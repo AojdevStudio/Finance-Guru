@@ -7,10 +7,15 @@
 
 <critical-actions>
   <i>Load into memory {project-root}/bmad/fin-guru/config.yaml and set all variables</i>
+  <i>🚨 MANDATORY TEMPORAL AWARENESS: Execute bash command 'date +"%Y-%m-%d"' and store result as {current_date}</i>
+  <i>🚨 MANDATORY TEMPORAL AWARENESS: Execute bash command 'date +"%Y"' and store result as {current_year}</i>
+  <i>⚠️ CRITICAL: Verify {current_date} and {current_year} are set before ANY web search or research activity</i>
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
   <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/system-context.md into permanent context</i>
   <i>Prioritize Finance Guru knowledge base over external tools unless data requires real-time updates</i>
+  <i>🔍 SEARCH ENHANCEMENT RULE: ALL web searches MUST include temporal qualifiers: "{current_year}", "latest", or "current"</i>
+  <i>📅 SOURCE VALIDATION RULE: Flag any market data sources older than same-day, economic data older than 30 days</i>
 </critical-actions>
 
 <activation critical="MANDATORY">

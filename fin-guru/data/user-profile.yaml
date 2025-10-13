@@ -116,10 +116,20 @@ user_profile:
 
       layer_2_income:
         strategy: "BUILD_WITH_NEW_CAPITAL"
-        monthly_deployment: 12000  # $12K/month new money
+        monthly_deployment: 13317  # Actual W2 income amount
         target_annual_income: 100000  # $100K dividend target
-        estimated_timeline_months: 20  # To achieve financial independence
-        note: "100% of new capital goes to dividend/income stocks"
+        estimated_timeline_months: 28  # Hybrid C conservative timeline
+        note: "100% of W2 income goes to dividend portfolio"
+        actual_deployment_month_1: 13318  # First purchase completed 2025-10-09
+
+    # Margin Living Strategy
+    margin_strategy:
+      enabled: true
+      expense_payment_method: "DIRECT_FROM_FIDELITY"
+      bank_transfers: false
+      note: "Pay all bills directly from Fidelity brokerage using margin - NO bank transfers"
+      starting_expenses: 4500  # Fixed expenses initially
+      scalability: "Progressive increase as trust builds"
 
     time_horizon: "long_term"
     emergency_fund_target: 0  # user specified $0

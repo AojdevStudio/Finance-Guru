@@ -1,3 +1,22 @@
+---
+title: "Finance Guru Research Workflow"
+description: "Comprehensive task workflow for conducting financial research with market intelligence, security analysis, and data validation protocols."
+category: "Task Workflow"
+subcategory: "Research Phase"
+product_line: "Finance Guru"
+audience: "AI Agent System"
+status: "Active"
+author: "AOJDevStudio"
+created_date: "2025-09-17"
+last_updated: "2025-09-17"
+tags:
+  - finance-guru
+  - research-workflow
+  - market-intelligence
+  - security-analysis
+  - data-validation
+---
+
 <!-- Version: 1.0.0 | Last Modified: 2025-09-17 | Author: AOJDevStudio -->
 <!-- Description: Comprehensive research workflow for Finance Guru agents -->
 <!-- Compatibility: Finance-Guru-Framework, exa-mcp, web-search-tool, sequential-thinking-mcp -->
@@ -73,6 +92,103 @@ This workflow defines the comprehensive research methodology for Finance Guru ag
 <!-- BEGIN: step_by_step_instructions -->
 
 ## Step-by-Step Task Instructions
+
+### Phase 0: Temporal Context Initialization (MANDATORY - 1 minute)
+
+⚠️ **CRITICAL REQUIREMENT**: This phase is MANDATORY and BLOCKING. All subsequent research activities are PROHIBITED until temporal context is successfully established.
+
+#### Step 0.1: Execute Temporal Awareness Protocol
+
+**Purpose**: Establish current date context to ensure all research includes appropriate temporal qualifiers, preventing retrieval of outdated information that could lead to poor investment decisions.
+
+**Execution**:
+
+```bash
+# Get current date and year
+date +"%Y-%m-%d"
+date +"%Y"
+```
+
+**Store Results**:
+- `{current_date}` = Full date (e.g., "2025-10-12")
+- `{current_year}` = Year only (e.g., "2025")
+
+**Validation Checkpoint**:
+- [ ] Current date successfully retrieved and stored as {current_date}
+- [ ] Current year successfully extracted and stored as {current_year}
+- [ ] Date format verified as YYYY-MM-DD
+- [ ] Year is within reasonable range (2025-2030)
+
+**On Failure**: If temporal context cannot be established, STOP ALL RESEARCH ACTIVITY and report error to user. Do not proceed to Phase 1.
+
+#### Step 0.2: Establish Search Enhancement Protocol
+
+**Search Query Enhancement Rules** (MANDATORY):
+
+All web searches conducted in this workflow MUST include temporal qualifiers. Non-compliant searches are PROHIBITED.
+
+**Temporal Qualifier Requirements**:
+1. Include `{current_year}` in query, OR
+2. Include "latest" keyword, OR
+3. Include "current" keyword
+
+**Examples**:
+
+✅ **COMPLIANT QUERIES**:
+- "Tesla stock analysis {current_year} latest"
+- "Federal Reserve policy October {current_year}"
+- "Current S&P 500 valuation metrics"
+- "Latest GDP growth data United States"
+
+❌ **NON-COMPLIANT QUERIES** (DO NOT USE):
+- "Tesla stock analysis"
+- "Federal Reserve policy"
+- "S&P 500 valuation metrics"
+- "GDP growth data"
+
+#### Step 0.3: Define Data Freshness Requirements
+
+**Freshness Thresholds by Data Type**:
+
+| Data Type | Maximum Age | Validation Action |
+|-----------|-------------|-------------------|
+| Market Data (prices, quotes) | Same-day | REJECT if older |
+| Economic Indicators | 30 days | FLAG if older |
+| Regulatory Changes | 90 days | FLAG if older |
+| Company Financials | Current quarter | FLAG if outdated |
+| Analyst Ratings | 30 days | FLAG if older |
+
+**Source Validation Protocol**:
+- Every source MUST be timestamped with collection date
+- Compare source date against freshness requirements
+- Flag or reject sources exceeding age thresholds
+- Document any freshness violations in research report
+
+**Quality Gate**:
+- [ ] Freshness thresholds understood and documented
+- [ ] Source validation protocol ready for implementation
+- [ ] Timestamp documentation system prepared
+
+**Completion Confirmation**:
+
+Display confirmation message before proceeding:
+
+```
+✅ TEMPORAL AWARENESS CONFIRMED
+
+Current Date: {current_date}
+Current Year: {current_year}
+
+📋 Search Enhancement Rules Active:
+• All queries MUST include {current_year}, "latest", or "current"
+• Market data: Same-day only
+• Economic data: Within 30 days
+• Regulatory data: Within 90 days
+
+Proceeding to Phase 1: Research Planning and Scoping
+```
+
+---
 
 ### Phase 1: Research Planning and Scoping (5-10 minutes)
 

@@ -3,13 +3,13 @@
 
 # QA Advisor
 
-<agent id="fin-guru/agents/qa-advisor.md" name="Dr. Jennifer Wu" title="Finance Guru™ Quality Assurance Advisor" icon="✅">
+<agent id="bmad/fin-guru/agents/qa-advisor.md" name="Dr. Jennifer Wu" title="Finance Guru™ Quality Assurance Advisor" icon="✅">
 
 <critical-actions>
-  <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>
+  <i>Load into memory {project-root}/bmad/fin-guru/config.yaml and set all variables</i>
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
-  <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
+  <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/system-context.md into permanent context</i>
   <i>Apply rigorous quality standards to all deliverables</i>
 </critical-actions>
 
@@ -39,7 +39,7 @@
 
   <item cmd="*verify">Verify sources and citations</item>
 
-  <item cmd="*checklist" exec="{project-root}/fin-guru/tasks/execute-checklist.md">
+  <item cmd="*checklist" exec="{project-root}/bmad/fin-guru/tasks/execute-checklist.md">
     Execute quality checklist
   </item>
 
@@ -51,7 +51,7 @@
 </menu>
 
 <module-integration>
-  <module-path>{project-root}/fin-guru</module-path>
+  <module-path>{project-root}/bmad/fin-guru</module-path>
   <checklists-path>{module-path}/checklists</checklists-path>
   <tasks-path>{module-path}/tasks</tasks-path>
 </module-integration>

@@ -3,13 +3,13 @@
 
 # Builder
 
-<agent id="fin-guru/agents/builder.md" name="Alexandra Kim" title="Finance Guru™ Document & Artifact Builder" icon="📝">
+<agent id="bmad/fin-guru/agents/builder.md" name="Alexandra Kim" title="Finance Guru™ Document & Artifact Builder" icon="📝">
 
 <critical-actions>
-  <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>
+  <i>Load into memory {project-root}/bmad/fin-guru/config.yaml and set all variables</i>
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
-  <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
+  <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/system-context.md into permanent context</i>
   <i>Always use appropriate templates from templates folder for document creation</i>
 </critical-actions>
 
@@ -33,26 +33,26 @@
 <menu>
   <item cmd="*help">Show available document types and templates</item>
 
-  <item cmd="*create" exec="{project-root}/fin-guru/tasks/create-doc.md">
+  <item cmd="*create" exec="{project-root}/bmad/fin-guru/tasks/create-doc.md">
     Create document from template
   </item>
 
-  <item cmd="*artifact" exec="{project-root}/fin-guru/tasks/artifact-creation.md">
+  <item cmd="*artifact" exec="{project-root}/bmad/fin-guru/tasks/artifact-creation.md">
     Build custom artifact (report, presentation, model)</item>
 
-  <item cmd="*analysis-report" exec="{project-root}/fin-guru/tasks/create-doc.md" tmpl="{project-root}/fin-guru/templates/analysis-report.md">
+  <item cmd="*analysis-report" exec="{project-root}/bmad/fin-guru/tasks/create-doc.md" tmpl="{project-root}/bmad/fin-guru/templates/analysis-report.md">
     Generate analysis report
   </item>
 
-  <item cmd="*compliance-memo" exec="{project-root}/fin-guru/tasks/create-doc.md" tmpl="{project-root}/fin-guru/templates/compliance-memo.md">
+  <item cmd="*compliance-memo" exec="{project-root}/bmad/fin-guru/tasks/create-doc.md" tmpl="{project-root}/bmad/fin-guru/templates/compliance-memo.md">
     Create compliance memo
   </item>
 
-  <item cmd="*excel-model" exec="{project-root}/fin-guru/tasks/create-doc.md" tmpl="{project-root}/fin-guru/templates/excel-model-spec.md">
+  <item cmd="*excel-model" exec="{project-root}/bmad/fin-guru/tasks/create-doc.md" tmpl="{project-root}/bmad/fin-guru/templates/excel-model-spec.md">
     Build Excel model specification
   </item>
 
-  <item cmd="*presentation" exec="{project-root}/fin-guru/tasks/create-doc.md" tmpl="{project-root}/fin-guru/templates/presentation-format.md">
+  <item cmd="*presentation" exec="{project-root}/bmad/fin-guru/tasks/create-doc.md" tmpl="{project-root}/bmad/fin-guru/templates/presentation-format.md">
     Create presentation
   </item>
 
@@ -62,7 +62,7 @@
 </menu>
 
 <module-integration>
-  <module-path>{project-root}/fin-guru</module-path>
+  <module-path>{project-root}/bmad/fin-guru</module-path>
   <templates-path>{module-path}/templates</templates-path>
   <tasks-path>{module-path}/tasks</tasks-path>
   <output-path>{project-root}/docs/fin-guru</output-path>

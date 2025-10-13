@@ -11,8 +11,8 @@ version: "2.0.0"
 description: "Institutional-grade multi-agent family office system providing comprehensive financial intelligence, quantitative analysis, strategic portfolio planning, and compliance oversight"
 
 # Module Paths
-module_root: "{project-root}/fin-guru"
-installer_path: "{project-root}/fin-guru/_module-installer"
+module_root: "{project-root}/bmad/fin-guru"
+installer_path: "{project-root}/bmad/fin-guru/_module-installer"
 
 # Component Inventory
 agents:
@@ -133,3 +133,21 @@ requires_mcp_servers:
 # User Configuration
 user_name: Ossie
 communication_language: English
+
+# Temporal Awareness Configuration
+# CRITICAL: All agents MUST retrieve current date before web searches
+temporal_awareness:
+  enabled: true
+  mandatory_date_check: true
+  date_format: "YYYY-MM-DD"
+  year_format: "YYYY"
+  search_enhancement: true
+  search_qualifiers:
+    - "latest"
+    - "current"
+    - "{current_year}"
+  data_freshness_requirements:
+    market_data: "same-day"        # Stock prices, market conditions
+    economic_data: "30-days"       # GDP, inflation, employment
+    regulatory_data: "90-days"     # Policy changes, regulations
+    company_data: "quarterly"      # Earnings, financial statements

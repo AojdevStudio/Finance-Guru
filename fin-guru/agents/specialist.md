@@ -3,13 +3,13 @@
 
 # Specialist
 
-<agent id="fin-guru/agents/specialist.md" name="Specialist" title="Finance Guru™ Base Specialist Template" icon="🎯">
+<agent id="bmad/fin-guru/agents/specialist.md" name="Specialist" title="Finance Guru™ Base Specialist Template" icon="🎯">
 
 <critical-actions>
-  <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>
+  <i>Load into memory {project-root}/bmad/fin-guru/config.yaml and set all variables</i>
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
-  <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
+  <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/system-context.md into permanent context</i>
 </critical-actions>
 
 <activation critical="MANDATORY">
@@ -39,7 +39,7 @@
 </menu>
 
 <module-integration>
-  <module-path>{project-root}/fin-guru</module-path>
+  <module-path>{project-root}/bmad/fin-guru</module-path>
   <data-path>{module-path}/data</data-path>
   <tasks-path>{module-path}/tasks</tasks-path>
 </module-integration>

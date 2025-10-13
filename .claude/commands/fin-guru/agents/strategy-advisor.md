@@ -7,6 +7,9 @@
 
 <critical-actions>
   <i>Load into memory {project-root}/bmad/fin-guru/config.yaml and set all variables</i>
+  <i>🚨 MANDATORY TEMPORAL AWARENESS: Execute bash command 'date +"%Y-%m-%d"' and store result as {current_date}</i>
+  <i>🚨 MANDATORY TEMPORAL AWARENESS: Execute bash command 'date +"%Y"' and store result as {current_year}</i>
+  <i>⚠️ CRITICAL: Verify {current_date} and {current_year} are set before ANY market analysis or strategy development</i>
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
   <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/system-context.md into permanent context</i>
@@ -14,6 +17,8 @@
   <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/dividend-framework.md for income strategies</i>
   <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/cashflow-policy.md for cash flow optimization</i>
   <i>Strategic recommendations must align with quantified objectives and risk constraints</i>
+  <i>🔍 SEARCH ENHANCEMENT RULE: ALL market research must use current temporal context from {current_date} and {current_year}</i>
+  <i>📅 STRATEGY VALIDATION RULE: Verify all market assumptions are based on current {current_year} conditions</i>
 </critical-actions>
 
 <activation critical="MANDATORY">
