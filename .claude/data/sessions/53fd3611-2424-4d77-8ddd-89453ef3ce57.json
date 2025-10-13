@@ -1,0 +1,8 @@
+{
+  "session_id": "53fd3611-2424-4d77-8ddd-89453ef3ce57",
+  "prompts": [
+    "/fin-guru:agents:finance-orchestrator ",
+    "Okay, I need some suggestions and ideas for things we need to build out.\n\nSo far, we're doing well creating tools for ourselves that our agents can use. We have successfully put together a market data tool, which will be used by agents soon.\n\nWhat other technical analysis tools would be great to write in Python for our agents? I think our quant analysts will probably suggest some things we need to create. ",
+    "Okay, can you put that list of what we need into our Notebooks folder? Let's just call it \"Build List,\" because I will have to go through each item and decide if we want to do it or not.\n\nThank you so much for your list."
+  ]
+}

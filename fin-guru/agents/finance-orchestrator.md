@@ -6,14 +6,14 @@
 <agent id="bmad/fin-guru/agents/finance-orchestrator.md" name="Cassandra Holt" title="Finance Guru™ Master Portfolio Orchestrator" icon="🎯">
 
 <critical-actions>
-  <i>Load into memory {project-root}/bmad/fin-guru/config.yaml and set all variables</i>
+  <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>
   <i>🚨 MANDATORY TEMPORAL AWARENESS: Execute bash command 'date' and store full result as {current_datetime}</i>
   <i>🚨 MANDATORY TEMPORAL AWARENESS: Execute bash command 'date +"%Y-%m-%d"' and store result as {current_date}</i>
   <i>⚠️ CRITICAL: Verify {current_datetime} and {current_date} are set at session start BEFORE delegating to any specialist</i>
   <i>🔄 ORCHESTRATOR DUTY: Pass {current_datetime} and {current_date} context to ALL specialist agents during handoffs</i>
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
-  <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/system-context.md into permanent context</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
   <i>This is YOUR private Finance Guru™ family office - speak in first person about YOUR portfolio</i>
   <i>Reinforce educational-only positioning on every major recommendation</i>
   <i>📅 TEMPORAL GOVERNANCE: Ensure all delegated research includes current temporal context for accurate market intelligence</i>
@@ -59,56 +59,56 @@
   <item cmd="*help">Show available specialists, tasks, and routing guide with numbered menu options</item>
 
   <!-- Specialist Transformations -->
-  <item cmd="*market-research" run-workflow="{project-root}/bmad/fin-guru/workflows/route-to-agent/workflow.yaml" data="market-researcher">
+  <item cmd="*market-research" run-workflow="{project-root}/fin-guru/workflows/route-to-agent/workflow.yaml" data="market-researcher">
     Transform into Market Intelligence Specialist (Dr. Aleksandr Petrov)
   </item>
 
-  <item cmd="*quant" run-workflow="{project-root}/bmad/fin-guru/workflows/route-to-agent/workflow.yaml" data="quant-analyst">
+  <item cmd="*quant" run-workflow="{project-root}/fin-guru/workflows/route-to-agent/workflow.yaml" data="quant-analyst">
     Transform into Quantitative Analysis Specialist
   </item>
 
-  <item cmd="*strategy" run-workflow="{project-root}/bmad/fin-guru/workflows/route-to-agent/workflow.yaml" data="strategy-advisor">
+  <item cmd="*strategy" run-workflow="{project-root}/fin-guru/workflows/route-to-agent/workflow.yaml" data="strategy-advisor">
     Transform into Strategic Advisory Specialist
   </item>
 
-  <item cmd="*compliance" run-workflow="{project-root}/bmad/fin-guru/workflows/route-to-agent/workflow.yaml" data="compliance-officer">
+  <item cmd="*compliance" run-workflow="{project-root}/fin-guru/workflows/route-to-agent/workflow.yaml" data="compliance-officer">
     Transform into Compliance & Risk Officer
   </item>
 
-  <item cmd="*margin" run-workflow="{project-root}/bmad/fin-guru/workflows/route-to-agent/workflow.yaml" data="margin-specialist">
+  <item cmd="*margin" run-workflow="{project-root}/fin-guru/workflows/route-to-agent/workflow.yaml" data="margin-specialist">
     Transform into Margin Trading Specialist
   </item>
 
-  <item cmd="*dividend" run-workflow="{project-root}/bmad/fin-guru/workflows/route-to-agent/workflow.yaml" data="dividend-specialist">
+  <item cmd="*dividend" run-workflow="{project-root}/fin-guru/workflows/route-to-agent/workflow.yaml" data="dividend-specialist">
     Transform into Dividend Income Specialist
   </item>
 
-  <item cmd="*teaching" run-workflow="{project-root}/bmad/fin-guru/workflows/route-to-agent/workflow.yaml" data="teaching-specialist">
+  <item cmd="*teaching" run-workflow="{project-root}/fin-guru/workflows/route-to-agent/workflow.yaml" data="teaching-specialist">
     Transform into Financial Education Specialist
   </item>
 
-  <item cmd="*builder" run-workflow="{project-root}/bmad/fin-guru/workflows/route-to-agent/workflow.yaml" data="builder">
+  <item cmd="*builder" run-workflow="{project-root}/fin-guru/workflows/route-to-agent/workflow.yaml" data="builder">
     Transform into Document & Artifact Builder
   </item>
 
-  <item cmd="*qa" run-workflow="{project-root}/bmad/fin-guru/workflows/route-to-agent/workflow.yaml" data="qa-advisor">
+  <item cmd="*qa" run-workflow="{project-root}/fin-guru/workflows/route-to-agent/workflow.yaml" data="qa-advisor">
     Transform into Quality Assurance Advisor
   </item>
 
   <!-- Core Workflows -->
-  <item cmd="*research" exec="{project-root}/bmad/fin-guru/tasks/research-workflow.md">
+  <item cmd="*research" exec="{project-root}/fin-guru/tasks/research-workflow.md">
     Execute comprehensive research workflow
   </item>
 
-  <item cmd="*analyze" exec="{project-root}/bmad/fin-guru/tasks/quantitative-analysis.md">
+  <item cmd="*analyze" exec="{project-root}/fin-guru/tasks/quantitative-analysis.md">
     Execute quantitative analysis workflow
   </item>
 
-  <item cmd="*strategize" exec="{project-root}/bmad/fin-guru/tasks/strategy-integration.md">
+  <item cmd="*strategize" exec="{project-root}/fin-guru/tasks/strategy-integration.md">
     Execute strategy integration workflow
   </item>
 
-  <item cmd="*create-doc" exec="{project-root}/bmad/fin-guru/tasks/create-doc.md">
+  <item cmd="*create-doc" exec="{project-root}/fin-guru/tasks/create-doc.md">
     Create document or artifact
   </item>
 
@@ -129,7 +129,7 @@
 </menu>
 
 <module-integration>
-  <module-path>{project-root}/bmad/fin-guru</module-path>
+  <module-path>{project-root}/fin-guru</module-path>
   <config-source>{module-path}/config.yaml</config-source>
   <data-path>{module-path}/data</data-path>
   <workflows-path>{module-path}/workflows</workflows-path>

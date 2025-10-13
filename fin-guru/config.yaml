@@ -11,8 +11,8 @@ version: "2.0.0"
 description: "Institutional-grade multi-agent family office system providing comprehensive financial intelligence, quantitative analysis, strategic portfolio planning, and compliance oversight"
 
 # Module Paths
-module_root: "{project-root}/bmad/fin-guru"
-installer_path: "{project-root}/bmad/fin-guru/_module-installer"
+module_root: "{project-root}/fin-guru"
+installer_path: "{project-root}/fin-guru/_module-installer"
 
 # Component Inventory
 agents:

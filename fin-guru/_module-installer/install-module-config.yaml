@@ -60,7 +60,7 @@ install_steps:
 
   - name: 'Register module'
     action: 'register'
-    manifest: '{project-root}/bmad/_cfg/manifest.yaml'
+    manifest: '{project-root}/_cfg/manifest.yaml'
 
 # Module dependencies
 requires:

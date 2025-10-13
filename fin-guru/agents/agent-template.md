@@ -6,10 +6,10 @@
 <agent id="bmad/fin-guru/agents/[agent-name].md" name="[Name]" title="Finance Guru™ [Title]" icon="[emoji]">
 
 <critical-actions>
-  <i>Load into memory {project-root}/bmad/fin-guru/config.yaml and set all variables</i>
+  <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
-  <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/system-context.md into permanent context</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
   <!-- Add agent-specific critical actions here -->
 </critical-actions>
 
@@ -34,7 +34,7 @@
   <item cmd="*help">Show [agent] capabilities and available commands</item>
 
   <!-- Add agent-specific menu items here -->
-  <item cmd="*[command]" exec="{project-root}/bmad/fin-guru/tasks/[task].md">
+  <item cmd="*[command]" exec="{project-root}/fin-guru/tasks/[task].md">
     [Command description]
   </item>
 
@@ -44,7 +44,7 @@
 </menu>
 
 <module-integration>
-  <module-path>{project-root}/bmad/fin-guru</module-path>
+  <module-path>{project-root}/fin-guru</module-path>
   <data-path>{module-path}/data</data-path>
   <tasks-path>{module-path}/tasks</tasks-path>
   <templates-path>{module-path}/templates</templates-path>

@@ -6,12 +6,12 @@
 <agent id="bmad/fin-guru/agents/dividend-specialist.md" name="Sarah Martinez" title="Finance Guru™ Dividend Income Specialist" icon="💰">
 
 <critical-actions>
-  <i>Load into memory {project-root}/bmad/fin-guru/config.yaml and set all variables</i>
+  <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
-  <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/system-context.md into permanent context</i>
-  <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/dividend-framework.md</i>
-  <i>Load COMPLETE file {project-root}/bmad/fin-guru/checklists/dividend-framework.md</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/data/dividend-framework.md</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/checklists/dividend-framework.md</i>
 </critical-actions>
 
 <activation critical="MANDATORY">
@@ -34,7 +34,7 @@
 <menu>
   <item cmd="*help">Show dividend analysis capabilities and income frameworks</item>
 
-  <item cmd="*analyze" exec="{project-root}/bmad/fin-guru/tasks/dividend-analysis.md">
+  <item cmd="*analyze" exec="{project-root}/fin-guru/tasks/dividend-analysis.md">
     Analyze dividend sustainability and income potential
   </item>
 
@@ -44,7 +44,7 @@
 
   <item cmd="*optimize">Optimize income portfolio for yield and tax efficiency</item>
 
-  <item cmd="*checklist" exec="{project-root}/bmad/fin-guru/tasks/execute-checklist.md" data="{project-root}/bmad/fin-guru/checklists/dividend-framework.md">
+  <item cmd="*checklist" exec="{project-root}/fin-guru/tasks/execute-checklist.md" data="{project-root}/fin-guru/checklists/dividend-framework.md">
     Execute dividend framework checklist
   </item>
 
@@ -54,7 +54,7 @@
 </menu>
 
 <module-integration>
-  <module-path>{project-root}/bmad/fin-guru</module-path>
+  <module-path>{project-root}/fin-guru</module-path>
   <data-path>{module-path}/data</data-path>
   <checklists-path>{module-path}/checklists</checklists-path>
   <tasks-path>{module-path}/tasks</tasks-path>

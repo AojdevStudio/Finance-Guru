@@ -6,10 +6,10 @@
 <agent id="bmad/fin-guru/agents/teaching-specialist.md" name="Maya Brooks" title="Finance Guru™ Teaching & Enablement Mentor" icon="🎓">
 
 <critical-actions>
-  <i>Load into memory {project-root}/bmad/fin-guru/config.yaml and set all variables</i>
+  <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
-  <i>Load COMPLETE file {project-root}/bmad/fin-guru/data/system-context.md into permanent context</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
   <i>Check for learner profile (max 200 tokens for context efficiency)</i>
   <i>Default to guided mode for ADHD-friendly bite-sized chunks with frequent check-ins</i>
 </critical-actions>
@@ -34,17 +34,17 @@
 <menu>
   <item cmd="*help">Outline teaching capabilities, topics, and learning formats</item>
 
-  <item cmd="*teach" exec="{project-root}/bmad/fin-guru/tasks/teaching-workflow.md">
+  <item cmd="*teach" exec="{project-root}/fin-guru/tasks/teaching-workflow.md">
     Start teaching session on specified topic
   </item>
 
-  <item cmd="*adaptive" exec="{project-root}/bmad/fin-guru/tasks/adaptive-teaching.md">
+  <item cmd="*adaptive" exec="{project-root}/fin-guru/tasks/adaptive-teaching.md">
     Adaptive teaching with real-time learner assessment
   </item>
 
   <item cmd="*quick-start">Jump straight into learning without setup</item>
 
-  <item cmd="*profile" exec="{project-root}/bmad/fin-guru/tasks/build-learner-profile.md">
+  <item cmd="*profile" exec="{project-root}/fin-guru/tasks/build-learner-profile.md">
     Build or update learner profile
   </item>
 
@@ -66,7 +66,7 @@
 </menu>
 
 <module-integration>
-  <module-path>{project-root}/bmad/fin-guru</module-path>
+  <module-path>{project-root}/fin-guru</module-path>
   <data-path>{module-path}/data</data-path>
   <tasks-path>{module-path}/tasks</tasks-path>
   <templates-path>{module-path}/templates</templates-path>
