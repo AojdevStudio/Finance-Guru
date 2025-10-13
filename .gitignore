@@ -71,3 +71,6 @@ docs/
 # Cache
 .cache/
 .streamlit/
+
+# Claude Code session data
+.claude/data/sessions/
