@@ -63,9 +63,13 @@ sensitive/
 credentials/
 
 # Family Office - Private financial documents and user data
-research/finance/
+# All research including finance/ and youtube-summaries/
+research/
+# Portfolio positions and analysis notebooks
 notebooks/
+# User's financial profile
 fin-guru/data/user-profile.yaml
+# All generated strategies and reports
 docs/
 
 # Cache
