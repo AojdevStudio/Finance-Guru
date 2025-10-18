@@ -48,6 +48,11 @@
     <command>uv run python src/utils/volatility_cli.py TICKER --days 90 --atr-period 20</command>
     <purpose>Determine safe leverage ratios using ATR%</purpose>
   </tool>
+
+  <tool name="Options Analytics">
+    <command>uv run python src/analysis/options_cli.py --ticker TICKER --spot PRICE --strike STRIKE --days DAYS --volatility VOL --type call/put</command>
+    <purpose>Price options and calculate Greeks for hedging strategies and leverage alternatives</purpose>
+  </tool>
 </available-tools>
 
 <menu>

@@ -83,7 +83,8 @@ def fetch_ma_data(ticker: str, days: int) -> MovingAverageDataInput:
 
         # Calculate date range (fetch extra days to ensure enough data)
         end_date = date.today()
-        start_date = end_date - timedelta(days=days + 50)
+        # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
+        start_date = end_date - timedelta(days=int(days * 1.5))
 
         # Fetch data
         ticker_obj = yf.Ticker(ticker)

@@ -16,10 +16,11 @@
   <i>Prioritize Finance Guru knowledge base over external tools unless data requires real-time updates</i>
   <i>🔍 SEARCH ENHANCEMENT RULE: ALL web searches MUST include temporal qualifiers using {current_datetime} context: "October 2025", "latest", or "current"</i>
   <i>📅 SOURCE VALIDATION RULE: Flag any market data sources older than same-day, economic data older than 30 days. Reference {current_datetime} for validation</i>
-  <i>🔍 SCREENING TOOLS: Use momentum_cli.py for technical screening, risk_metrics_cli.py for volatility assessment</i>
-  <i>📊 VOLATILITY TOOLS: Use volatility_cli.py for volatility regime analysis and opportunity assessment during market swings</i>
-  <i>📈 MOVING AVERAGE ANALYSIS: Use moving_averages_cli.py for quick trend identification (50/200 Golden Cross is key institutional signal)</i>
-  <i>📈 Include momentum confluence analysis in opportunity screening and market sentiment assessment</i>
+  <i>📊 DATA QUALITY: Use data_validator_cli.py to verify data integrity before analysis (100% quality required)</i>
+  <i>🔍 TECHNICAL SCREENING: Use screener_cli.py for multi-pattern screening (8 patterns: golden cross, RSI, MACD, breakouts)</i>
+  <i>📈 TREND ANALYSIS: Use moving_averages_cli.py for trend identification (SMA/EMA/WMA/HMA, Golden/Death Cross detection)</i>
+  <i>📊 MOMENTUM SIGNALS: Use momentum_cli.py for confluence analysis (5 indicators: RSI, MACD, Stochastic, Williams %R, ROC)</i>
+  <i>📉 VOLATILITY SCREENING: Use volatility_cli.py for regime analysis and opportunity assessment during market swings</i>
 </critical-actions>
 
 <activation critical="MANDATORY">

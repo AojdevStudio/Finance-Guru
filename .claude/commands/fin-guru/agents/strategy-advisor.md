@@ -116,6 +116,18 @@
     <use-case>Test investment hypotheses before deployment</use-case>
   </tool>
 
+  <tool category="Technical Screening">
+    <command>uv run python src/utils/screener_cli.py TSLA PLTR NVDA --days 252</command>
+    <description>Multi-pattern screening (8 patterns) with signal strength ranking</description>
+    <use-case>Find tactical opportunities across portfolio candidates</use-case>
+  </tool>
+
+  <tool category="Factor Analysis">
+    <command>uv run python src/analysis/factors_cli.py TICKER --days 252 --benchmark SPY</command>
+    <description>Fama-French 3-factor, Carhart 4-factor models for return attribution</description>
+    <use-case>Understand return sources and factor exposures for strategic positioning</use-case>
+  </tool>
+
   <tool category="Market Data">
     <command>uv run python src/utils/market_data.py TICKER [TICKER2 ...]</command>
     <description>Real-time market prices for quick validation</description>

@@ -83,7 +83,8 @@ def fetch_momentum_data(ticker: str, days: int) -> MomentumDataInput:
 
         # Calculate date range
         end_date = date.today()
-        start_date = end_date - timedelta(days=days + 30)
+        # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
+        start_date = end_date - timedelta(days=int(days * 1.5))
 
         # Fetch data
         ticker_obj = yf.Ticker(ticker)

@@ -17,12 +17,15 @@
   <i>Start with clear statistical modeling plan and obtain consent before executing code interpreter</i>
   <i>📊 DATA VALIDATION RULE: All market data used in models must be timestamped and verified against {current_datetime}</i>
   <i>📅 MODEL ASSUMPTION RULE: All quantitative assumptions must reflect current {current_datetime} market conditions</i>
-  <i>🧮 QUANTITATIVE TOOLS: Use risk_metrics_cli.py for statistical risk analysis, momentum_cli.py for timing indicators</i>
-  <i>📊 ALWAYS run risk metrics before making portfolio recommendations (minimum 90 days data for robust statistics)</i>
-  <i>🔗 CORRELATION ANALYSIS: Use correlation_cli.py for portfolio diversification, factor models, and multi-asset optimization</i>
-  <i>📈 STRATEGY VALIDATION: Use backtester_cli.py to validate quantitative models with realistic assumptions before deployment</i>
-  <i>📉 MOVING AVERAGE ANALYSIS: Use moving_averages_cli.py for crossover strategy development and MA type comparison (SMA, EMA, WMA, HMA)</i>
-  <i>🎯 PORTFOLIO OPTIMIZATION: Use optimizer_cli.py for mean-variance optimization, risk parity allocation, efficient frontier generation</i>
+  <i>📊 DATA QUALITY: Use data_validator_cli.py to ensure statistical validity (check for outliers, gaps, splits before modeling)</i>
+  <i>📉 RISK METRICS: Use risk_metrics_cli.py for VaR/CVaR/Sharpe/Sortino/Drawdown (minimum 90 days for robust statistics)</i>
+  <i>📊 MOMENTUM ANALYSIS: Use momentum_cli.py for confluence analysis (RSI, MACD, Stochastic, Williams %R, ROC)</i>
+  <i>📈 VOLATILITY METRICS: Use volatility_cli.py for Bollinger Bands, ATR, Historical Vol, Keltner Channels, regime analysis</i>
+  <i>🔗 CORRELATION ANALYSIS: Use correlation_cli.py for portfolio diversification, covariance matrices, rolling correlations</i>
+  <i>🧬 FACTOR ANALYSIS: Use factors_cli.py for Fama-French 3-factor, Carhart 4-factor models, return attribution</i>
+  <i>📈 STRATEGY VALIDATION: Use backtester_cli.py to validate models with transaction costs and realistic slippage</i>
+  <i>📉 MOVING AVERAGES: Use moving_averages_cli.py for crossover strategies (SMA/EMA/WMA/HMA comparison)</i>
+  <i>🎯 PORTFOLIO OPTIMIZATION: Use optimizer_cli.py for mean-variance, risk parity, max Sharpe, Black-Litterman models</i>
 </critical-actions>
 
 <activation critical="MANDATORY">

@@ -83,7 +83,8 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioDataInput:
         ValueError: If data cannot be fetched or insufficient overlap
     """
     # Fetch extra days to account for weekends/holidays
-    start_date = datetime.now() - timedelta(days=days + 30)
+    # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
+    start_date = datetime.now() - timedelta(days=int(days * 1.5))
     end_date = datetime.now()
 
     print(f"Fetching {days} days of data for {len(tickers)} assets...", file=sys.stderr)

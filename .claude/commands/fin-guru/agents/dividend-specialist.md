@@ -12,6 +12,9 @@
   <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
   <i>Load COMPLETE file {project-root}/fin-guru/data/dividend-framework.md</i>
   <i>Load COMPLETE file {project-root}/fin-guru/checklists/dividend-framework.md</i>
+  <i>📊 DIVIDEND ANALYSIS: Use correlation_cli.py to build diversified income portfolios across sectors</i>
+  <i>📈 VOLATILITY ASSESSMENT: Use volatility_cli.py to evaluate dividend stock stability and income reliability</i>
+  <i>🎯 PORTFOLIO OPTIMIZATION: Use optimizer_cli.py for income-optimized portfolios (maximize yield with risk constraints)</i>
 </critical-actions>
 
 <activation critical="MANDATORY">

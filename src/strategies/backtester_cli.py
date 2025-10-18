@@ -72,7 +72,8 @@ def fetch_price_data(ticker: str, days: int) -> pd.DataFrame:
     Raises:
         ValueError: If data cannot be fetched
     """
-    start_date = datetime.now() - timedelta(days=days + 30)
+    # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
+    start_date = datetime.now() - timedelta(days=int(days * 1.5))
     end_date = datetime.now()
 
     stock = yf.Ticker(ticker)
