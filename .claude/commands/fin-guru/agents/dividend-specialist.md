@@ -10,6 +10,7 @@
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
   <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
+  <i>📊 PORTFOLIO CONTEXT: Execute task {project-root}/fin-guru/tasks/load-portfolio-context.md before dividend income analysis</i>
   <i>Load COMPLETE file {project-root}/fin-guru/data/dividend-framework.md</i>
   <i>Load COMPLETE file {project-root}/fin-guru/checklists/dividend-framework.md</i>
   <i>📊 DIVIDEND ANALYSIS: Use correlation_cli.py to build diversified income portfolios across sectors</i>

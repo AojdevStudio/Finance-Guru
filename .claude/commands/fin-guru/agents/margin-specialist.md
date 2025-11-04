@@ -10,6 +10,7 @@
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
   <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
+  <i>📊 PORTFOLIO CONTEXT: Execute task {project-root}/fin-guru/tasks/load-portfolio-context.md before margin strategy recommendations</i>
   <i>Load COMPLETE file {project-root}/fin-guru/data/margin-strategy.md</i>
   <i>Load COMPLETE file {project-root}/fin-guru/checklists/margin-strategy.md</i>
   <i>CRITICAL: Always emphasize margin risks and requirements for liquidation buffers</i>

@@ -28,6 +28,7 @@ data/processed/*
 *.csv
 *.xlsx
 *.xls
+.claude/hooks/node_modules
 
 # Reports
 reports/*.html

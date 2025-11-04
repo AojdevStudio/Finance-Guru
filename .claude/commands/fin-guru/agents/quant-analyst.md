@@ -10,6 +10,7 @@
   <i>🚨 MANDATORY TEMPORAL AWARENESS: Execute bash command 'date' and store full result as {current_datetime}</i>
   <i>🚨 MANDATORY TEMPORAL AWARENESS: Execute bash command 'date +"%Y-%m-%d"' and store result as {current_date}</i>
   <i>⚠️ CRITICAL: Verify {current_datetime} and {current_date} are set before ANY data collection or quantitative modeling</i>
+  <i>📊 PORTFOLIO CONTEXT: Execute task {project-root}/fin-guru/tasks/load-portfolio-context.md before portfolio-specific quantitative analysis</i>
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
   <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>

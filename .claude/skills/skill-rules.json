@@ -1,0 +1,193 @@
+{
+    "version": "1.0",
+    "description": "Skill activation triggers for Claude Code. Controls when skills automatically suggest or block actions.",
+    "skills": {
+        "skill-developer": {
+            "type": "domain",
+            "enforcement": "block",
+            "priority": "high",
+            "description": "Meta-skill for creating and managing Claude Code skills",
+            "promptTriggers": {
+                "keywords": [
+                    "skill system",
+                    "create skill",
+                    "add skill",
+                    "skill triggers",
+                    "skill rules",
+                    "hook system",
+                    "skill development",
+                    "skill-rules.json"
+                ],
+                "intentPatterns": [
+                    "(how do|how does|explain).*?skill",
+                    "(create|add|modify|build).*?skill",
+                    "skill.*?(work|trigger|activate|system)"
+                ]
+            }
+        },
+        "backend-dev-guidelines": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Backend development patterns for Python/FastAPI/SQLAlchemy",
+            "promptTriggers": {
+                "keywords": [
+                    "backend",
+                    "backend development",
+                    "API",
+                    "endpoint",
+                    "route",
+                    "router",
+                    "routing",
+                    "FastAPI",
+                    "SQLAlchemy",
+                    "database model",
+                    "schema",
+                    "Pydantic",
+                    "service",
+                    "middleware",
+                    "validation",
+                    "async",
+                    "await",
+                    "Celery",
+                    "task",
+                    "tools",
+                    "python",
+                    "monte-carlo",
+                    "migration",
+                    "alembic",
+                    "dependency injection",
+                    "Depends"
+                ],
+                "intentPatterns": [
+                    "(create|add|implement|build).*?(route|endpoint|API|controller|service|repository)",
+                    "(fix|handle|debug).*?(error|exception|backend)",
+                    "(add|implement).*?(middleware|validation|error.*?handling)",
+                    "(organize|structure|refactor).*?(backend|service|API)",
+                    "(how to|best practice).*?(backend|route|controller|service)"
+                ]
+            },
+            "fileTriggers": {
+                "pathPatterns": [
+                    "backend/app/**/*.py",
+                    "backend/app/api/**/*.py",
+                    "backend/app/models/**/*.py",
+                    "backend/app/schemas/**/*.py",
+                    "backend/app/services/**/*.py",
+                    "backend/app/core/**/*.py",
+                    "backend/app/middleware/**/*.py",
+                    "backend/app/tasks/**/*.py"
+                ],
+                "pathExclusions": [
+                    "backend/app/tests/**/*.py",
+                    "backend/alembic/**/*.py",
+                    "backend/scripts/**/*.py",
+                    "**/__pycache__/**",
+                    "**/*.pyc"
+                ],
+                "contentPatterns": [
+                    "from fastapi import",
+                    "import sqlalchemy",
+                    "from sqlalchemy",
+                    "@app\\.",
+                    "@router\\.",
+                    "def (get|post|put|delete|patch)_",
+                    "class.*BaseModel",
+                    "Depends\\(",
+                    "async def"
+                ]
+            }
+        },
+        "route-tester": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Testing authenticated API routes with JWT cookie-based auth",
+            "promptTriggers": {
+                "keywords": [
+                    "test route",
+                    "test endpoint",
+                    "test API",
+                    "route testing",
+                    "API testing",
+                    "authenticated route",
+                    "JWT testing",
+                    "cookie auth",
+                    "test with auth"
+                ],
+                "intentPatterns": [
+                    "(test|debug|verify).*?(route|endpoint|API)",
+                    "(how to|how do I).*?test.*?(route|endpoint|API)",
+                    "test.*?(authenticated|auth|JWT|cookie)"
+                ]
+            },
+            "fileTriggers": {
+                "pathPatterns": [
+                    "backend/app/api/**/*.py",
+                    "**/test-*.py",
+                    "backend/app/tests/test_*.py"
+                ],
+                "contentPatterns": [
+                    "@router\\.(get|post|put|delete|patch)",
+                    "@app\\.(get|post|put|delete|patch)",
+                    "async def (get|post|put|delete|patch)_"
+                ]
+            }
+        },
+        "error-tracking": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Sentry error tracking and performance monitoring patterns",
+            "promptTriggers": {
+                "keywords": [
+                    "error handling",
+                    "exception",
+                    "sentry",
+                    "error tracking",
+                    "captureException",
+                    "monitoring",
+                    "performance tracking"
+                ],
+                "intentPatterns": [
+                    "(add|create|implement|setup).*?(error handling|sentry|error tracking)",
+                    "(fix|handle|catch).*?(error|exception)",
+                    "(how to|best practice).*?(error|sentry|monitoring)"
+                ]
+            },
+            "fileTriggers": {
+                "pathPatterns": [
+                    "backend/app/**/*.py",
+                    "backend/app/api/**/*.py",
+                    "backend/app/services/**/*.py",
+                    "backend/app/core/**/*.py"
+                ],
+                "contentPatterns": [
+                    "import sentry_sdk",
+                    "from sentry_sdk",
+                    "sentry_sdk\\.",
+                    "capture_exception",
+                    "capture_message"
+                ]
+            }
+        }
+    },
+    "notes": {
+        "enforcement_types": {
+            "suggest": "Skill suggestion appears but doesn't block execution",
+            "block": "Requires skill to be used before proceeding (guardrail)",
+            "warn": "Shows warning but allows proceeding"
+        },
+        "priority_levels": {
+            "critical": "Highest - Always trigger when matched",
+            "high": "Important - Trigger for most matches",
+            "medium": "Moderate - Trigger for clear matches",
+            "low": "Optional - Trigger only for explicit matches"
+        },
+        "customization": {
+            "pathPatterns": "Adjust to match your project structure (blog-api, auth-service, etc.)",
+            "keywords": "Add domain-specific terms relevant to your project",
+            "intentPatterns": "Use regex for flexible user intent matching"
+        }
+    }
+}

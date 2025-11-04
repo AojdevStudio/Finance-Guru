@@ -27,14 +27,26 @@ family-office/                  # Your private workspace
 ├── src/                       # Python modules for your analysis
 ├── scripts/                   # Your financial parsing & automation
 ├── notebooks/                 # Your Jupyter analysis notebooks
+│   └── updates/              # YOUR TRANSACTION UPDATES (new additions, sales, snapshots)
 ├── docs/                      # Your financial documents & summaries
+│   └── fin-guru/             # 📂 YOUR ORGANIZED DOCUMENTATION CENTER
+│       ├── README.md         # Quick start guide
+│       ├── INDEX.md          # Master directory with current status
+│       ├── strategies/       # Strategic planning
+│       │   ├── active/       # Current strategies (4 documents)
+│       │   └── risk-management/  # Downside protection
+│       ├── tickets/          # Buy/sell execution tickets
+│       ├── reports/          # Monthly market reviews
+│       ├── analysis/         # Deep research & modeling
+│       └── archive/          # Historical reference documents
 ├── research/finance/          # Your assessment data & research
 │   └── Financial Structure Assessment (Responses)*.csv
-└── .guru-core/               # Finance Guru agent configurations
+└── fin-guru/                 # Finance Guru module configurations
     ├── agents/               # Your team of specialists
     ├── data/                 # Including this context & your profile
     ├── tasks/                # Your workflow automations
-    └── templates/            # Your document templates
+    ├── templates/            # Your document templates
+    └── config.yaml           # Module configuration
 ```
 
 ## 👤 Your Financial Profile
@@ -47,6 +59,56 @@ Key metrics from YOUR assessment:
 - Investment Capacity: $5,000-10,500/month
 - Risk Profile: Aggressive
 - Focus Areas: Margin strategies, dividend optimization, tax efficiency
+
+## 📂 Your Documentation Center
+
+**Location:** `docs/fin-guru/`
+
+This is YOUR organized documentation command center, restructured for clarity and ease of navigation:
+
+**Navigation:**
+- 📖 **START HERE**: [README.md](docs/fin-guru/README.md) - Quick start guide
+- 📋 **MASTER INDEX**: [INDEX.md](docs/fin-guru/INDEX.md) - Complete catalog with current status, pending actions, and usage guide
+
+**Folder Structure:**
+- **strategies/active/** - Current strategies (margin-living, DRIP v2, dividend income, high-income positive Sharpe)
+- **strategies/risk-management/** - Downside protection & hedging strategies
+- **tickets/** - Buy/sell execution tickets (date-stamped for historical tracking)
+- **reports/** - Monthly market reviews and intelligence
+- **analysis/** - Deep research, Monte Carlo simulations, modeling
+- **archive/** - Historical documents for reference only
+
+**Who uses this:**
+- **Builder** - Creates new documents, saves to appropriate folders
+- **Strategy Advisor** - Updates active strategies, creates buy tickets
+- **Market Researcher** - Generates market reports, saves to reports/
+- **Quant Analyst** - Saves analysis results to analysis/
+- **All Agents** - Reference INDEX.md for current status and pending actions
+
+**Document Naming Conventions:**
+- Active strategies: `{strategy-name}-master-strategy.md` (no dates, evergreen)
+- Execution tickets: `buy-ticket-{YYYY-MM-DD}-{descriptor}.md`
+- Analysis reports: `{topic}-{YYYY-MM-DD}.md`
+- Monthly reports: `monthly-refresh-{YYYY-MM-DD}.md`
+
+## 📈 Transaction Data & Portfolio Updates
+
+**Location:** `notebooks/updates/`
+
+This folder contains YOUR real-time transaction activity and portfolio changes:
+
+**What's tracked:**
+- ✅ Buy/Sell transactions (ticker, date, quantity, price, rationale)
+- ✅ Portfolio snapshots (point-in-time composition)
+- ✅ Cash flow events (deposits, withdrawals, dividends received)
+
+**Who monitors this:**
+- **Market Researcher** - Tracks what you're buying/selling to inform research priorities
+- **Quant Analyst** - Analyzes transaction patterns and portfolio evolution
+- **Strategy Advisor** - Understands your current positions for rebalancing recommendations
+- **Compliance Officer** - Monitors position sizes, concentration risk, and regulatory concerns
+
+**Usage:** Agents should check this folder when analyzing your portfolio or making recommendations to ensure they're working with your most current holdings.
 
 ## 🤖 Your Finance Guru Team
 
