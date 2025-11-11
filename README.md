@@ -20,155 +20,27 @@ My personal team of specialized agents:
 - **Dividend Specialist** - Income optimization
 - **Tax Optimizer** - Business structure & tax efficiency
 
+## Prerequisites
+
+Before using Finance Guru, ensure you have the following components installed and configured:
+
+### System Requirements
+
+- **Claude Code**: Latest version (multi-agent orchestration platform)
+    - Install: `curl -fsSL https://claude.ai/install.sh | bash`
+- **Node.js/TypeScript**: For skill activation hooks and automation
+    - Install: `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash`
+- **Python 3.12+**: Required for all financial analysis tools
+    - Install: `https://github.com/pyenv/pyenv?tab=readme-ov-file#installation`
+- **uv Package Manager**: Modern Python package manager for dependency management
+  - Install: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+  - Usage: `uv sync` (install all dependencies)
+- **Google Sheets Access**: Portfolio tracking and data management
+
+
 ## 📊 Quantitative Analysis Suite
 
 Finance Guru™ includes **11 production-ready quantitative analysis tools** built specifically for your portfolio. All tools use real market data and professional-grade calculations.
-
-### 🔬 Risk & Performance Analysis
-
-**1. Risk Metrics Calculator** - Measure portfolio risk
-- VaR (Value at Risk), CVaR (Conditional VaR)
-- Sharpe Ratio, Sortino Ratio, Calmar Ratio
-- Max Drawdown, Annual Volatility
-- Beta, Alpha (vs. benchmark)
-
-```bash
-# Quick risk scan
-uv run python src/analysis/risk_metrics_cli.py TSLA --days 90
-
-# Full analysis with benchmark
-uv run python src/analysis/risk_metrics_cli.py TSLA --days 252 --benchmark SPY
-```
-
-**2. Factor Analysis Engine** - Understand what drives your returns
-- CAPM (Capital Asset Pricing Model)
-- Market beta and alpha calculations
-- Return attribution by factor
-- Statistical significance testing
-
-```bash
-# Analyze return drivers
-uv run python src/analysis/factors_cli.py TSLA --days 252 --benchmark SPY
-```
-
-### 📈 Technical Analysis Tools
-
-**3. Momentum Indicators** - Identify trend strength
-- RSI (Relative Strength Index)
-- MACD (Moving Average Convergence Divergence)
-- Stochastic Oscillator, Williams %R, ROC
-- Confluence analysis (signal aggregation)
-
-```bash
-# Check momentum across all indicators
-uv run python src/utils/momentum_cli.py TSLA --days 90
-```
-
-**4. Volatility Metrics** - Assess price stability
-- Bollinger Bands
-- ATR (Average True Range)
-- Historical Volatility
-- Keltner Channels
-- Volatility regime assessment (low/normal/high/extreme)
-
-```bash
-# Assess volatility and get position sizing guidance
-uv run python src/utils/volatility_cli.py TSLA --days 90
-```
-
-**5. Moving Average Toolkit** - Detect trends
-- SMA (Simple), EMA (Exponential), WMA (Weighted), HMA (Hull)
-- Golden Cross / Death Cross detection
-- Crossover analysis and timing
-
-```bash
-# Classic 50/200 Golden Cross check
-uv run python src/utils/moving_averages_cli.py TSLA --days 252 --fast 50 --slow 200
-```
-
-**6. Technical Screener** - Find trading opportunities automatically
-- 8 pattern types: Golden Cross, RSI signals, MACD, Breakouts
-- Signal strength classification (weak/moderate/strong)
-- Portfolio screening with ranking
-- Buy/Sell/Hold recommendations
-
-```bash
-# Screen multiple stocks for opportunities
-uv run python src/utils/screener_cli.py TSLA PLTR NVDA AAPL --days 252
-```
-
-### 📊 Portfolio Management
-
-**7. Correlation & Covariance Engine** - Measure diversification
-- Correlation matrices (how assets move together)
-- Covariance analysis
-- Rolling correlations (time-varying relationships)
-- Diversification scoring
-- Concentration risk detection
-
-```bash
-# Check portfolio diversification
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 90
-```
-
-**8. Portfolio Optimizer** - Build optimal allocations
-- Mean-Variance Optimization (Markowitz)
-- Risk Parity (equal risk contribution)
-- Min Variance (defensive)
-- Max Sharpe (aggressive growth)
-- Black-Litterman (with your views)
-
-```bash
-# Optimize for maximum risk-adjusted returns
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method max_sharpe
-```
-
-### 🧪 Strategy Development
-
-**9. Backtesting Framework** - Test strategies before deploying
-- RSI mean reversion
-- SMA crossover
-- Buy-and-hold benchmark
-- Transaction cost modeling (commissions + slippage)
-- Performance metrics and trade logs
-
-```bash
-# Test RSI strategy with realistic costs
-uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy rsi \
-    --capital 500000 --commission 5.0 --slippage 0.001
-```
-
-### 🛡️ Data Quality & Options
-
-**10. Data Validator** - Ensure data quality
-- Missing data detection
-- Outlier detection (3 methods)
-- Stock split detection
-- Date gap analysis
-- Quality scoring (completeness, consistency, reliability)
-
-```bash
-# Validate data before analysis
-uv run python src/utils/data_validator_cli.py TSLA --days 90
-```
-
-**11. Options Analytics** - Price options and calculate Greeks
-- Black-Scholes pricing (calls & puts)
-- All five Greeks: Delta, Gamma, Theta, Vega, Rho
-- Implied volatility calculation
-- Put-call parity checks
-- Intrinsic vs. time value breakdown
-
-```bash
-# Price a call option
-uv run python src/analysis/options_cli.py \
-    --ticker TSLA \
-    --spot 265 \
-    --strike 250 \
-    --days 90 \
-    --volatility 0.45 \
-    --type call
-```
 
 ### 🏗️ Architecture
 
@@ -186,9 +58,23 @@ This design ensures:
 ### 📚 Tool Documentation
 
 For detailed guides on each tool, see:
-- **Complete Suite**: `docs/guides/final-4-tools-guide.md`
+- **Complete Suite**: `docs/guides/final-4-tools-guide.md` and `docs/guides/quantitative-analysis-tools.md`
 - **Risk Metrics**: `docs/guides/risk-metrics-tool-guide.md`
 - **Architecture**: `notebooks/tools-needed/type-safety-strategy.md`
+-
+
+### Skills System
+
+Finance Guru uses 6 active workflow skills with automatic activation:
+
+1. **skill-developer** (domain, block) - Skill system management
+2. **error-tracking** (domain, suggest) - Sentry monitoring patterns
+3. **portfolio-syncing** (domain, block) - Fidelity CSV imports to Google Sheets
+4. **dividend-tracking** (domain, suggest) - Dividend portfolio sync and calculations
+5. **margin-management** (domain, block) - Margin dashboard updates and alerts
+6. **formula-protection** (guardrail, block) - Spreadsheet formula safety
+
+**Configuration**: `.claude/skills/skill-rules.json`
 
 ### 🔗 Agent Tool Mapping
 
