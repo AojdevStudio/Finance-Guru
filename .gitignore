@@ -73,6 +73,8 @@ notebooks/
 fin-guru/data/user-profile.yaml
 # All generated strategies and reports
 docs/
+# Google Sheets portfolio optimizer scripts (contains sensitive portfolio logic)
+scripts/google-sheets/portfolio-optimizer/
 
 # Cache
 .cache/
