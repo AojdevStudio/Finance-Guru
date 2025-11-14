@@ -66,7 +66,7 @@ Key metrics from YOUR assessment:
 **URL**: https://docs.google.com/spreadsheets/d/1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4/edit
 
 This is YOUR live portfolio tracking spreadsheet with 6 tabs:
-- **Portfolio Positions** - Master holdings with prices, gains/losses, layer classification
+- **DataHub** - Master holdings with prices, gains/losses, layer classification
 - **Dividend Tracker** - Monthly dividend income monitoring and DRIP status
 - **Margin Dashboard** - Margin usage, interest costs, coverage ratios, scaling alerts
 - **Cash Flow Monitor** - Deposits, withdrawals, cash movements
@@ -80,7 +80,7 @@ This is YOUR live portfolio tracking spreadsheet with 6 tabs:
 **Key Principles for Agents**:
 - **Data Source**: Fidelity CSV exports (`notebooks/updates/`) are authoritative for ticker, quantity, and avg cost basis
 - **Price Data**: Google Finance formulas in Column C auto-update prices - DO NOT TOUCH
-- **Portfolio Positions**: WRITABLE columns = A (Ticker), B (Quantity), G (Avg Cost Basis) from CSV - all others are formula-maintained
+- **DataHub**: WRITABLE columns = A (Ticker), B (Quantity), G (Avg Cost Basis) from CSV - all others are formula-maintained
 - **Agent Permissions**: Quant = read-only, Builder = write-enabled, specialists have tab-specific access
 - **Safety Gates**: Stop on position mismatches, large changes (>10%), cost basis changes (>20%), formula errors (3+), margin jumps (>$5k)
 - **Formula Protection**: Never modify working formulas - only repair broken ones with IFERROR wrappers

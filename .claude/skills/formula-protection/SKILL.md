@@ -22,7 +22,7 @@ This skill **automatically blocks** when detecting:
 
 ## Sacred Formulas (NEVER TOUCH)
 
-### Portfolio Positions Tab
+### DataHub Tab
 
 **Column C: Last Price**
 ```
@@ -111,14 +111,14 @@ After: =IFERROR(B10 / B11, 0)
 **Example**:
 ```
 Before: =Sheet1!A1
-After: ='Portfolio Positions'!A1
+After: ='DataHub'!A1
 
 Before: ='Dividend Tracker OLD'!B10
 After: ='Dividend Tracker'!B10
 ```
 
 **When to use**:
-- Sheet was renamed (Sheet1 → Portfolio Positions)
+- Sheet was renamed (Sheet1 → DataHub)
 - Sheet was duplicated and old reference remains
 - Tab moved to different position
 
@@ -390,7 +390,7 @@ mcp__gdrive__sheets(
     operation: "spreadsheets.values.get",
     params: {
         spreadsheetId: SPREADSHEET_ID,  // from user-profile.yaml
-        range: "Portfolio Positions!A1:Z100"
+        range: "DataHub!A1:Z100"
     }
 )
 // Check for #N/A, #DIV/0!, #REF! in returned values
@@ -403,7 +403,7 @@ mcp__gdrive__sheets(
     operation: "spreadsheets.values.update",
     params: {
         spreadsheetId: SPREADSHEET_ID,  // from user-profile.yaml
-        range: "Portfolio Positions!C2:C2",
+        range: "DataHub!C2:C2",
         valueInputOption: "USER_ENTERED",
         requestBody: {
             values: [["=IFERROR(GOOGLEFINANCE(A2, \"price\"), \"N/A\")"]]

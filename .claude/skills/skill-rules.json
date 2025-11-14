@@ -89,13 +89,13 @@
             },
             "fileTriggers": {
                 "pathPatterns": [
-                    "notebooks/updates/Portfolio_Positions_*.csv",
+                    "notebooks/updates/DataHub_*.csv",
                     "notebooks/updates/Balances_for_Account_*.csv"
                 ],
                 "contentPatterns": [
                     "Symbol,Quantity",
                     "Average Cost Basis",
-                    "Portfolio_Positions",
+                    "DataHub",
                     "Account Number,Account Name,Symbol"
                 ]
             }

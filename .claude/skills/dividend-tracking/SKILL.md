@@ -1,18 +1,18 @@
 ---
 name: dividend-tracking
-description: Sync dividend portfolio data between Portfolio Positions and Dividend Tracker sheet. Cross-references Layer 2 dividend holdings, updates share counts, looks up dividend data, calculates expected income, and identifies distribution cuts. Triggers on dividend tracker, sync dividends, layer 2 income, DRIP status, or monthly dividend analysis.
+description: Sync dividend portfolio data between DataHub and Dividend Tracker sheet. Cross-references Layer 2 dividend holdings, updates share counts, looks up dividend data, calculates expected income, and identifies distribution cuts. Triggers on dividend tracker, sync dividends, layer 2 income, DRIP status, or monthly dividend analysis.
 ---
 
 # Dividend Tracking
 
 ## Purpose
 
-Maintain accurate dividend income tracking by syncing Layer 2 dividend fund holdings from Portfolio Positions to the Dividend Tracker sheet, ensuring expected monthly income calculations are current.
+Maintain accurate dividend income tracking by syncing Layer 2 dividend fund holdings from DataHub to the Dividend Tracker sheet, ensuring expected monthly income calculations are current.
 
 ## When to Use
 
 Use this skill when:
-- Portfolio Positions updated with new dividend funds
+- DataHub updated with new dividend funds
 - Monthly dividend cycle (checking expected payments)
 - User mentions: "dividend tracker", "sync dividends", "update dividends", "layer 2 income"
 - Analyzing dividend income or DRIP status
@@ -20,7 +20,7 @@ Use this skill when:
 
 ## Core Workflow
 
-### 1. Read Portfolio Positions
+### 1. Read DataHub
 
 **Filter**: Column S = "Layer 2 - Dividend"
 
@@ -60,7 +60,7 @@ AMZY: 65.748 shares
 - Column H: DRIP Status (Yes/No)
 
 **Identify Discrepancies**:
-- ❌ **MISSING funds**: In Portfolio Positions but not in Dividend Tracker
+- ❌ **MISSING funds**: In DataHub but not in Dividend Tracker
 - ⚠️ **MISMATCHED shares**: Share count differs between sheets
 - ⚠️ **OUTDATED data**: Dividend per share hasn't been updated in 30+ days
 
@@ -94,7 +94,7 @@ MSTY (YieldMax MSTR Option Income)
 
 **Update share count**:
 ```
-Column D (Shares Owned) = Portfolio Positions Column B
+Column D (Shares Owned) = DataHub Column B
 ```
 
 **Recalculate Total Dividend $**:
@@ -111,10 +111,10 @@ JEPQ: 92.043 shares × $0.51/share = $46.94/month
 #### For NEW Funds:
 
 **Add new row with**:
-- Column A: Fund Symbol (from Portfolio Positions)
+- Column A: Fund Symbol (from DataHub)
 - Column B: Fund Name (lookup from API or web search)
 - Column C: Dividend Frequency (Monthly/Quarterly)
-- Column D: Shares Owned (from Portfolio Positions)
+- Column D: Shares Owned (from DataHub)
 - Column E: Dividend Per Share (lookup current rate)
 - Column F: Total Dividend $ (formula: =D × E)
 - Column G: Ex-Dividend Date (lookup next ex-date)
@@ -171,7 +171,7 @@ Action: Look up ex-dates for upcoming month
 ## Critical Rules
 
 ### WRITABLE Columns (Dividend Tracker)
-- ✅ Column D: Shares Owned (sync from Portfolio Positions)
+- ✅ Column D: Shares Owned (sync from DataHub)
 - ✅ Column E: Dividend Per Share (update from API/web search)
 - ✅ Column G: Ex-Dividend Date (update from API/web search)
 
@@ -210,7 +210,7 @@ TOTAL: $2,847.32/month
 ## Monthly Review Triggers
 
 **When to run this workflow**:
-1. **After Portfolio Positions update** (new funds added)
+1. **After DataHub update** (new funds added)
 2. **Before ex-dividend dates** (validate shares owned)
 3. **After dividend payments** (confirm amounts match expectations)
 4. **Monthly strategy review** (assess progress toward $100k/year goal)
@@ -272,7 +272,7 @@ mcp__gdrive__sheets(
 - CANNOT modify Total Dividend $ formula (Column F)
 
 **Builder** (Write-enabled):
-- Can add new funds after Portfolio Positions sync
+- Can add new funds after DataHub sync
 - Can repair broken formulas
 - Can update DRIP status
 
@@ -293,7 +293,7 @@ For complete details, see:
 ## Pre-Flight Checklist
 
 Before syncing Dividend Tracker:
-- [ ] Portfolio Positions is up-to-date (CSV import completed)
+- [ ] DataHub is up-to-date (CSV import completed)
 - [ ] Layer 2 filter applied correctly (Column S)
 - [ ] Dividend Tracker sheet exists in Google Sheets
 - [ ] No manual edits pending (user should save first)
@@ -302,10 +302,10 @@ Before syncing Dividend Tracker:
 
 ## Example Scenario
 
-**Trigger**: Portfolio Positions updated with 3 new dividend funds
+**Trigger**: DataHub updated with 3 new dividend funds
 
 **Agent workflow**:
-1. ✅ Read Portfolio Positions Layer 2 - found 14 dividend funds
+1. ✅ Read DataHub Layer 2 - found 14 dividend funds
 2. ✅ Read Dividend Tracker - found 11 funds
 3. ⚠️ MISSING FUNDS DETECTED:
    - MSTY: 87.9 shares (not in tracker)

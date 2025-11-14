@@ -1,13 +1,13 @@
 ---
 name: portfolio-syncing
-description: Import and sync portfolio data from Fidelity CSV exports to Google Sheets Portfolio Positions. Handles CSV parsing, position updates, safety checks for mismatches and large changes, and validates formula integrity. Triggers on import fidelity, sync portfolio, update positions, CSV import, or working with Portfolio_Positions CSVs.
+description: Import and sync portfolio data from Fidelity CSV exports to Google Sheets DataHub. Handles CSV parsing, position updates, safety checks for mismatches and large changes, and validates formula integrity. Triggers on import fidelity, sync portfolio, update positions, CSV import, or working with Portfolio_Positions CSVs.
 ---
 
 # Portfolio Syncing
 
 ## Purpose
 
-Safely import Fidelity CSV position exports into the Google Sheets Portfolio Positions tab, ensuring data integrity, validating changes, and protecting sacred formulas.
+Safely import Fidelity CSV position exports into the Google Sheets DataHub tab, ensuring data integrity, validating changes, and protecting sacred formulas.
 
 ## When to Use
 
@@ -38,7 +38,7 @@ PLTR,369.746,$188.90,$69845.01,+$60235.59,...,$25.99
 
 ### 2. Compare with Current Sheet
 
-**Read from Google Sheets Portfolio Positions**:
+**Read from Google Sheets DataHub**:
 - Column A: Ticker
 - Column B: Quantity
 - Column G: Avg Cost Basis
@@ -195,12 +195,12 @@ Use these patterns to auto-classify new tickers in Column S:
 // Load fin-guru/data/user-profile.yaml
 // Extract: google_sheets.portfolio_tracker.spreadsheet_id
 
-// STEP 2: Read Portfolio Positions
+// STEP 2: Read DataHub
 mcp__gdrive__sheets(
     operation: "spreadsheets.values.get",
     params: {
         spreadsheetId: SPREADSHEET_ID,  // from user-profile.yaml
-        range: "Portfolio Positions!A2:G50"
+        range: "DataHub!A2:G50"
     }
 )
 
@@ -209,7 +209,7 @@ mcp__gdrive__sheets(
     operation: "spreadsheets.values.update",
     params: {
         spreadsheetId: SPREADSHEET_ID,  // from user-profile.yaml
-        range: "Portfolio Positions!A2:G50",
+        range: "DataHub!A2:G50",
         valueInputOption: "USER_ENTERED",
         requestBody: {
             values: [[ticker, quantity, "", "", "", "", avg_cost], ...]
@@ -245,7 +245,7 @@ Before importing CSV:
 - [ ] CSV file is latest by date
 - [ ] CSV is from Fidelity (not M1 Finance or other broker)
 - [ ] File is in `notebooks/updates/` directory
-- [ ] Google Sheets Portfolio Positions tab exists
+- [ ] Google Sheets DataHub tab exists
 - [ ] No pending manual edits in sheet (user should save first)
 - [ ] Current portfolio value is known (for validation)
 
