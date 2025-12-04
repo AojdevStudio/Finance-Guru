@@ -53,3 +53,4 @@ class PortfolioHeader(Widget):
             (f"📅 {timestamp}", "dim"),
         )
 
+

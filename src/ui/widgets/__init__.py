@@ -6,3 +6,4 @@ from src.ui.widgets.results_panel import ResultsPanel
 
 __all__ = ["PortfolioHeader", "TickerInput", "ResultsPanel"]
 
+

@@ -79,6 +79,7 @@ scripts/google-sheets/portfolio-optimizer/
 # Cache
 .cache/
 .streamlit/
+.claude/tsc-cache/
 
 # Claude Code session data
 .claude/data/sessions/
