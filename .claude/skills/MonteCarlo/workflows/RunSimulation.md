@@ -68,10 +68,10 @@ This produces:
 
 ### Step 5: Generate Excel Workbook
 
-Update the paths in `scripts/monte_carlo_excel_export.py` if needed, then run:
+Update the paths in `scripts/simulations/monte_carlo_excel_export.py` if needed, then run:
 
 ```bash
-uv run python scripts/monte_carlo_excel_export.py
+uv run python scripts/simulations/monte_carlo_excel_export.py
 ```
 
 This produces:

@@ -203,7 +203,7 @@
                 "pathPatterns": [
                     "docs/fin-guru/analysis/reports/*.pdf",
                     "docs/fin-guru/analysis/*watchlist*.md",
-                    "scripts/generate_*_report.py"
+                    "scripts/reports/generate_*_report.py"
                 ]
             }
         }
