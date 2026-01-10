@@ -482,3 +482,188 @@ class TestITCRiskCalculatorIntegration:
         assert isinstance(result, ITCRiskResponse)
         assert result.symbol == "BTC"
         assert 0 <= result.current_risk_score <= 1
+
+
+class TestITCRiskCLI:
+    """Tests for the ITC Risk CLI interface."""
+
+    def test_cli_list_supported_tradfi(self, capsys):
+        """CLI --list-supported should display tradfi tickers."""
+        from src.analysis.itc_risk_cli import list_supported_tickers
+
+        list_supported_tickers("tradfi")
+
+        captured = capsys.readouterr()
+        assert "TRADFI" in captured.out
+        assert "TSLA" in captured.out
+        assert "AAPL" in captured.out
+
+    def test_cli_list_supported_crypto(self, capsys):
+        """CLI --list-supported should display crypto tickers."""
+        from src.analysis.itc_risk_cli import list_supported_tickers
+
+        list_supported_tickers("crypto")
+
+        captured = capsys.readouterr()
+        assert "CRYPTO" in captured.out
+        assert "BTC" in captured.out
+        assert "ETH" in captured.out
+
+    def test_cli_format_output_human(self):
+        """CLI should format human-readable output correctly."""
+        from src.analysis.itc_risk_cli import format_output_human
+
+        response = ITCRiskResponse(
+            symbol="TSLA",
+            universe="tradfi",
+            current_price=450.0,
+            current_risk_score=0.5,
+            risk_bands=[
+                RiskBand(price=400.0, risk_score=0.4),
+                RiskBand(price=500.0, risk_score=0.6),
+            ],
+            timestamp=datetime.now(),
+        )
+
+        output = format_output_human(response)
+
+        assert "TSLA" in output
+        assert "TRADFI" in output
+        assert "0.500" in output or "0.5" in output
+        assert "MEDIUM RISK" in output
+
+    def test_cli_format_output_human_low_risk(self):
+        """CLI should format low risk output with green indicator."""
+        from src.analysis.itc_risk_cli import format_output_human
+
+        response = ITCRiskResponse(
+            symbol="AAPL",
+            universe="tradfi",
+            current_risk_score=0.2,
+            risk_bands=[],
+            timestamp=datetime.now(),
+        )
+
+        output = format_output_human(response)
+
+        assert "AAPL" in output
+        assert "LOW RISK" in output
+
+    def test_cli_format_output_human_high_risk(self):
+        """CLI should format high risk output with red indicator."""
+        from src.analysis.itc_risk_cli import format_output_human
+
+        response = ITCRiskResponse(
+            symbol="MSTR",
+            universe="tradfi",
+            current_risk_score=0.85,
+            risk_bands=[],
+            timestamp=datetime.now(),
+        )
+
+        output = format_output_human(response)
+
+        assert "MSTR" in output
+        assert "HIGH RISK" in output
+
+    def test_cli_format_output_json_single(self):
+        """CLI should format single result as JSON object."""
+        from src.analysis.itc_risk_cli import format_output_json
+        import json
+
+        response = ITCRiskResponse(
+            symbol="TSLA",
+            universe="tradfi",
+            current_risk_score=0.5,
+            risk_bands=[],
+            timestamp=datetime.now(),
+        )
+
+        output = format_output_json([response])
+
+        # Should be valid JSON
+        parsed = json.loads(output)
+        assert parsed["symbol"] == "TSLA"
+        assert parsed["current_risk_score"] == 0.5
+
+    def test_cli_format_output_json_multiple(self):
+        """CLI should format multiple results as JSON array."""
+        from src.analysis.itc_risk_cli import format_output_json
+        import json
+
+        responses = [
+            ITCRiskResponse(
+                symbol="TSLA",
+                universe="tradfi",
+                current_risk_score=0.5,
+                risk_bands=[],
+                timestamp=datetime.now(),
+            ),
+            ITCRiskResponse(
+                symbol="AAPL",
+                universe="tradfi",
+                current_risk_score=0.3,
+                risk_bands=[],
+                timestamp=datetime.now(),
+            ),
+        ]
+
+        output = format_output_json(responses)
+
+        # Should be valid JSON array
+        parsed = json.loads(output)
+        assert isinstance(parsed, list)
+        assert len(parsed) == 2
+        assert parsed[0]["symbol"] == "TSLA"
+        assert parsed[1]["symbol"] == "AAPL"
+
+    def test_cli_format_output_with_full_table(self):
+        """CLI --full-table should show all risk bands."""
+        from src.analysis.itc_risk_cli import format_output_human
+
+        response = ITCRiskResponse(
+            symbol="TSLA",
+            universe="tradfi",
+            current_price=450.0,
+            current_risk_score=0.5,
+            risk_bands=[
+                RiskBand(price=100.0, risk_score=0.0),
+                RiskBand(price=200.0, risk_score=0.2),
+                RiskBand(price=300.0, risk_score=0.4),
+                RiskBand(price=400.0, risk_score=0.5),
+                RiskBand(price=500.0, risk_score=0.6),
+                RiskBand(price=600.0, risk_score=0.7),
+                RiskBand(price=700.0, risk_score=0.8),
+                RiskBand(price=800.0, risk_score=0.9),
+            ],
+            timestamp=datetime.now(),
+        )
+
+        output = format_output_human(response, full_table=True)
+
+        assert "FULL RISK BAND TABLE" in output
+        # All prices should be in output
+        assert "100.00" in output
+        assert "800.00" in output
+
+    def test_cli_format_output_high_risk_distance(self):
+        """CLI should show distance to high risk zone."""
+        from src.analysis.itc_risk_cli import format_output_human
+
+        response = ITCRiskResponse(
+            symbol="TSLA",
+            universe="tradfi",
+            current_price=450.0,
+            current_risk_score=0.5,
+            risk_bands=[
+                RiskBand(price=400.0, risk_score=0.4),
+                RiskBand(price=600.0, risk_score=0.75),  # First high risk
+                RiskBand(price=800.0, risk_score=0.9),
+            ],
+            timestamp=datetime.now(),
+        )
+
+        output = format_output_human(response)
+
+        # Should show high risk price with distance calculation
+        assert "High Risk at:" in output or "600.00" in output
