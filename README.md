@@ -1,5 +1,11 @@
 # Finance Guru™
 
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-Powered-blueviolet)](https://claude.ai/claude-code)
+[![Tools](https://img.shields.io/badge/analysis%20tools-11-green.svg)](#11-production-ready-analysis-tools)
+[![Agents](https://img.shields.io/badge/AI%20agents-8-orange.svg)](#what-i-built)
+[![License](https://img.shields.io/badge/license-Private-red.svg)](#security--privacy)
+
 **Stop juggling 10 browser tabs for financial analysis. One command activates 8 AI specialists who work together as your private family office.**
 
 ![Architecture](docs/images/finance-guru-architecture.png)
