@@ -90,3 +90,6 @@ scripts/google-sheets/portfolio-optimizer/
 # Claude Code session data
 .claude/data/sessions/
 .mcp.json
+
+# Private scripts
+scripts/
