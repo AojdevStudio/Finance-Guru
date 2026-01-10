@@ -35,3 +35,7 @@ testpaths = ["tests/python"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+pythonpath = ["."]
+markers = [
+    "integration: marks tests as integration tests (require real API keys)",
+]
