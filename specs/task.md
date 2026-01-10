@@ -321,6 +321,144 @@ Provide specific file:line references for all issues found.
 
 ---
 
+## Phase 6: Changelog & GitHub Release
+
+### 6.1 Create CHANGELOG.md
+
+**Goal:** Document all changes for public release
+
+**Tasks:**
+- [ ] Create `CHANGELOG.md` in project root
+- [ ] Follow [Keep a Changelog](https://keepachangelog.com/) format
+- [ ] Document all features in v2.0.0 release
+
+**CHANGELOG.md Structure:**
+```markdown
+# Changelog
+
+All notable changes to Finance Guru will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.0.0] - 2026-01-XX
+
+### Added
+- Multi-agent system with 11 specialized financial agents
+- 12 production-ready CLI analysis tools
+- Hook-driven architecture for context injection
+- Multi-broker support (Fidelity, Schwab, Robinhood, Vanguard, E*TRADE, IBKR)
+- Onboarding specialist for new user setup
+- Comprehensive documentation (api.md, hooks.md, contributing.md)
+- Setup script for automated installation
+- Skills system with auto-activation
+
+### Features
+- Risk Metrics CLI (VaR, CVaR, Sharpe, Sortino, Max DD)
+- Momentum CLI (RSI, MACD, Stochastic)
+- Volatility CLI (Bollinger Bands, ATR, Regime)
+- Correlation CLI (Pearson, diversification scoring)
+- Portfolio Optimizer (Max Sharpe, Risk Parity, Black-Litterman)
+- Backtester (strategy validation)
+- Options Pricer (Black-Scholes, Greeks, IV)
+- Technical Screener (pattern detection)
+- Factor Analysis (CAPM, Alpha, Beta)
+- Data Validator (quality checks)
+
+### Architecture
+- CLI-First design for token efficiency
+- 3-layer pattern (Pydantic → Calculator → CLI)
+- Session start context injection via hooks
+- Skills auto-activation based on intent patterns
+
+## [1.0.0] - 2025-XX-XX
+
+### Added
+- Initial release (private)
+```
+
+### 6.2 Create GitHub Release
+
+**Goal:** Create official v2.0.0 release on GitHub
+
+**Tasks:**
+- [ ] Create git tag: `git tag -a v2.0.0 -m "Finance Guru v2.0.0 - Public Release"`
+- [ ] Push tag: `git push origin v2.0.0`
+- [ ] Create GitHub release via `gh` CLI:
+
+**Command:**
+```bash
+gh release create v2.0.0 \
+  --title "Finance Guru v2.0.0 - Public Release" \
+  --notes-file RELEASE_NOTES.md \
+  --latest
+```
+
+### 6.3 Create RELEASE_NOTES.md
+
+**Goal:** Detailed release notes for GitHub release page
+
+**Tasks:**
+- [ ] Create `RELEASE_NOTES.md` with:
+  - Overview of Finance Guru
+  - Key features
+  - Quick start instructions
+  - Breaking changes (if any)
+  - Migration guide (if applicable)
+  - Known issues
+  - Contributors
+
+**Template:**
+```markdown
+# Finance Guru v2.0.0 - Public Release
+
+Your AI-powered private family office. Stop juggling 10 browser tabs for financial analysis—one command activates 8 AI specialists who work together.
+
+## Highlights
+
+- **11 Specialized Agents** - Finance Orchestrator, Market Researcher, Quant Analyst, and more
+- **12 CLI Tools** - Production-ready analysis tools for risk, momentum, volatility, correlation
+- **Multi-Broker Support** - Works with Fidelity, Schwab, Robinhood, Vanguard, E*TRADE, IBKR
+- **Token Efficient** - CLI-first architecture keeps context window free
+
+## Quick Start
+
+\`\`\`bash
+git clone https://github.com/AojdevStudio/Finance-Guru.git
+cd Finance-Guru
+./setup.sh
+claude
+/fin-guru:agents:onboarding-specialist
+\`\`\`
+
+## Requirements
+
+- Python 3.12+
+- Claude Code CLI
+- MCP Servers: exa, bright-data, sequential-thinking
+
+## Documentation
+
+- [README](README.md) - Project overview
+- [API Reference](docs/api.md) - CLI tools documentation
+- [Hooks System](docs/hooks.md) - Architecture details
+- [Contributing](docs/contributing.md) - Development guide
+
+## Educational Disclaimer
+
+Finance Guru is for educational purposes only. Not investment advice.
+```
+
+### 6.4 Verify Release
+
+**Tasks:**
+- [ ] Verify tag exists: `git tag -l`
+- [ ] Verify release on GitHub: `gh release view v2.0.0`
+- [ ] Test clone from release: `git clone --branch v2.0.0 ...`
+- [ ] Verify setup.sh works on fresh release clone
+
+---
+
 ## Summary Checklist
 
 | Phase | Task | Status |
@@ -339,6 +477,10 @@ Provide specific file:line references for all issues found.
 | 5.2 | Run Codex review | [ ] |
 | 5.3 | Fix Codex feedback | [ ] |
 | 5.4 | Final commit and push | [ ] |
+| 6.1 | Create CHANGELOG.md | [ ] |
+| 6.2 | Create GitHub release | [ ] |
+| 6.3 | Create RELEASE_NOTES.md | [ ] |
+| 6.4 | Verify release | [ ] |
 
 ---
 
