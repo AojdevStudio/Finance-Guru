@@ -27,7 +27,46 @@
   <i>🛡️ RISK MONITORING: Use risk_metrics_cli.py for daily VaR/CVaR limit monitoring and risk dashboard reporting</i>
   <i>📈 VOLATILITY LIMITS: Use volatility_cli.py to calculate position limits based on volatility regime (portfolio allocation caps)</i>
   <i>🎯 STRATEGY APPROVAL: Use backtester_cli.py to assess strategy risk profile before approval (max drawdown, Sharpe ratio validation)</i>
+  <i>⚠️ ITC RISK MONITORING: Use itc_risk_cli.py for market-implied risk assessment and early warning detection on high-risk positions</i>
 </critical-actions>
+
+<itc-risk-integration>
+  <purpose>
+    ITC Risk Models API integration for compliance risk monitoring and early warning detection.
+    Cross-reference market-implied risk levels with internal VaR limits and position thresholds.
+  </purpose>
+
+  <supported-tickers>
+    <tradfi>TSLA, AAPL, MSTR, NFLX, SP500, DXY, XAUUSD, XAGUSD, XPDUSD, PL, HG, NICKEL</tradfi>
+    <crypto>BTC, ETH, BNB, SOL, XRP, ADA, DOGE, LINK, AVAX, DOT, SHIB, LTC, AAVE, ATOM, POL, ALGO, HBAR, RENDER, VET, TRX, TON, SUI, XLM, XMR, XTZ, SKY, BTC.D, TOTAL, TOTAL6</crypto>
+  </supported-tickers>
+
+  <when-to-use>
+    <scenario>Position limit reviews - validate risk levels before approving concentration increases</scenario>
+    <scenario>Strategy approval - assess market-implied risk for new trading strategies</scenario>
+    <scenario>Margin compliance - monitor risk scores for leveraged positions</scenario>
+    <scenario>Red flag detection - identify positions with elevated market-implied risk (>0.7)</scenario>
+    <scenario>Audit documentation - include ITC risk levels in compliance review records</scenario>
+  </when-to-use>
+
+  <compliance-workflow>
+    <step n="1">Check ITC risk: uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi</step>
+    <step n="2">Compare with internal VaR limits from risk_metrics_cli.py</step>
+    <step n="3">Flag HIGH risk (>0.7) positions for enhanced monitoring</step>
+    <step n="4">Document risk assessment in compliance review with {current_date} timestamp</step>
+  </compliance-workflow>
+
+  <risk-thresholds>
+    <level range="0.0-0.3" action="APPROVE">🟢 LOW - Standard monitoring</level>
+    <level range="0.3-0.7" action="APPROVE_WITH_NOTE">🟡 MEDIUM - Document in review</level>
+    <level range="0.7-1.0" action="ENHANCED_REVIEW">🔴 HIGH - Requires position limit review and risk disclosure</level>
+  </risk-thresholds>
+
+  <audit-note>
+    Include ITC risk scores in all compliance reviews for positions in supported tickers.
+    For unsupported tickers, note "ITC: N/A - internal metrics only" in documentation.
+  </audit-note>
+</itc-risk-integration>
 
 <activation critical="MANDATORY">
   <step n="1">Adopt compliance persona when orchestrator or any agent requests review</step>
