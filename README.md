@@ -1,248 +1,178 @@
-# Finance Guru™ - Private Family Office
+# Finance Guru™
 
-This is my private Finance Guru™ system - my personal AI-powered family office.
+**Stop juggling 10 browser tabs for financial analysis. One command activates 8 AI specialists who work together as your private family office.**
 
-## 🎯 What This Is
-
-This repository is where I interact with Finance Guru™ - my team of specialized AI agents that serve as my personal family office. This is not an app or product - this IS Finance Guru, working exclusively for me to manage my financial strategies, analysis, and decision-making.
-
-
-## 🤖 My Finance Guru Team
-
-My personal team of specialized agents:
-
-- **Cassandra Holt** - Finance Orchestrator (Master Coordinator)
-- **Market Researcher** - Intelligence & market analysis
-- **Quant Analyst** - Data modeling & metrics
-- **Strategy Advisor** - Portfolio optimization
-- **Compliance Officer** - Risk & regulatory oversight
-- **Margin Specialist** - Leveraged strategies
-- **Dividend Specialist** - Income optimization
-- **Tax Optimizer** - Business structure & tax efficiency
-
-## Prerequisites
-
-Before using Finance Guru, ensure you have the following components installed and configured:
-
-### System Requirements
-
-- **Claude Code**: Latest version (multi-agent orchestration platform)
-    - Install: `curl -fsSL https://claude.ai/install.sh | bash`
-- **Node.js/TypeScript**: For skill activation hooks and automation
-    - Install: `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash`
-- **Python 3.12+**: Required for all financial analysis tools
-    - Install: `https://github.com/pyenv/pyenv?tab=readme-ov-file#installation`
-- **uv Package Manager**: Modern Python package manager for dependency management
-  - Install: `curl -LsSf https://astral.sh/uv/install.sh | sh`
-  - Usage: `uv sync` (install all dependencies)
-- **Google Sheets Access**: Portfolio tracking and data management
-
-
-## 📊 Quantitative Analysis Suite
-
-Finance Guru™ includes **11 production-ready quantitative analysis tools** built specifically for your portfolio. All tools use real market data and professional-grade calculations.
-
-### 🏗️ Architecture
-
-All tools follow a **3-layer architecture**:
-1. **Pydantic Models** - Type-safe input validation
-2. **Calculator Classes** - Business logic and calculations
-3. **CLI Interfaces** - Command-line integration for agents
-
-This design ensures:
-- ✅ Data validation before any calculations
-- ✅ Educational documentation for non-developers
-- ✅ Consistent output formats (human-readable & JSON)
-- ✅ Easy integration with all Finance Guru agents
-
-### 📚 Tool Documentation
-
-For detailed guides on each tool, see:
-- **Complete Suite**: `docs/guides/final-4-tools-guide.md` and `docs/guides/quantitative-analysis-tools.md`
-- **Risk Metrics**: `docs/guides/risk-metrics-tool-guide.md`
-- **Architecture**: `notebooks/tools-needed/type-safety-strategy.md`
--
-
-### Skills System
-
-Finance Guru uses 6 active workflow skills with automatic activation:
-
-1. **skill-developer** (domain, block) - Skill system management
-2. **error-tracking** (domain, suggest) - Sentry monitoring patterns
-3. **portfolio-syncing** (domain, block) - Fidelity CSV imports to Google Sheets
-4. **dividend-tracking** (domain, suggest) - Dividend portfolio sync and calculations
-5. **margin-management** (domain, block) - Margin dashboard updates and alerts
-6. **formula-protection** (guardrail, block) - Spreadsheet formula safety
-
-**Configuration**: `.claude/skills/skill-rules.json`
-
-### 🔗 Agent Tool Mapping
-
-Different agents use different tools for their specialization:
-
-| Agent | Primary Tools |
-|-------|--------------|
-| **Market Researcher** | Technical Screener, Momentum, Moving Averages, Data Validator, ITC Risk |
-| **Quant Analyst** | Risk Metrics, Factor Analysis, Correlation, Volatility, Options, ITC Risk |
-| **Strategy Advisor** | Portfolio Optimizer, Backtester, Technical Screener, ITC Risk |
-| **Compliance Officer** | Risk Metrics, Data Validator, Volatility (position limits), ITC Risk |
-| **Margin Specialist** | Volatility, Options Greeks, Risk Metrics (Beta, VaR) |
-| **Dividend Specialist** | Correlation (portfolio construction), Risk Metrics |
-
-## 📁 Repository Structure
-
-```
-family-office/
-│
-├── src/                   # Python modules for analysis
-│   ├── analysis/          # Risk, factors, correlation, options, ITC Risk integration
-│   ├── strategies/        # Backtester, optimizer
-│   ├── utils/             # Momentum, volatility, screener, validators
-│   └── models/            # Pydantic models for all tools
-├── scripts/               # Financial automation & reporting
-│   ├── reports/           # Report generation scripts (21 templates)
-│   ├── simulations/       # Monte Carlo & DRIP simulations (5 scripts)
-│   ├── data/              # Data processing & utilities
-│   ├── utils/             # Utility scripts (monthly refresh, automation)
-│   ├── rbp/               # RBP execution framework
-│   ├── google-sheets/     # Google Apps Script code
-│   └── archive/           # Legacy/unused scripts
-├── notebooks/             # Jupyter analysis notebooks
-├── docs/                  # My financial documents & summaries
-│   ├── fin-guru/          # Generated analyses
-│   └── guides/            # Tool documentation
-├── research/finance/      # My assessment data
-└── fin-guru/              # Finance Guru agent configurations
-    ├── agents/            # Agent definitions
-    ├── tasks/             # Workflow definitions
-    ├── templates/         # Document templates
-    └── data/              # Knowledge base & user profile
-```
-
-## 🚀 How I Use This
-
-### Primary Interface
-```bash
-/finance-orchestrator    # Cassandra coordinates everything
-```
-
-### Direct Agent Access
-```bash
-*agent market-research   # Become Market Researcher
-*agent quant            # Become Quant Analyst
-*agent strategy         # Become Strategy Advisor
-```
-
-### Task Execution
-```bash
-*research               # Execute research workflow
-*analyze                # Execute quantitative analysis
-*strategize             # Execute strategy integration
-```
-
-### Status Check
-```bash
-*status                 # Current context & progress
-*help                   # Show available commands
-```
-
-## 💡 Example Workflows
-
-### Quick Market Analysis
-```bash
-# 1. Check data quality
-uv run python src/utils/data_validator_cli.py TSLA --days 90
-
-# 2. Assess risk profile
-uv run python src/analysis/risk_metrics_cli.py TSLA --days 90 --benchmark SPY
-
-# 3. Check market-implied risk (ITC Risk Models)
-uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi
-
-# 4. Check momentum and trend
-uv run python src/utils/momentum_cli.py TSLA --days 90
-uv run python src/utils/moving_averages_cli.py TSLA --days 252 --fast 50 --slow 200
-```
-
-### Portfolio Rebalancing
-```bash
-# 1. Check current correlations
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA SPY --days 90
-
-# 2. Optimize allocation
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 \
-    --method max_sharpe --max-position 0.30
-
-# 3. Validate with backtesting
-uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy rsi
-```
-
-### Options Strategy Analysis
-```bash
-# 1. Check current volatility regime
-uv run python src/utils/volatility_cli.py TSLA --days 90
-
-# 2. Price option and get Greeks
-uv run python src/analysis/options_cli.py \
-    --ticker TSLA --spot 265 --strike 250 --days 90 \
-    --volatility 0.45 --type call
-
-# 3. Calculate implied volatility from market price
-uv run python src/analysis/options_cli.py \
-    --ticker TSLA --spot 265 --strike 250 --days 90 \
-    --market-price 25.50 --type call --implied-vol
-```
-
-## 🔒 Security Note
-
-This is my private financial command center. All data stays local. No external access.
-
-## 📊 Working Areas
-
-- Portfolio optimization & rebalancing
-- Cash flow analysis & projections
-- Tax strategy & business structure optimization
-- Investment research & due diligence
-- Risk assessment & hedging strategies
-- Debt optimization & refinancing analysis
-- Options strategy development & Greeks-based hedging
-- Technical analysis & opportunity screening
-
-## ⚠️ Important Disclaimers
-
-**Educational Use Only**: All analyses and recommendations generated by Finance Guru™ are for educational purposes only and should not be considered financial advice.
-
-**Not Investment Advice**: Finance Guru™ is a research and analysis tool. Always consult with licensed financial professionals before making investment decisions.
-
-**Risk Disclosure**: All investments carry risk, including potential loss of principal. Past performance does not guarantee future results.
-
-**Data Accuracy**: While Finance Guru™ uses professional-grade calculations and validates data quality, always verify critical information independently.
-
-## 🛠️ Technical Stack
-
-- **Python 3.12+** - Core language
-- **uv** - Package manager (fast, reliable)
-- **pandas, numpy, scipy** - Data analysis & statistics
-- **yfinance** - Real-time market data
-- **scikit-learn** - Machine learning & regression
-- **pydantic** - Type-safe data validation
-- **streamlit** - Visualization (when needed)
-
-## 📖 Learning Resources
-
-This system is built with educational explanations throughout:
-- Tool help text: `<tool> --help`
-- In-code documentation: Check Python docstrings
-- Comprehensive guides: `docs/guides/`
-- Architecture notes: `notebooks/tools-needed/`
-
-## 🔄 Version Information
-
-- **Finance Guru™**: v2.0.0
-- **BMAD-CORE™**: v6.0.0
-- **Tools Built**: 11 of 11 (Complete Suite)
-- **Last Updated**: 2026-01-09
+![Architecture](docs/images/finance-guru-architecture.png)
 
 ---
 
-**This is Finance Guru™** - My AI-powered family office, working exclusively for me.
+## The Problem I Solved
+
+I was drowning in complexity. Every investment decision meant:
+- Opening Yahoo Finance for prices
+- Switching to a spreadsheet for calculations
+- Googling "how to calculate Sharpe ratio" (again)
+- Copy-pasting data between 5 different tools
+- Second-guessing myself because I couldn't see the full picture
+
+**The real cost wasn't time—it was confidence.** I never felt certain my analysis was complete.
+
+## The Insight
+
+What if instead of me becoming an expert in everything, I could have a *team* of experts who already knew my portfolio, my risk tolerance, and my goals?
+
+Not a chatbot. Not an app. A **personal family office** that treats me like a wealth management client—but built on AI agents that can actually run calculations.
+
+## What I Built
+
+Finance Guru™ is my private AI-powered family office. It's not software you install—it's a system where Claude transforms into specialized financial agents who work exclusively for me.
+
+**One command:**
+```bash
+/finance-orchestrator
+```
+
+**Eight specialists activate:**
+
+| Agent | Expertise | What They Do |
+|-------|-----------|--------------|
+| **Cassandra Holt** | Orchestrator | Coordinates the team, routes my requests |
+| **Market Researcher** | Intelligence | Scans markets, identifies opportunities |
+| **Quant Analyst** | Data Science | Runs calculations, builds models |
+| **Strategy Advisor** | Portfolio | Optimizes allocations, validates strategies |
+| **Compliance Officer** | Risk | Checks position limits, flags concerns |
+| **Margin Specialist** | Leverage | Analyzes margin strategies safely |
+| **Dividend Specialist** | Income | Optimizes yield, tracks distributions |
+| **Tax Optimizer** | Efficiency | Structures holdings for tax advantage |
+
+## See It In Action
+
+**Me:** "Should I add more TSLA to my portfolio?"
+
+**What happens behind the scenes:**
+```bash
+# Market Researcher checks momentum
+uv run python src/utils/momentum_cli.py TSLA --days 90
+
+# Quant Analyst calculates risk metrics
+uv run python src/analysis/risk_metrics_cli.py TSLA --days 90 --benchmark SPY
+
+# Quant Analyst checks market-implied risk
+uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi
+
+# Strategy Advisor checks correlation with existing holdings
+uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 90
+
+# Compliance Officer validates position size
+# → Checks if addition exceeds concentration limits
+```
+
+**What I get:** A coordinated answer that considers momentum, risk, correlation, and compliance—not just a single data point.
+
+## The Technical Foundation
+
+### 11 Production-Ready Analysis Tools
+
+Every tool follows the same bulletproof pattern:
+
+```
+Pydantic Models → Calculator Classes → CLI Interfaces
+     ↓                    ↓                  ↓
+ Type Safety         Business Logic      Agent Access
+```
+
+| Category | Tools | Key Metrics |
+|----------|-------|-------------|
+| **Risk** | Risk Metrics, ITC Risk | VaR, CVaR, Sharpe, Sortino, Max Drawdown, Beta, Alpha |
+| **Technical** | Momentum, Moving Averages, Volatility | RSI, MACD, Golden Cross, Bollinger Bands, ATR |
+| **Portfolio** | Correlation, Optimizer, Backtester | Diversification score, Max Sharpe, Risk Parity |
+| **Options** | Options Pricer | Black-Scholes, Greeks, Implied Volatility |
+
+### External Risk Intelligence
+
+**ITC Risk Models API** integration provides market-implied risk scores:
+- Real-time risk assessment for TSLA, AAPL, MSTR, NFLX, SP500, commodities
+- Risk bands help agents validate entry/exit timing
+- Complements internal quant metrics with external perspective
+
+## Quick Start
+
+### Prerequisites
+```bash
+# Claude Code (the orchestration platform)
+curl -fsSL https://claude.ai/install.sh | bash
+
+# Python 3.12+ with uv package manager
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv sync
+```
+
+### Your First Analysis
+```bash
+# Activate Finance Guru
+/finance-orchestrator
+
+# Or go direct to a specialist
+*agent quant            # "Analyze TSLA risk profile"
+*agent strategy         # "Optimize my portfolio allocation"
+*agent market-research  # "What's the momentum on NVDA?"
+```
+
+## Project Structure
+
+```
+family-office/
+├── src/                      # Analysis engine
+│   ├── analysis/             # Risk, correlation, options, ITC Risk
+│   ├── strategies/           # Backtester, optimizer
+│   ├── utils/                # Momentum, volatility, validators
+│   └── models/               # Pydantic type definitions
+├── scripts/                  # Automation
+│   ├── reports/              # 21 report templates
+│   ├── simulations/          # Monte Carlo, DRIP projections
+│   └── rbp/                  # Autonomous execution framework
+├── fin-guru/                 # Agent system
+│   ├── agents/               # 8 specialist definitions
+│   ├── tasks/                # Workflow configurations
+│   └── data/                 # Knowledge base, user profile
+└── docs/                     # Analysis outputs & guides
+```
+
+## Why This Approach Works
+
+**Traditional tools** give you data. Finance Guru gives you **judgment**.
+
+The difference:
+- A stock screener tells you RSI is 75
+- Finance Guru tells you "RSI is overbought, but your portfolio is underweight tech, and Compliance says you have room for a small position if Quant's risk metrics confirm"
+
+**It's the coordination that creates value**—not any single calculation.
+
+## Security & Privacy
+
+- All data stays local on my machine
+- No external access to financial information
+- Portfolio data never leaves this repository
+- This is a private system, not a service
+
+## Built With
+
+- **Claude Code** - Multi-agent orchestration
+- **Python 3.12** - Analysis engine
+- **Pydantic** - Type-safe validation
+- **yfinance** - Market data
+- **pandas/numpy/scipy** - Calculations
+- **ITC Risk Models** - External risk intelligence
+
+## Educational Disclaimer
+
+Finance Guru™ is for educational purposes only. This is not investment advice. All investments carry risk, including potential loss of principal. Always consult licensed financial professionals before making investment decisions.
+
+---
+
+<p align="center">
+  <strong>Finance Guru™ v2.0.0</strong><br>
+  My AI-powered family office, working exclusively for me.
+</p>
