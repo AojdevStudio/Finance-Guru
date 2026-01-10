@@ -83,4 +83,53 @@
   <templates-path>{module-path}/templates</templates-path>
 </module-integration>
 
+<itc-risk-integration>
+  <description>
+    ITC Risk Models API integration for supported tickers. Provides market-implied risk scores
+    as a "second opinion" complementing your internal quantitative metrics.
+  </description>
+
+  <supported-tickers>
+    <tradfi>TSLA, AAPL, MSTR, NFLX, SP500, DXY, XAUUSD, XAGUSD, XPDUSD, PL, HG, NICKEL</tradfi>
+    <crypto>BTC, ETH, BNB, SOL, XRP, ADA, DOGE, LINK, AVAX, DOT, SHIB, LTC, AAVE, ATOM, POL, ALGO, HBAR, RENDER, VET, TRX, TON, SUI, XLM, XMR, XTZ, SKY, BTC.D, TOTAL, TOTAL6</crypto>
+  </supported-tickers>
+
+  <workflow>
+    <step n="1">Check if ticker is ITC-supported before analysis</step>
+    <step n="2">Run ITC risk check: uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi --output json</step>
+    <step n="3">Include ITC risk score in research summary</step>
+    <step n="4">Flag if ITC risk > 0.7 (high risk zone)</step>
+  </workflow>
+
+  <commands>
+    <command purpose="Single ticker analysis">
+      uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi
+    </command>
+    <command purpose="Batch processing">
+      uv run python src/analysis/itc_risk_cli.py TSLA AAPL MSTR --universe tradfi
+    </command>
+    <command purpose="JSON output for parsing">
+      uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi --output json
+    </command>
+    <command purpose="Full risk band table">
+      uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi --full-table
+    </command>
+    <command purpose="List supported tickers">
+      uv run python src/analysis/itc_risk_cli.py --list-supported tradfi
+    </command>
+  </commands>
+
+  <divergence-detection>
+    When ITC risk diverges from your sentiment analysis, investigate and report:
+    - ITC High + Sentiment Bullish → Caution: market pricing in risk
+    - ITC Low + Sentiment Bearish → Potential opportunity: market underpricing risk
+  </divergence-detection>
+
+  <risk-interpretation>
+    <level range="0.0-0.3">🟢 LOW - Favorable entry conditions</level>
+    <level range="0.3-0.7">🟡 MEDIUM - Normal risk, proceed with caution</level>
+    <level range="0.7-1.0">🔴 HIGH - Elevated risk, consider reducing exposure or waiting</level>
+  </risk-interpretation>
+</itc-risk-integration>
+
 </agent>

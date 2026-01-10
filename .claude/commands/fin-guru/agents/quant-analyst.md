@@ -87,4 +87,66 @@
   <tasks-path>{module-path}/tasks</tasks-path>
 </module-integration>
 
+<itc-risk-integration>
+  <description>
+    ITC Risk Models API integration for comparison studies and divergence analysis.
+    Cross-reference ITC market-implied risk with internal quantitative metrics.
+  </description>
+
+  <supported-tickers>
+    <tradfi>TSLA, AAPL, MSTR, NFLX, SP500, DXY, XAUUSD, XAGUSD, XPDUSD, PL, HG, NICKEL</tradfi>
+    <crypto>BTC, ETH, BNB, SOL, XRP, ADA, DOGE, LINK, AVAX, DOT, SHIB, LTC, AAVE, ATOM, POL, ALGO, HBAR, RENDER, VET, TRX, TON, SUI, XLM, XMR, XTZ, SKY, BTC.D, TOTAL, TOTAL6</crypto>
+  </supported-tickers>
+
+  <comparison-workflow>
+    <step n="1">Run internal risk metrics: uv run python src/analysis/risk_metrics_cli.py TICKER --days 90</step>
+    <step n="2">Run ITC risk check: uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi</step>
+    <step n="3">Compare VaR/Sharpe with ITC risk score</step>
+    <step n="4">Flag divergences and create analysis report</step>
+  </comparison-workflow>
+
+  <commands>
+    <command purpose="ITC risk analysis">
+      uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi
+    </command>
+    <command purpose="JSON output for quantitative parsing">
+      uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi --output json
+    </command>
+    <command purpose="Batch risk comparison">
+      uv run python src/analysis/itc_risk_cli.py TSLA AAPL MSTR --universe tradfi
+    </command>
+  </commands>
+
+  <divergence-analysis>
+    When internal metrics diverge from ITC risk, create investigation:
+
+    DIVERGENCE ANALYSIS: {TICKER}
+    ────────────────────────────
+    Internal VaR95: X.X% (Low/Medium/High)
+    Internal Sharpe: X.XX
+    ITC Risk Score: 0.XX (Low/Medium/High)
+
+    Divergence Type:
+    - VaR Low + ITC High → Price-based risk elevated despite stable volatility
+    - VaR High + ITC Low → Statistical risk elevated but market sentiment favorable
+
+    Investigation Required:
+    - Check recent price action and resistance levels
+    - Review sentiment indicators and news catalysts
+    - Analyze if divergence is transient or structural
+  </divergence-analysis>
+
+  <risk-interpretation>
+    <level range="0.0-0.3">🟢 LOW - Market-implied risk favorable</level>
+    <level range="0.3-0.7">🟡 MEDIUM - Normal market conditions</level>
+    <level range="0.7-1.0">🔴 HIGH - Market pricing in elevated risk</level>
+  </risk-interpretation>
+
+  <integration-note>
+    ITC risk provides a complementary "second opinion" to your quantitative models.
+    Use divergences as investigation triggers, not automatic trading signals.
+    For unsupported tickers, rely solely on internal risk_metrics_cli.py analysis.
+  </integration-note>
+</itc-risk-integration>
+
 </agent>

@@ -144,4 +144,49 @@
   </tool>
 </available-tools>
 
+<itc-risk-integration>
+  <description>
+    Pre-trade ITC Risk check for supported tickers. Provides market-implied risk assessment
+    before creating buy tickets or making position recommendations.
+  </description>
+
+  <supported-tickers>
+    <tradfi>TSLA, AAPL, MSTR, NFLX, SP500, DXY, XAUUSD, XAGUSD, XPDUSD, PL, HG, NICKEL</tradfi>
+    <crypto>BTC, ETH, BNB, SOL, XRP, ADA, DOGE, LINK, AVAX, DOT, SHIB, LTC, AAVE, ATOM, POL, ALGO, HBAR, RENDER, VET, TRX, TON, SUI, XLM, XMR, XTZ, SKY, BTC.D, TOTAL, TOTAL6</crypto>
+  </supported-tickers>
+
+  <pre-trade-workflow>
+    <step n="1">Before creating buy tickets for supported tickers, check ITC risk</step>
+    <step n="2">Run: uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi</step>
+    <step n="3">Add risk advisory to buy ticket if ITC risk > 0.7</step>
+    <step n="4">Document ITC risk score in strategic recommendations</step>
+  </pre-trade-workflow>
+
+  <commands>
+    <command purpose="Pre-trade risk check">
+      uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi
+    </command>
+    <command purpose="Full risk band analysis">
+      uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi --full-table
+    </command>
+  </commands>
+
+  <buy-ticket-advisory>
+    Add this block to buy tickets when ITC risk > 0.7:
+
+    ⚠️ HIGH RISK SIGNAL (ITC): Risk score 0.XX
+    Price approaching high-risk zone. Consider:
+    - Reducing position size by 25-50%
+    - Waiting for pullback to lower risk zone
+    - Setting tighter stop-loss (ATR-based)
+    - Scaling in over multiple entries
+  </buy-ticket-advisory>
+
+  <risk-levels>
+    <level range="0.0-0.3">🟢 LOW - Favorable for full position entry</level>
+    <level range="0.3-0.7">🟡 MEDIUM - Standard position sizing</level>
+    <level range="0.7-1.0">🔴 HIGH - Reduce size or wait for better entry</level>
+  </risk-levels>
+</itc-risk-integration>
+
 </agent>
