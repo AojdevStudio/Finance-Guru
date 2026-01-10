@@ -55,14 +55,15 @@ done
 | **Backtesting** | `src/strategies/backtester_cli.py` | RSI, SMA cross, Buy-hold, Sharpe, Win rate, Drawdown | `--strategy <type>`, `--capital`, `--commission`, `--slippage` | - |
 | **Moving Averages** | `src/utils/moving_averages_cli.py` | SMA, EMA, WMA, HMA, Golden/Death Cross | `--ma-type <type>`, `--period`, `--fast`, `--slow` | - |
 | **Portfolio Optimizer** | `src/strategies/optimizer_cli.py` | Max Sharpe, Risk Parity, Min Variance, Mean-Var, Black-Litterman | `--method <type>`, `--max-position`, `--view <ticker:return>` | - |
+| **ITC Risk** | `src/analysis/itc_risk_cli.py` | ITC Risk Score, Risk Bands, High Risk Threshold, Price Context | `--universe <crypto\|tradfi>`, `--full-table`, `--list-supported` | - |
 
 ## Agent-Tool Matrix
 
 | Agent | Primary Tools | Use Cases |
 |-------|--------------|-----------|
-| **Market Researcher** | Momentum, Moving Averages, Risk Metrics | Quick scans, trend identification, initial risk assessment |
-| **Quant Analyst** | All tools | Deep analysis, custom parameters, optimization, factor analysis |
-| **Strategy Advisor** | Optimizer, Backtesting, Correlation | Portfolio construction, rebalancing, validation, diversification |
+| **Market Researcher** | Momentum, Moving Averages, Risk Metrics, ITC Risk | Quick scans, trend identification, initial risk assessment, ITC risk level checks |
+| **Quant Analyst** | All tools, ITC Risk | Deep analysis, custom parameters, optimization, factor analysis, ITC risk bands |
+| **Strategy Advisor** | Optimizer, Backtesting, Correlation, ITC Risk | Portfolio construction, rebalancing, validation, diversification, risk zone analysis |
 | **Compliance Officer** | Volatility, Risk Metrics, Backtesting | Position limits, risk profiles, strategy approval |
 | **Margin Specialist** | Volatility | Leverage assessment, ATR-based position sizing |
 
@@ -81,7 +82,7 @@ done
 
 ## Version Info
 
-**Finance Guru™**: v2.0.0 | **BMAD-CORE™**: v6.0.0 | **Build**: 2025-10-08 | **Updated**: 2025-10-13 | **Tools**: 7/11 complete
+**Finance Guru™**: v2.0.0 | **BMAD-CORE™**: v6.0.0 | **Build**: 2025-10-08 | **Updated**: 2026-01-09 | **Tools**: 8/11 complete
 
 ---
 
