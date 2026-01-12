@@ -1,7 +1,7 @@
 [project]
 name = "family-office"
 version = "0.1.0"
-description = "Add your description here"
+description = "Finance Guru - AI-powered family office system with financial analysis tools"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -31,6 +31,9 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
 ]
+
+[project.scripts]
+fidelity-parser = "src.data.fidelity_parser_cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
