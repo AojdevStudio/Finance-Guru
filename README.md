@@ -113,6 +113,8 @@ Pydantic Models → Calculator Classes → CLI Interfaces
 
 ## Quick Start
 
+**For complete installation instructions, see [docs/SETUP.md](docs/SETUP.md)**
+
 ### Prerequisites
 ```bash
 # Claude Code (the orchestration platform)
@@ -121,19 +123,18 @@ curl -fsSL https://claude.ai/install.sh | bash
 # Python 3.12+ with uv package manager
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Docker (required for Google Drive MCP)
-# Install from https://docs.docker.com/get-docker/
+# Bun (for onboarding and hooks)
+curl -fsSL https://bun.sh/install | bash
 
-# Google Drive MCP Server (for portfolio syncing)
-git clone https://github.com/AojdevStudio/gdrive.git
-cd gdrive && bun install && bun run build
+# Docker (optional, for Google Drive MCP)
+# Install from https://docs.docker.com/get-docker/
 ```
 
 ### Setup
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/yourusername/family-office.git
+# 1. Fork and clone the repository
+git clone https://github.com/YOUR-USERNAME/family-office.git
 cd family-office
 
 # 2. Run the setup script
@@ -145,6 +146,9 @@ The setup script will:
 - Set up portfolio data folders
 - Create user profile template
 - Install Python dependencies
+- Run interactive onboarding wizard
+
+**Need help?** See the [complete setup guide](docs/SETUP.md) for troubleshooting and configuration details.
 
 ### Onboarding (First Time Users)
 
@@ -381,6 +385,7 @@ ITC_API_KEY=your_key_here        # For ITC risk scores
 | Document | Description |
 |----------|-------------|
 | [docs/index.md](docs/index.md) | Documentation hub |
+| [docs/SETUP.md](docs/SETUP.md) | **Complete setup guide** (start here) |
 | [docs/api.md](docs/api.md) | CLI tools reference |
 | [docs/hooks.md](docs/hooks.md) | Hooks system documentation |
 | [docs/contributing.md](docs/contributing.md) | Contribution guidelines |
