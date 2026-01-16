@@ -151,9 +151,38 @@ The setup script will:
 - Set up portfolio data folders
 - Create user profile template
 - Install Python dependencies
+- Load Finance Guru agent commands (symlinks to ~/.claude/commands/fin-guru)
+- Load Finance Guru skills (9 skills linked to ~/.claude/skills/)
 - Run interactive onboarding wizard
 
 **Need help?** See the [complete setup guide](docs/SETUP.md) for troubleshooting and configuration details.
+
+### What Gets Installed
+
+The setup script symlinks Finance Guru components to your global Claude Code configuration:
+
+**Agent Commands** (→ `~/.claude/commands/fin-guru/`):
+- `/fin-guru:agents:finance-orchestrator` - Main orchestrator (Cassandra Holt)
+- `/fin-guru:agents:market-researcher` - Market intelligence specialist
+- `/fin-guru:agents:quant-analyst` - Quantitative analysis specialist
+- `/fin-guru:agents:strategy-advisor` - Portfolio strategy specialist
+- `/fin-guru:agents:compliance-officer` - Risk and compliance specialist
+- `/fin-guru:agents:margin-specialist` - Leverage analysis specialist
+- `/fin-guru:agents:dividend-specialist` - Income optimization specialist
+- `/fin-guru:agents:onboarding-specialist` - First-time setup guide
+
+**Skills** (→ `~/.claude/skills/`):
+- `fin-core` - Core Finance Guru system context
+- `margin-management` - Margin Dashboard integration
+- `PortfolioSyncing` - Fidelity CSV → Google Sheets sync
+- `MonteCarlo` - Monte Carlo simulation runner
+- `retirement-syncing` - Retirement account sync (Vanguard/Fidelity)
+- `dividend-tracking` - Dividend data sync
+- `FinanceReport` - PDF analysis report generator
+- `TransactionSyncing` - Transaction history import
+- `formula-protection` - Spreadsheet formula protection
+
+These symlinks allow you to use Finance Guru commands and skills from any Claude Code session.
 
 ### Onboarding (First Time Users)
 
