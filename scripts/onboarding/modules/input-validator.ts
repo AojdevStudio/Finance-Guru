@@ -190,3 +190,20 @@ export function validateBrokerage(input: string): string {
   // Return standardized name if known, otherwise return input as-is
   return knownBrokerages[lowerInput] || normalized;
 }
+
+/**
+ * Validates enum input against allowed values
+ * @param input - String to validate
+ * @param allowedValues - Array of allowed values
+ * @param fieldName - Name of the field for error messages
+ * @returns Validated value or throws error
+ */
+export function validateEnum(input: string, allowedValues: string[], fieldName: string = 'value'): string {
+  const normalized = input.toLowerCase().trim();
+
+  if (allowedValues.includes(normalized)) {
+    return normalized;
+  }
+
+  throw new Error(`Invalid ${fieldName}: ${input}. Must be one of: ${allowedValues.join(', ')}`);
+}
