@@ -11,6 +11,7 @@
 #   --integration   Run only integration tests (requires API keys)
 #   --coverage      Run tests with coverage report
 #   --verbose       Extra verbose output
+#   --self-test     Run self-diagnostic checks only
 #   --help          Show this help message
 #
 # Examples:
@@ -18,6 +19,7 @@
 #   ./test-runner.sh --unit             # Run only unit tests
 #   ./test-runner.sh --coverage         # Run with coverage
 #   ./test-runner.sh --integration      # Run integration tests only
+#   ./test-runner.sh --self-test        # Validate test runner setup
 
 set -e
 
@@ -36,6 +38,7 @@ NC='\033[0m'
 RUN_MODE="all"
 WITH_COVERAGE=false
 VERBOSE=false
+SELF_TEST_ONLY=false
 
 # Parse arguments
 show_help() {
@@ -49,6 +52,7 @@ show_help() {
   echo "  --integration   Run only integration tests (requires API keys)"
   echo "  --coverage      Run tests with coverage report"
   echo "  --verbose       Extra verbose output"
+  echo "  --self-test     Run self-diagnostic checks only"
   echo "  --help          Show this help message"
   echo ""
   echo "Examples:"
@@ -56,6 +60,7 @@ show_help() {
   echo "  $0 --unit             # Run only unit tests"
   echo "  $0 --coverage         # Run with coverage"
   echo "  $0 --integration      # Run integration tests only"
+  echo "  $0 --self-test        # Validate test runner setup"
   exit 0
 }
 
@@ -81,6 +86,10 @@ for arg in "$@"; do
       VERBOSE=true
       shift
       ;;
+    --self-test)
+      SELF_TEST_ONLY=true
+      shift
+      ;;
     --help)
       show_help
       ;;
@@ -94,6 +103,135 @@ done
 
 # Change to project root
 cd "$PROJECT_ROOT"
+
+# Self-test function
+run_self_test() {
+  # Temporarily disable exit on error for diagnostic checks
+  set +e
+
+  echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"
+  echo -e "${CYAN}  Test Runner Self-Diagnostic${NC}"
+  echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"
+  echo ""
+
+  local checks_passed=0
+  local checks_failed=0
+
+  # Check 1: Verify project root
+  echo -e "${BLUE}Check 1: Project root directory${NC}"
+  if [ -d "$PROJECT_ROOT" ]; then
+    echo -e "${GREEN}✓ Project root exists: $PROJECT_ROOT${NC}"
+    ((checks_passed++))
+  else
+    echo -e "${RED}✗ Project root not found: $PROJECT_ROOT${NC}"
+    ((checks_failed++))
+  fi
+
+  # Check 2: Verify Python environment
+  echo -e "${BLUE}Check 2: Python environment (uv)${NC}"
+  if command -v uv &> /dev/null; then
+    UV_VERSION=$(uv --version 2>&1 | head -n1)
+    echo -e "${GREEN}✓ uv is available: $UV_VERSION${NC}"
+    ((checks_passed++))
+  else
+    echo -e "${RED}✗ uv not found - Python tests will fail${NC}"
+    ((checks_failed++))
+  fi
+
+  # Check 3: Verify pytest availability
+  echo -e "${BLUE}Check 3: pytest availability${NC}"
+  if uv run pytest --version &> /dev/null; then
+    PYTEST_VERSION=$(uv run pytest --version 2>&1)
+    echo -e "${GREEN}✓ pytest is available: $PYTEST_VERSION${NC}"
+    ((checks_passed++))
+  else
+    echo -e "${RED}✗ pytest not available via uv${NC}"
+    ((checks_failed++))
+  fi
+
+  # Check 4: Verify test directory structure
+  echo -e "${BLUE}Check 4: Test directory structure${NC}"
+  if [ -d "$PROJECT_ROOT/tests/python" ]; then
+    TEST_COUNT=$(find "$PROJECT_ROOT/tests/python" -name "test_*.py" | wc -l | tr -d ' ')
+    echo -e "${GREEN}✓ Python test directory exists: $TEST_COUNT test files found${NC}"
+    ((checks_passed++))
+  else
+    echo -e "${RED}✗ Python test directory not found${NC}"
+    ((checks_failed++))
+  fi
+
+  # Check 5: Verify pyproject.toml
+  echo -e "${BLUE}Check 5: pyproject.toml configuration${NC}"
+  if [ -f "$PROJECT_ROOT/pyproject.toml" ]; then
+    if grep -q "pytest" "$PROJECT_ROOT/pyproject.toml"; then
+      echo -e "${GREEN}✓ pyproject.toml exists with pytest config${NC}"
+      ((checks_passed++))
+    else
+      echo -e "${YELLOW}⚠ pyproject.toml exists but no pytest config found${NC}"
+      ((checks_passed++))
+    fi
+  else
+    echo -e "${RED}✗ pyproject.toml not found${NC}"
+    ((checks_failed++))
+  fi
+
+  # Check 6: Verify src directory
+  echo -e "${BLUE}Check 6: Source code directory${NC}"
+  if [ -d "$PROJECT_ROOT/src" ]; then
+    PY_FILES=$(find "$PROJECT_ROOT/src" -name "*.py" | wc -l | tr -d ' ')
+    echo -e "${GREEN}✓ Source directory exists: $PY_FILES Python files found${NC}"
+    ((checks_passed++))
+  else
+    echo -e "${RED}✗ Source directory not found${NC}"
+    ((checks_failed++))
+  fi
+
+  # Check 7: Verify integration test scripts
+  echo -e "${BLUE}Check 7: Integration test scripts${NC}"
+  if [ -d "$PROJECT_ROOT/tests/integration" ]; then
+    INTEGRATION_COUNT=$(find "$PROJECT_ROOT/tests/integration" -name "test_*.sh" | wc -l | tr -d ' ')
+    echo -e "${GREEN}✓ Integration test directory exists: $INTEGRATION_COUNT bash test scripts found${NC}"
+    ((checks_passed++))
+  else
+    echo -e "${YELLOW}⚠ Integration test directory not found (optional)${NC}"
+    ((checks_passed++))
+  fi
+
+  # Check 8: Verify this script is executable
+  echo -e "${BLUE}Check 8: Test runner permissions${NC}"
+  if [ -x "$SCRIPT_DIR/test-runner.sh" ]; then
+    echo -e "${GREEN}✓ Test runner is executable${NC}"
+    ((checks_passed++))
+  else
+    echo -e "${YELLOW}⚠ Test runner is not executable (still works via bash)${NC}"
+    ((checks_passed++))
+  fi
+
+  # Summary
+  echo ""
+  echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"
+
+  local total_checks=$((checks_passed + checks_failed))
+  if [ $checks_failed -eq 0 ]; then
+    echo -e "${GREEN}✓ Self-test PASSED: $checks_passed/$total_checks checks passed${NC}"
+    echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"
+    # Re-enable exit on error before returning
+    set -e
+    return 0
+  else
+    echo -e "${RED}✗ Self-test FAILED: $checks_failed/$total_checks checks failed${NC}"
+    echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"
+    # Re-enable exit on error before returning
+    set -e
+    return 1
+  fi
+}
+
+# Run self-test if requested
+if [ "$SELF_TEST_ONLY" = true ]; then
+  run_self_test
+  exit $?
+fi
 
 # Header
 echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"
