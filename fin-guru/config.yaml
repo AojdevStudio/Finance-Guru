@@ -6,7 +6,7 @@
 # Module Identity
 module_name: "Finance Guru™"
 module_code: fin-guru
-author: Ossie
+author: "{user_name}"
 version: "2.0.0"
 description: "Institutional-grade multi-agent family office system providing comprehensive financial intelligence, quantitative analysis, strategic portfolio planning, and compliance oversight"
 
@@ -140,7 +140,7 @@ requires_mcp_servers:
   - sequential-thinking
 
 # User Configuration
-user_name: Ossie
+user_name: "{user_name}"
 communication_language: English
 
 # Temporal Awareness Configuration

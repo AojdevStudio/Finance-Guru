@@ -3,7 +3,7 @@
 > **Institutional-grade multi-agent family office system providing comprehensive financial intelligence, quantitative analysis, strategic portfolio planning, and compliance oversight.**
 
 **Version:** 2.0.0 (BMAD v6)
-**Author:** Ossie
+**Author:** {user_name}
 **Date:** 2025-10-08
 
 ---
@@ -327,7 +327,7 @@ To extend Finance Guru™:
 
 ## License
 
-Copyright © 2025 Ossie
+Copyright © 2025 {user_name}
 Finance Guru™ is a trademark.
 Built on BMAD-CORE™ v6.
 

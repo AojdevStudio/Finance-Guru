@@ -7,7 +7,7 @@ description: "Ensures current date is known and enforced before any web search o
 version: "1.0.0"
 category: "system-validation"
 module: "fin-guru"
-author: "Ossie"
+author: "{user_name}"
 created: "2025-10-12"
 
 # Workflow Purpose
