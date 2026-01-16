@@ -1,22 +1,23 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env bun
 
 /**
  * Finance Guru Core Config Loader
  * Session Start Hook
- * 
+ *
  * Automatically loads Finance Guru system context at session start:
  * - System configuration (config.yaml)
- * - User profile (user-profile.yaml) 
+ * - User profile (user-profile.yaml)
  * - Latest portfolio updates (balances, positions)
  * - fin-core skill content
+ *
+ * Refactored to use Bun runtime for improved performance.
  */
 
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Bun provides __dirname directly (no need for fileURLToPath workaround)
+const __dirname = import.meta.dir;
 
 interface HookInput {
   session_id: string;
