@@ -91,9 +91,12 @@ scripts/google-sheets/portfolio-optimizer/
 .claude/data/sessions/
 .mcp.json
 
-# Private scripts (except public onboarding CLI)
+# Private scripts (except public onboarding CLI and test infrastructure)
 scripts/*
 !scripts/onboarding/
+!scripts/rbp/
+scripts/rbp/*
+!scripts/rbp/test-runner.sh
 
 # Private session data and conversations
 .claude/data/sessions/
