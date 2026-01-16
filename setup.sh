@@ -297,6 +297,68 @@ else
 fi
 
 echo ""
+echo "Step 11: Verifying MCP Launchpad setup..."
+echo ""
+
+# Check if mcpl is installed
+if command -v mcpl &> /dev/null; then
+    MCPL_VERSION=$(mcpl --version 2>&1 | head -n1)
+    echo -e "${GREEN}Found:${NC} $MCPL_VERSION"
+    echo ""
+
+    # Run mcpl verify to check server connections
+    echo "Checking MCP server connections..."
+    mcpl verify
+    echo ""
+
+    # Check for Finance Guru required servers
+    echo "Checking Finance Guru required MCP servers..."
+
+    MISSING_SERVERS=()
+    SERVER_LIST=$(mcpl list 2>&1)
+
+    # Check for required servers by looking for server name at start of line with bracket
+    if ! echo "$SERVER_LIST" | grep -q "^\s*\[exa\]"; then
+        MISSING_SERVERS+=("exa")
+    fi
+
+    if ! echo "$SERVER_LIST" | grep -q "^\s*\[bright-data\]"; then
+        MISSING_SERVERS+=("bright-data")
+    fi
+
+    if ! echo "$SERVER_LIST" | grep -q "^\s*\[sequential-thinking\]"; then
+        MISSING_SERVERS+=("sequential-thinking")
+    fi
+
+    if [ ${#MISSING_SERVERS[@]} -gt 0 ]; then
+        echo -e "${YELLOW}Warning:${NC} Missing required MCP servers: ${MISSING_SERVERS[*]}"
+        echo "Finance Guru requires these servers for full functionality."
+        echo "Configure them in your MCP config (~/.claude/mcp.json or ./mcp.json)"
+        echo "See docs/SETUP.md for configuration examples."
+        echo ""
+    else
+        echo -e "${GREEN}All required MCP servers configured!${NC}"
+        echo ""
+    fi
+else
+    echo -e "${YELLOW}MCP Launchpad not found${NC}"
+    echo ""
+    echo "MCP Launchpad (mcpl) provides unified access to all MCP servers."
+    echo "Finance Guru uses it for market research, data extraction, and analysis."
+    echo ""
+    echo "To install mcpl:"
+    echo -e "  ${BLUE}uv tool install https://github.com/kenneth-liao/mcp-launchpad.git${NC}"
+    echo ""
+    echo "After installation, configure required MCP servers:"
+    echo "  - exa (market intelligence)"
+    echo "  - bright-data (web scraping)"
+    echo "  - sequential-thinking (complex reasoning)"
+    echo ""
+    echo "See docs/SETUP.md for detailed MCP configuration instructions."
+    echo ""
+fi
+
+echo ""
 echo "=========================================="
 echo -e "${GREEN}  Setup Complete!${NC}"
 echo "=========================================="
@@ -308,14 +370,18 @@ echo "     - FINNHUB_API_KEY (for real-time prices)"
 echo "     - ITC_API_KEY (for external risk scores)"
 echo "     Note: yfinance works without API keys for basic market data."
 echo ""
-echo -e "  2. ${BLUE}Configure MCP servers${NC} in Claude Code settings"
+echo -e "  2. ${BLUE}Install MCP Launchpad${NC} if not already installed:"
+echo "     uv tool install https://github.com/kenneth-liao/mcp-launchpad.git"
+echo ""
+echo -e "  3. ${BLUE}Configure MCP servers${NC} in MCP config file"
 echo "     Required: exa, bright-data, sequential-thinking"
 echo "     Optional: gdrive, perplexity, financial-datasets"
+echo "     See docs/SETUP.md for configuration examples."
 echo ""
-echo -e "  3. ${BLUE}If you skipped onboarding, run it manually${NC}:"
+echo -e "  4. ${BLUE}If you skipped onboarding, run it manually${NC}:"
 echo "     bun run scripts/onboarding/index.ts"
 echo ""
-echo "  4. After onboarding, use the Finance Orchestrator:"
+echo "  5. After onboarding, use the Finance Orchestrator:"
 echo "     /finance-orchestrator"
 echo ""
 echo "See docs/index.md for full documentation."

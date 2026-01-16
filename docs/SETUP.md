@@ -164,6 +164,34 @@ mcpl session status
 
 See [CLAUDE.md](../CLAUDE.md) for complete MCP Launchpad documentation.
 
+#### Installing MCP Launchpad
+
+MCP Launchpad is installed globally using uv tool:
+
+```bash
+# Install mcpl (one-time setup)
+uv tool install https://github.com/kenneth-liao/mcp-launchpad.git
+
+# Verify installation
+mcpl --version
+
+# Check which servers are configured
+mcpl list
+
+# Test all server connections
+mcpl verify
+```
+
+#### MCP Configuration Files
+
+mcpl reads configuration from these locations (in order):
+
+1. `./mcp.json` (project-level, recommended for Finance Guru)
+2. `./.claude/mcp.json` (project-level)
+3. `~/.claude/mcp.json` (global user-level)
+
+**For Finance Guru**, create `mcp.json` in the project root or use your global `~/.claude/mcp.json`.
+
 #### Required MCP Servers
 
 | Server | Purpose | Setup Instructions |
@@ -183,49 +211,71 @@ See [CLAUDE.md](../CLAUDE.md) for complete MCP Launchpad documentation.
 
 #### MCP Exa Setup
 
-```bash
-# Install exa MCP server
-# Follow instructions at: https://github.com/exa-labs/mcp-server-exa
+Exa provides AI-powered web search and content extraction for market intelligence.
 
-# Add to Claude Code settings (.claude/settings.json)
+**Configuration** (`mcp.json` or `~/.claude/mcp.json`):
+
+```json
 {
   "mcpServers": {
     "exa": {
       "command": "npx",
-      "args": ["-y", "@exa-labs/mcp-server-exa"],
-      "env": {
-        "EXA_API_KEY": "your_exa_api_key_here"
-      }
+      "args": ["-y", "mcp-remote", "https://mcp.exa.ai/mcp?exaApiKey=${EXA_API_KEY}"]
     }
   }
 }
 ```
 
-Get your Exa API key: [exa.ai/api](https://exa.ai/api)
+**Or use the HTTP transport**:
+
+```json
+{
+  "mcpServers": {
+    "exa": {
+      "type": "http",
+      "url": "https://mcp.exa.ai/mcp?exaApiKey=${EXA_API_KEY}"
+    }
+  }
+}
+```
+
+**Setup Steps**:
+1. Get your Exa API key: [exa.ai/api](https://exa.ai/api)
+2. Add `EXA_API_KEY=your_key` to `~/.claude/.env` or `./.env`
+3. Test: `mcpl list exa --refresh`
 
 #### MCP Bright Data Setup
 
-```bash
-# Add to Claude Code settings
+Bright Data provides web scraping and data extraction for financial data gathering.
+
+**Configuration** (`mcp.json` or `~/.claude/mcp.json`):
+
+```json
 {
   "mcpServers": {
     "bright-data": {
       "command": "npx",
       "args": ["-y", "@brightdata/mcp-server"],
       "env": {
-        "BRIGHT_DATA_API_KEY": "your_bright_data_key"
+        "BRIGHT_DATA_API_KEY": "${BRIGHT_DATA_API_KEY}"
       }
     }
   }
 }
 ```
 
-Get your Bright Data key: [brightdata.com](https://brightdata.com/)
+**Setup Steps**:
+1. Get your Bright Data key: [brightdata.com](https://brightdata.com/)
+2. Add `BRIGHT_DATA_API_KEY=your_key` to `~/.claude/.env` or `./.env`
+3. Test: `mcpl list bright-data --refresh`
 
 #### MCP Sequential Thinking Setup
 
-```bash
-# Add to Claude Code settings
+Sequential Thinking provides multi-step reasoning for complex financial analysis.
+
+**Configuration** (`mcp.json` or `~/.claude/mcp.json`):
+
+```json
 {
   "mcpServers": {
     "sequential-thinking": {
@@ -236,7 +286,11 @@ Get your Bright Data key: [brightdata.com](https://brightdata.com/)
 }
 ```
 
-No API key required for sequential-thinking.
+**Setup Steps**:
+1. No API key required
+2. Test: `mcpl list sequential-thinking --refresh`
+
+**Note**: This server provides tools for breaking down complex financial problems into sequential steps.
 
 #### MCP Google Drive Setup (Optional)
 
