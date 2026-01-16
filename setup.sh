@@ -203,6 +203,29 @@ else
 fi
 
 echo ""
+echo "Step 8: Running onboarding wizard..."
+echo ""
+
+# Check if bun is installed
+if command -v bun &> /dev/null; then
+    cd "$PROJECT_ROOT"
+
+    # Check if onboarding has already been completed
+    if [ -f ".onboarding-state.json" ]; then
+        echo -e "${YELLOW}Onboarding state detected.${NC} Resuming..."
+        bun run scripts/onboarding/index.ts --resume
+    else
+        echo "Starting fresh onboarding..."
+        bun run scripts/onboarding/index.ts
+    fi
+else
+    echo -e "${YELLOW}Warning:${NC} bun not found. Install with: curl -fsSL https://bun.sh/install | bash"
+    echo "Then run: bun run scripts/onboarding/index.ts"
+    echo ""
+    echo "Skipping onboarding wizard for now."
+fi
+
+echo ""
 echo "=========================================="
 echo -e "${GREEN}  Setup Complete!${NC}"
 echo "=========================================="
@@ -218,8 +241,8 @@ echo -e "  2. ${BLUE}Configure MCP servers${NC} in Claude Code settings"
 echo "     Required: exa, bright-data, sequential-thinking"
 echo "     Optional: gdrive, perplexity, financial-datasets"
 echo ""
-echo -e "  3. ${BLUE}Run the Onboarding Specialist${NC}:"
-echo "     /fin-guru:agents:onboarding-specialist"
+echo -e "  3. ${BLUE}If you skipped onboarding, run it manually${NC}:"
+echo "     bun run scripts/onboarding/index.ts"
 echo ""
 echo "  4. After onboarding, use the Finance Orchestrator:"
 echo "     /finance-orchestrator"
