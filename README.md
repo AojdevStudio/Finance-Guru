@@ -9,11 +9,16 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/ossieirondi/family-office/stargazers"><img src="https://img.shields.io/github/stars/ossieirondi/family-office?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/ossieirondi/family-office/network/members"><img src="https://img.shields.io/github/forks/ossieirondi/family-office?style=social" alt="GitHub forks"></a>
+</p>
+
+<p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.12+-blue.svg" alt="Python 3.12+"></a>
   <a href="https://claude.ai/claude-code"><img src="https://img.shields.io/badge/Claude%20Code-Powered-blueviolet" alt="Claude Code"></a>
   <a href="#11-production-ready-analysis-tools"><img src="https://img.shields.io/badge/analysis%20tools-11-green.svg" alt="Tools"></a>
   <a href="#what-i-built"><img src="https://img.shields.io/badge/AI%20agents-8-orange.svg" alt="Agents"></a>
-  <a href="#security--privacy"><img src="https://img.shields.io/badge/license-Private-red.svg" alt="License"></a>
+  <a href="#license"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
 </p>
 
 <p align="center">
@@ -399,9 +404,70 @@ ITC_API_KEY=your_key_here        # For ITC risk scores
 
 Finance Guru™ is for educational purposes only. This is not investment advice. All investments carry risk, including potential loss of principal. Always consult licensed financial professionals before making investment decisions.
 
+## License
+
+Finance Guru is free software licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**.
+
+### What This Means for You
+
+**You are free to:**
+- ✅ **Use** Finance Guru for any purpose (personal, commercial, educational)
+- ✅ **Study** the source code and understand how it works
+- ✅ **Modify** the code to suit your needs
+- ✅ **Share** copies with others
+- ✅ **Distribute** your modifications
+
+**Under these conditions:**
+- 📖 **Source code must remain open** (copyleft) - derivatives must use AGPLv3
+- 🌐 **Network users get source access** - if you run Finance Guru as a service, users must be able to get the source
+- 📝 **Changes must be documented** - state what you modified and when
+- 🔄 **Same license for derivatives** - any modifications must also be AGPLv3
+
+### Why AGPLv3?
+
+AGPLv3 is the strongest copyleft license, designed specifically for server software. It ensures:
+
+1. **Community Protection**: Prevents companies from taking this code, modifying it, running it as a SaaS, and keeping improvements private
+2. **Transparency**: Anyone using Finance Guru (especially financial analysis tools) can audit the code
+3. **Freedom Forever**: Guarantees the software stays free and open for all future users
+
+### Network Copyleft (Section 13)
+
+The key difference from regular GPL: If you run a modified version of Finance Guru on a server and let people interact with it over a network, **you must provide them with the source code**.
+
+This prevents the "cloud loophole" where someone could use your work without contributing back.
+
+### Compatible With
+
+- **Other AGPLv3 projects**: Freely combine
+- **GPLv3 projects**: Compatible (see Section 13 of license)
+- **Permissive licenses** (MIT, Apache, BSD): Can be included in AGPLv3 projects
+
+### Not Compatible With
+
+- ❌ Proprietary/closed-source projects cannot include Finance Guru code
+- ❌ GPL v2-only projects (but GPLv2-or-later is compatible via GPLv3)
+
+### Full License Text
+
+See [LICENSE](LICENSE) for the complete legal terms.
+
+### Questions?
+
+- **"Can I use this for my business?"** Yes! AGPLv3 allows commercial use.
+- **"Do I need to open-source my portfolio data?"** No. Your data isn't part of the software.
+- **"Can I sell Finance Guru?"** Yes, but you must provide source code to buyers.
+- **"Can I make a proprietary fork?"** No. All derivatives must be AGPLv3.
+
+For more on AGPLv3, see the [GNU project page](https://www.gnu.org/licenses/agpl-3.0.html).
+
 ---
 
 <p align="center">
   <strong>Finance Guru™ v2.0.0</strong><br>
   My AI-powered family office, working exclusively for me.
+</p>
+
+<p align="center">
+  <sub>If Finance Guru helps you, please ⭐ star the repo!</sub>
 </p>

@@ -229,7 +229,48 @@ else
 fi
 
 echo ""
-echo "Step 9: Running onboarding wizard..."
+echo "Step 9: Loading Finance Guru skills..."
+echo ""
+
+# Create ~/.claude/skills if it doesn't exist
+GLOBAL_SKILLS_DIR="$HOME/.claude/skills"
+create_dir "$GLOBAL_SKILLS_DIR"
+
+# List of Finance Guru skills to symlink
+FIN_GURU_SKILLS=(
+    "fin-core"
+    "margin-management"
+    "PortfolioSyncing"
+    "MonteCarlo"
+    "retirement-syncing"
+    "dividend-tracking"
+    "FinanceReport"
+    "TransactionSyncing"
+    "formula-protection"
+)
+
+# Create symlinks for each skill
+for skill in "${FIN_GURU_SKILLS[@]}"; do
+    SKILL_SOURCE="$PROJECT_ROOT/.claude/skills/$skill"
+    SKILL_LINK="$GLOBAL_SKILLS_DIR/$skill"
+
+    if [ -d "$SKILL_SOURCE" ]; then
+        if [ -L "$SKILL_LINK" ]; then
+            echo -e "${YELLOW}Exists:${NC} $skill skill symlink"
+        elif [ -d "$SKILL_LINK" ]; then
+            echo -e "${YELLOW}Warning:${NC} $SKILL_LINK exists but is not a symlink"
+            echo "Skipping $skill symlink creation (manual cleanup needed)"
+        else
+            ln -s "$SKILL_SOURCE" "$SKILL_LINK"
+            echo -e "${GREEN}Linked:${NC} $skill skill → ~/.claude/skills/$skill"
+        fi
+    else
+        echo -e "${YELLOW}Warning:${NC} Skill not found at $SKILL_SOURCE"
+    fi
+done
+
+echo ""
+echo "Step 10: Running onboarding wizard..."
 echo ""
 
 # Check if bun is installed
