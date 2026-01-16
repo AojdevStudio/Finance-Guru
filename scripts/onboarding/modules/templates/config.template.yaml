@@ -1,0 +1,68 @@
+# Finance Guru™ Module Configuration
+# Generated: {{timestamp}}
+# User: {{user_name}}
+
+module_name: "Finance Guru™"
+module_code: fin-guru
+author: {{user_name}}
+version: "2.0.0"
+description: "Private AI-powered family office system"
+
+user_name: {{user_name}}
+communication_language: {{language}}
+
+# Module paths (auto-detected)
+module_root: "{{project_root}}/fin-guru"
+installer_path: "{{project_root}}/fin-guru/_module-installer"
+
+# Component inventory (unchanged)
+agents:
+  count: 13
+  list:
+    - finance-orchestrator
+    - market-researcher
+    - quant-analyst
+    - strategy-advisor
+    - compliance-officer
+    - teaching-specialist
+    - margin-specialist
+    - dividend-specialist
+    - onboarding-specialist
+    - builder
+    - qa-advisor
+    - specialist
+    - agent-template
+
+# Framework configuration
+framework:
+  name: "Finance Guru™"
+  version: "2.0.0"
+  domain: "finance"
+  tools:
+    - exa
+    - web-search-tool
+    - sequential-thinking
+    - code-interpreter
+    - financial-datasets
+    - bright-data
+
+# Workflow pipeline
+workflow_pipeline:
+  - research
+  - quant
+  - strategy
+  - artifacts
+
+# Module settings
+primary_agent: finance-orchestrator
+default_mode: consultative
+compliance_required: true
+educational_only: true
+
+# Temporal awareness
+temporal_awareness:
+  enabled: true
+  mandatory_date_check: true
+  date_format: "YYYY-MM-DD"
+  year_format: "YYYY"
+  search_enhancement: true

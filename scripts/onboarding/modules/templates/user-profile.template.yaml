@@ -1,0 +1,82 @@
+# Finance Guru™ User Profile Configuration
+# Generated: {{timestamp}}
+# User: {{user_name}}
+
+system_ownership:
+  type: "private_family_office"
+  owner: "sole_client"
+  mode: "exclusive_service"
+  data_location: "local_only"
+  repository: "{{repository_name}}"
+
+orientation_status:
+  completed: true
+  onboarding_version: "1.0"
+  completed_at: "{{timestamp}}"
+  onboarding_phase: "active"
+
+user_profile:
+  liquid_assets:
+    total: {{liquid_assets_total}}
+    accounts_count: {{liquid_assets_count}}
+    average_yield: {{liquid_assets_yield}}
+    {{#if liquid_assets_structure}}
+    structure: "{{liquid_assets_structure}}"
+    {{/if}}
+
+  investment_portfolio:
+    total_value: {{portfolio_value}}
+    primary_brokerage: "{{brokerage}}"
+    {{#if has_retirement}}
+    retirement_accounts: {{retirement_value}}
+    {{/if}}
+    allocation: "{{allocation_strategy}}"
+    risk_profile: "{{risk_tolerance}}"
+
+    {{#if google_sheets_id}}
+    google_sheets:
+      spreadsheet_id: "{{google_sheets_id}}"
+      url: "https://docs.google.com/spreadsheets/d/{{google_sheets_id}}/edit"
+      purpose: "Finance Guru portfolio tracking"
+      last_updated: "{{timestamp}}"
+    {{/if}}
+
+  cash_flow:
+    monthly_income: {{monthly_income}}
+    fixed_expenses: {{fixed_expenses}}
+    variable_expenses: {{variable_expenses}}
+    current_savings: {{current_savings}}
+    investment_capacity: {{investment_capacity}}
+
+  debt_profile:
+    {{#if has_mortgage}}
+    mortgage_balance: {{mortgage_balance}}
+    mortgage_payment: {{mortgage_payment}}
+    {{/if}}
+    {{#if other_debt}}
+    other_debt: "{{other_debt}}"
+    {{/if}}
+    weighted_interest_rate: {{weighted_rate}}
+
+  preferences:
+    risk_tolerance: "{{risk_tolerance}}"
+    investment_philosophy: "{{investment_philosophy}}"
+    focus_areas: {{focus_areas}}
+    emergency_fund_target: {{emergency_fund_months}}
+    time_horizon: "long_term"
+
+opportunities:
+  high_priority: []
+  medium_priority: []
+  strategic: []
+
+recommended_workflows:
+  primary: []
+  secondary: []
+  educational: []
+
+session_context:
+  first_interaction: true
+  last_command: "onboarding"
+  active_workflows: []
+  completed_tasks: ["onboarding"]
