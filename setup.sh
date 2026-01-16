@@ -47,12 +47,16 @@ create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/archive"
 create_dir "$PROJECT_ROOT/fin-guru-private/guides"
 
 echo ""
-echo "Step 2: Creating portfolio data directory..."
+echo "Step 2: Creating portfolio data directories..."
 echo ""
 
-# Create notebooks/updates for Fidelity CSV exports
+# Create notebooks structure for CSV exports and analysis
 create_dir "$PROJECT_ROOT/notebooks"
 create_dir "$PROJECT_ROOT/notebooks/updates"
+create_dir "$PROJECT_ROOT/notebooks/retirement-accounts"
+create_dir "$PROJECT_ROOT/notebooks/transactions"
+create_dir "$PROJECT_ROOT/notebooks/tools-needed"
+create_dir "$PROJECT_ROOT/notebooks/tools-needed/done"
 
 echo ""
 echo "Step 3: Creating Finance Guru data directory..."
