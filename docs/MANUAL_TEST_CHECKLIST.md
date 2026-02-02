@@ -52,8 +52,6 @@
 - [ ] Git repository initialized
 - [ ] On correct branch (typically `main`)
 - [ ] No uncommitted changes from previous sessions
-- [ ] Beads system initialized (`bd list` works)
-- [ ] RBP Stack components functional (if applicable)
 
 ---
 
@@ -84,8 +82,7 @@
   - [ ] `tests/integration/`
   - [ ] `tests/onboarding/`
   - [ ] `tests/python/`
-  - [ ] `tests/bun/`
-
+  
 ### Agent Infrastructure
 
 - [ ] Finance Orchestrator command exists: `.claude/commands/fin-guru/agents/finance-orchestrator.md`
@@ -405,7 +402,7 @@ Every generated document must have:
 **Critical**: Execute ALL steps before ending session
 
 1. [ ] **File Remaining Work**
-   - [ ] All follow-up tasks captured in beads
+   - [ ] All follow-up tasks captured as issues
    - [ ] Task descriptions clear and actionable
    - [ ] Dependencies properly set
    - [ ] Priorities assigned
@@ -417,15 +414,14 @@ Every generated document must have:
    - [ ] Linting clean
 
 3. [ ] **Update Issue Status**
-   - [ ] Completed beads closed: `bd close <id>`
-   - [ ] In-progress beads updated
-   - [ ] Blocked beads marked
+   - [ ] Completed issues closed
+   - [ ] In-progress issues updated
+   - [ ] Blocked issues marked
    - [ ] Dependencies verified
 
 4. [ ] **PUSH TO REMOTE** (MANDATORY)
    ```bash
    git pull --rebase
-   bd sync
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -441,25 +437,12 @@ Every generated document must have:
 6. [ ] **Verify**
    - [ ] All changes committed
    - [ ] All commits pushed
-   - [ ] Beads synced
    - [ ] No local-only work
 
 7. [ ] **Hand Off**
    - [ ] Context documented for next session
    - [ ] Open issues clearly described
    - [ ] Next steps identified
-
-### RBP Protocol Validation
-
-If using RBP Stack:
-
-- [ ] Task from `bd ready` completed
-- [ ] Implementation matches acceptance criteria
-- [ ] Verification commands run successfully
-- [ ] Bead closed using `close-with-proof.sh`
-- [ ] Test proof recorded in closure
-- [ ] Commit message follows format: `[RBP] <type>: <description>`
-- [ ] Signal sent: `<rbp:complete/>` or `<rbp:error>`
 
 ---
 

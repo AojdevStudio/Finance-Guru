@@ -325,8 +325,7 @@ After each sync, verify:
 
 **Solution:**
 1. **DO NOT PANIC** - your data is safe
-2. Run: `bd create --title="Repair formulas in DataHub" --type=bug`
-3. Contact support (file GitHub issue)
+2. Contact support (file GitHub issue)
 4. Restore from Google Sheets version history if needed
 
 ---

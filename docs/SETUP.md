@@ -822,7 +822,6 @@ git check-ignore fin-guru/data/user-profile.yaml
 - `fin-guru/data/user-profile.yaml` - Your financial data
 - `fin-guru-private/` - Your strategies and analysis
 - `notebooks/updates/*.csv` - Account exports
-- `.beads/issues.jsonl` - Private task tracking
 - `scripts/` (most files) - Private automation
 
 ### Updating Your Fork
