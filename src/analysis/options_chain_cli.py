@@ -46,12 +46,16 @@ from __future__ import annotations
 import argparse
 import math
 import sys
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
+
+# Constants
+DEFAULT_RISK_FREE_RATE = 0.045  # 4.5% risk-free rate for Black-Scholes
+MAX_TICKER_LENGTH = 5  # Maximum length for stock ticker symbols
 
 import yfinance as yf
 
@@ -351,7 +355,7 @@ def scan_chain(
                             days_to_expiry=days_to_expiry,
                             volatility=iv,
                             option_type=option_type,
-                            risk_free_rate=0.045,
+                            risk_free_rate=DEFAULT_RISK_FREE_RATE,
                             dividend_yield=0.0,
                         )
                         delta = greeks.delta
@@ -639,6 +643,16 @@ Examples:
     # Parse arguments
     args = parser.parse_args()
 
+    # Validate ticker format
+    ticker = args.ticker.strip().upper()
+    if not ticker.isalpha() or len(ticker) > MAX_TICKER_LENGTH or len(ticker) == 0:
+        print(
+            f"ERROR: Invalid ticker '{args.ticker}'. "
+            f"Must be 1-{MAX_TICKER_LENGTH} alphabetic characters.",
+            file=sys.stderr,
+        )
+        return 1
+
     try:
         # Handle --list-expiries mode
         if args.list_expiries:
@@ -674,6 +688,35 @@ Examples:
                 "Not investment advice."
             )
             return 0
+
+        # Validate numeric parameter bounds
+        if args.otm_min < 0 or args.otm_max < 0:
+            print(
+                "ERROR: OTM percentages must be non-negative",
+                file=sys.stderr,
+            )
+            return 1
+
+        if args.days_min < 0 or args.days_max < 0:
+            print(
+                "ERROR: Days values must be non-negative",
+                file=sys.stderr,
+            )
+            return 1
+
+        if args.budget is not None and args.budget <= 0:
+            print(
+                "ERROR: Budget must be a positive number",
+                file=sys.stderr,
+            )
+            return 1
+
+        if args.contracts < 1:
+            print(
+                "ERROR: Target contracts must be at least 1",
+                file=sys.stderr,
+            )
+            return 1
 
         # Validate parameter combinations
         if args.otm_min >= args.otm_max:
@@ -714,7 +757,15 @@ Examples:
 
         # Display or save
         if args.save_to:
-            save_path = Path(args.save_to)
+            save_path = Path(args.save_to).resolve()
+            project_dir = project_root.resolve()
+            if not str(save_path).startswith(str(project_dir)):
+                print(
+                    f"ERROR: Save path must be within the project directory: "
+                    f"{project_dir}",
+                    file=sys.stderr,
+                )
+                return 1
             save_path.parent.mkdir(parents=True, exist_ok=True)
             save_path.write_text(output_str)
             print(f"Saved to: {save_path}", file=sys.stderr)

@@ -18,7 +18,7 @@ tags:
   - privacy
   - cli
 references:
-  - ../../../knowledge/finance/meeting-notes/2026-01-30-paycheck-to-portfolio-sean-review.md
+  - ../../meeting-notes/2026-01-30-paycheck-to-portfolio-sean-review.md
   - finance-guru-interactive-knowledge-explorer.md
 supersedes: []
 diagrams:
@@ -50,7 +50,7 @@ Feature (Large — 5 discrete scopes in single umbrella spec)
 - Borrow-vs-sell tax optimization
 - Living off portfolio equity tracking
 
-**Stored at:** `knowledge/finance/meeting-notes/2026-01-30-paycheck-to-portfolio-sean-review.md`
+**Stored at:** `.dev/meeting-notes/2026-01-30-paycheck-to-portfolio-sean-review.md`
 
 ## Linear Issue Integration
 

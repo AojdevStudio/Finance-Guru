@@ -1,7 +1,27 @@
-# Into The Cryptoverse (ITC) Risk Models API Integration Specification
+---
+title: "Into The Cryptoverse (ITC) Risk Models API Integration"
+status: backlog
+created: 2026-01-09
+updated: 2026-02-02
+author: "Ossie Irondi"
+spec_id: itc-risk-api-integration
+version: "1.0.0"
+description: "Integrate ITC Risk Models API for market-implied risk signals complementing internal quantitative metrics"
+tags:
+  - finance-guru
+  - itc
+  - risk
+  - api-integration
+  - market-data
+references:
+  - agent-itc-integration-compliance.md
+supersedes: []
+diagrams:
+  human: ""
+  machine: ""
+---
 
-**Generated:** 2026-01-09 16:51:03
-**Status:** Ready for Implementation
+# Into The Cryptoverse (ITC) Risk Models API Integration Specification
 
 ## Problem Statement
 

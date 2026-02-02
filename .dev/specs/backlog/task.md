@@ -1,8 +1,26 @@
-# Finance Guru Public Release Tasks
+---
+title: "Finance Guru Public Release Tasks"
+status: backlog
+created: 2026-01-10
+updated: 2026-02-02
+author: "Ossie Irondi"
+spec_id: task
+version: "1.0.0"
+description: "Task checklist for preparing Finance Guru for public sharing and new user onboarding"
+tags:
+  - finance-guru
+  - public-release
+  - tasks
+  - onboarding
+references:
+  - finance-guru-user-onboarding-and-public-release.md
+supersedes: []
+diagrams:
+  human: ""
+  machine: ""
+---
 
-**Created:** 2026-01-10
-**Purpose:** Prepare Finance Guru for public sharing - make it simple and clear for new users
-**Executor:** Rolf (autonomous agent)
+# Finance Guru Public Release Tasks
 
 ---
 

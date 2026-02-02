@@ -1,8 +1,27 @@
+---
+title: "Finance Guru User Onboarding and Public Release"
+status: backlog
+created: 2026-01-15
+updated: 2026-02-02
+author: "Ossie Irondi"
+spec_id: finance-guru-user-onboarding-and-public-release
+version: "1.0.0"
+description: "Comprehensive onboarding flow and configuration automation for public distribution of Finance Guru"
+tags:
+  - finance-guru
+  - onboarding
+  - public-release
+  - setup
+  - configuration
+references: []
+supersedes: []
+diagrams:
+  human: ""
+  machine: ""
+---
+
 # Finance Guru User Onboarding and Public Release Specification
 
-**Generated:** 2026-01-15
-**Status:** Ready for Implementation
-**RBP Compatible:** Yes
 **Linear Issue:** AOJ-194
 
 ## Problem Statement

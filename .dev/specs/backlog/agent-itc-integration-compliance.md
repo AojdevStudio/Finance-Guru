@@ -1,8 +1,26 @@
-# Agent ITC Integration - Compliance Officer
+---
+title: "Agent ITC Integration - Compliance Officer"
+status: backlog
+created: 2026-01-09
+updated: 2026-02-02
+author: "Ossie Irondi"
+spec_id: agent-itc-integration-compliance
+version: "1.0.0"
+description: "Add ITC Risk Models API integration to the Compliance Officer agent for consistent risk signal access"
+tags:
+  - finance-guru
+  - itc
+  - compliance
+  - risk
+  - agents
+references: []
+supersedes: []
+diagrams:
+  human: ""
+  machine: ""
+---
 
-**Generated:** 2026-01-09 20:03:32 CST
-**Status:** Ready for Implementation
-**RBP Compatible:** Yes
+# Agent ITC Integration - Compliance Officer
 
 ## Problem Statement
 

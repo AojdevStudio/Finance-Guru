@@ -18,7 +18,7 @@ def format_level_bar(level_scores: dict, achieved: int) -> str:
     """Generate a visual level progress bar."""
     bars = []
     for level in range(1, 6):
-        score = level_scores.get(str(level), level_scores.get(level, 0))
+        score = level_scores.get(str(level), 0)
         if level <= achieved:
             indicator = "█" * 4
             status = f"L{level} {score:.0f}%"
@@ -111,7 +111,7 @@ def generate_markdown_report(data: dict) -> str:
     lines.append("| Level | Score | Status |")
     lines.append("|-------|-------|--------|")
     for level in range(1, 6):
-        score = level_scores.get(str(level), level_scores.get(level, 0))
+        score = level_scores.get(str(level), 0)
         if achieved > 0 and level <= achieved:
             status = "✅ Achieved"
         elif score >= 80:
@@ -227,7 +227,7 @@ def generate_brief_report(data: dict) -> str:
     
     # Quick level summary
     for level in range(1, 6):
-        score = data["level_scores"].get(str(level), data["level_scores"].get(level, 0))
+        score = data["level_scores"].get(str(level), 0)
         bar = "█" * int(score / 10) + "░" * (10 - int(score / 10))
         check = "✅" if achieved > 0 and level <= achieved else "⬜"
         lines.append(f"L{level} {check} [{bar}] {score:.0f}%")
@@ -274,7 +274,24 @@ def main():
         return 1
     
     data = json.loads(analysis_path.read_text())
-    
+
+    # Validate required fields
+    required_fields = [
+        "repo_name", "pass_rate", "achieved_level",
+        "total_passed", "total_criteria", "level_scores", "pillars",
+    ]
+    missing = [f for f in required_fields if f not in data]
+    if missing:
+        print(f"❌ Analysis data missing required fields: {', '.join(missing)}")
+        print("Re-run analyze_repo.py to generate a valid analysis.")
+        return 1
+
+    # Normalize level_scores keys to strings for consistent access
+    if "level_scores" in data:
+        data["level_scores"] = {
+            str(k): v for k, v in data["level_scores"].items()
+        }
+
     # Generate report
     if args.format == "markdown":
         report = generate_markdown_report(data)

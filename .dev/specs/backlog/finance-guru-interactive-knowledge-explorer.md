@@ -16,7 +16,7 @@ tags:
   - marketing
   - knowledge-graph
 references:
-  - ../../../knowledge/finance/playgrounds/dividend-strategy-explorer.html
+  - ../../playgrounds/dividend-strategy-explorer.html
 supersedes: []
 diagrams:
   human: "diagrams/finance-guru-interactive-knowledge-explorer-arch.png"
@@ -47,7 +47,7 @@ Finance Guru's onboarding (James Cooper) collects financial data (assets, income
 - Maya starts every teaching relationship cold, wasting early sessions on assessment
 - New users face intimidating CLI onboarding with no visual preview of what they'll learn
 - No shareable marketing artifact that demonstrates Finance Guru's educational depth
-- The working prototype sits unused in `knowledge/finance/playgrounds/`
+- The working prototype sits unused in `.dev/playgrounds/`
 
 ### What Triggered This
 
@@ -291,7 +291,7 @@ The explorer IS the demo. Instead of explaining what Finance Guru teaches, show 
 
 ## Implementation Notes
 
-- The existing prototype at `knowledge/finance/playgrounds/dividend-strategy-explorer.html` is the starting point
+- The existing prototype at `.dev/playgrounds/dividend-strategy-explorer.html` is the starting point
 - Finance Guru repo: `aojdevstudio/Finance-Guru` (private, main branch)
 - Maya's teaching workflow and concept progressions provide the raw material for topic data files
 - The build script should live in Finance Guru's `scripts/` directory
