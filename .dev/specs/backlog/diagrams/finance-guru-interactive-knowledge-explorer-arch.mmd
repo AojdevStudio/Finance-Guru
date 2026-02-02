@@ -1,0 +1,117 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a73e8', 'primaryTextColor': '#fff', 'primaryBorderColor': '#1558b0', 'lineColor': '#5f6368', 'secondaryColor': '#34a853', 'tertiaryColor': '#fbbc04', 'background': '#ffffff'}}}%%
+
+flowchart TD
+
+    %% ───────────────────────────────────────────────
+    %% DATA LAYER
+    %% ───────────────────────────────────────────────
+    subgraph DATA["Topic Data Layer"]
+        direction LR
+        DJ1["investing-basics.json"]
+        DJ2["tax-strategies.json"]
+        DJ3["retirement-planning.json"]
+        DJ4["debt-management.json"]
+        DJ5["...more topics"]
+    end
+
+    %% ───────────────────────────────────────────────
+    %% BUILD PIPELINE
+    %% ───────────────────────────────────────────────
+    subgraph BUILD["Build Pipeline"]
+        TE["Template Engine\nJinja2 / Nunjucks"]
+        HTML["Interactive Explorer\nSingle-page HTML + JS"]
+        TE --> HTML
+    end
+
+    DATA --> TE
+
+    %% ───────────────────────────────────────────────
+    %% USER INTERACTION
+    %% ───────────────────────────────────────────────
+    subgraph INTERACT["User Interaction"]
+        direction TB
+        USER["User visits Explorer"]
+        ASSESS["Self-Assess Knowledge\nRate topics: None to Expert"]
+        RESULTS["Results Dashboard\nGaps, strengths, recommendations"]
+        USER --> ASSESS --> RESULTS
+    end
+
+    HTML --> USER
+
+    %% ───────────────────────────────────────────────
+    %% THREE OUTPUT PATHS
+    %% ───────────────────────────────────────────────
+    subgraph OUTPUTS["Three Output Paths"]
+        direction LR
+        OUT_PROMPT["1. Learning Prompt\nCopied to clipboard"]
+        OUT_PROFILE["2. Maya Learner Profile\nJSON export"]
+        OUT_WIDGET["3. Embeddable Widget\niframe / Web Component"]
+    end
+
+    RESULTS --> OUT_PROMPT
+    RESULTS --> OUT_PROFILE
+    RESULTS --> OUT_WIDGET
+
+    %% ───────────────────────────────────────────────
+    %% DESTINATION: LEARNING PROMPT
+    %% ───────────────────────────────────────────────
+    subgraph CHATBOT["Any Chatbot"]
+        CB_ANY["ChatGPT / Claude / Gemini\nPaste prompt, start learning"]
+    end
+
+    OUT_PROMPT -->|"paste"| CB_ANY
+
+    %% ───────────────────────────────────────────────
+    %% DESTINATION: MAYA PROFILE -> CLI -> SESSIONS
+    %% ───────────────────────────────────────────────
+    subgraph MAYA["Maya Teaching Pipeline"]
+        direction LR
+        CLI["Finance Guru CLI\nLoad learner profile"]
+        SESSIONS["Maya Teaching Sessions\nPersonalized curriculum"]
+        CLI --> SESSIONS
+    end
+
+    OUT_PROFILE -->|"import JSON"| CLI
+
+    %% ───────────────────────────────────────────────
+    %% DESTINATION: EMBEDDABLE WIDGET
+    %% ───────────────────────────────────────────────
+    subgraph SITE["aojdevstudio.me"]
+        PORTFOLIO["Portfolio Site\nEmbedded knowledge explorer"]
+    end
+
+    OUT_WIDGET -->|"embed"| PORTFOLIO
+
+    %% ───────────────────────────────────────────────
+    %% MARKETING FUNNEL
+    %% ───────────────────────────────────────────────
+    subgraph FUNNEL["Marketing Funnel"]
+        direction LR
+        F1["Discovery\nBlog, SEO, social"]
+        F2["Assessment\nSelf-assess knowledge"]
+        F3["Conversion\nCopy prompt / export profile"]
+        F4["Retention\nReturn for new topics,\ntrack progress"]
+        F1 --> F2 --> F3 --> F4
+    end
+
+    F1 -.->|"drives traffic"| USER
+    F2 -.->|"powers"| ASSESS
+    F3 -.->|"triggers"| OUTPUTS
+    F4 -.->|"re-engages"| USER
+
+    %% ───────────────────────────────────────────────
+    %% STYLES
+    %% ───────────────────────────────────────────────
+    classDef dataNode fill:#e8f0fe,stroke:#1a73e8,color:#1a73e8
+    classDef buildNode fill:#1a73e8,stroke:#1558b0,color:#fff
+    classDef userNode fill:#34a853,stroke:#1e8e3e,color:#fff
+    classDef outputNode fill:#fbbc04,stroke:#f29900,color:#202124
+    classDef destNode fill:#ea4335,stroke:#c5221f,color:#fff
+    classDef funnelNode fill:#ab47bc,stroke:#8e24aa,color:#fff
+
+    class DJ1,DJ2,DJ3,DJ4,DJ5 dataNode
+    class TE,HTML buildNode
+    class USER,ASSESS,RESULTS userNode
+    class OUT_PROMPT,OUT_PROFILE,OUT_WIDGET outputNode
+    class CB_ANY,CLI,SESSIONS,PORTFOLIO destNode
+    class F1,F2,F3,F4 funnelNode

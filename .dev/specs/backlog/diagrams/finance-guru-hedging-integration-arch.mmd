@@ -1,0 +1,123 @@
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#93c5fd', 'primaryBorderColor': '#3b82f6', 'lineColor': '#64748b', 'secondaryColor': '#1e293b', 'tertiaryColor': '#0f172a'}}}%%
+
+graph TB
+    subgraph PUBLIC["PUBLIC REPO (family-office)"]
+        direction TB
+
+        subgraph MODELS["Layer 1: Pydantic Models (src/models/)"]
+            OI["options_inputs.py<br/><i>8 existing models</i>"]
+            HI["hedging_inputs.py<br/><i>NEW: HedgeConfig, HedgePosition,<br/>RollSuggestion, HedgeSizeRequest,<br/>HedgeComparisonInput, etc.</i>"]
+            TRI["total_return_inputs.py<br/><i>NEW: TotalReturnInput,<br/>DividendRecord, TickerReturn</i>"]
+        end
+
+        subgraph CALC["Layer 2: Calculators (src/analysis/)"]
+            OC["options.py<br/><i>Black-Scholes + Greeks</i>"]
+            OCC["options_chain_cli.py<br/><i>Scanner (738 lines)</i>"]
+            RT["rolling_tracker.py<br/><i>NEW: Roll management</i>"]
+            HS["hedge_sizer.py<br/><i>NEW: Portfolio sizing</i>"]
+            HC["hedge_comparison.py<br/><i>NEW: SQQQ vs Puts</i>"]
+            TR["total_return.py<br/><i>NEW: Dividend returns</i>"]
+        end
+
+        subgraph CLI["Layer 3: CLI Interfaces (src/analysis/)"]
+            RTC["rolling_tracker_cli.py<br/><i>status | suggest-roll | log-roll | history</i>"]
+            HSC["hedge_sizer_cli.py<br/><i>portfolio sizing + budget check</i>"]
+            HCC["hedge_comparison_cli.py<br/><i>scenario comparison table</i>"]
+            TRC["total_return_cli.py<br/><i>multi-ticker + DRIP</i>"]
+        end
+
+        subgraph UTILS["Utilities (src/utils/)"]
+            CL["config_loader.py<br/><i>NEW: Read user-profile.yaml<br/>Return typed HedgeConfig</i>"]
+        end
+
+        subgraph KNOWLEDGE["Agent Knowledge (fin-guru/data/knowledge/)"]
+            K1["hedging-strategies.md"]
+            K2["options-insurance-framework.md"]
+            K3["dividend-total-return.md"]
+            K4["borrow-vs-sell-tax.md"]
+        end
+
+        subgraph AGENTS["Agent System (fin-guru/agents/)"]
+            SA["Strategy Advisor"]
+            TS["Teaching Specialist"]
+            QA["Quant Analyst"]
+        end
+
+        subgraph TESTS["Test Suite (tests/python/)"]
+            T1["test_rolling_tracker.py"]
+            T2["test_hedge_sizer.py"]
+            T3["test_hedge_comparison.py"]
+            T4["test_total_return.py"]
+            T5["test_config_loader.py"]
+            TE["365 existing tests"]
+        end
+    end
+
+    subgraph PRIVATE["PRIVATE / GITIGNORED"]
+        direction TB
+        UP["user-profile.yaml<br/><i>portfolio_value, hedging config,<br/>API keys, account details</i>"]
+        POS["fin-guru-private/hedging/<br/>positions.yaml"]
+        RH["fin-guru-private/hedging/<br/>roll-history.yaml"]
+        BT["fin-guru-private/hedging/<br/>budget-tracker.yaml"]
+        ENV[".env<br/><i>API keys</i>"]
+    end
+
+    subgraph EXTERNAL["External Data"]
+        YF["yfinance API<br/><i>Options chains, prices,<br/>dividends, history</i>"]
+    end
+
+    %% Model -> Calculator connections
+    HI --> RT
+    HI --> HS
+    HI --> HC
+    TRI --> TR
+    OI --> OC
+    OI --> OCC
+
+    %% Calculator -> CLI connections
+    RT --> RTC
+    HS --> HSC
+    HC --> HCC
+    TR --> TRC
+
+    %% Cross-calculator dependencies
+    OC --> HC
+    OCC --> RT
+    OCC --> HS
+
+    %% Config loading
+    UP --> CL
+    CL --> RT
+    CL --> HS
+    CL --> HC
+
+    %% Private data flows
+    POS --> RT
+    RH --> RT
+    BT --> HS
+
+    %% External data
+    YF --> OCC
+    YF --> TR
+    YF --> HS
+
+    %% Knowledge -> Agent connections
+    K1 --> SA
+    K2 --> TS
+    K3 --> TS
+    K4 --> SA
+    K1 --> QA
+    K2 --> QA
+
+    %% Styling
+    classDef newComponent fill:#1e3a5f,stroke:#3b82f6,stroke-width:2px,color:#93c5fd
+    classDef existingComponent fill:#1e293b,stroke:#475569,stroke-width:1px,color:#94a3b8
+    classDef privateComponent fill:#7f1d1d,stroke:#dc2626,stroke-width:2px,color:#fca5a5
+    classDef externalComponent fill:#1a2e05,stroke:#65a30d,stroke-width:1px,color:#bef264
+    classDef knowledgeComponent fill:#312e81,stroke:#7c3aed,stroke-width:1px,color:#c4b5fd
+
+    class HI,TRI,RT,HS,HC,TR,RTC,HSC,HCC,TRC,CL,T1,T2,T3,T4,T5 newComponent
+    class OI,OC,OCC,TE existingComponent
+    class UP,POS,RH,BT,ENV privateComponent
+    class YF externalComponent
+    class K1,K2,K3,K4,SA,TS,QA knowledgeComponent
