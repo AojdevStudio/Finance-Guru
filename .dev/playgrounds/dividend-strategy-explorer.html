@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dividend Investment Strategy Explorer</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --orange: #db6d28;
+    --cyan: #39d2c0;
+    --pink: #f778ba;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header {
+    padding: 12px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .header h1 span { color: var(--accent); }
+
+  .header-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .preset-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .preset-btn:hover { border-color: var(--accent); color: var(--text); }
+  .preset-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    width: 300px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-section h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .node-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .node-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.1s;
+    font-size: 13px;
+  }
+
+  .node-item:hover { background: rgba(255,255,255,0.04); }
+
+  .node-item .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .node-item .name { flex: 1; }
+
+  .knowledge-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .knowledge-badge.know { background: rgba(63,185,80,0.15); color: var(--green); }
+  .knowledge-badge.fuzzy { background: rgba(210,153,34,0.15); color: var(--yellow); }
+  .knowledge-badge.unknown { background: rgba(248,81,73,0.15); color: var(--red); }
+
+  .canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    max-width: 280px;
+    line-height: 1.5;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 100;
+    display: none;
+  }
+
+  .tooltip .tt-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .tooltip .tt-desc { color: var(--text-muted); }
+  .tooltip .tt-category { font-size: 10px; color: var(--accent); text-transform: uppercase; margin-top: 6px; }
+
+  .prompt-panel {
+    height: 160px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .prompt-header span {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+  }
+
+  .copy-btn {
+    padding: 4px 12px;
+    font-size: 12px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.15s;
+  }
+
+  .copy-btn:hover { opacity: 0.85; }
+
+  .prompt-text {
+    flex: 1;
+    padding: 12px 16px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    overflow-y: auto;
+  }
+
+  .stats {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+  }
+
+  .stat { color: var(--text-muted); }
+  .stat strong { color: var(--text); }
+
+  .edge-type-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .edge-type-btn {
+    padding: 3px 8px;
+    font-size: 11px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .edge-type-btn:hover { border-color: var(--accent); }
+  .edge-type-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  .action-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .action-btn:hover { border-color: var(--text-muted); color: var(--text); }
+
+  .instructions {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .instructions kbd {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>$</span> Dividend Investment Strategy Explorer</h1>
+  <div class="header-controls">
+    <div class="stats">
+      <span class="stat" id="stat-know"><strong>0</strong> know</span>
+      <span class="stat" id="stat-fuzzy"><strong>0</strong> fuzzy</span>
+      <span class="stat" id="stat-unknown"><strong>0</strong> unknown</span>
+    </div>
+    <button class="preset-btn" onclick="applyPreset('all')">All</button>
+    <button class="preset-btn" onclick="applyPreset('core')">Core Strategy</button>
+    <button class="preset-btn" onclick="applyPreset('risk')">Risk Mgmt</button>
+    <button class="preset-btn" onclick="applyPreset('implementation')">Implementation</button>
+    <button class="preset-btn" onclick="applyPreset('advanced')">Advanced</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h3>How to Use</h3>
+      <div class="instructions">
+        <kbd>Drag</kbd> nodes to arrange. <kbd>Click badge</kbd> to cycle knowledge: Know / Fuzzy / Unknown. Use presets to focus. The prompt below updates live based on your gaps.
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Categories</h3>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background: #58a6ff"></div> Foundation</div>
+        <div class="legend-item"><div class="legend-dot" style="background: #3fb950"></div> Strategy</div>
+        <div class="legend-item"><div class="legend-dot" style="background: #d29922"></div> Portfolio</div>
+        <div class="legend-item"><div class="legend-dot" style="background: #f85149"></div> Risk</div>
+        <div class="legend-item"><div class="legend-dot" style="background: #bc8cff"></div> Advanced</div>
+        <div class="legend-item"><div class="legend-dot" style="background: #39d2c0"></div> Implementation</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Concepts</h3>
+      <div class="node-list" id="node-list"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Actions</h3>
+      <div class="action-row">
+        <button class="action-btn" onclick="autoLayout()">Auto-Layout</button>
+        <button class="action-btn" onclick="setAllKnowledge('know')">All Know</button>
+        <button class="action-btn" onclick="setAllKnowledge('fuzzy')">All Fuzzy</button>
+        <button class="action-btn" onclick="setAllKnowledge('unknown')">All Unknown</button>
+        <button class="action-btn" onclick="resetLayout()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="canvas-container">
+    <canvas id="canvas"></canvas>
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+</div>
+
+<div class="prompt-panel">
+  <div class="prompt-header">
+    <span>Learning Prompt</span>
+    <button class="copy-btn" id="copy-btn" onclick="copyPrompt()">Copy</button>
+  </div>
+  <div class="prompt-text" id="prompt-text">
+    Mark your knowledge levels to generate a targeted learning prompt...
+  </div>
+</div>
+
+<script>
+const CATEGORIES = {
+  foundation: { color: '#58a6ff', label: 'Foundation' },
+  strategy: { color: '#3fb950', label: 'Strategy' },
+  portfolio: { color: '#d29922', label: 'Portfolio' },
+  risk: { color: '#f85149', label: 'Risk' },
+  advanced: { color: '#bc8cff', label: 'Advanced' },
+  implementation: { color: '#39d2c0', label: 'Implementation' }
+};
+
+const KNOWLEDGE_LEVELS = ['fuzzy', 'know', 'unknown'];
+
+const nodesData = [
+  { id: 'mindset', label: 'Investment-First\nMindset', category: 'foundation', knowledge: 'fuzzy',
+    desc: 'Invert traditional finance: invest 100% of income first, use leverage for expenses. Paycheck -> Investment -> Margin Bridge -> Dividends Replace Margin. Treats portfolio as income-generating business.',
+    tags: ['core', 'implementation'] },
+  { id: 'compound', label: 'Front-End\nLoading', category: 'foundation', knowledge: 'fuzzy',
+    desc: 'Maximize compound interest by investing full income immediately rather than leftovers. $1k income with $800 expenses: invest $1k, borrow $800. 5x more capital compounding from day one.',
+    tags: ['core'] },
+  { id: 'fire', label: 'FIRE Target', category: 'foundation', knowledge: 'fuzzy',
+    desc: 'Financial Independence, Retire Early. Target: dividend income exceeding living expenses. Traditional 4% rule needs $1M for $40k/yr. High-yield strategies (15-35%) need dramatically less capital.',
+    tags: ['core'] },
+  { id: 'three-bucket', label: 'Three-Bucket\nStrategy', category: 'strategy', knowledge: 'fuzzy',
+    desc: 'Portfolio divided into: Growth Foundation (30-40%), Anchor Holdings (30-40%), High-Yield Cash Flow (20-40%). Balances appreciation, stability, and income generation.',
+    tags: ['core', 'implementation'] },
+  { id: 'bucket-growth', label: 'Bucket 1:\nGrowth', category: 'portfolio', knowledge: 'fuzzy',
+    desc: 'Capital appreciation and stability. SPY, BRK.B, NVDA, MCD, COST. 30-40% allocation. Expected 5-15% annual return. Foundation that anchors portfolio value.',
+    tags: ['core'] },
+  { id: 'bucket-anchor', label: 'Bucket 2:\nAnchors', category: 'portfolio', knowledge: 'fuzzy',
+    desc: 'Stable high-dividend income. CLM, CRF (Cornerstone funds). 30-40% allocation. 15-20% yield. 5-star Morningstar ratings. DRIP at NAV when trading at premium.',
+    tags: ['core'] },
+  { id: 'bucket-yield', label: 'Bucket 3:\nHigh-Yield', category: 'portfolio', knowledge: 'fuzzy',
+    desc: 'Maximum income generation. QQQY, MSTY, XDTE, SPYI. 20-40% allocation. 25-35% yield. Weekly dividend payers for consistent cash flow.',
+    tags: ['core'] },
+  { id: 'flywheel', label: 'Margin\nFlywheel', category: 'strategy', knowledge: 'fuzzy',
+    desc: 'Self-reinforcing cycle: Income -> Invest -> Margin for expenses -> Dividends grow -> Dividends replace margin -> Freedom. Each cycle compounds faster than the last.',
+    tags: ['core', 'advanced'] },
+  { id: 'spread', label: 'Business\nSpread', category: 'strategy', knowledge: 'fuzzy',
+    desc: 'Profitable arbitrage: borrow at 5-8% margin rate, invest at 25-35% yield. Net spread of 16-27% positive arbitrage. This is the core engine of the strategy.',
+    tags: ['core'] },
+  { id: 'drip-nav', label: 'DRIP at\nNAV', category: 'advanced', knowledge: 'fuzzy',
+    desc: 'Dividend reinvestment at Net Asset Value instead of market price. When CLF trades at 13% premium, DRIP buys at NAV = automatic 13% bonus on every reinvestment. Compounds exponentially.',
+    tags: ['advanced'] },
+  { id: 'nav-arb', label: 'NAV\nArbitrage', category: 'advanced', knowledge: 'fuzzy',
+    desc: 'CRF example: 21% dividend yield + 13.35% NAV premium = 34.35% effective yield. Sean got $5,447 immediate unrealized gain from a single $294 dividend reinvestment.',
+    tags: ['advanced'] },
+  { id: 'cef', label: 'Closed-End\nFunds', category: 'portfolio', knowledge: 'fuzzy',
+    desc: 'Fixed share count, trade at premium/discount to NAV. Key funds: CLM (19%+ yield), CRF (premium trading). Evaluate dividend coverage ratio, NAV trends, management quality, expense ratios.',
+    tags: ['core'] },
+  { id: 'covered-calls', label: 'Covered Call\nETFs', category: 'portfolio', knowledge: 'fuzzy',
+    desc: 'Generate income by selling call options on holdings. QQQY, SPYI, XDTE. Preferred families: Roundhill/NEOS (NAV preservation), YieldMax (high yield), Defiance (balanced).',
+    tags: ['core'] },
+  { id: 'equity-rule', label: '50% Equity\nRule', category: 'risk', knowledge: 'fuzzy',
+    desc: 'NEVER let equity fall below 50% of portfolio value. With $100k portfolio and $40k margin: $60k equity = 60%. Need 75%+ decline for margin call. Provides massive safety buffer.',
+    tags: ['risk'] },
+  { id: 'put-insurance', label: 'Put Option\nInsurance', category: 'risk', knowledge: 'fuzzy',
+    desc: 'Protective puts limit downside. Example: 1000 SPY shares at $400k, buy $380 puts for $5k. Max loss capped at $25k (6.25%). Insurance cost: ~1.25% annually.',
+    tags: ['risk', 'advanced'] },
+  { id: 'margin-call', label: 'Margin Call\nRisk', category: 'risk', knowledge: 'fuzzy',
+    desc: 'When portfolio drops below maintenance requirement, broker forces asset sales. Prevention: 50% equity rule, diversification, put options, emergency cash reserves.',
+    tags: ['risk'] },
+  { id: 'div-cut', label: 'Dividend Cut\nRisk', category: 'risk', knowledge: 'fuzzy',
+    desc: 'Economic downturns can force distribution reductions. Mitigation: plan on 75% of current yields, diversify across fund families, prioritize strong coverage ratios.',
+    tags: ['risk'] },
+  { id: 'total-return', label: 'Total Return\nCalculation', category: 'foundation', knowledge: 'fuzzy',
+    desc: 'ROI = (Current Value - Initial + Dividends) / Initial x 100. NAV erosion is NOT poor performance when dividends included. Sean\'s CLM: apparent NAV erosion but 23.9% total return.',
+    tags: ['core'] },
+  { id: 'platform', label: 'Platform\nSelection', category: 'implementation', knowledge: 'fuzzy',
+    desc: 'E*Trade: 8.44% negotiated margin, strong research. Robinhood: 5.25% margin, $1k free. Fidelity: higher rates, extensive funds. Key: low margin rate, DRIP support, flexible access.',
+    tags: ['implementation'] },
+  { id: 'scaling', label: 'Progressive\nScaling', category: 'implementation', knowledge: 'fuzzy',
+    desc: 'Stage 1 ($10-50k): 25% max margin, learn basics. Stage 2 ($50-150k): 40% margin, add options. Stage 3 ($150k+): dynamic leverage, multi-platform, advanced hedging.',
+    tags: ['implementation', 'advanced'] }
+];
+
+const edgesData = [
+  { from: 'mindset', to: 'compound', label: 'enables', type: 'foundation' },
+  { from: 'compound', to: 'fire', label: 'accelerates', type: 'foundation' },
+  { from: 'mindset', to: 'flywheel', label: 'drives', type: 'strategy' },
+  { from: 'flywheel', to: 'spread', label: 'creates', type: 'strategy' },
+  { from: 'three-bucket', to: 'bucket-growth', label: 'contains', type: 'portfolio' },
+  { from: 'three-bucket', to: 'bucket-anchor', label: 'contains', type: 'portfolio' },
+  { from: 'three-bucket', to: 'bucket-yield', label: 'contains', type: 'portfolio' },
+  { from: 'bucket-anchor', to: 'cef', label: 'uses', type: 'portfolio' },
+  { from: 'bucket-yield', to: 'covered-calls', label: 'uses', type: 'portfolio' },
+  { from: 'cef', to: 'drip-nav', label: 'enables', type: 'advanced' },
+  { from: 'drip-nav', to: 'nav-arb', label: 'creates', type: 'advanced' },
+  { from: 'spread', to: 'platform', label: 'requires', type: 'implementation' },
+  { from: 'flywheel', to: 'equity-rule', label: 'needs', type: 'risk' },
+  { from: 'equity-rule', to: 'margin-call', label: 'prevents', type: 'risk' },
+  { from: 'put-insurance', to: 'margin-call', label: 'mitigates', type: 'risk' },
+  { from: 'fire', to: 'three-bucket', label: 'achieved via', type: 'strategy' },
+  { from: 'total-return', to: 'cef', label: 'measures', type: 'foundation' },
+  { from: 'total-return', to: 'covered-calls', label: 'measures', type: 'foundation' },
+  { from: 'platform', to: 'scaling', label: 'supports', type: 'implementation' },
+  { from: 'scaling', to: 'flywheel', label: 'grows', type: 'implementation' },
+  { from: 'div-cut', to: 'flywheel', label: 'threatens', type: 'risk' },
+  { from: 'nav-arb', to: 'compound', label: 'supercharges', type: 'advanced' }
+];
+
+const PRESETS = {
+  all: nodesData.map(n => n.id),
+  core: nodesData.filter(n => n.tags.includes('core')).map(n => n.id),
+  risk: nodesData.filter(n => n.tags.includes('risk') || n.category === 'risk').map(n => n.id),
+  implementation: nodesData.filter(n => n.tags.includes('implementation') || n.category === 'implementation').map(n => n.id),
+  advanced: nodesData.filter(n => n.tags.includes('advanced') || n.category === 'advanced').map(n => n.id)
+};
+
+// State
+let nodes = [];
+let edges = [];
+let visibleNodeIds = new Set(PRESETS.all);
+let activePreset = 'all';
+let dragging = null;
+let dragOffset = { x: 0, y: 0 };
+let hoveredNode = null;
+let canvasW = 0, canvasH = 0;
+let dpr = window.devicePixelRatio || 1;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const tooltipEl = document.getElementById('tooltip');
+const promptEl = document.getElementById('prompt-text');
+
+function initNodes() {
+  const cw = canvas.parentElement.clientWidth;
+  const ch = canvas.parentElement.clientHeight;
+  const cx = cw / 2, cy = ch / 2;
+
+  // Arrange in a structured layout by category
+  const categoryPositions = {
+    foundation: { cx: cx - 100, cy: cy - 180, spread: 140 },
+    strategy: { cx: cx + 100, cy: cy - 60, spread: 120 },
+    portfolio: { cx: cx - 160, cy: cy + 60, spread: 110 },
+    risk: { cx: cx + 200, cy: cy + 120, spread: 100 },
+    advanced: { cx: cx + 40, cy: cy + 200, spread: 130 },
+    implementation: { cx: cx - 200, cy: cy + 220, spread: 100 }
+  };
+
+  const categoryCounters = {};
+
+  nodes = nodesData.map(nd => {
+    const catPos = categoryPositions[nd.category];
+    if (!categoryCounters[nd.category]) categoryCounters[nd.category] = 0;
+    const idx = categoryCounters[nd.category]++;
+    const total = nodesData.filter(n => n.category === nd.category).length;
+    const angle = (idx / total) * Math.PI * 2 - Math.PI / 2;
+
+    return {
+      ...nd,
+      x: catPos.cx + Math.cos(angle) * catPos.spread,
+      y: catPos.cy + Math.sin(angle) * catPos.spread,
+      radius: 36,
+      visible: true
+    };
+  });
+
+  edges = edgesData.map(ed => ({ ...ed }));
+}
+
+function resizeCanvas() {
+  const container = canvas.parentElement;
+  canvasW = container.clientWidth;
+  canvasH = container.clientHeight;
+  canvas.width = canvasW * dpr;
+  canvas.height = canvasH * dpr;
+  canvas.style.width = canvasW + 'px';
+  canvas.style.height = canvasH + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function drawEdge(edge) {
+  const from = nodes.find(n => n.id === edge.from);
+  const to = nodes.find(n => n.id === edge.to);
+  if (!from || !to || !visibleNodeIds.has(from.id) || !visibleNodeIds.has(to.id)) return;
+
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist === 0) return;
+
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  const startX = from.x + nx * from.radius;
+  const startY = from.y + ny * from.radius;
+  const endX = to.x - nx * to.radius;
+  const endY = to.y - ny * to.radius;
+
+  const cat = CATEGORIES[from.category] || CATEGORIES.foundation;
+  const alpha = (hoveredNode && (hoveredNode.id === from.id || hoveredNode.id === to.id)) ? 0.8 : 0.2;
+
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.strokeStyle = cat.color + Math.round(alpha * 255).toString(16).padStart(2, '0');
+  ctx.lineWidth = hoveredNode && (hoveredNode.id === from.id || hoveredNode.id === to.id) ? 2 : 1;
+  ctx.stroke();
+
+  // Arrow
+  const arrowLen = 8;
+  const arrowAngle = Math.atan2(endY - startY, endX - startX);
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(endX - arrowLen * Math.cos(arrowAngle - 0.35), endY - arrowLen * Math.sin(arrowAngle - 0.35));
+  ctx.lineTo(endX - arrowLen * Math.cos(arrowAngle + 0.35), endY - arrowLen * Math.sin(arrowAngle + 0.35));
+  ctx.closePath();
+  ctx.fillStyle = cat.color + Math.round(alpha * 255).toString(16).padStart(2, '0');
+  ctx.fill();
+
+  // Label
+  if (hoveredNode && (hoveredNode.id === from.id || hoveredNode.id === to.id)) {
+    const midX = (startX + endX) / 2;
+    const midY = (startY + endY) / 2;
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.fillStyle = '#8b949e';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const bgW = ctx.measureText(edge.label).width + 8;
+    ctx.fillStyle = '#0d1117cc';
+    ctx.fillRect(midX - bgW / 2, midY - 8, bgW, 16);
+
+    ctx.fillStyle = '#8b949e';
+    ctx.fillText(edge.label, midX, midY);
+  }
+}
+
+function drawNode(node) {
+  if (!visibleNodeIds.has(node.id)) return;
+
+  const cat = CATEGORIES[node.category];
+  const isHovered = hoveredNode && hoveredNode.id === node.id;
+  const isConnected = hoveredNode && edges.some(e =>
+    (e.from === hoveredNode.id && e.to === node.id) ||
+    (e.to === hoveredNode.id && e.from === node.id)
+  );
+  const dimmed = hoveredNode && !isHovered && !isConnected;
+
+  // Glow
+  if (isHovered) {
+    const gradient = ctx.createRadialGradient(node.x, node.y, node.radius, node.x, node.y, node.radius + 20);
+    gradient.addColorStop(0, cat.color + '30');
+    gradient.addColorStop(1, cat.color + '00');
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, node.radius + 20, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+  }
+
+  // Node circle
+  ctx.beginPath();
+  ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+  ctx.fillStyle = dimmed ? '#161b2240' : '#161b22';
+  ctx.fill();
+  ctx.strokeStyle = dimmed ? cat.color + '30' : (isHovered ? cat.color : cat.color + '80');
+  ctx.lineWidth = isHovered ? 2.5 : 1.5;
+  ctx.stroke();
+
+  // Knowledge ring
+  const knowledgeColors = { know: '#3fb950', fuzzy: '#d29922', unknown: '#f85149' };
+  const kColor = knowledgeColors[node.knowledge];
+  ctx.beginPath();
+  ctx.arc(node.x, node.y, node.radius + 3, 0, Math.PI * 2);
+  ctx.strokeStyle = dimmed ? kColor + '20' : kColor + '60';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Label
+  ctx.font = `${isHovered ? '600' : '500'} 11px -apple-system, sans-serif`;
+  ctx.fillStyle = dimmed ? '#8b949e40' : '#e6edf3';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const lines = node.label.split('\n');
+  const lineHeight = 14;
+  const startY = node.y - ((lines.length - 1) * lineHeight) / 2;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, node.x, startY + i * lineHeight);
+  });
+
+  // Knowledge indicator dot
+  ctx.beginPath();
+  ctx.arc(node.x + node.radius - 4, node.y - node.radius + 4, 5, 0, Math.PI * 2);
+  ctx.fillStyle = kColor;
+  ctx.fill();
+  ctx.strokeStyle = '#0d1117';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvasW, canvasH);
+
+  // Subtle grid
+  ctx.strokeStyle = '#ffffff06';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvasW; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvasH); ctx.stroke();
+  }
+  for (let y = 0; y < canvasH; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvasW, y); ctx.stroke();
+  }
+
+  edges.forEach(e => drawEdge(e));
+  nodes.forEach(n => drawNode(n));
+}
+
+function getNodeAt(x, y) {
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    if (!visibleNodeIds.has(n.id)) continue;
+    const dx = x - n.x, dy = y - n.y;
+    if (dx * dx + dy * dy <= n.radius * n.radius) return n;
+  }
+  return null;
+}
+
+function getMousePos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+canvas.addEventListener('mousedown', e => {
+  const pos = getMousePos(e);
+  const node = getNodeAt(pos.x, pos.y);
+  if (node) {
+    dragging = node;
+    dragOffset = { x: pos.x - node.x, y: pos.y - node.y };
+    canvas.style.cursor = 'grabbing';
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  const pos = getMousePos(e);
+
+  if (dragging) {
+    dragging.x = pos.x - dragOffset.x;
+    dragging.y = pos.y - dragOffset.y;
+    draw();
+    return;
+  }
+
+  const node = getNodeAt(pos.x, pos.y);
+  if (node !== hoveredNode) {
+    hoveredNode = node;
+    canvas.style.cursor = node ? 'grab' : 'default';
+
+    if (node) {
+      tooltipEl.style.display = 'block';
+      tooltipEl.innerHTML = `
+        <div class="tt-title">${node.label.replace('\n', ' ')}</div>
+        <div class="tt-desc">${node.desc}</div>
+        <div class="tt-category">${CATEGORIES[node.category].label} | ${node.knowledge.toUpperCase()}</div>
+      `;
+      const tx = Math.min(pos.x + 16, canvasW - 300);
+      const ty = Math.min(pos.y + 16, canvasH - 120);
+      tooltipEl.style.left = tx + 'px';
+      tooltipEl.style.top = ty + 'px';
+    } else {
+      tooltipEl.style.display = 'none';
+    }
+
+    draw();
+  } else if (node) {
+    const tx = Math.min(pos.x + 16, canvasW - 300);
+    const ty = Math.min(pos.y + 16, canvasH - 120);
+    tooltipEl.style.left = tx + 'px';
+    tooltipEl.style.top = ty + 'px';
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  if (dragging) {
+    dragging = null;
+    canvas.style.cursor = hoveredNode ? 'grab' : 'default';
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  dragging = null;
+  hoveredNode = null;
+  tooltipEl.style.display = 'none';
+  canvas.style.cursor = 'default';
+  draw();
+});
+
+function cycleKnowledge(nodeId) {
+  const node = nodes.find(n => n.id === nodeId);
+  if (!node) return;
+  const idx = KNOWLEDGE_LEVELS.indexOf(node.knowledge);
+  node.knowledge = KNOWLEDGE_LEVELS[(idx + 1) % KNOWLEDGE_LEVELS.length];
+  renderSidebar();
+  updatePrompt();
+  draw();
+}
+
+function renderSidebar() {
+  const listEl = document.getElementById('node-list');
+  listEl.innerHTML = nodes
+    .filter(n => visibleNodeIds.has(n.id))
+    .map(n => {
+      const cat = CATEGORIES[n.category];
+      return `<div class="node-item" onclick="focusNode('${n.id}')">
+        <div class="dot" style="background: ${cat.color}"></div>
+        <span class="name">${n.label.replace('\n', ' ')}</span>
+        <span class="knowledge-badge ${n.knowledge}" onclick="event.stopPropagation(); cycleKnowledge('${n.id}')">${n.knowledge}</span>
+      </div>`;
+    }).join('');
+
+  // Stats
+  const know = nodes.filter(n => visibleNodeIds.has(n.id) && n.knowledge === 'know').length;
+  const fuzzy = nodes.filter(n => visibleNodeIds.has(n.id) && n.knowledge === 'fuzzy').length;
+  const unknown = nodes.filter(n => visibleNodeIds.has(n.id) && n.knowledge === 'unknown').length;
+  document.getElementById('stat-know').innerHTML = `<strong>${know}</strong> know`;
+  document.getElementById('stat-fuzzy').innerHTML = `<strong>${fuzzy}</strong> fuzzy`;
+  document.getElementById('stat-unknown').innerHTML = `<strong>${unknown}</strong> unknown`;
+}
+
+function focusNode(nodeId) {
+  const node = nodes.find(n => n.id === nodeId);
+  if (!node) return;
+  hoveredNode = node;
+  draw();
+  setTimeout(() => { hoveredNode = null; draw(); }, 1500);
+}
+
+function applyPreset(name) {
+  activePreset = name;
+  visibleNodeIds = new Set(PRESETS[name]);
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.toLowerCase().replace(' ', '') === name ||
+      (name === 'all' && btn.textContent === 'All') ||
+      (name === 'core' && btn.textContent === 'Core Strategy') ||
+      (name === 'risk' && btn.textContent === 'Risk Mgmt') ||
+      (name === 'implementation' && btn.textContent === 'Implementation') ||
+      (name === 'advanced' && btn.textContent === 'Advanced'));
+  });
+
+  renderSidebar();
+  updatePrompt();
+  draw();
+}
+
+function setAllKnowledge(level) {
+  nodes.forEach(n => { if (visibleNodeIds.has(n.id)) n.knowledge = level; });
+  renderSidebar();
+  updatePrompt();
+  draw();
+}
+
+function autoLayout() {
+  const visible = nodes.filter(n => visibleNodeIds.has(n.id));
+  if (visible.length === 0) return;
+
+  // Force-directed layout
+  const iterations = 200;
+  const repulsion = 8000;
+  const attraction = 0.005;
+  const damping = 0.95;
+  const centerX = canvasW / 2;
+  const centerY = canvasH / 2;
+
+  const vx = {}, vy = {};
+  visible.forEach(n => { vx[n.id] = 0; vy[n.id] = 0; });
+
+  for (let iter = 0; iter < iterations; iter++) {
+    // Repulsion between all pairs
+    for (let i = 0; i < visible.length; i++) {
+      for (let j = i + 1; j < visible.length; j++) {
+        const a = visible[i], b = visible[j];
+        let dx = a.x - b.x, dy = a.y - b.y;
+        const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+        const force = repulsion / (dist * dist);
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        vx[a.id] += fx; vy[a.id] += fy;
+        vx[b.id] -= fx; vy[b.id] -= fy;
+      }
+    }
+
+    // Attraction along edges
+    edges.forEach(e => {
+      const a = nodes.find(n => n.id === e.from);
+      const b = nodes.find(n => n.id === e.to);
+      if (!a || !b || !visibleNodeIds.has(a.id) || !visibleNodeIds.has(b.id)) return;
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const fx = dx * attraction;
+      const fy = dy * attraction;
+      vx[a.id] += fx; vy[a.id] += fy;
+      vx[b.id] -= fx; vy[b.id] -= fy;
+    });
+
+    // Center gravity
+    visible.forEach(n => {
+      vx[n.id] += (centerX - n.x) * 0.001;
+      vy[n.id] += (centerY - n.y) * 0.001;
+    });
+
+    // Apply velocities with damping
+    visible.forEach(n => {
+      vx[n.id] *= damping;
+      vy[n.id] *= damping;
+      n.x += vx[n.id];
+      n.y += vy[n.id];
+      // Keep in bounds
+      n.x = Math.max(60, Math.min(canvasW - 60, n.x));
+      n.y = Math.max(60, Math.min(canvasH - 60, n.y));
+    });
+  }
+
+  draw();
+}
+
+function resetLayout() {
+  initNodes();
+  visibleNodeIds = new Set(PRESETS.all);
+  activePreset = 'all';
+  applyPreset('all');
+}
+
+function updatePrompt() {
+  const visible = nodes.filter(n => visibleNodeIds.has(n.id));
+  const know = visible.filter(n => n.knowledge === 'know');
+  const fuzzy = visible.filter(n => n.knowledge === 'fuzzy');
+  const unknown = visible.filter(n => n.knowledge === 'unknown');
+
+  if (fuzzy.length === 0 && unknown.length === 0) {
+    promptEl.textContent = "You've marked everything as known! Adjust some concepts to 'fuzzy' or 'unknown' to generate a learning prompt.";
+    return;
+  }
+
+  if (know.length === 0 && unknown.length === visible.length) {
+    promptEl.textContent = "I'm new to dividend investment strategies and want to learn the fundamentals. Please explain the Investment-First Mindset, how the Three-Bucket Strategy works, what the Margin Flywheel is, and how the Business Spread creates positive arbitrage. Start from the basics and build up. Use concrete numbers and real examples from practitioners like Sean (Paycheck to Portfolio) and Alex (9-5 to Freedom).";
+    return;
+  }
+
+  let parts = [];
+
+  parts.push("I'm studying advanced dividend investment strategies for financial independence.");
+
+  if (know.length > 0) {
+    parts.push(`I already understand: ${know.map(n => n.label.replace('\n', ' ')).join(', ')}.`);
+  }
+
+  if (fuzzy.length > 0) {
+    parts.push(`I'm fuzzy on: ${fuzzy.map(n => n.label.replace('\n', ' ')).join(', ')}.`);
+  }
+
+  if (unknown.length > 0) {
+    parts.push(`I don't understand: ${unknown.map(n => n.label.replace('\n', ' ')).join(', ')}.`);
+  }
+
+  // Relevant edges
+  const relevantEdges = edges.filter(e => {
+    const from = nodes.find(n => n.id === e.from);
+    const to = nodes.find(n => n.id === e.to);
+    if (!from || !to) return false;
+    if (!visibleNodeIds.has(from.id) || !visibleNodeIds.has(to.id)) return false;
+    return (from.knowledge !== 'know' || to.knowledge !== 'know');
+  });
+
+  if (relevantEdges.length > 0) {
+    const edgeDescs = relevantEdges.slice(0, 8).map(e => {
+      const from = nodes.find(n => n.id === e.from);
+      const to = nodes.find(n => n.id === e.to);
+      return `${from.label.replace('\n', ' ')} ${e.label} ${to.label.replace('\n', ' ')}`;
+    });
+    parts.push(`Key relationships I want to understand: ${edgeDescs.join('; ')}.`);
+  }
+
+  parts.push("Please explain the fuzzy and unknown concepts, building on what I already know. Use concrete numbers, real portfolio examples, and specific fund tickers (CLM, CRF, QQQY, SPYI, XDTE). Include risk considerations for each concept.");
+
+  promptEl.textContent = parts.join(' ');
+}
+
+function copyPrompt() {
+  const text = promptEl.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+  });
+}
+
+// Init
+function init() {
+  resizeCanvas();
+  initNodes();
+  applyPreset('all');
+  autoLayout();
+  updatePrompt();
+  draw();
+}
+
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  draw();
+});
+
+init();
+</script>
+</body>
+</html>

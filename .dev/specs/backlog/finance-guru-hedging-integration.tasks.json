@@ -1,0 +1,550 @@
+{
+  "spec_id": "finance-guru-hedging-integration",
+  "created": "2026-02-02T08:45:00Z",
+  "project_type": "feature",
+  "tech_stack": {
+    "language": "python-3.12",
+    "package_manager": "uv",
+    "validation": "pydantic-v2",
+    "testing": "pytest",
+    "market_data": "yfinance",
+    "math": "scipy + numpy",
+    "cli": "argparse",
+    "config": "yaml + python-dotenv",
+    "styling": "n/a (CLI-only)"
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "category": "configuration",
+      "scope": "private-config",
+      "description": "Add hedging section to user-profile.template.yaml with strategy, budget, roll frequency, DTE, OTM range, underlyings, and portfolio total value",
+      "files": [
+        "scripts/onboarding/modules/templates/user-profile.template.yaml",
+        "fin-guru/data/user-profile.yaml"
+      ],
+      "steps": [
+        "Read existing template structure",
+        "Add hedging section with all fields and Handlebars conditionals",
+        "Add portfolio.total_value field",
+        "Add hedging example values in comments",
+        "Verify template renders correctly"
+      ],
+      "verification": "Template has hedging section; onboarding script can generate user-profile.yaml with hedging fields populated",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "TASK-002",
+      "category": "implementation",
+      "scope": "private-config",
+      "description": "Create hedging_inputs.py with shared Pydantic models: HedgeConfig, PortfolioConfig, HedgePosition, RollSuggestion, RollRecord, HedgeSizeRequest, HedgeSizeResult, HedgeComparisonInput, ScenarioResult, HedgeComparisonOutput",
+      "files": [
+        "src/models/hedging_inputs.py",
+        "src/models/__init__.py"
+      ],
+      "steps": [
+        "Create hedging_inputs.py with all hedging-related models",
+        "Add validators (strike > 0, budget > 0, OTM range 0-100, etc.)",
+        "Add model docstrings with educational context",
+        "Export from __init__.py",
+        "Verify imports work"
+      ],
+      "verification": "All models importable from src.models; validators reject invalid inputs; JSON serialization works",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "TASK-003",
+      "category": "implementation",
+      "scope": "private-config",
+      "description": "Create total_return_inputs.py with Pydantic models: TotalReturnInput, DividendRecord, TickerReturn, TotalReturnOutput",
+      "files": [
+        "src/models/total_return_inputs.py",
+        "src/models/__init__.py"
+      ],
+      "steps": [
+        "Create total_return_inputs.py with all total-return models",
+        "Add validators (dates in order, tickers non-empty, initial_investment > 0)",
+        "Add educational docstrings",
+        "Export from __init__.py"
+      ],
+      "verification": "All models importable; validators reject invalid inputs; JSON serialization works",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "TASK-004",
+      "category": "implementation",
+      "scope": "private-config",
+      "description": "Create config_loader.py utility that reads user-profile.yaml and returns typed HedgeConfig and PortfolioConfig models with graceful fallbacks",
+      "files": [
+        "src/utils/config_loader.py"
+      ],
+      "steps": [
+        "Read user-profile.yaml path from environment or default location",
+        "Parse YAML and extract hedging section",
+        "Return HedgeConfig with defaults if section missing",
+        "Return PortfolioConfig with None values if portfolio section missing",
+        "Handle missing file, malformed YAML, partial config"
+      ],
+      "verification": "Config loader returns typed models; handles missing file gracefully; returns defaults when hedging section absent",
+      "dependencies": ["TASK-001", "TASK-002"],
+      "passes": false
+    },
+    {
+      "id": "TASK-005",
+      "category": "testing",
+      "scope": "private-config",
+      "description": "Create test_config_loader.py with tests for: valid config, missing file, missing hedging section, partial config, malformed YAML, default values",
+      "files": [
+        "tests/python/test_config_loader.py"
+      ],
+      "steps": [
+        "Create fixture YAML files (valid, partial, missing hedging, malformed)",
+        "Test valid config returns correct typed models",
+        "Test missing file returns defaults gracefully",
+        "Test missing hedging section returns HedgeConfig with defaults",
+        "Test malformed YAML raises appropriate error",
+        "Test partial config fills in defaults for missing fields"
+      ],
+      "verification": "All config loader tests pass; no real user-profile.yaml used in tests",
+      "dependencies": ["TASK-004"],
+      "passes": false
+    },
+    {
+      "id": "TASK-006",
+      "category": "configuration",
+      "scope": "private-config",
+      "description": "Update setup.sh to create fin-guru-private/hedging/ directory structure and add hedging-related gitignore entries",
+      "files": [
+        "scripts/onboarding/setup.sh",
+        ".gitignore"
+      ],
+      "steps": [
+        "Add mkdir -p for fin-guru-private/hedging/",
+        "Create positions.yaml, roll-history.yaml, budget-tracker.yaml templates",
+        "Verify .gitignore covers fin-guru-private/hedging/",
+        "Test setup.sh creates directory structure"
+      ],
+      "verification": "Running setup.sh creates hedging directory; files are gitignored; git status shows no new tracked private files",
+      "dependencies": ["TASK-001"],
+      "passes": false
+    },
+    {
+      "id": "TASK-007",
+      "category": "implementation",
+      "scope": "rolling-tracker",
+      "description": "Create rolling_tracker.py calculator with position management, roll suggestion logic, and history tracking",
+      "files": [
+        "src/analysis/rolling_tracker.py"
+      ],
+      "steps": [
+        "Implement load_positions() from fin-guru-private/hedging/positions.yaml",
+        "Implement save_positions() to write updated positions",
+        "Implement check_roll_needed() - returns positions within N days of expiry",
+        "Implement suggest_roll() - uses options chain scanner logic to find replacements",
+        "Implement log_roll() - records roll to roll-history.yaml",
+        "Implement get_roll_history() - reads and returns roll history",
+        "Follow 3-layer architecture: calculator class, no CLI logic"
+      ],
+      "verification": "RollingTracker class methods work with mock data; positions load/save correctly; roll suggestions match expected criteria",
+      "dependencies": ["TASK-002", "TASK-004"],
+      "passes": false
+    },
+    {
+      "id": "TASK-008",
+      "category": "implementation",
+      "scope": "rolling-tracker",
+      "description": "Create rolling_tracker_cli.py with subcommands: status, suggest-roll, log-roll, history",
+      "files": [
+        "src/analysis/rolling_tracker_cli.py"
+      ],
+      "steps": [
+        "Set up argparse with subcommands",
+        "Implement status subcommand - display current positions table",
+        "Implement suggest-roll subcommand - show positions needing roll with suggestions",
+        "Implement log-roll subcommand - accept roll parameters and record",
+        "Implement history subcommand - display roll history table",
+        "Add --days-threshold, --output (human/json), --save-to flags",
+        "Include educational disclaimer"
+      ],
+      "verification": "CLI runs with uv run; all 4 subcommands work; human and JSON output formats correct; help text is clear",
+      "dependencies": ["TASK-007"],
+      "passes": false
+    },
+    {
+      "id": "TASK-009",
+      "category": "testing",
+      "scope": "rolling-tracker",
+      "description": "Create test_rolling_tracker.py with 15+ tests covering: position loading, roll detection, suggestion logic, history logging, CLI argument parsing, edge cases",
+      "files": [
+        "tests/python/test_rolling_tracker.py"
+      ],
+      "steps": [
+        "Test position loading from valid YAML",
+        "Test empty positions file initialization",
+        "Test roll needed detection (within threshold vs not)",
+        "Test roll suggestion criteria match config",
+        "Test roll logging writes to history file",
+        "Test history retrieval and formatting",
+        "Test expired position handling",
+        "Test CLI argument parsing for all subcommands",
+        "Mock yfinance calls throughout"
+      ],
+      "verification": "All rolling tracker tests pass; mocked data only; covers happy path and edge cases",
+      "dependencies": ["TASK-007", "TASK-008"],
+      "passes": false
+    },
+    {
+      "id": "TASK-010",
+      "category": "implementation",
+      "scope": "hedge-sizer",
+      "description": "Create hedge_sizer.py calculator with portfolio-aware sizing logic, multi-underlying distribution, and budget validation",
+      "files": [
+        "src/analysis/hedge_sizer.py"
+      ],
+      "steps": [
+        "Implement calculate_hedge_size(request: HedgeSizeRequest) -> HedgeSizeResult",
+        "Implement contracts_for_portfolio() - floor(portfolio_value / (contracts_per_50k * 50000))",
+        "Implement distribute_contracts() - split across underlyings evenly with remainder to primary",
+        "Implement estimate_monthly_cost() - fetch current premiums via scanner, multiply by contracts",
+        "Implement budget_check() - compare monthly cost against budget",
+        "Calculate coverage_ratio as % of portfolio covered by notional put value"
+      ],
+      "verification": "HedgeSizer produces correct contract counts for known portfolio values; distribution across underlyings is balanced; budget utilization calculated correctly",
+      "dependencies": ["TASK-002", "TASK-004"],
+      "passes": false
+    },
+    {
+      "id": "TASK-011",
+      "category": "implementation",
+      "scope": "hedge-sizer",
+      "description": "Create hedge_sizer_cli.py with portfolio value input, auto-config loading, and multi-format output",
+      "files": [
+        "src/analysis/hedge_sizer_cli.py"
+      ],
+      "steps": [
+        "Set up argparse with --portfolio-value, --underlyings, --contracts-per-50k, --output, --save-to flags",
+        "Auto-load portfolio value from config if not provided via flag",
+        "Display recommended positions table with per-underlying breakdown",
+        "Show monthly cost, budget utilization, coverage ratio",
+        "Add educational notes about sizing methodology",
+        "Support JSON output"
+      ],
+      "verification": "CLI runs with uv run; auto-loads config; --portfolio-value override works; output is clear and accurate",
+      "dependencies": ["TASK-010"],
+      "passes": false
+    },
+    {
+      "id": "TASK-012",
+      "category": "testing",
+      "scope": "hedge-sizer",
+      "description": "Create test_hedge_sizer.py with 12+ tests covering: sizing formula, distribution logic, budget checking, CLI args, edge cases",
+      "files": [
+        "tests/python/test_hedge_sizer.py"
+      ],
+      "steps": [
+        "Test sizing formula: 300k portfolio = 6 contracts at 1/50k",
+        "Test distribution: 6 contracts across 2 underlyings = 3 each",
+        "Test odd distribution: 5 contracts across 2 = 3+2 with primary getting more",
+        "Test budget utilization calculation",
+        "Test coverage ratio calculation",
+        "Test no portfolio value provided (no config, no flag) = clear error",
+        "Test auto-load from config",
+        "Test CLI argument parsing",
+        "Mock premium fetching"
+      ],
+      "verification": "All hedge sizer tests pass; math verified with known inputs; edge cases handled",
+      "dependencies": ["TASK-010", "TASK-011"],
+      "passes": false
+    },
+    {
+      "id": "TASK-013",
+      "category": "implementation",
+      "scope": "hedge-comparison",
+      "description": "Create hedge_comparison.py calculator modeling SQQQ vs puts performance across market decline scenarios",
+      "files": [
+        "src/analysis/hedge_comparison.py"
+      ],
+      "steps": [
+        "Implement model_sqqq_return() - 3x inverse with daily rebalancing decay approximation",
+        "Implement model_put_return() - use Black-Scholes with IV expansion estimate for each scenario",
+        "Implement estimate_iv_expansion() - simplified VIX correlation model",
+        "Implement compare_scenarios() - run both models for each scenario percentage",
+        "Implement calculate_breakeven() - find drop % where each strategy becomes profitable",
+        "Implement generate_recommendation() - which strategy wins for user's profile",
+        "Include educational_notes about SQQQ decay, theta, and IV"
+      ],
+      "verification": "Comparison produces reasonable results for known scenarios; SQQQ decay modeled; put IV expansion included; breakeven calculations correct",
+      "dependencies": ["TASK-002"],
+      "passes": false
+    },
+    {
+      "id": "TASK-014",
+      "category": "implementation",
+      "scope": "hedge-comparison",
+      "description": "Create hedge_comparison_cli.py with scenario configuration, auto-config loading, and comparison table output",
+      "files": [
+        "src/analysis/hedge_comparison_cli.py"
+      ],
+      "steps": [
+        "Set up argparse with --portfolio-value, --budget, --scenarios, --output, --save-to flags",
+        "Auto-load from config if flags not provided",
+        "Display comparison table: scenario, SQQQ P&L, put P&L, winner",
+        "Show breakeven analysis",
+        "Show recommendation with reasoning",
+        "Include educational disclaimers about SQQQ decay and model limitations",
+        "Support JSON output"
+      ],
+      "verification": "CLI runs with uv run; comparison table is clear; recommendation is justified; educational notes included",
+      "dependencies": ["TASK-013"],
+      "passes": false
+    },
+    {
+      "id": "TASK-015",
+      "category": "testing",
+      "scope": "hedge-comparison",
+      "description": "Create test_hedge_comparison.py with 12+ tests covering: SQQQ modeling, put modeling, scenario comparison, breakeven, recommendation logic",
+      "files": [
+        "tests/python/test_hedge_comparison.py"
+      ],
+      "steps": [
+        "Test SQQQ return model for known drop percentages",
+        "Test SQQQ decay approximation over 30-day period",
+        "Test put return model with and without IV expansion",
+        "Test scenario comparison produces correct winners",
+        "Test breakeven calculation for both strategies",
+        "Test recommendation logic consistency",
+        "Test CLI argument parsing",
+        "Test edge case: zero budget, extreme scenarios"
+      ],
+      "verification": "All comparison tests pass; math verified against known values; models produce reasonable approximations",
+      "dependencies": ["TASK-013", "TASK-014"],
+      "passes": false
+    },
+    {
+      "id": "TASK-016",
+      "category": "implementation",
+      "scope": "total-return",
+      "description": "Create total_return.py calculator with dividend-inclusive return calculations, DRIP modeling, and multi-ticker comparison",
+      "files": [
+        "src/analysis/total_return.py"
+      ],
+      "steps": [
+        "Implement fetch_price_history() via yfinance",
+        "Implement fetch_dividend_history() via yfinance",
+        "Implement calculate_price_return() - (end_price - start_price) / start_price",
+        "Implement calculate_dividend_return() - sum(dividends) / start_price",
+        "Implement calculate_total_return() - price + dividend returns",
+        "Implement model_drip() - reinvest dividends at ex-div date prices",
+        "Implement compare_tickers() - run all calculations for multiple tickers",
+        "Implement annualize_return() - convert period return to annualized"
+      ],
+      "verification": "Returns calculated correctly for known test data; DRIP modeling produces higher returns than non-DRIP; annualization formula correct",
+      "dependencies": ["TASK-003"],
+      "passes": false
+    },
+    {
+      "id": "TASK-017",
+      "category": "implementation",
+      "scope": "total-return",
+      "description": "Create total_return_cli.py with multi-ticker input, date range, reinvestment toggle, and comparison output",
+      "files": [
+        "src/analysis/total_return_cli.py"
+      ],
+      "steps": [
+        "Set up argparse with positional TICKERS, --start, --end, --reinvest/--no-reinvest, --investment, --output, --save-to flags",
+        "Display per-ticker return breakdown table",
+        "Show side-by-side: price-only return vs total return vs DRIP return",
+        "Include dividend history detail table",
+        "Add educational notes about total return importance",
+        "Support JSON output"
+      ],
+      "verification": "CLI runs with uv run; multiple tickers display correctly; reinvestment toggle works; output clearly shows impact of dividends on returns",
+      "dependencies": ["TASK-016"],
+      "passes": false
+    },
+    {
+      "id": "TASK-018",
+      "category": "testing",
+      "scope": "total-return",
+      "description": "Create test_total_return.py with 15+ tests covering: price return, dividend return, total return, DRIP modeling, multi-ticker, edge cases",
+      "files": [
+        "tests/python/test_total_return.py"
+      ],
+      "steps": [
+        "Test price-only return calculation",
+        "Test dividend return calculation",
+        "Test total return = price + dividend",
+        "Test DRIP modeling increases total return vs non-DRIP",
+        "Test annualization formula",
+        "Test ticker with no dividends (pure growth stock)",
+        "Test partial date range with incomplete data",
+        "Test multiple ticker comparison",
+        "Test CLI argument parsing",
+        "Mock yfinance calls throughout"
+      ],
+      "verification": "All total return tests pass; math verified; DRIP produces strictly higher returns; edge cases handled gracefully",
+      "dependencies": ["TASK-016", "TASK-017"],
+      "passes": false
+    },
+    {
+      "id": "TASK-019",
+      "category": "documentation",
+      "scope": "knowledge-capture",
+      "description": "Create hedging-strategies.md knowledge file covering protective puts framework, sizing, rolling, budget, and always-on philosophy",
+      "files": [
+        "fin-guru/data/knowledge/hedging-strategies.md"
+      ],
+      "steps": [
+        "Write structured knowledge file with frontmatter",
+        "Cover: put sizing rule (1 contract / $50k), rolling cadence (5-7 days), target DTE (30 days), OTM range (10-20%)",
+        "Cover: monthly budget framework ($500-600), underlying selection (QQQ + SPY)",
+        "Cover: always-on philosophy vs timing",
+        "Include actionable decision framework",
+        "No personal portfolio details"
+      ],
+      "verification": "Knowledge file is educational, generic, contains no PII; covers all key strategies from meeting; structured for agent consumption",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "TASK-020",
+      "category": "documentation",
+      "scope": "knowledge-capture",
+      "description": "Create options-insurance-framework.md knowledge file covering options-as-insurance mental model, Greeks simplified, IV expansion, max loss/gain asymmetry",
+      "files": [
+        "fin-guru/data/knowledge/options-insurance-framework.md"
+      ],
+      "steps": [
+        "Write structured knowledge file with frontmatter",
+        "Cover: homeowners insurance analogy for puts",
+        "Cover: max loss (premium) vs max gain (unlimited for puts) asymmetry",
+        "Cover: Greeks simplified (delta, theta, vega focus)",
+        "Cover: IV expansion during crashes and why it amplifies put value",
+        "Cover: why timing is unrealistic - fear is unpredictable",
+        "Include practical examples with approximate numbers"
+      ],
+      "verification": "Knowledge file teaches options concepts clearly; analogy is accurate; no PII; suitable for public repo",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "TASK-021",
+      "category": "documentation",
+      "scope": "knowledge-capture",
+      "description": "Create dividend-total-return.md knowledge file covering total return accounting, why dividends must be included, rental property analogy",
+      "files": [
+        "fin-guru/data/knowledge/dividend-total-return.md"
+      ],
+      "steps": [
+        "Write structured knowledge file with frontmatter",
+        "Cover: why price-only returns understate income funds",
+        "Cover: rental property analogy (judging property without counting rent)",
+        "Cover: common accounting mistakes and how to fix them",
+        "Cover: DRIP impact on total return",
+        "Cover: tools for tracking (Snowball, spreadsheet methods)"
+      ],
+      "verification": "Knowledge file explains total return concept clearly; analogy is educational; no PII; suitable for public repo",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "TASK-022",
+      "category": "documentation",
+      "scope": "knowledge-capture",
+      "description": "Create borrow-vs-sell-tax.md knowledge file covering tax-optimized liquidity strategies, capital gains avoidance, property tax payment approach",
+      "files": [
+        "fin-guru/data/knowledge/borrow-vs-sell-tax.md"
+      ],
+      "steps": [
+        "Write structured knowledge file with frontmatter",
+        "Cover: borrow against equity vs selling and triggering capital gains",
+        "Cover: margin/HELOC as liquidity tools",
+        "Cover: property tax payment strategy (invest > borrow > pay vs sell > pay)",
+        "Cover: when selling IS appropriate (tax loss harvesting, rebalancing)",
+        "Include tax bracket examples (generic, not personal)"
+      ],
+      "verification": "Knowledge file explains borrow-vs-sell clearly; tax examples are generic; no PII; suitable for public repo",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "TASK-023",
+      "category": "configuration",
+      "scope": "knowledge-capture",
+      "description": "Update agent definitions to reference new knowledge files so Strategy Advisor and Teaching Specialist can access hedging knowledge",
+      "files": [
+        "fin-guru/agents/strategy-advisor.yaml",
+        "fin-guru/agents/teaching-specialist.yaml",
+        "fin-guru/agents/quant-analyst.yaml"
+      ],
+      "steps": [
+        "Read current agent definition format",
+        "Add knowledge file references to Strategy Advisor",
+        "Add knowledge file references to Teaching Specialist",
+        "Add knowledge file references to Quant Analyst",
+        "Verify agent config parses correctly"
+      ],
+      "verification": "Agent definitions reference new knowledge files; config parses without errors; agents can locate knowledge files",
+      "dependencies": ["TASK-019", "TASK-020", "TASK-021", "TASK-022"],
+      "passes": false
+    },
+    {
+      "id": "TASK-024",
+      "category": "documentation",
+      "scope": "architecture",
+      "description": "Create Mermaid architecture diagram showing new hedging tools integration with existing Finance Guru components",
+      "files": [
+        ".dev/specs/backlog/diagrams/finance-guru-hedging-integration-arch.mmd"
+      ],
+      "steps": [
+        "Create Mermaid diagram with component groups",
+        "Show existing components (options calculator, scanner, agents)",
+        "Show new CLI tools and their data flows",
+        "Show private vs public boundary",
+        "Show config loading path",
+        "Show agent knowledge integration"
+      ],
+      "verification": "Mermaid diagram renders correctly; shows all new and existing components; clearly marks private vs public boundary",
+      "dependencies": [],
+      "passes": false
+    },
+    {
+      "id": "TASK-025",
+      "category": "documentation",
+      "scope": "architecture",
+      "description": "Update Finance Guru README.md with new CLI tools documentation, usage examples, and hedging section",
+      "files": [
+        "README.md"
+      ],
+      "steps": [
+        "Add hedging tools section to README",
+        "Document all 4 new CLI commands with usage examples",
+        "Add hedging config section to setup instructions",
+        "Update CLI tools count in overview"
+      ],
+      "verification": "README documents all new tools; usage examples are correct; no private data in examples",
+      "dependencies": ["TASK-008", "TASK-011", "TASK-014", "TASK-017"],
+      "passes": false
+    },
+    {
+      "id": "TASK-026",
+      "category": "testing",
+      "scope": "integration",
+      "description": "Run full test suite to verify no regressions: all 365+ existing tests still pass alongside new tests",
+      "files": [],
+      "steps": [
+        "Run uv run pytest tests/python/ -v",
+        "Verify all existing tests pass",
+        "Verify all new tests pass",
+        "Check total test count increased by expected amount",
+        "Fix any regressions"
+      ],
+      "verification": "Full test suite passes with 0 failures; new test count is 365 + ~55 new tests = ~420 total",
+      "dependencies": ["TASK-005", "TASK-009", "TASK-012", "TASK-015", "TASK-018"],
+      "passes": false
+    }
+  ]
+}

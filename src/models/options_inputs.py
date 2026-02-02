@@ -350,6 +350,46 @@ class PutCallParityInput(BaseModel):
     dividend_yield: float = Field(default=0.0, description="Dividend yield")
 
 
+class OptionContractData(BaseModel):
+    """Market data + calculated Greeks for a single option contract."""
+    contract_symbol: str = Field(..., description="Full option contract symbol")
+    expiration: str = Field(..., description="Expiration date YYYY-MM-DD")
+    strike: float = Field(..., gt=0.0, description="Strike price")
+    otm_pct: float = Field(..., description="Percent out of the money")
+    days_to_expiry: int = Field(..., ge=0, description="Days until expiration")
+    last_price: float = Field(..., ge=0.0, description="Last traded premium")
+    bid: float = Field(..., ge=0.0, description="Bid price")
+    ask: float = Field(..., ge=0.0, description="Ask price")
+    mid: float = Field(..., ge=0.0, description="Mid price (bid+ask)/2")
+    volume: int = Field(default=0, ge=0, description="Trading volume")
+    open_interest: int = Field(default=0, ge=0, description="Open interest")
+    implied_volatility: float = Field(default=0.0, ge=0.0, description="Implied volatility from market")
+    delta: float | None = Field(default=None, description="Calculated delta")
+    gamma: float | None = Field(default=None, description="Calculated gamma")
+    theta: float | None = Field(default=None, description="Calculated theta (per day)")
+    vega: float | None = Field(default=None, description="Calculated vega")
+    total_cost: float = Field(..., ge=0.0, description="Cost per contract (premium x 100)")
+    contracts_in_budget: int | None = Field(default=None, description="Max contracts affordable")
+
+
+class OptionsChainOutput(BaseModel):
+    """Full options chain scan result."""
+    ticker: str
+    spot_price: float
+    scan_date: str
+    option_type: Literal["call", "put"]
+    otm_range: tuple[float, float] = Field(..., description="OTM% filter range")
+    days_range: tuple[int, int] = Field(..., description="Days to expiry filter range")
+    budget: float | None = None
+    target_contracts: int = 1
+    expirations_available: list[str] = Field(default_factory=list)
+    expirations_scanned: list[str] = Field(default_factory=list)
+    contracts: list[OptionContractData] = Field(default_factory=list)
+    total_found: int = 0
+
+    model_config = {"arbitrary_types_allowed": True}
+
+
 # Type exports
 __all__ = [
     "OptionInput",
@@ -358,4 +398,6 @@ __all__ = [
     "ImpliedVolInput",
     "ImpliedVolOutput",
     "PutCallParityInput",
+    "OptionContractData",
+    "OptionsChainOutput",
 ]
