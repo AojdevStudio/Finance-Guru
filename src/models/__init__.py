@@ -80,6 +80,17 @@ from src.models.itc_risk_inputs import (
     ITCRiskResponse,
 )
 
+from src.models.options_inputs import (
+    OptionInput,
+    BlackScholesInput,
+    GreeksOutput,
+    ImpliedVolInput,
+    ImpliedVolOutput,
+    PutCallParityInput,
+    OptionContractData,
+    OptionsChainOutput,
+)
+
 __all__ = [
     # Risk models
     "PriceDataInput",
@@ -130,4 +141,13 @@ __all__ = [
     "ITCRiskRequest",
     "RiskBand",
     "ITCRiskResponse",
+    # Options models
+    "OptionInput",
+    "BlackScholesInput",
+    "GreeksOutput",
+    "ImpliedVolInput",
+    "ImpliedVolOutput",
+    "PutCallParityInput",
+    "OptionContractData",
+    "OptionsChainOutput",
 ]
