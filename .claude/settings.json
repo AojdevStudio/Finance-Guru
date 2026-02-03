@@ -1,33 +1,19 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash",
-      "Read",
-      "Edit",
-      "Write",
-      "WebFetch",
-      "Grep",
-      "Glob",
-      "LS",
-      "Eza",
-      "MultiEdit",
-      "NotebookRead",
-      "NotebookEdit",
-      "TodoRead",
-      "TodoWrite",
-      "WebSearch",
-      "mcp__gdrive",
-      "mcp__context7"
-    ],
-    "deny": []
-  },
   "hooks": {
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx $CLAUDE_PROJECT_DIR/.claude/hooks/load-fin-core-config.ts"
+            "command": "bun run $CLAUDE_PROJECT_DIR/.claude/hooks/load-fin-core-config.ts"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/gsd-check-update.cjs"
           }
         ]
       }
@@ -67,5 +53,13 @@
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node .claude/hooks/gsd-statusline.js"
+  },
+  "enabledPlugins": {
+    "agent-sdk-dev@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true
   }
 }

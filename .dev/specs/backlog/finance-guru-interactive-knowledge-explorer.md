@@ -1,6 +1,6 @@
 ---
 title: "Finance Guru Interactive Knowledge Explorer"
-status: backlog
+status: in-progress
 created: 2026-02-02
 updated: 2026-02-02
 author: "Ossie Irondi"

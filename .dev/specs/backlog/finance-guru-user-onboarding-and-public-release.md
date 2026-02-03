@@ -1,6 +1,6 @@
 ---
 title: "Finance Guru User Onboarding and Public Release"
-status: backlog
+status: in-progress
 created: 2026-01-15
 updated: 2026-02-02
 author: "Ossie Irondi"

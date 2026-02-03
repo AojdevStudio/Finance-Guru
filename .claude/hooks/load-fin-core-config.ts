@@ -16,7 +16,7 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, resolve, dirname } from 'path';
 
-// Bun provides __dirname directly (no need for fileURLToPath workaround)
+// Bun provides import.meta.dir directly
 const __dirname = import.meta.dir;
 
 interface HookInput {

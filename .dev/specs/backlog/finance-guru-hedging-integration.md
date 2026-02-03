@@ -1,6 +1,6 @@
 ---
 title: "Finance Guru Hedging & Portfolio Protection Integration"
-status: backlog
+status: in-progress
 created: 2026-02-02
 updated: 2026-02-02
 author: "Ossie Irondi"
