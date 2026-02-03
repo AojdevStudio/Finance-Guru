@@ -321,10 +321,12 @@ Plans:
   3. Topic JSON schema is defined and validated -- a malformed JSON file produces a clear build error, not a broken HTML file
   4. The template engine is reusable: changing only the topic JSON file produces a different explorer with different concepts
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 09-01: TBD
+- [ ] 09-01-PLAN.md -- Data foundation: deps, Zod schema, topic JSON port, HTML template, CSS (EXPL-02, EXPL-04 data)
+- [ ] 09-02-PLAN.md -- Cytoscape.js explorer application with all 14 prototype features (EXPL-01, EXPL-03)
+- [ ] 09-03-PLAN.md -- Two-stage Bun build pipeline and end-to-end verification (EXPL-01, EXPL-03, EXPL-04)
 
 ---
 
@@ -494,7 +496,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 6. Total Return | M2 | 0/2 | Planned | - |
 | 7. Tracker & Sizer | M2 | 0/6 | Planned | - |
 | 8. SQQQ vs Puts | M2 | 0/2 | Planned | - |
-| 9. Template Engine | M3 | 0/TBD | Not started | - |
+| 9. Template Engine | M3 | 0/3 | Planned | - |
 | 10. Assessment & Topics | M3 | 0/3 | Planned | - |
 | 11. Maya Integration | M3 | 0/TBD | Not started | - |
 
