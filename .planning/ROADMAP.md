@@ -298,11 +298,11 @@ Plans:
   5. All 4 hedging CLI tools pass integration test: `uv run python src/analysis/<tool>_cli.py --help` works for total_return, rolling_tracker, hedge_sizer, and hedge_comparison
   6. Architecture diagram (.mmd) shows all new M2 components and their data flow
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: TBD
-- [ ] 08-02: TBD
+- [ ] 08-01-PLAN.md -- Pydantic models (ScenarioInput, SQQQResult, PutResult, ComparisonRow, ComparisonOutput) and HedgeComparisonCalculator with SQQQ day-by-day simulation, IV expansion, and breakeven analysis (HC-01, HC-02, HC-03, HC-04, HC-05, HEDG-06)
+- [ ] 08-02-PLAN.md -- CLI interface with --scenarios/--output json, known-answer test suite (15 tests), M2 architecture diagram, and integration verification (STD-01, STD-02, STD-03, STD-04, HEDG-11, HEDG-12, HEDG-13)
 
 ---
 
@@ -492,7 +492,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 5. Config & Models | M2 | 0/3 | Planned | - |
 | 6. Total Return | M2 | 0/2 | Planned | - |
 | 7. Tracker & Sizer | M2 | 0/6 | Planned | - |
-| 8. SQQQ vs Puts | M2 | 0/TBD | Not started | - |
+| 8. SQQQ vs Puts | M2 | 0/2 | Planned | - |
 | 9. Template Engine | M3 | 0/TBD | Not started | - |
 | 10. Assessment & Topics | M3 | 0/TBD | Not started | - |
 | 11. Maya Integration | M3 | 0/TBD | Not started | - |
