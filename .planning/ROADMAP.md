@@ -364,14 +364,16 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
   1. Clicking "Export Profile" downloads a JSON file matching Maya's learner_profile schema with all self-assessed knowledge states
-  2. `uv run python src/tools/fin_guru_cli.py explore dividend-strategy` opens the dividend explorer in the default browser
+  2. `uv run python src/cli/fin_guru.py explore dividend-strategy` opens the dividend explorer in the default browser
   3. Maya agent reads the exported learner profile at session start (if the file exists in fin-guru/data/) and references the user's knowledge levels
   4. Topic selector landing page (index.html) shows all available explorers as a card grid with completion badges
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 11-01: TBD
+- [ ] 11-01-PLAN.md -- Learner profile export + Maya agent integration (EXPL-07, EXPL-13)
+- [ ] 11-02-PLAN.md -- Topic selector landing page + CLI explore subcommand (EXPL-10, EXPL-12)
+- [ ] 11-03-PLAN.md -- Build all explorers, run tests, and human verification
 
 ---
 
@@ -498,7 +500,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 8. SQQQ vs Puts | M2 | 0/2 | Planned | - |
 | 9. Template Engine | M3 | 0/3 | Planned | - |
 | 10. Assessment & Topics | M3 | 0/3 | Planned | - |
-| 11. Maya Integration | M3 | 0/TBD | Not started | - |
+| 11. Maya Integration | M3 | 0/3 | Planned | - |
 
 ---
 *Created: 2026-02-02*
