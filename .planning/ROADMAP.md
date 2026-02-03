@@ -216,10 +216,12 @@ Plans:
   4. fin-guru-private/hedging/ directory exists with positions.yaml, roll-history.yaml, and budget-tracker.yaml templates
   5. All shared Pydantic models (HedgePosition, RollSuggestion, HedgeSizeRequest, TotalReturnInput, DividendRecord, TickerReturn) pass validation tests with known inputs
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: TBD
+- [ ] 05-01-PLAN.md -- Shared Pydantic models: hedging_inputs.py + total_return_inputs.py + __init__.py exports (HEDG-02, HEDG-03)
+- [ ] 05-02-PLAN.md -- Config loader + private hedging data templates (CFG-01, CFG-02, CFG-03, HEDG-01, HEDG-08)
+- [ ] 05-03-PLAN.md -- TDD tests for all models + config loader override chain
 
 ---
 
@@ -482,7 +484,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 2. Setup Automation | M1 | 0/2 | Planned | - |
 | 3. Onboarding Wizard | M1 | 0/2 | Planned | - |
 | 4. Polish & Hooks | M1 | 0/2 | Planned | - |
-| 5. Config & Models | M2 | 0/TBD | Not started | - |
+| 5. Config & Models | M2 | 0/3 | Planned | - |
 | 6. Total Return | M2 | 0/TBD | Not started | - |
 | 7. Tracker & Sizer | M2 | 0/TBD | Not started | - |
 | 8. SQQQ vs Puts | M2 | 0/TBD | Not started | - |
