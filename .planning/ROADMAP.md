@@ -267,11 +267,15 @@ Plans:
   4. Knowledge base files (hedging-strategies.md, options-insurance-framework.md) exist and Strategy Advisor, Teaching Specialist, and Quant Analyst agent definitions reference them
   5. Black-Scholes limitation on American-style options is documented with intrinsic value floor applied to put pricing
 
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
+- [ ] 07-01-PLAN.md -- RollingTracker calculator: scan_chain_quiet wrapper, American put pricing, position status, roll suggestions, log-roll, history (Layer 2)
+- [ ] 07-02-PLAN.md -- HedgeSizer calculator: contract sizing formula, multi-underlying allocation, budget validation (Layer 2)
+- [ ] 07-03-PLAN.md -- Rolling tracker CLI with argparse subcommands: status, suggest-roll, log-roll, history (Layer 3)
+- [ ] 07-04-PLAN.md -- Hedge sizer CLI with flat argparse: --portfolio, --underlyings, budget validation (Layer 3)
+- [ ] 07-05-PLAN.md -- Knowledge base files (hedging-strategies.md, options-insurance-framework.md) and agent definition updates
+- [ ] 07-06-PLAN.md -- Known-answer tests for both calculators and CLIs (TDD)
 
 ---
 
@@ -487,7 +491,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 4. Polish & Hooks | M1 | 0/2 | Planned | - |
 | 5. Config & Models | M2 | 0/3 | Planned | - |
 | 6. Total Return | M2 | 0/2 | Planned | - |
-| 7. Tracker & Sizer | M2 | 0/TBD | Not started | - |
+| 7. Tracker & Sizer | M2 | 0/6 | Planned | - |
 | 8. SQQQ vs Puts | M2 | 0/TBD | Not started | - |
 | 9. Template Engine | M3 | 0/TBD | Not started | - |
 | 10. Assessment & Topics | M3 | 0/TBD | Not started | - |
