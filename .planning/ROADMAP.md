@@ -145,10 +145,11 @@ Plans:
   3. Running `./setup.sh --check-deps-only` performs a dry-run dependency check without creating files or starting onboarding
   4. Running `./setup.sh` a second time detects existing configuration and only prompts for missing fields (idempotent)
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md -- Dependency checker with fail-fast behavior and --check-deps-only flag
+- [ ] 02-02-PLAN.md -- Setup orchestration restructure with idempotent directory creation and config scaffolding
 
 ---
 
@@ -477,7 +478,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Git Scrub & Security | M1 | 0/TBD | Not started | - |
-| 2. Setup Automation | M1 | 0/TBD | Not started | - |
+| 2. Setup Automation | M1 | 0/2 | Planned | - |
 | 3. Onboarding Wizard | M1 | 0/TBD | Not started | - |
 | 4. Polish & Hooks | M1 | 0/TBD | Not started | - |
 | 5. Config & Models | M2 | 0/TBD | Not started | - |
