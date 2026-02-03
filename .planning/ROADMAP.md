@@ -2,13 +2,13 @@
 
 ## Overview
 
-Transform Finance Guru from a single-user private system into a distributable financial analysis toolkit across three milestones: public release infrastructure (git scrub, setup automation, onboarding wizard), hedging and portfolio protection CLI tools (config loader, total return, rolling tracker, hedge sizer, SQQQ comparison), and an interactive knowledge explorer (template engine, self-assessment, Maya integration). Eleven phases derived from 63 v1 requirements, ordered by the dependency chain: onboarding produces config files that hedging tools consume, and the explorer builds on stable schemas.
+Transform Finance Guru from a single-user private system into a distributable financial analysis toolkit across three milestones: public release infrastructure (git scrub, setup automation, onboarding wizard, agent readiness hardening), hedging and portfolio protection CLI tools (config loader, total return, rolling tracker, hedge sizer, SQQQ comparison), and an interactive knowledge explorer (template engine, self-assessment, Maya integration). Twelve phases derived from 63 v1 requirements plus agent-readiness findings, ordered by the dependency chain: onboarding produces config files that hedging tools consume, and the explorer builds on stable schemas.
 
 ## Milestones
 
-- **M1: Public Release & Onboarding** - Phases 1-4
-- **M2: Hedging & Portfolio Protection** - Phases 5-8
-- **M3: Interactive Knowledge Explorer** - Phases 9-11
+- **M1: Public Release & Onboarding** - Phases 1-5
+- **M2: Hedging & Portfolio Protection** - Phases 6-9
+- **M3: Interactive Knowledge Explorer** - Phases 10-12
 
 ## Git & PR Strategy
 
@@ -17,9 +17,9 @@ Phase 1 rewrites git history (`git filter-repo`), so it must land directly on `m
 | Scope | Branch | PR | Lands On |
 |-------|--------|-----|----------|
 | Phase 1: Git Scrub | `main` (direct) | No PR — force push after history rewrite | `main` |
-| Phases 2-4: M1 Onboarding | `feat/m1-onboarding` | PR #1 — created at Phase 2 start | `main` |
-| Phases 5-8: M2 Hedging | `feat/m2-hedging` | PR #2 — created at Phase 5 start | `main` |
-| Phases 9-11: M3 Explorer | `feat/m3-explorer` | PR #3 — created at Phase 9 start | `main` |
+| Phases 2-5: M1 Onboarding | `feat/m1-onboarding` | PR #1 — created at Phase 2 start | `main` |
+| Phases 6-9: M2 Hedging | `feat/m2-hedging` | PR #2 — created at Phase 6 start | `main` |
+| Phases 10-12: M3 Explorer | `feat/m3-explorer` | PR #3 — created at Phase 10 start | `main` |
 
 **Branch lifecycle per milestone:**
 1. At first phase of milestone: `git checkout -b feat/m<N>-<name>`
@@ -35,13 +35,14 @@ Phase 1 rewrites git history (`git filter-repo`), so it must land directly on `m
 - [ ] **Phase 2: Setup Automation & Dependency Checking** - First-run setup script that works on any fresh machine
 - [ ] **Phase 3: Onboarding Wizard** - Interactive CLI that collects financial profile and generates config files
 - [ ] **Phase 4: Onboarding Polish & Hook Refactoring** - Save/resume, regression testing, and Bun hook ports
-- [ ] **Phase 5: Config Loader & Shared Hedging Models** - Foundation layer all four hedging CLIs depend on
-- [ ] **Phase 6: Total Return Calculator** - Price + dividend return CLI with DRIP modeling
-- [ ] **Phase 7: Rolling Tracker & Hedge Sizer** - Options position management and contract sizing CLIs
-- [ ] **Phase 8: SQQQ vs Puts Comparison** - Hedge strategy comparison with daily-compounded decay modeling
-- [ ] **Phase 9: Template Engine & Dividend Topic Port** - Build pipeline that converts JSON + template into standalone HTML explorers
-- [ ] **Phase 10: Self-Assessment, Persistence & Additional Topics** - Core interaction loop with localStorage and two new topics
-- [ ] **Phase 11: Maya Integration, Mobile Polish & CLI Launcher** - Tie explorer back into Finance Guru ecosystem
+- [ ] **Phase 5: Agent Readiness Hardening** - Linter, pre-commit hooks, issue/PR templates, and test coverage thresholds
+- [ ] **Phase 6: Config Loader & Shared Hedging Models** - Foundation layer all four hedging CLIs depend on
+- [ ] **Phase 7: Total Return Calculator** - Price + dividend return CLI with DRIP modeling
+- [ ] **Phase 8: Rolling Tracker & Hedge Sizer** - Options position management and contract sizing CLIs
+- [ ] **Phase 9: SQQQ vs Puts Comparison** - Hedge strategy comparison with daily-compounded decay modeling
+- [ ] **Phase 10: Template Engine & Dividend Topic Port** - Build pipeline that converts JSON + template into standalone HTML explorers
+- [ ] **Phase 11: Self-Assessment, Persistence & Additional Topics** - Core interaction loop with localStorage and two new topics
+- [ ] **Phase 12: Maya Integration, Mobile Polish & CLI Launcher** - Tie explorer back into Finance Guru ecosystem
 
 ## Dependency Map
 
@@ -55,32 +56,35 @@ MILESTONE 1 (Public Release)
                                       v
                                 Phase 4: Polish & Hooks
                                       |
+                                      v
+                                Phase 5: Agent Readiness
+                                      |
                                       | PRODUCES: user-profile.yaml (stable schema)
                                       |
 MILESTONE 2 (Hedging)                 v
-  Phase 5: Config & Models <----------+
+  Phase 6: Config & Models <----------+
        |
-       +--------> Phase 6: Total Return (independent after Phase 5)
+       +--------> Phase 7: Total Return (independent after Phase 6)
        |
-       +--------> Phase 7: Tracker & Sizer (independent after Phase 5)
+       +--------> Phase 8: Tracker & Sizer (independent after Phase 6)
        |               |
        |               | (options.py, options_chain scanner)
        |               v
-       +--------> Phase 8: SQQQ vs Puts (isolated, highest risk)
+       +--------> Phase 9: SQQQ vs Puts (isolated, highest risk)
 
-MILESTONE 3 (Explorer)        [Phase 9 can start parallel with M2 Phase 7]
-  Phase 9: Template Engine <-- existing prototype
+MILESTONE 3 (Explorer)        [Phase 10 can start parallel with M2 Phase 8]
+  Phase 10: Template Engine <-- existing prototype
        |
        v
-  Phase 10: Assessment + Topics --> Phase 11: Maya Integration + Polish
+  Phase 11: Assessment + Topics --> Phase 12: Maya Integration + Polish
 ```
 
-**Critical path:** Phase 1 -> 2 -> 3 -> 5 -> 7 (longest dependency chain)
+**Critical path:** Phase 1 -> 2 -> 3 -> 5 -> 6 -> 8 (longest dependency chain)
 
 **Parallel opportunities:**
-- Phase 6 and Phase 7 can run in parallel (both depend only on Phase 5)
-- Phase 9 can start in parallel with Phase 7 (zero runtime dependency on Python code)
-- Phase 6 and Phase 8 are independent (Phase 8 depends on Phase 5, not Phase 7)
+- Phase 7 and Phase 8 can run in parallel (both depend only on Phase 6)
+- Phase 10 can start in parallel with Phase 8 (zero runtime dependency on Python code)
+- Phase 7 and Phase 9 are independent (Phase 9 depends on Phase 6, not Phase 8)
 
 ## Research Flags
 
@@ -89,8 +93,8 @@ Phases that should run `/gsd:research-phase` before planning:
 | Phase | Why | What to Research |
 |-------|-----|------------------|
 | 1 | Irreversible consequences if scrub is incomplete | git filter-repo vs BFG for this repo's history; exact PII exposure audit |
-| 8 | Highest-risk calculation in the project | ProShares prospectus return tables for validation; VIX-SPX regression parameters; historical SQQQ vs QQQ calibration data |
-| 9 | New build pipeline with unfamiliar library | Cytoscape.js configuration for graph layouts; WebGL vs Canvas decision; Bun build pipeline patterns |
+| 9 | Highest-risk calculation in the project | ProShares prospectus return tables for validation; VIX-SPX regression parameters; historical SQQQ vs QQQ calibration data |
+| 10 | New build pipeline with unfamiliar library | Cytoscape.js configuration for graph layouts; WebGL vs Canvas decision; Bun build pipeline patterns |
 
 Phases that can skip research (standard patterns):
 
@@ -99,11 +103,12 @@ Phases that can skip research (standard patterns):
 | 2 | Standard bash scripting with version checks |
 | 3 | questionary is well-documented; existing TypeScript scaffold is the blueprint |
 | 4 | 1:1 behavior port of existing hooks; Bun TypeScript is documented |
-| 5 | Standard Pydantic model + YAML parsing; established codebase pattern |
-| 6 | Standard financial calculation; yfinance API well-known; existing 3-layer pattern |
-| 7 | Builds on existing options.py and options_chain_cli; known integration points |
-| 10 | Standard browser APIs (localStorage, pointer events, clipboard) |
-| 11 | Standard Python webbrowser.open(); Maya schema is defined |
+| 5 | Standard tooling: ruff, mypy, gitleaks, pytest-cov, GitHub templates |
+| 6 | Standard Pydantic model + YAML parsing; established codebase pattern |
+| 7 | Standard financial calculation; yfinance API well-known; existing 3-layer pattern |
+| 8 | Builds on existing options.py and options_chain_cli; known integration points |
+| 11 | Standard browser APIs (localStorage, pointer events, clipboard) |
+| 12 | Standard Python webbrowser.open(); Maya schema is defined |
 
 ## Phase Details
 
@@ -115,7 +120,6 @@ Phases that can skip research (standard patterns):
 **Branch**: `main` (direct — git filter-repo rewrites history, no PR possible)
 **Requirements**: SEC-01, SEC-02, SEC-03, ONBD-14, ONBD-15
 **Cross-cutting**: XC-06
-**Research flag**: YES -- audit git history for exact PII exposure before scrubbing
 
 **Success Criteria** (what must be TRUE):
   1. Running `git log --all -p | grep -iE "account|brokerage|Z057|net.worth|LLC"` returns zero matches across entire git history
@@ -183,7 +187,7 @@ Plans:
 **Goal**: Onboarding is interruption-safe and all Claude hooks run as Bun TypeScript under 500ms
 **Depends on**: Phase 3 (onboarding core must exist before adding save/resume)
 **Milestone**: M1 - Public Release & Onboarding
-**Branch**: `feat/m1-onboarding` (final phase — merge PR to main on completion)
+**Branch**: `feat/m1-onboarding` (continues on existing branch)
 **Requirements**: ONBD-03, ONBD-10, ONBD-11, ONBD-12, ONBD-13, ONBD-16
 
 **Success Criteria** (what must be TRUE):
@@ -200,7 +204,29 @@ Plans:
 
 ---
 
-### Phase 5: Config Loader & Shared Hedging Models
+### Phase 5: Agent Readiness Hardening
+
+**Goal**: Repository reaches L2 agent readiness with linter, expanded pre-commit hooks, issue/PR templates, and test coverage thresholds
+**Depends on**: Phase 4 (hooks and testing infrastructure must exist)
+**Milestone**: M1 - Public Release & Onboarding
+**Branch**: `feat/m1-onboarding` (final phase — merge PR to main on completion)
+**Requirements**: Derived from agent-readiness-report (2026-02-02)
+
+**Success Criteria** (what must be TRUE):
+  1. Running `ruff check src/ tests/` exits with zero errors (linter configured with pyproject.toml)
+  2. Pre-commit hooks run ruff, mypy type checking, and gitleaks on every commit (extending Phase 1's gitleaks-only hook)
+  3. GitHub issue templates exist for bug reports and feature requests, and a PR template captures description, test plan, and checklist
+  4. `pytest --cov=src --cov-fail-under=80` enforces minimum 80% coverage on the src/ directory
+  5. CODEOWNERS file exists mapping src/ and tests/ to the repository owner
+
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 5 to break down)
+
+---
+
+### Phase 6: Config Loader & Shared Hedging Models
 
 **Goal**: All four hedging CLI tools have a shared foundation of validated Pydantic models and config access
 **Depends on**: Phase 3 (user-profile.yaml schema must be stable)
@@ -219,16 +245,16 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Shared Pydantic models: hedging_inputs.py + total_return_inputs.py + __init__.py exports (HEDG-02, HEDG-03)
-- [ ] 05-02-PLAN.md -- Config loader + private hedging data templates (CFG-01, CFG-02, CFG-03, HEDG-01, HEDG-08)
-- [ ] 05-03-PLAN.md -- TDD tests for all models + config loader override chain
+- [ ] 06-01-PLAN.md -- Shared Pydantic models: hedging_inputs.py + total_return_inputs.py + __init__.py exports (HEDG-02, HEDG-03)
+- [ ] 06-02-PLAN.md -- Config loader + private hedging data templates (CFG-01, CFG-02, CFG-03, HEDG-01, HEDG-08)
+- [ ] 06-03-PLAN.md -- TDD tests for all models + config loader override chain
 
 ---
 
-### Phase 6: Total Return Calculator
+### Phase 7: Total Return Calculator
 
 **Goal**: User can compare total returns (price + dividends) across tickers with DRIP modeling
-**Depends on**: Phase 5 (shared models and config loader)
+**Depends on**: Phase 6 (shared models and config loader)
 **Milestone**: M2 - Hedging & Portfolio Protection
 **Branch**: `feat/m2-hedging` (continues on existing branch)
 **Requirements**: HEDG-07, TR-01, TR-02, TR-03
@@ -245,15 +271,15 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md -- TotalReturnCalculator class with DRIP modeling and dividend data quality validation (Layer 2)
-- [ ] 06-02-PLAN.md -- Total return CLI with multi-ticker comparison and known-answer test suite (Layer 3 + tests)
+- [ ] 07-01-PLAN.md -- TotalReturnCalculator class with DRIP modeling and dividend data quality validation (Layer 2)
+- [ ] 07-02-PLAN.md -- Total return CLI with multi-ticker comparison and known-answer test suite (Layer 3 + tests)
 
 ---
 
-### Phase 7: Rolling Tracker & Hedge Sizer
+### Phase 8: Rolling Tracker & Hedge Sizer
 
 **Goal**: User can monitor options positions, get roll alerts, and size new hedge contracts against their portfolio
-**Depends on**: Phase 5 (shared models and config loader)
+**Depends on**: Phase 6 (shared models and config loader)
 **Milestone**: M2 - Hedging & Portfolio Protection
 **Branch**: `feat/m2-hedging` (continues on existing branch)
 **Requirements**: HEDG-04, HEDG-05, RT-01, RT-02, RT-03, HS-01, HS-02, HS-03, BS-01, HEDG-09, HEDG-10
@@ -270,19 +296,19 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 07-01-PLAN.md -- RollingTracker calculator: scan_chain_quiet wrapper, American put pricing, position status, roll suggestions, log-roll, history (Layer 2)
-- [ ] 07-02-PLAN.md -- HedgeSizer calculator: contract sizing formula, multi-underlying allocation, budget validation (Layer 2)
-- [ ] 07-03-PLAN.md -- Rolling tracker CLI with argparse subcommands: status, suggest-roll, log-roll, history (Layer 3)
-- [ ] 07-04-PLAN.md -- Hedge sizer CLI with flat argparse: --portfolio, --underlyings, budget validation (Layer 3)
-- [ ] 07-05-PLAN.md -- Knowledge base files (hedging-strategies.md, options-insurance-framework.md) and agent definition updates
-- [ ] 07-06-PLAN.md -- Known-answer tests for both calculators and CLIs (TDD)
+- [ ] 08-01-PLAN.md -- RollingTracker calculator: scan_chain_quiet wrapper, American put pricing, position status, roll suggestions, log-roll, history (Layer 2)
+- [ ] 08-02-PLAN.md -- HedgeSizer calculator: contract sizing formula, multi-underlying allocation, budget validation (Layer 2)
+- [ ] 08-03-PLAN.md -- Rolling tracker CLI with argparse subcommands: status, suggest-roll, log-roll, history (Layer 3)
+- [ ] 08-04-PLAN.md -- Hedge sizer CLI with flat argparse: --portfolio, --underlyings, budget validation (Layer 3)
+- [ ] 08-05-PLAN.md -- Knowledge base files (hedging-strategies.md, options-insurance-framework.md) and agent definition updates
+- [ ] 08-06-PLAN.md -- Known-answer tests for both calculators and CLIs (TDD)
 
 ---
 
-### Phase 8: SQQQ vs Puts Comparison
+### Phase 9: SQQQ vs Puts Comparison
 
 **Goal**: User can compare SQQQ hedging vs protective puts with accurate decay modeling and breakeven analysis
-**Depends on**: Phase 5 (shared models); benefits from Phase 7 (options infrastructure) but not strictly required
+**Depends on**: Phase 6 (shared models); benefits from Phase 8 (options infrastructure) but not strictly required
 **Milestone**: M2 - Hedging & Portfolio Protection
 **Branch**: `feat/m2-hedging` (final phase — merge PR to main on completion)
 **Requirements**: HEDG-06, HC-01, HC-02, HC-03, HC-04, HC-05, HEDG-11, HEDG-12
@@ -301,15 +327,15 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md -- Pydantic models (ScenarioInput, SQQQResult, PutResult, ComparisonRow, ComparisonOutput) and HedgeComparisonCalculator with SQQQ day-by-day simulation, IV expansion, and breakeven analysis (HC-01, HC-02, HC-03, HC-04, HC-05, HEDG-06)
-- [ ] 08-02-PLAN.md -- CLI interface with --scenarios/--output json, known-answer test suite (15 tests), M2 architecture diagram, and integration verification (STD-01, STD-02, STD-03, STD-04, HEDG-11, HEDG-12, HEDG-13)
+- [ ] 09-01-PLAN.md -- Pydantic models (ScenarioInput, SQQQResult, PutResult, ComparisonRow, ComparisonOutput) and HedgeComparisonCalculator with SQQQ day-by-day simulation, IV expansion, and breakeven analysis (HC-01, HC-02, HC-03, HC-04, HC-05, HEDG-06)
+- [ ] 09-02-PLAN.md -- CLI interface with --scenarios/--output json, known-answer test suite (15 tests), M2 architecture diagram, and integration verification (STD-01, STD-02, STD-03, STD-04, HEDG-11, HEDG-12, HEDG-13)
 
 ---
 
-### Phase 9: Template Engine & Dividend Topic Port
+### Phase 10: Template Engine & Dividend Topic Port
 
 **Goal**: A build pipeline exists that converts topic JSON into standalone interactive HTML knowledge explorers
-**Depends on**: Phase 3 (stable user-profile.yaml schema); can start parallel with Phase 7
+**Depends on**: Phase 3 (stable user-profile.yaml schema); can start parallel with Phase 8
 **Milestone**: M3 - Interactive Knowledge Explorer
 **Branch**: `feat/m3-explorer` (create branch + draft PR at phase start)
 **Requirements**: EXPL-01, EXPL-02, EXPL-03, EXPL-04
@@ -324,16 +350,16 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md -- Data foundation: deps, Zod schema, topic JSON port, HTML template, CSS (EXPL-02, EXPL-04 data)
-- [ ] 09-02-PLAN.md -- Cytoscape.js explorer application with all 14 prototype features (EXPL-01, EXPL-03)
-- [ ] 09-03-PLAN.md -- Two-stage Bun build pipeline and end-to-end verification (EXPL-01, EXPL-03, EXPL-04)
+- [ ] 10-01-PLAN.md -- Data foundation: deps, Zod schema, topic JSON port, HTML template, CSS (EXPL-02, EXPL-04 data)
+- [ ] 10-02-PLAN.md -- Cytoscape.js explorer application with all 14 prototype features (EXPL-01, EXPL-03)
+- [ ] 10-03-PLAN.md -- Two-stage Bun build pipeline and end-to-end verification (EXPL-01, EXPL-03, EXPL-04)
 
 ---
 
-### Phase 10: Self-Assessment, Persistence & Additional Topics
+### Phase 11: Self-Assessment, Persistence & Additional Topics
 
 **Goal**: Users can self-assess their knowledge, persist progress across sessions, and explore options-greeks and risk-management topics
-**Depends on**: Phase 9 (template engine must exist)
+**Depends on**: Phase 10 (template engine must exist)
 **Milestone**: M3 - Interactive Knowledge Explorer
 **Branch**: `feat/m3-explorer` (continues on existing branch)
 **Requirements**: EXPL-05, EXPL-06, EXPL-08, EXPL-09a, EXPL-09b, EXPL-15, EXPL-16
@@ -348,16 +374,16 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 10-01-PLAN.md -- Options-greeks and risk-management topic JSON data files (EXPL-09a, EXPL-09b)
-- [ ] 10-02-PLAN.md -- Template engine enhancements: localStorage persistence, 4-state knowledge cycling, learning modes, clipboard copy, mobile responsive (EXPL-05, EXPL-06, EXPL-08, EXPL-15, EXPL-16)
-- [ ] 10-03-PLAN.md -- Build all 3 explorers, integration verification, and human visual check
+- [ ] 11-01-PLAN.md -- Zod schema update + options-greeks and risk-management topic JSON data files (EXPL-09a, EXPL-09b)
+- [ ] 11-02-PLAN.md -- Template engine enhancements: localStorage persistence, 4-state knowledge cycling, state migration, learning modes, clipboard copy, mobile responsive (EXPL-05, EXPL-06, EXPL-08, EXPL-15, EXPL-16)
+- [ ] 11-03-PLAN.md -- Build all 3 explorers, automated + human verification of all Phase 11 features
 
 ---
 
-### Phase 11: Maya Integration, Mobile Polish & CLI Launcher
+### Phase 12: Maya Integration, Mobile Polish & CLI Launcher
 
 **Goal**: Explorer connects back into Finance Guru through Maya learner profiles and a CLI launcher
-**Depends on**: Phase 10 (assessment and persistence must work before exporting profiles)
+**Depends on**: Phase 11 (assessment and persistence must work before exporting profiles)
 **Milestone**: M3 - Interactive Knowledge Explorer
 **Branch**: `feat/m3-explorer` (final phase — merge PR to main on completion)
 **Requirements**: EXPL-07, EXPL-10, EXPL-12, EXPL-13
@@ -371,9 +397,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 11-01-PLAN.md -- Learner profile export + Maya agent integration (EXPL-07, EXPL-13)
-- [ ] 11-02-PLAN.md -- Topic selector landing page + CLI explore subcommand (EXPL-10, EXPL-12)
-- [ ] 11-03-PLAN.md -- Build all explorers, run tests, and human verification
+- [ ] 12-01-PLAN.md -- Learner profile export + Maya agent integration (EXPL-07, EXPL-13)
+- [ ] 12-02-PLAN.md -- Topic selector landing page + CLI explore subcommand (EXPL-10, EXPL-12)
+- [ ] 12-03-PLAN.md -- Build all explorers, run tests, and human verification
 
 ---
 
@@ -381,7 +407,7 @@ Plans:
 
 ### Requirement-to-Phase Mapping
 
-**Milestone 1: Public Release & Onboarding (23 requirements)**
+**Milestone 1: Public Release & Onboarding (23 requirements + readiness report)**
 
 | Requirement | Phase | Category |
 |-------------|-------|----------|
@@ -408,84 +434,85 @@ Plans:
 | ONBD-12 | 4 | Hooks |
 | ONBD-13 | 4 | Hooks |
 | ONBD-16 | 4 | Testing |
+| _(readiness report)_ | 5 | Agent Readiness |
 
 **Milestone 2: Hedging & Portfolio Protection (29 requirements)**
 
 | Requirement | Phase | Category |
 |-------------|-------|----------|
-| HEDG-01 | 5 | Config |
-| HEDG-02 | 5 | Models |
-| HEDG-03 | 5 | Models |
-| HEDG-08 | 5 | Data |
-| CFG-01 | 5 | Config |
-| CFG-02 | 5 | Config |
-| CFG-03 | 5 | Config |
-| HEDG-07 | 6 | CLI |
-| TR-01 | 6 | CLI |
-| TR-02 | 6 | CLI |
-| TR-03 | 6 | CLI |
-| HEDG-04 | 7 | CLI |
-| HEDG-05 | 7 | CLI |
-| RT-01 | 7 | CLI |
-| RT-02 | 7 | CLI |
-| RT-03 | 7 | CLI |
-| HS-01 | 7 | CLI |
-| HS-02 | 7 | CLI |
-| HS-03 | 7 | CLI |
-| BS-01 | 7 | CLI |
-| HEDG-09 | 7 | Knowledge |
-| HEDG-10 | 7 | Agents |
-| HEDG-06 | 8 | CLI |
-| HC-01 | 8 | CLI |
-| HC-02 | 8 | CLI |
-| HC-03 | 8 | CLI |
-| HC-04 | 8 | CLI |
-| HC-05 | 8 | CLI |
-| HEDG-11 | 8 | Docs |
-| HEDG-12 | 8 | Integration |
+| HEDG-01 | 6 | Config |
+| HEDG-02 | 6 | Models |
+| HEDG-03 | 6 | Models |
+| HEDG-08 | 6 | Data |
+| CFG-01 | 6 | Config |
+| CFG-02 | 6 | Config |
+| CFG-03 | 6 | Config |
+| HEDG-07 | 7 | CLI |
+| TR-01 | 7 | CLI |
+| TR-02 | 7 | CLI |
+| TR-03 | 7 | CLI |
+| HEDG-04 | 8 | CLI |
+| HEDG-05 | 8 | CLI |
+| RT-01 | 8 | CLI |
+| RT-02 | 8 | CLI |
+| RT-03 | 8 | CLI |
+| HS-01 | 8 | CLI |
+| HS-02 | 8 | CLI |
+| HS-03 | 8 | CLI |
+| BS-01 | 8 | CLI |
+| HEDG-09 | 8 | Knowledge |
+| HEDG-10 | 8 | Agents |
+| HEDG-06 | 9 | CLI |
+| HC-01 | 9 | CLI |
+| HC-02 | 9 | CLI |
+| HC-03 | 9 | CLI |
+| HC-04 | 9 | CLI |
+| HC-05 | 9 | CLI |
+| HEDG-11 | 9 | Docs |
+| HEDG-12 | 9 | Integration |
 
 **Milestone 3: Interactive Knowledge Explorer (15 requirements)**
 
 | Requirement | Phase | Category |
 |-------------|-------|----------|
-| EXPL-01 | 9 | Engine |
-| EXPL-02 | 9 | Schema |
-| EXPL-03 | 9 | Engine |
-| EXPL-04 | 9 | Content |
-| EXPL-05 | 10 | Persistence |
-| EXPL-06 | 10 | Interaction |
-| EXPL-08 | 10 | Mobile |
-| EXPL-09a | 10 | Content |
-| EXPL-09b | 10 | Content |
-| EXPL-15 | 10 | Browser |
-| EXPL-16 | 10 | Performance |
-| EXPL-07 | 11 | Integration |
-| EXPL-10 | 11 | UI |
-| EXPL-12 | 11 | CLI |
-| EXPL-13 | 11 | Integration |
+| EXPL-01 | 10 | Engine |
+| EXPL-02 | 10 | Schema |
+| EXPL-03 | 10 | Engine |
+| EXPL-04 | 10 | Content |
+| EXPL-05 | 11 | Persistence |
+| EXPL-06 | 11 | Interaction |
+| EXPL-08 | 11 | Mobile |
+| EXPL-09a | 11 | Content |
+| EXPL-09b | 11 | Content |
+| EXPL-15 | 11 | Browser |
+| EXPL-16 | 11 | Performance |
+| EXPL-07 | 12 | Integration |
+| EXPL-10 | 12 | UI |
+| EXPL-12 | 12 | CLI |
+| EXPL-13 | 12 | Integration |
 
 **Cross-Cutting Requirements (apply incrementally across phases)**
 
 | Requirement | Applies To | Category |
 |-------------|-----------|----------|
 | XC-01 | All phases | Dependencies |
-| XC-02 | Phases 5-11 | Architecture |
-| XC-03 | Phases 5-8 | Architecture |
+| XC-02 | Phases 6-12 | Architecture |
+| XC-03 | Phases 6-9 | Architecture |
 | XC-04 | All phases | Testing |
-| XC-05 | Phases 6-8 | Compliance |
+| XC-05 | Phases 7-9 | Compliance |
 | XC-06 | Phase 1 (primary), all phases | Security |
-| STD-01 | Phases 6-8 | CLI Pattern |
-| STD-02 | Phases 6-8 | Compliance |
-| STD-03 | Phases 6-8 | CLI Pattern |
-| STD-04 | Phases 6-8 | Testing |
-| HEDG-13 | Phases 6-8 | Testing |
+| STD-01 | Phases 7-9 | CLI Pattern |
+| STD-02 | Phases 7-9 | Compliance |
+| STD-03 | Phases 7-9 | CLI Pattern |
+| STD-04 | Phases 7-9 | Testing |
+| HEDG-13 | Phases 7-9 | Testing |
 
-**Coverage summary:** 67/67 v1 requirements mapped (23 M1 + 29 M2 + 15 M3) + 11 cross-cutting. No orphans.
+**Coverage summary:** 67/67 v1 requirements mapped (23 M1 + 29 M2 + 15 M3) + 11 cross-cutting + Phase 5 derived from readiness report. No orphans.
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12
 (With parallel opportunities noted in Dependency Map above)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -494,14 +521,15 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 2. Setup Automation | M1 | 0/2 | Planned | - |
 | 3. Onboarding Wizard | M1 | 0/2 | Planned | - |
 | 4. Polish & Hooks | M1 | 0/2 | Planned | - |
-| 5. Config & Models | M2 | 0/3 | Planned | - |
-| 6. Total Return | M2 | 0/2 | Planned | - |
-| 7. Tracker & Sizer | M2 | 0/6 | Planned | - |
-| 8. SQQQ vs Puts | M2 | 0/2 | Planned | - |
-| 9. Template Engine | M3 | 0/3 | Planned | - |
-| 10. Assessment & Topics | M3 | 0/3 | Planned | - |
-| 11. Maya Integration | M3 | 0/3 | Planned | - |
+| 5. Agent Readiness | M1 | 0/0 | Planned | - |
+| 6. Config & Models | M2 | 0/3 | Planned | - |
+| 7. Total Return | M2 | 0/2 | Planned | - |
+| 8. Tracker & Sizer | M2 | 0/6 | Planned | - |
+| 9. SQQQ vs Puts | M2 | 0/2 | Planned | - |
+| 10. Template Engine | M3 | 0/3 | Planned | - |
+| 11. Assessment & Topics | M3 | 0/3 | Planned | - |
+| 12. Maya Integration | M3 | 0/3 | Planned | - |
 
 ---
 *Created: 2026-02-02*
-*Depth: comprehensive (11 phases across 3 milestones)*
+*Depth: comprehensive (12 phases across 3 milestones)*
