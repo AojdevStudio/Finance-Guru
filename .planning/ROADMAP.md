@@ -123,11 +123,12 @@ Phases that can skip research (standard patterns):
   3. `.gitignore` covers user-profile.yaml, .env, .onboarding-progress.json, fin-guru-private/, and CSV exports -- verified by CI grep test
   4. No file in the working tree contains hardcoded personal references (names, account numbers, LLC names, employer names, spreadsheet IDs)
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md -- Working tree PII cleanup and .gitignore hardening (ONBD-14, ONBD-15)
+- [ ] 01-02-PLAN.md -- PII expressions file and git-filter-repo history rewrite (SEC-01, XC-06)
+- [ ] 01-03-PLAN.md -- Gitleaks pre-commit hook and CI PII check workflow (SEC-02, SEC-03)
 
 ---
 
@@ -477,7 +478,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Git Scrub & Security | M1 | 0/TBD | Not started | - |
+| 1. Git Scrub & Security | M1 | 0/3 | Planned | - |
 | 2. Setup Automation | M1 | 0/2 | Planned | - |
 | 3. Onboarding Wizard | M1 | 0/TBD | Not started | - |
 | 4. Polish & Hooks | M1 | 0/TBD | Not started | - |
