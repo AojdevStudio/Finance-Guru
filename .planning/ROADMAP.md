@@ -170,11 +170,11 @@ Plans:
   4. .env file is created with optional API keys (user can skip all keys and system still functions with yfinance)
   5. Finance Guru agents load the generated user-profile.yaml and address the user by their configured name
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md -- Onboarding models, validators, and 8 section runners (Layer 1+2)
+- [ ] 03-02-PLAN.md -- Wizard CLI, config generation, agent genericization, and tests (Layer 3)
 
 ---
 
@@ -480,7 +480,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 |-------|-----------|----------------|--------|-----------|
 | 1. Git Scrub & Security | M1 | 0/3 | Planned | - |
 | 2. Setup Automation | M1 | 0/2 | Planned | - |
-| 3. Onboarding Wizard | M1 | 0/TBD | Not started | - |
+| 3. Onboarding Wizard | M1 | 0/2 | Planned | - |
 | 4. Polish & Hooks | M1 | 0/TBD | Not started | - |
 | 5. Config & Models | M2 | 0/TBD | Not started | - |
 | 6. Total Return | M2 | 0/TBD | Not started | - |
