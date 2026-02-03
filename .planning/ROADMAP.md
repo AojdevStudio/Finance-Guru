@@ -242,10 +242,11 @@ Plans:
   4. When yfinance dividend data has gaps, the output includes a data quality warning (not silent wrong numbers)
   5. `--output json` produces structured JSON and `--help` shows complete usage examples
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md -- TotalReturnCalculator class with DRIP modeling and dividend data quality validation (Layer 2)
+- [ ] 06-02-PLAN.md -- Total return CLI with multi-ticker comparison and known-answer test suite (Layer 3 + tests)
 
 ---
 
@@ -485,7 +486,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 3. Onboarding Wizard | M1 | 0/2 | Planned | - |
 | 4. Polish & Hooks | M1 | 0/2 | Planned | - |
 | 5. Config & Models | M2 | 0/3 | Planned | - |
-| 6. Total Return | M2 | 0/TBD | Not started | - |
+| 6. Total Return | M2 | 0/2 | Planned | - |
 | 7. Tracker & Sizer | M2 | 0/TBD | Not started | - |
 | 8. SQQQ vs Puts | M2 | 0/TBD | Not started | - |
 | 9. Template Engine | M3 | 0/TBD | Not started | - |
