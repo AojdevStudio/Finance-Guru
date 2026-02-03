@@ -192,11 +192,11 @@ Plans:
   3. All three hooks (load-fin-core-config, skill-activation-prompt, post-tool-use-tracker) run as Bun TypeScript and produce identical output to the original implementations
   4. Each hook completes execution in under 500ms (verified by test assertions)
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md -- Hook cleanup, settings.json update, dead .sh deletion, and Bun performance test suite (ONBD-10, ONBD-11, ONBD-12, ONBD-13)
+- [ ] 04-02-PLAN.md -- Onboarding save/resume with SIGINT handler, progress file, and full regression suite (ONBD-03, ONBD-16)
 
 ---
 
@@ -481,7 +481,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 1. Git Scrub & Security | M1 | 0/3 | Planned | - |
 | 2. Setup Automation | M1 | 0/2 | Planned | - |
 | 3. Onboarding Wizard | M1 | 0/2 | Planned | - |
-| 4. Polish & Hooks | M1 | 0/TBD | Not started | - |
+| 4. Polish & Hooks | M1 | 0/2 | Planned | - |
 | 5. Config & Models | M2 | 0/TBD | Not started | - |
 | 6. Total Return | M2 | 0/TBD | Not started | - |
 | 7. Tracker & Sizer | M2 | 0/TBD | Not started | - |
