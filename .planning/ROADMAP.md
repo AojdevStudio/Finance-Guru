@@ -343,11 +343,12 @@ Plans:
   4. Options-greeks and risk-management topic explorers are generated and functional
   5. All explorer pages load in under 1 second with zero external runtime dependencies
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 10-01: TBD
-- [ ] 10-02: TBD
+- [ ] 10-01-PLAN.md -- Options-greeks and risk-management topic JSON data files (EXPL-09a, EXPL-09b)
+- [ ] 10-02-PLAN.md -- Template engine enhancements: localStorage persistence, 4-state knowledge cycling, learning modes, clipboard copy, mobile responsive (EXPL-05, EXPL-06, EXPL-08, EXPL-15, EXPL-16)
+- [ ] 10-03-PLAN.md -- Build all 3 explorers, integration verification, and human visual check
 
 ---
 
@@ -494,7 +495,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 7. Tracker & Sizer | M2 | 0/6 | Planned | - |
 | 8. SQQQ vs Puts | M2 | 0/2 | Planned | - |
 | 9. Template Engine | M3 | 0/TBD | Not started | - |
-| 10. Assessment & Topics | M3 | 0/TBD | Not started | - |
+| 10. Assessment & Topics | M3 | 0/3 | Planned | - |
 | 11. Maya Integration | M3 | 0/TBD | Not started | - |
 
 ---
