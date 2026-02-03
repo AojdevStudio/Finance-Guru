@@ -10,6 +10,25 @@ Transform Finance Guru from a single-user private system into a distributable fi
 - **M2: Hedging & Portfolio Protection** - Phases 5-8
 - **M3: Interactive Knowledge Explorer** - Phases 9-11
 
+## Git & PR Strategy
+
+Phase 1 rewrites git history (`git filter-repo`), so it must land directly on `main`. All subsequent work uses feature branches with one PR per milestone.
+
+| Scope | Branch | PR | Lands On |
+|-------|--------|-----|----------|
+| Phase 1: Git Scrub | `main` (direct) | No PR — force push after history rewrite | `main` |
+| Phases 2-4: M1 Onboarding | `feat/m1-onboarding` | PR #1 — created at Phase 2 start | `main` |
+| Phases 5-8: M2 Hedging | `feat/m2-hedging` | PR #2 — created at Phase 5 start | `main` |
+| Phases 9-11: M3 Explorer | `feat/m3-explorer` | PR #3 — created at Phase 9 start | `main` |
+
+**Branch lifecycle per milestone:**
+1. At first phase of milestone: `git checkout -b feat/m<N>-<name>`
+2. Create draft PR immediately (tracks progress)
+3. All phases within the milestone commit to this branch
+4. At last phase completion: mark PR ready for review, merge to `main`
+
+**Phase 1 is special:** It operates directly on `main` because `git filter-repo` rewrites the entire repository history. A PR is not possible — the rewritten history requires a force push.
+
 ## Phases
 
 - [ ] **Phase 1: Git History Scrub & Security Foundation** - Remove all PII from git history and prevent future leaks
@@ -93,6 +112,7 @@ Phases that can skip research (standard patterns):
 **Goal**: Repository is safe for public visibility with zero PII exposure risk
 **Depends on**: Nothing (first phase, CRITICAL prerequisite)
 **Milestone**: M1 - Public Release & Onboarding
+**Branch**: `main` (direct — git filter-repo rewrites history, no PR possible)
 **Requirements**: SEC-01, SEC-02, SEC-03, ONBD-14, ONBD-15
 **Cross-cutting**: XC-06
 **Research flag**: YES -- audit git history for exact PII exposure before scrubbing
@@ -116,6 +136,7 @@ Plans:
 **Goal**: A new user can run one command on a fresh machine and get a working environment
 **Depends on**: Phase 1
 **Milestone**: M1 - Public Release & Onboarding
+**Branch**: `feat/m1-onboarding` (create branch + draft PR at phase start)
 **Requirements**: ONBD-05, ONBD-06, SETUP-01, SETUP-02, SETUP-03
 
 **Success Criteria** (what must be TRUE):
@@ -136,6 +157,7 @@ Plans:
 **Goal**: A new user completes an interactive CLI session and has a fully personalized Finance Guru configuration
 **Depends on**: Phase 2 (setup.sh must exist to orchestrate onboarding)
 **Milestone**: M1 - Public Release & Onboarding
+**Branch**: `feat/m1-onboarding` (continues on existing branch)
 **Requirements**: ONBD-01, ONBD-02, ONBD-04, ONBD-07, ONBD-08, ONBD-09, ONBD-17
 **Cross-cutting**: XC-01 (questionary is the only new dependency)
 
@@ -159,6 +181,7 @@ Plans:
 **Goal**: Onboarding is interruption-safe and all Claude hooks run as Bun TypeScript under 500ms
 **Depends on**: Phase 3 (onboarding core must exist before adding save/resume)
 **Milestone**: M1 - Public Release & Onboarding
+**Branch**: `feat/m1-onboarding` (final phase — merge PR to main on completion)
 **Requirements**: ONBD-03, ONBD-10, ONBD-11, ONBD-12, ONBD-13, ONBD-16
 
 **Success Criteria** (what must be TRUE):
@@ -180,6 +203,7 @@ Plans:
 **Goal**: All four hedging CLI tools have a shared foundation of validated Pydantic models and config access
 **Depends on**: Phase 3 (user-profile.yaml schema must be stable)
 **Milestone**: M2 - Hedging & Portfolio Protection
+**Branch**: `feat/m2-hedging` (create branch + draft PR at phase start)
 **Requirements**: HEDG-01, HEDG-02, HEDG-03, HEDG-08, CFG-01, CFG-02, CFG-03
 **Cross-cutting**: XC-02, XC-03
 
@@ -202,6 +226,7 @@ Plans:
 **Goal**: User can compare total returns (price + dividends) across tickers with DRIP modeling
 **Depends on**: Phase 5 (shared models and config loader)
 **Milestone**: M2 - Hedging & Portfolio Protection
+**Branch**: `feat/m2-hedging` (continues on existing branch)
 **Requirements**: HEDG-07, TR-01, TR-02, TR-03
 **Cross-cutting**: STD-01, STD-02, STD-03, STD-04, XC-03, XC-04, XC-05
 **HEDG-13 (incremental)**: Tests for total return components
@@ -225,6 +250,7 @@ Plans:
 **Goal**: User can monitor options positions, get roll alerts, and size new hedge contracts against their portfolio
 **Depends on**: Phase 5 (shared models and config loader)
 **Milestone**: M2 - Hedging & Portfolio Protection
+**Branch**: `feat/m2-hedging` (continues on existing branch)
 **Requirements**: HEDG-04, HEDG-05, RT-01, RT-02, RT-03, HS-01, HS-02, HS-03, BS-01, HEDG-09, HEDG-10
 **Cross-cutting**: STD-01, STD-02, STD-03, STD-04, XC-03, XC-04, XC-05
 **HEDG-13 (incremental)**: Tests for tracker and sizer components
@@ -249,6 +275,7 @@ Plans:
 **Goal**: User can compare SQQQ hedging vs protective puts with accurate decay modeling and breakeven analysis
 **Depends on**: Phase 5 (shared models); benefits from Phase 7 (options infrastructure) but not strictly required
 **Milestone**: M2 - Hedging & Portfolio Protection
+**Branch**: `feat/m2-hedging` (final phase — merge PR to main on completion)
 **Requirements**: HEDG-06, HC-01, HC-02, HC-03, HC-04, HC-05, HEDG-11, HEDG-12
 **Cross-cutting**: STD-01, STD-02, STD-03, STD-04, XC-03, XC-04, XC-05
 **HEDG-13 (incremental)**: Tests for comparison components
@@ -275,6 +302,7 @@ Plans:
 **Goal**: A build pipeline exists that converts topic JSON into standalone interactive HTML knowledge explorers
 **Depends on**: Phase 3 (stable user-profile.yaml schema); can start parallel with Phase 7
 **Milestone**: M3 - Interactive Knowledge Explorer
+**Branch**: `feat/m3-explorer` (create branch + draft PR at phase start)
 **Requirements**: EXPL-01, EXPL-02, EXPL-03, EXPL-04
 **Research flag**: YES -- Cytoscape.js configuration, build pipeline patterns
 
@@ -296,6 +324,7 @@ Plans:
 **Goal**: Users can self-assess their knowledge, persist progress across sessions, and explore options-greeks and risk-management topics
 **Depends on**: Phase 9 (template engine must exist)
 **Milestone**: M3 - Interactive Knowledge Explorer
+**Branch**: `feat/m3-explorer` (continues on existing branch)
 **Requirements**: EXPL-05, EXPL-06, EXPL-08, EXPL-09a, EXPL-09b, EXPL-15, EXPL-16
 
 **Success Criteria** (what must be TRUE):
@@ -318,6 +347,7 @@ Plans:
 **Goal**: Explorer connects back into Finance Guru through Maya learner profiles and a CLI launcher
 **Depends on**: Phase 10 (assessment and persistence must work before exporting profiles)
 **Milestone**: M3 - Interactive Knowledge Explorer
+**Branch**: `feat/m3-explorer` (final phase — merge PR to main on completion)
 **Requirements**: EXPL-07, EXPL-10, EXPL-12, EXPL-13
 
 **Success Criteria** (what must be TRUE):
