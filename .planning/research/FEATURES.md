@@ -208,7 +208,7 @@ M3 Knowledge Explorer
 4. Progress indicator showing section N of M
 5. .gitignore protection for all sensitive files
 6. README with fork workflow and setup instructions
-7. Hardcoded reference removal (grep "Ossie" returns nothing)
+7. Hardcoded reference removal (grep for personal names returns nothing)
 8. Idempotent re-run
 
 **Ship with (differentiators):**

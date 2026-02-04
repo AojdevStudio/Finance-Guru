@@ -88,8 +88,8 @@ echo "2026-01-12,SCHD,500,75.00,37500.00" >> notebooks/updates/dividend.csv
 echo "Date,Account,Type,Amount" > notebooks/retirement-accounts/OfxDownload.csv
 echo "2026-01-12,401k,Vanguard,125000.00" >> notebooks/retirement-accounts/OfxDownload.csv
 
-echo "Date,Description,Amount" > notebooks/transactions/History_for_Account_Z05724592.csv
-echo "2026-01-12,Margin Interest,-125.50" >> notebooks/transactions/History_for_Account_Z05724592.csv
+echo "Date,Description,Amount" > notebooks/transactions/History_for_Account_EXAMPLE123.csv
+echo "2026-01-12,Margin Interest,-125.50" >> notebooks/transactions/History_for_Account_EXAMPLE123.csv
 
 # Create test analysis files
 echo "ticker,score,recommendation" > fin-guru-private/fin-guru/analysis/watchlist.csv
@@ -132,7 +132,7 @@ csv_files=(
     "notebooks/updates/Portfolio_Positions_Jan-12-2026.csv"
     "notebooks/updates/dividend.csv"
     "notebooks/retirement-accounts/OfxDownload.csv"
-    "notebooks/transactions/History_for_Account_Z05724592.csv"
+    "notebooks/transactions/History_for_Account_EXAMPLE123.csv"
     "fin-guru-private/fin-guru/analysis/watchlist.csv"
 )
 

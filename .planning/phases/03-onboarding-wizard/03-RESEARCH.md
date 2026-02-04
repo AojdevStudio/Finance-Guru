@@ -207,7 +207,7 @@ Problems that look simple but have existing solutions:
 | Pydantic validation models | New model classes | yaml_generation_inputs.py models | Complete set of UserDataInput, LiquidAssetsInput, etc. already exists |
 | YAML/config file writing | Manual file creation | write_config_files() | Knows all output paths, creates directories |
 | Currency formatting | f-string formatting | YAMLGenerator._prepare_user_data() | Already formats $X,XXX.XX |
-| Possessive name generation | Manual string logic | YAMLGenerator._prepare_user_data() | Already handles "Ossie's" vs "James'" |
+| Possessive name generation | Manual string logic | YAMLGenerator._prepare_user_data() | Already handles possessives like "Alex's" vs "James'" |
 | File generation for all configs | Per-file generation | generator.generate_all_configs() | Generates all 6 config files in one call |
 | Input type validation (currency, %) | Python parsing | Existing validators in input-validator.ts logic ported to Python | TypeScript versions already handle $10,000 and 4.5% formats |
 

@@ -23,7 +23,7 @@ Before importing CSV:
 - **Quantity** → Column B: Quantity
 - **Average Cost Basis** → Column G: Avg Cost Basis
 
-**Balances File**: `notebooks/updates/Balances_for_Account_Z05724592.csv`
+**Balances File**: `notebooks/updates/Balances_for_Account_{account_id}.csv`
 
 **Key Fields to Extract**:
 - **"Settled cash"** → SPAXX row (Column L)

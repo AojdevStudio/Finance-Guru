@@ -44,7 +44,7 @@ These capabilities exist and are working in the current codebase:
 - [ ] **ONBD-11**: Refactor skill-activation-prompt hook to Bun TypeScript (1:1 behavior port)
 - [ ] **ONBD-12**: Refactor post-tool-use-tracker hook to Bun TypeScript (convert from bash)
 - [ ] **ONBD-13**: Bun hook test suite with performance assertions (< 500ms per hook)
-- [ ] **ONBD-14**: Remove all hardcoded "Ossie" references from public codebase (config.yaml, workflows, etc.)
+- [ ] **ONBD-14**: Remove all hardcoded personal name references from public codebase (config.yaml, workflows, etc.)
 - [ ] **ONBD-15**: Update .gitignore to protect all private data (user-profile.yaml, .env, CSV exports, fin-guru-private/)
 - [ ] **ONBD-16**: All existing 365+ tests still pass after changes (no regressions)
 - [ ] **ONBD-17**: Finance Guru agents work with generic user profile (uses {user_name}, not hardcoded)

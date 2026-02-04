@@ -3,7 +3,7 @@ title: "Finance Guru Public Release Tasks"
 status: backlog
 created: 2026-01-10
 updated: 2026-02-02
-author: "Ossie Irondi"
+author: "{user_name}"
 spec_id: task
 version: "1.0.0"
 description: "Task checklist for preparing Finance Guru for public sharing and new user onboarding"

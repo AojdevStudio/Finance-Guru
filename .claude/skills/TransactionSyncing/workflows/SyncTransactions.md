@@ -4,7 +4,7 @@ Import Fidelity transaction history CSV into Google Sheets with smart routing an
 
 ## Step 1: Read Transaction History CSV
 
-**Location**: `notebooks/transactions/History_for_Account_Z05724592.csv`
+**Location**: `notebooks/transactions/History_for_Account_{account_id}.csv`
 
 **Read the CSV and parse**:
 ```python
@@ -28,20 +28,20 @@ Cash Balance ($), Settlement Date
 **Read existing sheets**:
 ```javascript
 mcp__gdrive__sheets(operation: "listSheets", params: {
-    spreadsheetId: "1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4"
+    spreadsheetId: "{spreadsheet_id}"
 })
 ```
 
 **If "Transactions" tab doesn't exist, create it**:
 ```javascript
 mcp__gdrive__sheets(operation: "createSheet", params: {
-    spreadsheetId: "1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4",
+    spreadsheetId: "{spreadsheet_id}",
     title: "Transactions"
 })
 
 // Add headers
 mcp__gdrive__sheets(operation: "updateCells", params: {
-    spreadsheetId: "1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4",
+    spreadsheetId: "{spreadsheet_id}",
     range: "Transactions!A1:I1",
     values: [["Date", "Action", "Symbol", "Description", "Type", "Amount", "Category", "Balance", "Settlement"]]
 })
@@ -51,7 +51,7 @@ mcp__gdrive__sheets(operation: "updateCells", params: {
 
 ```javascript
 mcp__gdrive__sheets(operation: "readSheet", params: {
-    spreadsheetId: "1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4",
+    spreadsheetId: "{spreadsheet_id}",
     range: "Transactions!A:F"
 })
 ```
@@ -182,7 +182,7 @@ transaction_row = [
 ```javascript
 // Append all new transactions at once
 mcp__gdrive__sheets(operation: "appendRows", params: {
-    spreadsheetId: "1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4",
+    spreadsheetId: "{spreadsheet_id}",
     sheetName: "Transactions",
     values: new_transaction_rows
 })
@@ -209,7 +209,7 @@ for tx in new_transactions:
 **Read existing Expense Tracker for deduplication**:
 ```javascript
 mcp__gdrive__sheets(operation: "readSheet", params: {
-    spreadsheetId: "1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4",
+    spreadsheetId: "{spreadsheet_id}",
     range: "Expense Tracker!A:D"
 })
 ```
@@ -217,7 +217,7 @@ mcp__gdrive__sheets(operation: "readSheet", params: {
 **Append only new expenses**:
 ```javascript
 mcp__gdrive__sheets(operation: "appendRows", params: {
-    spreadsheetId: "1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4",
+    spreadsheetId: "{spreadsheet_id}",
     sheetName: "Expense Tracker",
     values: new_expense_rows
 })

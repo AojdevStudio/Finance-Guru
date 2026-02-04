@@ -141,7 +141,7 @@ def test_create_user(mocker):
     app.dependency_overrides[get_user_service] = lambda: fake_service
 
     with TestClient(app) as client:
-        response = client.post("/api/users", json={"email": "admin@unifiedental.com", "role": "admin"})
+        response = client.post("/api/users", json={"email": "user@example.com", "role": "admin"})
     assert response.status_code == 201
     app.dependency_overrides.clear()
 ```

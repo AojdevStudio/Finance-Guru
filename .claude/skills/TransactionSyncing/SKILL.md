@@ -24,7 +24,7 @@ Running the **SyncTransactions** workflow from the **TransactionSyncing** skill.
 **Example 1: Sync after downloading Fidelity transaction history**
 ```
 User: "sync transactions"
--> Reads History_for_Account_Z05724592.csv from notebooks/transactions/
+-> Reads History_for_Account_{account_id}.csv from notebooks/transactions/
 -> Creates/updates Transactions tab with full Fidelity data
 -> Routes DEBIT CARD PURCHASE entries to Expense Tracker
 -> Auto-categorizes expenses (H-E-B -> Groceries, Tesla -> Auto & Transport)
@@ -94,7 +94,7 @@ See `CategoryRules.md` for the full pattern matching rules.
 
 ### 1. Read Fidelity Transaction History CSV
 
-**Location**: `notebooks/transactions/History_for_Account_Z05724592.csv`
+**Location**: `notebooks/transactions/History_for_Account_{account_id}.csv`
 
 **CSV Columns**:
 ```

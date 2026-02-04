@@ -19,19 +19,20 @@ Progress: [██░░░░░░░░░░░░░░░░░░] 6%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 9 min
-- Total execution time: 0.3 hours
+- Total plans completed: 3
+- Average duration: ~11 min
+- Total execution time: ~0.55 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
+| 01-git-scrub | 1/3 | ~15 min | ~15 min |
 | 02-setup-automation | 2/2 | 17 min | 9 min |
 
 **Recent Trend:**
-- Last 5 plans: 6 min, 11 min
-- Trend: --
+- Last 5 plans: 01-01 (~15 min), 02-01 (6 min), 02-02 (11 min)
+- Trend: Accelerating
 
 *Updated after each plan completion*
 
@@ -47,6 +48,9 @@ Recent decisions affecting current work:
 - [Roadmap]: Phase 9 (SQQQ comparison) isolated due to highest-risk calculation (was Phase 8, renumbered)
 - [Roadmap]: Phases 1, 9, 10 flagged for /gsd:research-phase before planning (renumbered from 1, 8, 9)
 - [Roadmap]: Phase 5 (Agent Readiness Hardening) added at end of M1 based on agent-readiness-report (2026-02-02). L1→L2 quick wins: ruff linter, expanded pre-commit hooks, issue/PR templates, test coverage thresholds, CODEOWNERS.
+- [01-01]: PII replaced with template variables ({account_id}, {spreadsheet_id}, {user_name}, {employer_name}, {llc_name}) rather than generic placeholders
+- [01-01]: OS-level paths preserved, will be handled by git-filter-repo in Plan 02
+- [01-01]: Personal email addresses and domains in backend dev guidelines cleaned as additional PII
 - [02-01]: Used sort -V for version comparison (avoids Python 4.x false negative from arithmetic)
 - [02-01]: check-all-then-fail pattern with set -e + || guards for dependency checking
 - [02-02]: File-level idempotency only for setup.sh; field-level YAML merging deferred to Phase 3 onboarding wizard

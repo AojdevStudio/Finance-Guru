@@ -60,7 +60,7 @@ from app.middleware.request_context import RequestContextMiddleware
 def configure_middleware(app: FastAPI) -> None:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["https://unifiedental.com", "https://portal.unifiedental.com"],
+        allow_origins=["https://example.com", "https://portal.example.com"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -68,7 +68,7 @@ def configure_middleware(app: FastAPI) -> None:
     app.add_middleware(GZipMiddleware)
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["unifiedental.com", "portal.unifiedental.com", "localhost"],
+        allowed_hosts=["example.com", "portal.example.com", "localhost"],
     )
     app.add_middleware(RequestContextMiddleware)  # closest to handlers
 

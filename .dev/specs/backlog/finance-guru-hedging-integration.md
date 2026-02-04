@@ -3,7 +3,7 @@ title: "Finance Guru Hedging & Portfolio Protection Integration"
 status: in-progress
 created: 2026-02-02
 updated: 2026-02-02
-author: "Ossie Irondi"
+author: "{user_name}"
 spec_id: finance-guru-hedging-integration
 version: "1.0.0"
 description: "Integrate Paycheck to Portfolio hedging strategies into Finance Guru CLI tools, private config, and agent knowledge base"

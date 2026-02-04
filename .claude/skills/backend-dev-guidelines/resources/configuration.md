@@ -107,13 +107,13 @@ No `config.ini` or JSON files are used; any static configuration should be embed
 
 ```
 APP_ENV=development
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/unifiedental
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/myapp
 SUPABASE_URL=https://<project>.supabase.co
 SUPABASE_ANON_KEY=anon-key
 SUPABASE_SERVICE_KEY=service-role-key
-SMTP_USER=admin@unifiedental.com
+SMTP_USER=user@example.com
 SMTP_PASSWORD=dev-password
-FROM_EMAIL=admin@unifiedental.com
+FROM_EMAIL=user@example.com
 ```
 
 > 🔒 **Security**: Never commit `.env`. `.gitignore` already excludes it.

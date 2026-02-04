@@ -212,7 +212,7 @@ You have the right to:
 
 To delete your data:
 1. Disconnect your bank accounts in the dashboard
-2. Contact support@unifiedental.com for full data removal
+2. Contact support@example.com for full data removal
 3. We will process deletion requests within 30 days
 
 ### Third-Party Services
@@ -230,7 +230,7 @@ We may update this Privacy Policy periodically. Significant changes will be comm
 ### Contact
 
 For privacy questions or data requests:
-- **Email:** support@unifiedental.com
+- **Email:** support@example.com
 - **Response Time:** Within 5 business days
 
 ---
