@@ -30,6 +30,18 @@ Finance Guru™: v2.0.0|BMAD-CORE™: v6.0.0|Build: 2025-10-08|Updated: 2026-01-
 
 Note: Private family office system - maintain exclusive,personalized nature of Finance Guru service.
 
+[Style]
+Markdown emphasis: underscores (`_text_`), not asterisks (`*text*`) — enforced by markdownlint (MD049)
+
+[Bash Patterns (setup.sh)]
+`set -e` active: guard `eval` with `if !` to capture failures; never eval multiline or non-command strings
+`command -v` for existence checks (not `which`); use sentinel `"0.0"` for version fallback under set -e
+Auto-install: `get_install_command()` returns both executable and instructional strings — guard before eval
+
+[PR Review Workflow]
+CodeRabbit + Claude bot review PRs automatically; fetch comments via `gh api repos/{owner}/{repo}/pulls/{n}/comments`
+Address all comments before merge; check which are already resolved in latest commit before fixing
+
 [Landing the Plane (Session Completion)]
 When ending work session,MUST complete ALL steps. Work NOT complete until `git push` succeeds.
 MANDATORY WORKFLOW: 1.File issues for remaining work - Create github issues for follow-up;2.Run quality gates (if code changed) - `uv run pytest`,`uv run black --check .`,`uv run mypy src/`;3.Update issue status - Close finished,update in-progress;4.PUSH TO REMOTE - MANDATORY: `git pull --rebase;git push;git status` (MUST show "up to date with origin");5.Clean up - Clear stashes,prune remote branches;6.Verify - All changes committed AND pushed;7.Hand off - Provide context for next session

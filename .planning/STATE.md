@@ -5,33 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 1 - Git History Scrub & Security Foundation
+**Current focus:** Phase 2 complete -- Setup Automation & Dependency Checking
 
 ## Current Position
 
-Phase: 1 of 12 (Git History Scrub & Security Foundation)
-Plan: 1 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-04 -- Completed 01-01-PLAN.md (Working Tree PII Cleanup)
+Phase: 2 of 12 (Setup Automation & Dependency Checking)
+Plan: 2 of 2 in current phase (PHASE COMPLETE)
+Status: Phase complete
+Last activity: 2026-02-04 -- Completed 02-02-PLAN.md
 
-Progress: [##                  ] 3%
+Progress: [██░░░░░░░░░░░░░░░░░░] 6%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: ~15 min
-- Total execution time: ~0.25 hours
+- Total plans completed: 3
+- Average duration: ~11 min
+- Total execution time: ~0.55 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 1/3 | ~15 min | ~15 min |
+| 01-git-scrub | 1/3 | ~15 min | ~15 min |
+| 02-setup-automation | 2/2 | 17 min | 9 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~15 min)
-- Trend: Starting
+- Last 5 plans: 01-01 (~15 min), 02-01 (6 min), 02-02 (11 min)
+- Trend: Accelerating
 
 *Updated after each plan completion*
 
@@ -50,6 +51,11 @@ Recent decisions affecting current work:
 - [01-01]: PII replaced with template variables ({account_id}, {spreadsheet_id}, {user_name}, {employer_name}, {llc_name}) rather than generic placeholders
 - [01-01]: OS-level paths preserved, will be handled by git-filter-repo in Plan 02
 - [01-01]: Personal email addresses and domains in backend dev guidelines cleaned as additional PII
+- [02-01]: Used sort -V for version comparison (avoids Python 4.x false negative from arithmetic)
+- [02-01]: check-all-then-fail pattern with set -e + || guards for dependency checking
+- [02-02]: File-level idempotency only for setup.sh; field-level YAML merging deferred to Phase 3 onboarding wizard
+- [02-02]: verify_directory_structure runs on every execution path (first run and re-run) to catch missing subdirs
+- [02-02]: user-profile.yaml template at fin-guru/data/ (tracked in git as template, Phase 3 will populate)
 
 ### Pending Todos
 
@@ -63,7 +69,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-02-04T03:46:21Z
+Stopped at: Completed 02-02-PLAN.md (Phase 2 complete)
 Resume file: None
-Next action: /gsd:execute-phase 1 (Plan 02 - git-filter-repo history rewrite)
+Next action: /gsd:plan-phase 3 (Onboarding Wizard -- depends on Phase 2 which is now complete)

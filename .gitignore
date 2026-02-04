@@ -80,6 +80,8 @@ fin-guru/data/user-profile.yaml
 **/user-profile.yaml
 # Onboarding state and progress (may contain sensitive configuration)
 .onboarding-state.json
+# Setup progress tracking (user-specific)
+.setup-progress
 .onboarding-progress.json
 # All generated strategies and reports
 fin-guru-private/

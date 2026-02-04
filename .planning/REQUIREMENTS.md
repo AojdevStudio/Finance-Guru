@@ -26,13 +26,13 @@
 
 ### Setup Automation
 
-| ID | Requirement | Scope | Phase | Notes |
-|----|-------------|-------|-------|-------|
-| ONBD-05 | setup.sh orchestrates full first-time setup | v1 | 2 | Dependency checks, onboarding, config generation |
-| ONBD-06 | setup.sh is idempotent — re-run updates missing fields only | v1 | 2 | Detect existing files, diff against template, prompt for missing |
-| SETUP-01 | Dependency checker verifies prerequisites (uv, bun, Python 3.12+) | v1 | 2 | Show exact install commands on failure, fail-fast |
-| SETUP-02 | setup.sh creates fin-guru-private/ directory structure | v1 | 2 | hedging/, strategies/, analysis/ subdirectories |
-| SETUP-03 | --check-deps-only flag for dry-run dependency verification | v1 | 2 | For CI/debugging use |
+| ID | Requirement | Scope | Phase | Status | Notes |
+|----|-------------|-------|-------|--------|-------|
+| ONBD-05 | setup.sh orchestrates full first-time setup | v1 | 2 | Complete | Dependency checks, directory creation, config scaffolding, Python deps |
+| ONBD-06 | setup.sh is idempotent — re-run updates missing fields only | v1 | 2 | Complete | File-level skip/prompt; field-level YAML merge deferred to Phase 3 |
+| SETUP-01 | Dependency checker verifies prerequisites (uv, bun, Python 3.12+) | v1 | 2 | Complete | check-all-then-fail, OS-specific install commands, sort -V comparison |
+| SETUP-02 | setup.sh creates fin-guru-private/ directory structure | v1 | 2 | Complete | 13+ subdirectories including hedging/, strategies/, analysis/ |
+| SETUP-03 | --check-deps-only flag for dry-run dependency verification | v1 | 2 | Complete | Dry-run check, no filesystem modifications, exit code reflects status |
 
 ### Onboarding Wizard
 
@@ -256,4 +256,4 @@
 | **11: Integration** | EXPL-07, EXPL-10, EXPL-12, EXPL-13 |
 
 ---
-*Last updated: 2026-02-02*
+*Last updated: 2026-02-04 (Phase 2 requirements marked Complete)*

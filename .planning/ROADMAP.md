@@ -153,8 +153,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Rewrite setup.sh: dependency checker, OS detection, color output, CLI args, --check-deps-only, auto-install prompts (SETUP-01, SETUP-03)
-- [ ] 02-02-PLAN.md -- Directory creation, config scaffolding, .setup-progress tracking, idempotent re-runs, integration test update (ONBD-05, ONBD-06, SETUP-02)
+- [x] 02-01-PLAN.md -- Rewrite setup.sh: dependency checker, OS detection, color output, CLI args, --check-deps-only, auto-install prompts (SETUP-01, SETUP-03)
+- [x] 02-02-PLAN.md -- Directory creation, config scaffolding, .setup-progress tracking, idempotent re-runs, integration test update (ONBD-05, ONBD-06, SETUP-02)
 
 ---
 
@@ -518,7 +518,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Git Scrub & Security | M1 | 0/3 | Planned | - |
-| 2. Setup Automation | M1 | 0/2 | Planned | - |
+| 2. Setup Automation | M1 | 2/2 | Complete | 2026-02-04 |
 | 3. Onboarding Wizard | M1 | 0/2 | Planned | - |
 | 4. Polish & Hooks | M1 | 0/2 | Planned | - |
 | 5. Agent Readiness | M1 | 0/0 | Planned | - |
