@@ -11,16 +11,17 @@ Add interactive self-assessment, localStorage persistence, and two new topic exp
 </domain>
 
 <decisions>
+
 ## Implementation Decisions
 
-### Knowledge State Cycling
+## Knowledge State Cycling
 - 4-state cycle: unknown (gray) -> familiar (blue) -> confident (green) -> mastered (gold)
 - Color progression visual treatment — node color changes with each click
 - Wrapping cycle — clicking mastered loops back to unknown
 - "Reset All" button available to clear all states for a topic back to unknown
 - States persist via localStorage (key per topic)
 
-### Learning Modes Experience
+## Learning Modes Experience
 - Three modes: Guided / Standard / Yolo (keep these exact names)
 - Mode is **per-topic** — each topic remembers its own mode setting
 - Top bar toggle — three buttons always visible at top of explorer (Guided | Standard | Yolo)
@@ -30,13 +31,13 @@ Add interactive self-assessment, localStorage persistence, and two new topic exp
   - **Yolo**: "Analyze X in context of portfolio strategy with edge cases" prompts + everything unlocked
 - Mode selection persisted in localStorage per topic
 
-### New Topic Content Structure
+## New Topic Content Structure
 - **Options-Greeks**: Comprehensive depth (~30+ nodes) — core 5 Greeks, second-order Greeks (charm, vanna), volatility surface, Greeks in portfolio context, strategies integration
 - **Risk-Management**: Full risk framework (~25-30 nodes) — VaR, Sharpe, Beta, correlation, diversification, drawdown + hedging strategies, margin risk, tail risk, regime detection, position sizing
 - **Cross-topic links**: Concepts that appear across topics show visual cross-references (e.g., "Theta" in options-greeks links to "covered call income" in dividends)
 - **Portfolio-personalized**: Prompts reference actual portfolio positions and strategy (SQQQ, PLTR, JEPI, margin-living, DRIP v2) rather than generic examples
 
-### Progress Visibility
+## Progress Visibility
 - **Progress bar + fraction** at the top: "12/30 concepts mastered" with visual fill
 - **Expandable state breakdown** below bar: counts per state (unknown/familiar/confident/mastered)
 - **Completion threshold**: Confident + Mastered count toward progress bar (not just mastered)
@@ -44,7 +45,7 @@ Add interactive self-assessment, localStorage persistence, and two new topic exp
 - **Last studied timestamp**: Each topic shows relative time since last engagement ("Last studied: 3 days ago")
 - Timestamp and progress stored in localStorage
 
-### Claude's Discretion
+## Claude's Discretion
 - Exact node animations on state transitions
 - Graph layout adjustments for larger concept graphs (30+ nodes)
 - localStorage key naming and schema migration strategy

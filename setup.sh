@@ -214,13 +214,15 @@ check_dependency() {
     return 1
   fi
 
-  # Extract version
-  local found_version=""
+  # Extract version (sentinel "0.0" ensures predictable behavior under set -e)
+  local found_version="0.0"
   case "$cmd" in
-    python3) found_version=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1) ;;
-    uv)      found_version=$(uv --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) ;;
-    bun)     found_version=$(bun --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) ;;
+    python3) found_version=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1) || found_version="0.0" ;;
+    uv)      found_version=$(uv --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) || found_version="0.0" ;;
+    bun)     found_version=$(bun --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) || found_version="0.0" ;;
   esac
+  # Ensure fallback if extraction returned empty
+  [ -z "$found_version" ] && found_version="0.0"
 
   # Check minimum version if specified
   if [ -n "$min_version" ] && [ -n "$found_version" ]; then

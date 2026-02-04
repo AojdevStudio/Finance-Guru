@@ -77,7 +77,7 @@ Each task was committed atomically:
 3. **Task 3: Update integration test for new setup.sh behavior** - `1ef6a53` (test)
 
 ## Files Created/Modified
-- `setup.sh` - Added 8 new functions: is_step_complete, mark_step_complete, show_progress, create_dir, create_directory_structure, verify_directory_structure, scaffold_file, scaffold_config_files, install_python_deps, print_summary. Updated main flow with step-based execution.
+- `setup.sh` - Added 10 new functions: is_step_complete, mark_step_complete, show_progress, create_dir, create_directory_structure, verify_directory_structure, scaffold_file, scaffold_config_files, install_python_deps, print_summary. Updated main flow with step-based execution.
 - `.gitignore` - Added .setup-progress exclusion in Family Office section
 - `tests/integration/test_setup_onboarding_integration.sh` - Complete rewrite: 46 assertions across 5 test groups, removed all old onboarding/symlink/MCP references
 
