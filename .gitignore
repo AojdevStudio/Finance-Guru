@@ -75,10 +75,12 @@ credentials/
 research/
 # Portfolio positions and analysis notebooks
 notebooks/
-# User's financial profile
+# User's financial profile (any location in repo tree)
 fin-guru/data/user-profile.yaml
-# Onboarding state (may contain sensitive configuration)
+**/user-profile.yaml
+# Onboarding state and progress (may contain sensitive configuration)
 .onboarding-state.json
+.onboarding-progress.json
 # All generated strategies and reports
 fin-guru-private/
 # Google Sheets portfolio optimizer scripts (contains sensitive portfolio logic)
