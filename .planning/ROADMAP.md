@@ -296,12 +296,12 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 08-01-PLAN.md -- RollingTracker calculator: scan_chain_quiet wrapper, American put pricing, position status, roll suggestions, log-roll, history (Layer 2)
+- [ ] 08-01-PLAN.md -- RollingTracker calculator: scan_chain_quiet wrapper, American put pricing, position status, roll suggestions, log-position, log-roll, history (Layer 2)
 - [ ] 08-02-PLAN.md -- HedgeSizer calculator: contract sizing formula, multi-underlying allocation, budget validation (Layer 2)
-- [ ] 08-03-PLAN.md -- Rolling tracker CLI with argparse subcommands: status, suggest-roll, log-roll, history (Layer 3)
+- [ ] 08-03-PLAN.md -- Rolling tracker CLI with argparse subcommands: status, suggest-roll, log-position, log-roll, history (Layer 3)
 - [ ] 08-04-PLAN.md -- Hedge sizer CLI with flat argparse: --portfolio, --underlyings, budget validation (Layer 3)
 - [ ] 08-05-PLAN.md -- Knowledge base files (hedging-strategies.md, options-insurance-framework.md) and agent definition updates
-- [ ] 08-06-PLAN.md -- Known-answer tests for both calculators and CLIs (TDD)
+- [ ] 08-06-PLAN.md -- Known-answer tests for both calculators and CLIs
 
 ---
 
