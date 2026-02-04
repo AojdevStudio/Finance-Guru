@@ -17,6 +17,12 @@ literal:9424526a719032acbe090cc883accedb1b7eb167e89f855d78a7a0fec0aaf441==>REDAC
 literal:Z05724592==>REDACTED_ACCOUNT
 # Catch any similar Fidelity-style account number patterns
 regex:Z0\d{7,}==>REDACTED_ACCOUNT
+# Vanguard IRA account numbers (found in PITFALLS.md and onboarding specs)
+literal:39321600==>REDACTED_ACCOUNT
+literal:35407271==>REDACTED_ACCOUNT
+# Vanguard Brokerage account numbers
+literal:53527429==>REDACTED_ACCOUNT
+literal:50580939==>REDACTED_ACCOUNT
 
 # === HIGH: Google Sheets Spreadsheet ID ===
 # 44-character spreadsheet ID from portfolio tracker
@@ -40,10 +46,17 @@ literal:CBN 401(k)==>REDACTED_EMPLOYER 401(k)
 literal:CBN 401(K)==>REDACTED_EMPLOYER 401(K)
 literal:CBN 401k==>REDACTED_EMPLOYER 401k
 
-# === HIGH: Personal Names (longer patterns first) ===
+# === HIGH: Personal Names (longer patterns first, case-sensitive) ===
+# Capitalized forms (from documents, commit messages)
 literal:Ossie Irondi==>REDACTED_NAME
 literal:Irondi==>REDACTED_NAME
 literal:Ossie==>REDACTED_NAME
+# Combined username MUST come before separate lowercase parts
+# (ossie is a prefix of ossieirondi - sequential replacement order matters)
+literal:ossieirondi==>redacted_user
+# Lowercase forms (from function names, variable names, filenames, grep patterns)
+literal:irondi==>redacted_name
+literal:ossie==>redacted_name
 
 # === HIGH: Email Addresses (full email before domain parts) ===
 literal:admin@kamdental.com==>redacted@example.com
@@ -57,8 +70,10 @@ literal:unifiedental==>redacted_domain
 
 # === MEDIUM: GitHub Identity ===
 # GitHub username linking to personal identity (102 occurrences in file content)
+# All case variants: Title, UPPER, lower
 literal:AojdevStudio==>FinanceGuruDev
 literal:AOJDevStudio==>FinanceGuruDev
+literal:aojdevstudio==>financegurudev
 
 # === MEDIUM: Financial Amounts ===
 # Mortgage balance - formatted variants (most specific first)
@@ -86,7 +101,6 @@ regex:Balances_for_Account_Z\d+==>Balances_for_Account_REDACTED
 regex:History_for_Account_Z\d+==>History_for_Account_REDACTED
 regex:Portfolio_Positions_\w+-\d+-\d+\.csv==>Portfolio_Positions_REDACTED.csv
 
-# === MEDIUM: OS-level user paths ===
-# macOS username in file paths (/Users/ossieirondi/...)
-# Case-sensitive: only matches lowercase username, not "Ossie" or "Irondi"
-literal:ossieirondi==>redacted_user
+# Note: OS-level user path pattern (ossieirondi) is in the Personal Names
+# section above, ordered before the shorter "ossie" pattern to prevent
+# partial matching conflicts.
