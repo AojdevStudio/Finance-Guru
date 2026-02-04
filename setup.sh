@@ -162,11 +162,21 @@ prompt_install() {
     return 1
   fi
 
+  # Skip auto-install for multiline/instructional strings (not executable)
+  if [[ "$install_cmd" == *$'\n'* ]]; then
+    info "$dep_name requires manual installation:"
+    printf "  %s\n" "$install_cmd"
+    return 1
+  fi
+
   printf "  %s not found. Install now? [y/N] " "$dep_name"
   read -r response
   if [[ "$response" =~ ^[Yy]$ ]]; then
     info "Installing $dep_name..."
-    eval "$install_cmd"
+    if ! eval "$install_cmd"; then
+      error "Install command failed for $dep_name"
+      return 1
+    fi
     # Re-check if install succeeded
     case "$dep_name" in
       Python)  command -v python3 &>/dev/null && success "Installed: $dep_name" && return 0 ;;

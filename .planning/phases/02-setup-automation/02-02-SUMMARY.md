@@ -105,5 +105,5 @@ None - no external service configuration required.
 - fin-guru-private/ directory structure is in place for hedging tools (Phase 6) and analysis outputs
 
 ---
-*Phase: 02-setup-automation*
-*Completed: 2026-02-04*
+_Phase: 02-setup-automation_
+_Completed: 2026-02-04_
