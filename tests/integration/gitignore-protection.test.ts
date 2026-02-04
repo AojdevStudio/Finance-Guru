@@ -50,7 +50,7 @@ describe("Gitignore Protection Integration Test", () => {
       "notebooks/updates/Portfolio_Positions_Jan-12-2026.csv",
       "notebooks/updates/dividend.csv",
       "notebooks/retirement-accounts/OfxDownload.csv",
-      "notebooks/transactions/History_for_Account_Z05724592.csv",
+      "notebooks/transactions/History_for_Account_EXAMPLE123.csv",
       "fin-guru-private/fin-guru/analysis/watchlist.csv"
     ];
 

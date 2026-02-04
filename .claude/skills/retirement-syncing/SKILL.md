@@ -24,7 +24,7 @@ Use this skill when:
 |------|--------|----------|
 | `OfxDownload.csv` | Vanguard IRAs | Account 39321600 & 35407271 holdings |
 | `OfxDownload (1).csv` | Vanguard Brokerage | Account 53527429 & 50580939 holdings |
-| `Portfolio_Positions_*.csv` | Fidelity 401(k) | CBN 401(k) Plan holdings |
+| `Portfolio_Positions_*.csv` | Fidelity 401(k) | {employer_name} 401(k) Plan holdings |
 
 ## CSV Formats
 
@@ -41,7 +41,7 @@ Account Number,Investment Name,Symbol,Shares,Share Price,Total Value,
 ### Fidelity 401k Format (Portfolio_Positions_*.csv)
 ```csv
 Account Number,Account Name,Symbol,Description,Quantity,Last Price,...
-86689,CBN 401(K) PLAN,FGCKX,FID GROWTH CO K,4.447,$50.04,...
+86689,{employer_name} 401(K) PLAN,FGCKX,FID GROWTH CO K,4.447,$50.04,...
 ```
 
 **Key Fields:**

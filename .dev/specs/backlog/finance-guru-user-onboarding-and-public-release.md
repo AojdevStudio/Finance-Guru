@@ -3,7 +3,7 @@ title: "Finance Guru User Onboarding and Public Release"
 status: in-progress
 created: 2026-01-15
 updated: 2026-02-02
-author: "Ossie Irondi"
+author: "{user_name}"
 spec_id: finance-guru-user-onboarding-and-public-release
 version: "1.0.0"
 description: "Comprehensive onboarding flow and configuration automation for public distribution of Finance Guru"
@@ -27,7 +27,7 @@ diagrams:
 ## Problem Statement
 
 ### Why This Exists
-Finance Guru is currently hardcoded with Ossie's personal financial data (name, portfolio values, strategies), making it impossible to distribute to other users. The system needs a comprehensive onboarding flow and configuration automation to become a public, distributable financial analysis tool that anyone can use with their own financial data.
+Finance Guru is currently hardcoded with the owner's personal financial data (name, portfolio values, strategies), making it impossible to distribute to other users. The system needs a comprehensive onboarding flow and configuration automation to become a public, distributable financial analysis tool that anyone can use with their own financial data.
 
 ### Who It's For
 - New Finance Guru users who want to set up their own private AI-powered family office
@@ -38,7 +38,7 @@ Finance Guru is currently hardcoded with Ossie's personal financial data (name, 
 - Finance Guru remains a single-user system, limiting its impact
 - Community growth blocked - unable to share valuable financial analysis tools
 - Manual setup is error-prone, time-consuming (60+ minutes), and poorly documented
-- Risk of accidentally exposing Ossie's private financial data if repo shared
+- Risk of accidentally exposing the owner's private financial data if repo shared
 
 ### What Triggered This
 Desire to open-source Finance Guru and help others build their own AI-powered family offices while maintaining a private fork with personal financial data.
@@ -392,9 +392,9 @@ To update your profile later, run: ./setup.sh
 ### In Scope (MVP - All Components from AOJ-194)
 
 #### 1. Remove Hardcoded User References ✅
-- Replace "Ossie" in `fin-guru/config.yaml` (author field)
+- Replace "the owner's name" in `fin-guru/config.yaml` (author field)
 - Replace hardcoded data in `fin-guru/data/user-profile.yaml` with template
-- Update any documentation mentioning Ossie specifically
+- Update any documentation mentioning the owner specifically
 - Add `{user_name}` template variables in relevant files
 
 #### 2. Add First-Time User Onboarding ✅
@@ -542,7 +542,7 @@ To update your profile later, run: ./setup.sh
 | System | Files Modified | Integration Points | Breaking Changes |
 |--------|----------------|-------------------|------------------|
 | **setup.sh** | `setup.sh` | Orchestrates onboarding, calls Python CLI | None (new functionality) |
-| **fin-guru config** | `fin-guru/config.yaml` | Remove `author: Ossie`, add `{user_name}` | Yes: hardcoded author removed |
+| **fin-guru config** | `fin-guru/config.yaml` | Remove `author: {user_name}`, add `{user_name}` | Yes: hardcoded author removed |
 | **User profile** | `fin-guru/data/user-profile.yaml` | Transform to template, populated by onboarding | Yes: empty template by default |
 | **CLAUDE.md** | `CLAUDE.md` | Convert to template with path variables | No: variables resolved at runtime |
 | **Hooks** | `.claude/hooks/*` | Complete refactor to Bun TypeScript | Yes: bash/ts hooks removed |
@@ -551,7 +551,7 @@ To update your profile later, run: ./setup.sh
 | **Session start** | `.claude/hooks/load-fin-core-config.ts` | Loads user profile at start | No: existing behavior preserved |
 | **MCP config** | `.claude/mcp.json` | Fresh template creation | Yes: existing config backed up |
 
-### Migration Path for Existing Setup (Ossie's Current State)
+### Migration Path for Existing Setup (the owner's Current State)
 
 **Prerequisites**:
 1. Commit all current changes
@@ -824,9 +824,9 @@ gitleaks detect --source . --verbose
 #### Functional Requirements
 - [ ] **AC1**: New user completes full setup in < 15 minutes (from fork to working Finance Guru)
 - [ ] **AC2**: Setup creates valid `user-profile.yaml` passing schema validation (all required fields present)
-- [ ] **AC3**: Finance Guru agents work with generic user profile (no "Ossie" appears in outputs)
+- [ ] **AC3**: Finance Guru agents work with generic user profile (no "the owner's name" appears in outputs)
 - [ ] **AC4**: All 8 components from AOJ-194 implemented and tested
-- [ ] **AC5**: Existing Ossie setup can migrate without data loss (verified by profile comparison)
+- [ ] **AC5**: Existing owner setup can migrate without data loss (verified by profile comparison)
 - [ ] **AC6**: Onboarding is resumable after interruption (Ctrl+C then restart continues from checkpoint)
 - [ ] **AC7**: setup.sh is idempotent (re-run updates missing fields only, preserves existing data)
 - [ ] **AC8**: All Bun hooks function identically to original bash/ts hooks (verified by integration tests)
@@ -836,7 +836,7 @@ gitleaks detect --source . --verbose
 - [ ] **AC10**: All hook tests pass: `bun test` in `.claude/hooks/` (Bun hook tests)
 - [ ] **AC11**: Integration test passes: `./tests/integration/test-full-setup.sh` (end-to-end setup)
 - [ ] **AC12**: Manual test checklist completed (fork, setup, test, verify gitignore)
-- [ ] **AC13**: No hardcoded "Ossie" references in public codebase (grep -r "Ossie" returns only docs/examples)
+- [ ] **AC13**: No hardcoded "the owner's name" references in public codebase (grep -r "the owner's name" returns only docs/examples)
 - [ ] **AC14**: Gitignore prevents private data commits (verified with test commits)
 
 #### Documentation Requirements
@@ -864,7 +864,7 @@ ls -la .claude/mcp.json  # Exists, has exa/perplexity/gdrive
 
 # Test Finance Guru
 # Launch Claude Code, run /finance-orchestrator
-# Verify: response uses YOUR name, not "Ossie"
+# Verify: response uses YOUR name, not "the owner's name"
 ```
 
 **Test Scenario 2: Interrupted Onboarding**
@@ -894,7 +894,7 @@ ls -la .claude/mcp.json  # Exists, has exa/perplexity/gdrive
 # Should NOT overwrite existing answers
 ```
 
-**Test Scenario 4: Migration from Ossie Setup**
+**Test Scenario 4: Migration from Owner Setup**
 ```bash
 # Backup current data
 cp fin-guru/data/user-profile.yaml backup.yaml
@@ -1043,11 +1043,11 @@ cd .claude/hooks && bun test    # Bun hook tests
   - Verify only missing fields prompted
 
 - [ ] **Test: Finance Guru agents with new profile** → File: `tests/integration/test_agents_with_new_profile.py`
-  - Create test profile (not Ossie's data)
+  - Create test profile (not the owner's data)
   - Load profile via hook
   - Run finance-orchestrator agent
   - Verify agent uses test profile data
-  - Verify no "Ossie" in agent output
+  - Verify no "the owner's name" in agent output
 
 - [ ] **Test: MCP server configuration** → File: `tests/integration/test_mcp_servers.sh`
   - Verify MCP.json created
@@ -1110,7 +1110,7 @@ cd .claude/hooks && bun test    # Bun hook tests
   - Open Claude Code in project directory
   - Run: `/finance-orchestrator`
   - Verify agent responds
-  - **Critical**: Verify YOUR name appears, not "Ossie"
+  - **Critical**: Verify YOUR name appears, not "the owner's name"
   - Verify agent uses YOUR portfolio data (not hardcoded)
 
 - [ ] **Test all Bun hooks**
@@ -1408,17 +1408,17 @@ cd .claude/hooks && bun test    # Bun hook tests
 
 **Data Protection Tasks**
 
-### Task 19: Remove Hardcoded "Ossie" References
+### Task 19: Remove Hardcoded "the owner's name" References
 - **ID:** task-019
 - **Dependencies:** none
 - **Files:**
-  - `fin-guru/config.yaml` (remove `author: Ossie`)
+  - `fin-guru/config.yaml` (remove `author: {user_name}`)
   - `fin-guru/workflows/workflow.yaml` (template variables)
   - `fin-guru/distribution-plan.md` (generic language)
   - `fin-guru/README.md` (examples use {user_name})
   - Any other files with hardcoded references
 - **Acceptance:**
-  - Search `grep -r "Ossie" .` returns only docs/examples
+  - Search `grep -r "the owner's name" .` returns only docs/examples
   - config.yaml uses `{user_name}` variable
   - No personal data in public codebase
 - **Tests:** `tests/python/test_no_hardcoded_references.py`
@@ -1609,7 +1609,7 @@ cd .claude/hooks && bun test    # Bun hook tests
 4. **Testing**: Follow existing pytest patterns in `tests/python/`
 
 **Files to Reference**:
-- **User Profile Schema**: `fin-guru/data/user-profile.yaml` (current Ossie's data shows complete schema)
+- **User Profile Schema**: `fin-guru/data/user-profile.yaml` (current the owner's data shows complete schema)
 - **Hook Patterns**: `.claude/hooks/load-fin-core-config.ts` (shows session start hook pattern)
 - **Setup Script Pattern**: Current `setup.sh` (extend, don't rewrite from scratch)
 - **CLI Tool Pattern**: `src/analysis/risk_metrics_cli.py` (argparse usage, input validation)
@@ -1671,7 +1671,7 @@ if (!profile?.user_profile?.investment_portfolio) {
 - [ ] Documentation complete (README, setup guide, troubleshooting)
 - [ ] CHANGELOG.md updated with breaking changes
 - [ ] Example onboarding completed successfully on 3 platforms (Mac, Linux, Windows/WSL)
-- [ ] Existing Ossie setup successfully migrated without data loss
+- [ ] Existing owner setup successfully migrated without data loss
 - [ ] Linear issue AOJ-194 marked complete with link to PR
 
 ---
@@ -1698,4 +1698,4 @@ if (!profile?.user_profile?.investment_portfolio) {
 
 **Testing Strategy:** Comprehensive 3-layer approach (unit + integration + manual checklist)
 
-**Success Criteria:** New user completes setup in < 15 min, Finance Guru works with their data, no "Ossie" references, all tests pass
+**Success Criteria:** New user completes setup in < 15 min, Finance Guru works with their data, no "the owner's name" references, all tests pass

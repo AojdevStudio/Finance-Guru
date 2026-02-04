@@ -34,7 +34,7 @@ Read the latest CSV file using the Read tool.
 Check for margin and balance information:
 
 ```bash
-cd /Users/ossieirondi/Documents/Irondi-Household/family-office && ls notebooks/updates/Balances_for_Account_Z05724592.csv 2>/dev/null
+cd /Users/ossieirondi/Documents/Irondi-Household/family-office && ls notebooks/updates/Balances_for_Account_{account_id}.csv 2>/dev/null
 ```
 
 If the balance file exists, read it using the Read tool. This file contains:

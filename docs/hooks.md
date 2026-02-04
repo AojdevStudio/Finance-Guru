@@ -103,7 +103,7 @@ Located in `.claude/settings.json`:
    - Agent team overview
 
 5. **Latest portfolio data** (`notebooks/updates/`)
-   - `Balances_for_Account_Z05724592.csv` - Account balances, margin data
+   - `Balances_for_Account_{account_id}.csv` - Account balances, margin data
    - `Portfolio_Positions_MMM-DD-YYYY.csv` - Current holdings
 
 ### Data Freshness Alerts

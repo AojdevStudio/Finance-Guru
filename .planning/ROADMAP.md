@@ -170,7 +170,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User completes 8-section interactive onboarding and a valid user-profile.yaml is generated in fin-guru-private/ with their financial data
   2. Entering invalid input (non-numeric for dollar amounts, out-of-range percentages) shows a clear error and re-prompts up to 3 times, then offers a skip option
-  3. CLAUDE.md is generated with the user's name and correct project-root path (no hardcoded "Ossie" or absolute paths)
+  3. CLAUDE.md is generated with the user's name and correct project-root path (no hardcoded personal names or absolute paths)
   4. .env file is created with optional API keys (user can skip all keys and system still functions with yfinance)
   5. Finance Guru agents load the generated user-profile.yaml and address the user by their configured name
 

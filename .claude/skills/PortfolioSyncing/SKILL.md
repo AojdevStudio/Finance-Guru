@@ -76,7 +76,7 @@ TSLA,74,$445.47,$32964.78,+$15634.71,...,$234.19
 PLTR,369.746,$188.90,$69845.01,+$60235.59,...,$25.99
 ```
 
-**Balances File**: `notebooks/updates/Balances_for_Account_Z05724592.csv`
+**Balances File**: `notebooks/updates/Balances_for_Account_{account_id}.csv`
 
 **Key Fields to Extract for Cash & Margin**:
 - **"Settled cash"** → Use for SPAXX row (Column L: Current Value)
@@ -133,7 +133,7 @@ END
 
 ### 3.5 Transaction History Cross-Check (Optional Validation)
 
-**Transactions File**: `notebooks/transactions/History_for_Account_Z05724592.csv`
+**Transactions File**: `notebooks/transactions/History_for_Account_{account_id}.csv`
 
 When large quantity changes (>10%) are detected, cross-reference with the transaction history to validate:
 

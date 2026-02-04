@@ -3,7 +3,7 @@ title: "Agent ITC Integration - Compliance Officer"
 status: implemented
 created: 2026-01-09
 updated: 2026-02-03
-author: "Ossie Irondi"
+author: "{user_name}"
 spec_id: agent-itc-integration-compliance
 version: "1.0.1"
 description: "Add ITC Risk Models API integration to the Compliance Officer agent for consistent risk signal access"

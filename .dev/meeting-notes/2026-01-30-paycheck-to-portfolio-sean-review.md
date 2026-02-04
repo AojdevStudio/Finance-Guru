@@ -3,7 +3,7 @@ title: Portfolio Review with Sean — Paycheck to Portfolio
 date: 2026-01-30
 type: meeting-notes
 participants:
-  - Ossie Irondi (Client)
+  - {user_name} (Client)
   - Sean (Advisor, Paycheck to Portfolio)
 duration: ~40 minutes
 tags: [portfolio, hedging, options, dividends, tax-strategy, living-off-portfolio]
