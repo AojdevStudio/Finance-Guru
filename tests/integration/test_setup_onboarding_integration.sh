@@ -118,7 +118,10 @@ trap cleanup EXIT
 # a PATH override so setup.sh's dependency check passes.
 
 TMPBIN=""
-PYTHON3_VERSION=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+PYTHON3_VERSION="0.0"
+if command -v python3 &>/dev/null; then
+  PYTHON3_VERSION=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+fi
 PYTHON3_MAJOR=$(echo "$PYTHON3_VERSION" | cut -d. -f1)
 PYTHON3_MINOR=$(echo "$PYTHON3_VERSION" | cut -d. -f2)
 
