@@ -70,7 +70,7 @@ decisions:
     decision: "Update test_no_hardcoded_references.py to use string concatenation for search pattern to avoid self-triggering"
     rationale: "Test file needs to search for the personal name but shouldn't itself contain the literal pattern in PII scans"
   - id: DEC-01-01-04
-    decision: "Replace personal email and domain references in backend dev guidelines (admin@unifiedental.com -> user@example.com)"
+    decision: "Replace personal email and domain references in backend dev guidelines (<EMAIL_2> -> user@example.com)"
     rationale: "Email addresses and business domains identify the owner even if not in the original substitution rules"
 metrics:
   duration: ~15 minutes
@@ -84,14 +84,14 @@ metrics:
 ## What Was Done
 
 ### Task 1: Replace all PII in tracked working tree files
-- Replaced Fidelity account number (Z05724592) with `{account_id}` across all tracked files
+- Replaced Fidelity account number (<ACCOUNT_ID>) with `{account_id}` across all tracked files
 - Replaced Google Sheets spreadsheet ID with `{spreadsheet_id}` in skills, framework config
 - Replaced personal names with `{user_name}` or generic references ("the owner") in 37+ files
-- Replaced employer name (Avanade) with `{employer_name}` in research and plan files
+- Replaced employer name (<EMPLOYER_1>) with `{employer_name}` in research and plan files
 - Replaced CBN 401(k) employer context with `{employer_name} 401(k)` in retirement syncing skill
-- Replaced LLC names (MaryFinds LLC, KC Ventures Consulting Group LLC) with `{llc_name}`
-- Replaced personal email addresses (admin@unifiedental.com, admin@kamdental.com) with user@example.com in backend dev guidelines
-- Replaced business domain references (unifiedental.com) with example.com in CORS and host configs
+- Replaced LLC names (<LLC_NAME_1> LLC, <LLC_FULL_NAME_2> LLC) with `{llc_name}`
+- Replaced personal email addresses (<EMAIL_2>, <EMAIL_1>) with user@example.com in backend dev guidelines
+- Replaced business domain references (<DOMAIN_2>.com) with example.com in CORS and host configs
 - Updated LICENSE copyright from personal name to "Finance Guru Contributors"
 - Rewrote test_no_hardcoded_references.py to use constructed search patterns avoiding self-triggering
 - Preserved OS-level paths (/Users/ossieirondi/) per exclusion rules (14 files with path-only references)
@@ -118,13 +118,13 @@ metrics:
 
 **2. [Rule 2 - Missing Critical] Personal email addresses in backend dev guidelines**
 - **Found during:** Task 1 verification
-- **Issue:** admin@unifiedental.com appeared 20+ times in backend dev guidelines (complete-examples.md, configuration.md, testing-guide.md, etc.) and domain references (unifiedental.com) in CORS/host configs
+- **Issue:** <EMAIL_2> appeared 20+ times in backend dev guidelines (complete-examples.md, configuration.md, testing-guide.md, etc.) and domain references (<DOMAIN_2>.com) in CORS/host configs
 - **Fix:** Replaced all email occurrences with user@example.com and domain references with example.com
 - **Files modified:** 8 files in .claude/skills/backend-dev-guidelines/resources/
 
 **3. [Rule 2 - Missing Critical] Email patterns in plan files**
 - **Found during:** Task 1 verification
-- **Issue:** admin@kamdental and admin@unifiedental appeared in plan file verification commands and expressions file documentation
+- **Issue:** admin@<DOMAIN_1> and admin@<DOMAIN_2> appeared in plan file verification commands and expressions file documentation
 - **Fix:** Replaced with {personal_email_1} and {personal_email_2} template variables
 - **Files modified:** 01-01-PLAN.md, 01-02-PLAN.md, 01-03-PLAN.md
 
@@ -132,16 +132,16 @@ metrics:
 
 | Check | Result |
 |-------|--------|
-| Z05724592 in tracked files (excl. 01-RESEARCH.md) | 0 matches |
+| <ACCOUNT_ID> in tracked files (excl. 01-RESEARCH.md) | 0 matches |
 | Spreadsheet ID in tracked files (excl. 01-RESEARCH.md) | 0 matches |
-| Avanade in tracked files (excl. 01-RESEARCH.md) | 0 matches |
-| admin@kamdental/unifiedental (excl. 01-RESEARCH.md) | 0 matches |
-| MaryFinds / KC Ventures (excl. 01-RESEARCH.md) | 0 matches |
+| <EMPLOYER_1> in tracked files (excl. 01-RESEARCH.md) | 0 matches |
+| admin@<DOMAIN_1>/<DOMAIN_2> (excl. 01-RESEARCH.md) | 0 matches |
+| <LLC_NAME_1> / <LLC_NAME_2> (excl. 01-RESEARCH.md) | 0 matches |
 | .onboarding-progress.json gitignored | PASS |
 | **/user-profile.yaml gitignored | PASS |
 | Working tree clean | PASS |
 
-## Remaining Ossie/Irondi References (Documented Exceptions)
+## Remaining <FIRST_NAME>/<LAST_NAME> References (Documented Exceptions)
 
 14 files contain `ossieirondi` ONLY in OS-level path context (`/Users/ossieirondi/...`). Per plan instructions, these are excluded from working tree cleanup and will be handled by git-filter-repo in Plan 02:
 - .planning/codebase/CONCERNS.md, CONVENTIONS.md, TESTING.md (codebase reference paths)
