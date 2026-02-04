@@ -148,7 +148,7 @@ For Celery workers, run Sentry initialization at process start (inside `celery.p
 ```python
 from celery import Celery
 
-celery_app = Celery("unifiedental")
+celery_app = Celery("myapp")
 
 
 @celery_app.on_after_configure.connect

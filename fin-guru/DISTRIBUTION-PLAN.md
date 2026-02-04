@@ -104,7 +104,7 @@ finance-guru/
     "portfolio-management",
     "financial-planning"
   ],
-  "author": "Ossie",
+  "author": "{user_name}",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -319,7 +319,7 @@ version = "2.0.0"
 description = "Institutional-grade multi-agent family office system for Claude AI"
 readme = "README.md"
 authors = [
-    {name = "Ossie", email = "your.email@example.com"}
+    {name = "{user_name}", email = "your.email@example.com"}
 ]
 license = {text = "MIT"}
 classifiers = [

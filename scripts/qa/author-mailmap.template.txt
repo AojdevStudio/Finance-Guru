@@ -1,0 +1,21 @@
+# =====================================================================
+# Author Mailmap for git-filter-repo — TEMPLATE
+# Format: New Name <new@email> Old Name <old@email>
+# Rewrites git author/committer metadata to generic identity
+#
+# INSTRUCTIONS: Copy this file to author-mailmap.txt (gitignored) and
+# replace all <PLACEHOLDER> values with actual historical author info
+# before running git-filter-repo. DO NOT commit the filled-in version.
+# =====================================================================
+
+# Remap old identities to canonical project identity
+# Replace OLD_USERNAME, REAL_NAME, and email addresses with actual values
+# Keep angle brackets around emails — mailmap format requires them
+Finance Guru Developer <dev@example.com> OLD_USERNAME <old-email-1@example.com>
+Finance Guru Developer <dev@example.com> OLD_USERNAME <old-email-2@example.com>
+Finance Guru Developer <dev@example.com> Real Name <old-email-1@example.com>
+Finance Guru Developer <dev@example.com> Real Name <old-email-2@example.com>
+
+# Note: The following identities are intentionally NOT remapped:
+# - Claude <noreply@anthropic.com> (co-author, safe to keep)
+# - GitHub <noreply@github.com> (GitHub UI commits, safe to keep)

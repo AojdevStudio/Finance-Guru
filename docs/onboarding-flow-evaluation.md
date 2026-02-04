@@ -143,7 +143,7 @@ console.log('📋 Section implementations coming in subsequent tasks.');
 **Current State**:
 - ⚠️ Unknown if agents actually use generated profile
 - ⚠️ No test verifying agent reads profile
-- ⚠️ Agents may still have "Ossie" hardcoded references
+- Agents may still have hardcoded personal name references
 
 **Location to Check**:
 - `.claude/commands/fin-guru/agents/*.md` (agent definitions)
@@ -582,7 +582,7 @@ console.log('📋 Section implementations coming in subsequent tasks.');
 
 ❌ **Integration with Agents**:
 - No test verifying agents read generated profile
-- No test checking agents use user's name (not "Ossie")
+- No test checking agents use user's name (not a hardcoded name)
 
 **Test Coverage Estimate**: ~30% (infrastructure only, no flow coverage)
 
@@ -652,21 +652,21 @@ console.log('📋 Section implementations coming in subsequent tasks.');
 
 ---
 
-## 🎓 Learning from Ossie's Setup
+## Learning from the Owner's Setup
 
-**Observation**: Ossie has a complete, working Finance Guru setup with:
+**Observation**: The owner has a complete, working Finance Guru setup with:
 - `fin-guru-private/onboarding-summary.md` (real onboarding output)
-- Working agents that use his profile
+- Working agents that use the profile
 - Fully configured MCP servers
 
-**Recommendation**: Use Ossie's setup as reference implementation
+**Recommendation**: Use the owner's setup as reference implementation
 - Test new onboarding generates equivalent `user-profile.yaml`
 - Verify agents work identically with generated profile
-- Extract his MCP.json as template (anonymize API keys)
+- Extract MCP.json as template (anonymize API keys)
 
 **Action Item**: Create test comparing:
-- Ossie's current `user-profile.yaml`
-- Output from new onboarding (using Ossie's data as input)
+- The owner's current `user-profile.yaml`
+- Output from new onboarding (using the owner's data as input)
 - Should be structurally identical
 
 ---
@@ -720,8 +720,8 @@ From Spec (AOJ-194 Acceptance Criteria):
 - [ ] **AC2**: Setup creates valid `user-profile.yaml` passing schema validation
   - Status: ⚠️ Sections generate data, but no schema validator
 
-- [ ] **AC3**: Finance Guru agents work with generic user profile (no "Ossie" appears)
-  - Status: ❌ Not verified (agents might still hardcode "Ossie")
+- [ ] **AC3**: Finance Guru agents work with generic user profile (no hardcoded name appears)
+  - Status: Not verified (agents might still have hardcoded names)
 
 - [ ] **AC6**: Onboarding is resumable after interruption (Ctrl+C then restart)
   - Status: ✅ Progress system supports this, needs E2E test
@@ -759,7 +759,7 @@ From Spec (AOJ-194 Acceptance Criteria):
 - **Release Risk**: 🔴 High (missing critical broker upload feature)
 
 **Recommendation**:
-- **Phase 1** (Wire up flow + MCP config): Ship internally to Ossie for dogfooding
+- **Phase 1** (Wire up flow + MCP config): Ship internally to the owner for dogfooding
 - **Phase 2** (Broker support): Required for public release
 - **Phase 3** (Tests + docs): Quality gate before announcing publicly
 

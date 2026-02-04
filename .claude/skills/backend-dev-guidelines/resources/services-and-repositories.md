@@ -333,16 +333,16 @@ from app.services.user_service import DuplicateEmailError, UserService
 async def test_create_user_happy_path():
     repo = AsyncMock()
     repo.email_exists.return_value = False
-    repo.create.return_value = {"id": "abc", "email": "admin@unifiedental.com", "is_active": True}
+    repo.create.return_value = {"id": "abc", "email": "user@example.com", "is_active": True}
 
     service = UserService(repository=repo)
 
-    payload = UserCreate(email="admin@unifiedental.com", role="admin")
+    payload = UserCreate(email="user@example.com", role="admin")
     response = await service.create(payload)
 
-    repo.email_exists.assert_awaited_once_with("admin@unifiedental.com")
+    repo.email_exists.assert_awaited_once_with("user@example.com")
     repo.create.assert_awaited_once()
-    assert response.email == "admin@unifiedental.com"
+    assert response.email == "user@example.com"
 
 
 @pytest.mark.asyncio
@@ -352,7 +352,7 @@ async def test_create_user_duplicate_email():
 
     service = UserService(repository=repo)
 
-    payload = UserCreate(email="admin@unifiedental.com", role="admin")
+    payload = UserCreate(email="user@example.com", role="admin")
     with pytest.raises(DuplicateEmailError):
         await service.create(payload)
 ```
@@ -366,7 +366,7 @@ from httpx import AsyncClient
 @pytest.mark.asyncio
 async def test_create_user_endpoint(app, async_client: AsyncClient, fake_service: UserService):
     app.dependency_overrides[get_user_service] = lambda: fake_service
-    response = await async_client.post("/api/users", json={"email": "admin@unifiedental.com", "role": "admin"})
+    response = await async_client.post("/api/users", json={"email": "user@example.com", "role": "admin"})
     assert response.status_code == 201
     app.dependency_overrides.clear()
 ```

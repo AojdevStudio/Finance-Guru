@@ -79,7 +79,7 @@ The architecture centers on file-based integration between three isolated compon
 Research identified 19 pitfalls across 4 severity levels. The top 5 are make-or-break for the project. See [PITFALLS.md](./PITFALLS.md) for complete analysis with detection and prevention strategies.
 
 1. **Private financial data in git history** (CRITICAL, M1) -- Real account numbers, net worth, LLC names persist in git history even after gitignore. Run `git filter-repo` before any public release. Rotate all API keys that were ever committed.
-2. **Hardcoded personal references beyond "Ossie"** (CRITICAL, M1) -- Existing test only greps for name. Account number Z05724592 hardcoded in hooks. LLC names, employer names, spreadsheet IDs all present. Expand scrub patterns to comprehensive PII search.
+2. **Hardcoded personal references beyond the owner's name** (CRITICAL, M1) -- Existing test only greps for name. Account number {account_id} hardcoded in hooks. LLC names, employer names, spreadsheet IDs all present. Expand scrub patterns to comprehensive PII search.
 3. **SQQQ modeled as simple -3x multiplication** (CRITICAL, M2) -- Daily-rebalanced leveraged ETF returns diverge 5-20% from simple multiplication over 30 days. Must use day-by-day simulation with volatility drag. Validate against historical data.
 4. **Black-Scholes applied to American-style options** (CRITICAL, M2) -- QQQ/SPY options are American-style; BS underprices ITM puts. Document limitation, add intrinsic value floor at minimum.
 5. **Financial calculator output treated as actionable** (CRITICAL, M2) -- Every calculator needs known-answer tests, data freshness indicators, confidence bands, and conservative rounding (floor, not round).
@@ -187,7 +187,7 @@ Based on combined research, here is the suggested phase structure across all thr
 | Rank | Risk | Severity | Likelihood | Milestone | Mitigation | Owner |
 |------|------|----------|------------|-----------|------------|-------|
 | 1 | Financial PII exposed in git history when repo goes public | CRITICAL | HIGH | M1 | Run git filter-repo, rotate all keys, scan with gitleaks before public | Phase 1 |
-| 2 | Hardcoded PII beyond "Ossie" survives scrub | CRITICAL | HIGH | M1 | Expand scrub test to account numbers, LLC names, employers, spreadsheet IDs | Phase 1 |
+| 2 | Hardcoded PII beyond the owner's name survives scrub | CRITICAL | HIGH | M1 | Expand scrub test to account numbers, LLC names, employers, spreadsheet IDs | Phase 1 |
 | 3 | SQQQ modeled with simple multiplication, not daily compounding | CRITICAL | MEDIUM | M2 | Day-by-day simulation, volatility drag formula, historical validation | Phase 8 |
 | 4 | Black-Scholes misprices American-style puts during crash | CRITICAL | MEDIUM | M2 | Document limitation, add intrinsic value floor, disclaimers | Phase 7 |
 | 5 | Financial calculator output used without validation | CRITICAL | MEDIUM | M2 | Known-answer tests, freshness indicators, confidence bands | Phases 6-8 |

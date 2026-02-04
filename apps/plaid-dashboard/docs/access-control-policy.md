@@ -325,9 +325,9 @@ Exceptions to this policy require:
 
 ## 14. Contact
 
-**Security Inquiries:** support@unifiedental.com
-**Access Requests:** support@unifiedental.com
-**Incident Reporting:** support@unifiedental.com (Subject: SECURITY)
+**Security Inquiries:** support@example.com
+**Access Requests:** support@example.com
+**Incident Reporting:** support@example.com (Subject: SECURITY)
 
 ---
 

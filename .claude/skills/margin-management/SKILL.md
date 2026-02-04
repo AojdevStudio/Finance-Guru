@@ -23,7 +23,7 @@ Use this skill when:
 
 ### 1. Read Fidelity Balances CSV
 
-**Location**: `notebooks/updates/Balances_for_Account_Z05724592.csv`
+**Location**: `notebooks/updates/Balances_for_Account_{account_id}.csv`
 
 **Key Fields to Extract**:
 ```csv

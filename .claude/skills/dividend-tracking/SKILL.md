@@ -89,7 +89,7 @@ Dividends Received = Quantity × Amount per share
 mcp__gdrive__sheets(
     operation: "readSheet",
     params: {
-        spreadsheetId: "1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4",
+        spreadsheetId: "{spreadsheet_id}",
         range: "Dividends!A2:D43"
     }
 )
@@ -107,7 +107,7 @@ mcp__gdrive__sheets(
 mcp__gdrive__sheets(
     operation: "updateCells",
     params: {
-        spreadsheetId: "1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4",
+        spreadsheetId: "{spreadsheet_id}",
         range: "Dividends!A2:D13",  // Adjust range based on record count
         values: [
             ["JEPI", "$51.63", "01/05/2026", "TRUE"],
@@ -125,7 +125,7 @@ After writing records, use browser automation to process them:
 ```javascript
 // 1. Open Google Sheets
 mcp__claude-in-chrome__tabs_create_mcp({
-    url: "https://docs.google.com/spreadsheets/d/1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4/edit#gid=2068577140"
+    url: "https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid=2068577140"
 })
 
 // 2. Wait for sheet to load
@@ -244,9 +244,9 @@ Before syncing dividends:
 
 ## Google Sheets Integration
 
-**Spreadsheet ID**: `1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4`
+**Spreadsheet ID**: `{spreadsheet_id}`
 **Dividends Sheet ID**: `2068577140`
-**Direct URL**: `https://docs.google.com/spreadsheets/d/1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4/edit#gid=2068577140`
+**Direct URL**: `https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid=2068577140`
 
 ## Reference Files
 

@@ -58,7 +58,7 @@ Anonymized, aggregated data used for application improvement may be retained ind
 Users may request deletion of their data at any time by:
 
 1. Disconnecting their bank accounts through the Finance Guru dashboard
-2. Contacting support at support@unifiedental.com
+2. Contacting support at support@example.com
 3. Submitting a written request
 
 **Response Timeline:** All deletion requests will be processed within 30 days.
@@ -148,7 +148,7 @@ This policy is reviewed:
 
 For questions about this policy or to submit a data deletion request:
 
-**Email:** support@unifiedental.com
+**Email:** support@example.com
 **Response Time:** Within 5 business days
 
 ---

@@ -25,7 +25,7 @@ Mistakes that cause data exposure, incorrect financial calculations, or system r
 - Running `git log --all -p -- fin-guru/data/user-profile.yaml` returns content
 - Running `git log --all -p -- .mcp.json` returns API keys
 - Any file currently in `.gitignore` that was committed before the rule was added
-- `Balances_for_Account_Z05724592.csv` pattern in hook code reveals real account numbers
+- `Balances_for_Account_{account_id}.csv` pattern in hook code reveals real account numbers
 
 **Prevention:**
 1. Before making the repo public, run `git filter-repo` or BFG Repo Cleaner to scrub ALL sensitive files from ALL history
@@ -34,23 +34,23 @@ Mistakes that cause data exposure, incorrect financial calculations, or system r
 4. Run a secrets scanner (gitleaks, truffleHog) on the ENTIRE repo history, not just HEAD
 5. Rotate any API keys that were ever committed -- they are compromised regardless of scrubbing
 
-**Detection:** Run `gitleaks detect --source . --verbose` against full history before any public release. Also search for: account numbers (Z05724592), dollar amounts from user-profile.yaml, Google Sheets spreadsheet IDs, personal names.
+**Detection:** Run `gitleaks detect --source . --verbose` against full history before any public release. Also search for: account numbers ({account_id}), dollar amounts from user-profile.yaml, Google Sheets spreadsheet IDs, personal names.
 
 **Consequence of failure:** Personal financial data, brokerage account numbers, portfolio positions, and investment strategies exposed publicly. Cannot be undone once repo is cloned by anyone.
 
 ---
 
-### Pitfall 2: Hardcoded Personal References Beyond "Ossie"
+### Pitfall 2: Hardcoded Personal References Beyond the Owner's Name
 
 **Severity:** CRITICAL
 **Milestone:** M1 (Onboarding/Public Release)
 
-**What goes wrong:** The existing `test_no_hardcoded_references.py` only searches for "Ossie" but the codebase contains far more personal data that would identify the owner. The hook `load-fin-core-config.ts` hardcodes `Balances_for_Account_Z05724592.csv` (real Fidelity account number). The `user-profile.yaml` contains Google Sheets spreadsheet IDs, LLC names ("MaryFinds LLC", "KC Ventures Consulting Group LLC"), specific employer names ("Avanade", "CBN"), and Bitcoin holdings details.
+**What goes wrong:** The existing `test_no_hardcoded_references.py` only searches for the owner's name but the codebase contains far more personal data that would identify the owner. The hook `load-fin-core-config.ts` hardcodes `Balances_for_Account_{account_id}.csv` (real Fidelity account number). The `user-profile.yaml` contains Google Sheets spreadsheet IDs, LLC names ("{llc_name}", "{llc_name}"), specific employer names ("{employer_name}", "CBN"), and Bitcoin holdings details.
 
 **Why it happens:** Teams search for obvious markers (name) but miss indirect PII: account numbers, employer names, business entity names, dollar amounts that fingerprint the individual, spreadsheet URLs that are publicly accessible.
 
 **Warning signs:**
-- The grep for `Ossie|irondi|Irondi` returns 18 files in current codebase
+- The grep for personal name patterns returns 18 files in current codebase
 - Hook code references specific account number patterns
 - Agent markdown files reference personal meeting notes
 - `setup.sh` hardcodes skill names tied to personal workflows (e.g., "PortfolioSyncing", "retirement-syncing")
@@ -59,10 +59,10 @@ Mistakes that cause data exposure, incorrect financial calculations, or system r
 1. Expand the hardcoded references test to search for: account numbers, LLC names, employer names, email patterns, spreadsheet IDs, dollar amounts matching the real profile
 2. Create a `SCRUB_PATTERNS.txt` file listing all strings that must not appear in public code
 3. Add a pre-commit hook that blocks commits containing any scrub pattern
-4. Audit `.claude/hooks/load-fin-core-config.ts` line 178 (`Balances_for_Account_Z05724592`) -- this must be parameterized
+4. Audit `.claude/hooks/load-fin-core-config.ts` line 178 (`Balances_for_Account_{account_id}`) -- this must be parameterized
 5. Review ALL `.dev/meeting-notes/` and `.dev/specs/` files for personal details before making public
 
-**Detection:** grep -r for patterns: `Z0\d+`, `LLC`, `Avanade`, `CBN`, `MaryFinds`, specific dollar amounts from user-profile.yaml.
+**Detection:** grep -r for patterns: `Z0\d+`, `LLC`, `{employer_name}`, `CBN`, `{llc_name}`, specific dollar amounts from user-profile.yaml.
 
 ---
 
@@ -451,7 +451,7 @@ Mistakes that cause annoyance but are fixable without major rework.
 | Milestone | Phase | Likely Pitfall | Severity | Mitigation |
 |-----------|-------|---------------|----------|------------|
 | M1 | Pre-public scrub | Git history contains financial PII (Pitfall 1) | CRITICAL | Run git filter-repo BEFORE making public, rotate all exposed keys |
-| M1 | Hardcoded refs | Account numbers and LLC names not caught by existing tests (Pitfall 2) | CRITICAL | Expand scrub patterns beyond just "Ossie" |
+| M1 | Hardcoded refs | Account numbers and LLC names not caught by existing tests (Pitfall 2) | CRITICAL | Expand scrub patterns beyond just the owner's name |
 | M1 | Setup.sh | Script fails on machines without Bun or older Python (Pitfall 7) | HIGH | Test in bare Docker container, add version checks |
 | M1 | Onboarding | 15-min questionnaire causes abandonment for open-source users (Pitfall 13) | MEDIUM | Make onboarding optional, tools work without it |
 | M1 | MCP config | MCP.json created with servers user cannot connect to (Pitfall 14) | MEDIUM | Make MCP optional, use yfinance as primary data source |
@@ -478,7 +478,7 @@ Mistakes that cause annoyance but are fixable without major rework.
 - `/Users/ossieirondi/Documents/Irondi-Household/family-office/fin-guru/data/user-profile.yaml` -- Contains real financial data (PII)
 - `/Users/ossieirondi/Documents/Irondi-Household/family-office/.claude/hooks/load-fin-core-config.ts` -- Hardcoded account number on line 178
 - `/Users/ossieirondi/Documents/Irondi-Household/family-office/.gitignore` -- Current protection rules
-- `/Users/ossieirondi/Documents/Irondi-Household/family-office/tests/python/test_no_hardcoded_references.py` -- Only checks for "Ossie"
+- `/Users/ossieirondi/Documents/Irondi-Household/family-office/tests/python/test_no_hardcoded_references.py` -- Only checks for the owner's name
 - `/Users/ossieirondi/Documents/Irondi-Household/family-office/src/analysis/options_chain_cli.py` -- Black-Scholes pricing without American option adjustment
 - `/Users/ossieirondi/Documents/Irondi-Household/family-office/.claude/hooks/` -- Mixed runtimes: .sh, .ts, .cjs files
 

@@ -97,7 +97,7 @@ function generateUpdateAlert(missingBalances: boolean, missingPositions: boolean
   const alerts: string[] = [];
 
   if (missingBalances) {
-    alerts.push('⚠️ MISSING: Balances file (notebooks/updates/Balances_for_Account_Z05724592.csv)');
+    alerts.push('⚠️ MISSING: Balances file (notebooks/updates/Balances_for_Account_{account_id}.csv)');
   } else if (outdatedBalances) {
     alerts.push('⚠️ OUTDATED: Balances file is older than 7 days');
   }
@@ -119,7 +119,7 @@ ${alerts.join('\n')}
 
 📥 ACTION REQUIRED:
 Please update your portfolio data by downloading the latest files from Fidelity:
-1. Balances: Export to notebooks/updates/Balances_for_Account_Z05724592.csv
+1. Balances: Export to notebooks/updates/Balances_for_Account_{account_id}.csv
 2. Positions: Export to notebooks/updates/Portfolio_Positions_MMM-DD-YYYY.csv
 
 Your Finance Guru analysis will be more accurate with current data.
@@ -175,7 +175,7 @@ function processHook(inputData: string) {
     const systemContext = loadFile(systemContextPath);
     
     // Load latest portfolio updates
-    const latestBalances = getLatestFile(updatesDir, /^Balances_for_Account_Z05724592\.csv$/);
+    const latestBalances = getLatestFile(updatesDir, /^Balances_for_Account_[^/]+\.csv$/);
     const latestPositions = getLatestPositionsFile(updatesDir);
 
     // Check file status

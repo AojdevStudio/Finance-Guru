@@ -262,8 +262,8 @@ Security policy exceptions require:
 
 ## 11. Contact
 
-**Security Inquiries:** support@unifiedental.com
-**Incident Reporting:** support@unifiedental.com (Subject: SECURITY)
+**Security Inquiries:** support@example.com
+**Incident Reporting:** support@example.com (Subject: SECURITY)
 
 ---
 

@@ -1,0 +1,84 @@
+# =====================================================================
+# PII Replacement Expressions for git-filter-repo — TEMPLATE
+# Format: literal:PATTERN==>REPLACEMENT or regex:PATTERN==>REPLACEMENT
+# Applied to ALL blobs and commit messages via --replace-text/--replace-message
+#
+# INSTRUCTIONS: Copy this file to pii-replacements.txt (gitignored) and
+# replace all <PLACEHOLDER> values with your actual PII before running
+# git-filter-repo. DO NOT commit the filled-in version.
+#
+# ORDERING: More specific (longer) patterns are listed before less specific
+# patterns within each category to prevent partial match conflicts.
+# git-filter-repo applies replacements sequentially.
+# =====================================================================
+
+# === CRITICAL: API Tokens ===
+# Replace with actual API token (64 hex chars)
+literal:<YOUR_API_TOKEN>==>REDACTED_API_TOKEN
+
+# === CRITICAL: Account Numbers ===
+# Replace with actual brokerage account number
+literal:<YOUR_ACCOUNT_NUMBER>==>REDACTED_ACCOUNT
+# Catch any similar Fidelity-style account number patterns
+regex:Z0\d{7,}==>REDACTED_ACCOUNT
+# Additional account numbers (IRA, brokerage, etc.)
+# literal:<ACCOUNT_2>==>REDACTED_ACCOUNT
+# literal:<ACCOUNT_3>==>REDACTED_ACCOUNT
+
+# === HIGH: Google Sheets Spreadsheet ID ===
+# Replace with actual 44-character spreadsheet ID
+literal:<YOUR_SPREADSHEET_ID>==>REDACTED_SPREADSHEET_ID
+
+# === HIGH: LLC Names (longer patterns first) ===
+literal:<FULL_LLC_NAME_1> LLC==>REDACTED_LLC
+literal:<LLC_SHORT_NAME_1>==>REDACTED_LLC
+literal:<FULL_LLC_NAME_2> LLC==>REDACTED_LLC
+literal:<LLC_SHORT_NAME_2>==>REDACTED_LLC
+
+# === MEDIUM: Employer Names ===
+# Unique employer names safe for global replacement
+literal:<EMPLOYER_NAME>==>REDACTED_EMPLOYER
+# Short employer abbreviations — context-specific ONLY (blanket replacement causes collateral)
+# Longer patterns first
+literal:<EMPLOYER_SHORT> 401(K) PLAN==>REDACTED_EMPLOYER 401(K) PLAN
+literal:<EMPLOYER_SHORT> 401(k) Plan==>REDACTED_EMPLOYER 401(k) Plan
+literal:<EMPLOYER_SHORT> 401(k)==>REDACTED_EMPLOYER 401(k)
+literal:<EMPLOYER_SHORT> 401(K)==>REDACTED_EMPLOYER 401(K)
+literal:<EMPLOYER_SHORT> 401k==>REDACTED_EMPLOYER 401k
+
+# === HIGH: Personal Names (longer patterns first, case-sensitive) ===
+# Capitalized forms (from documents, commit messages)
+literal:<FULL_NAME>==>REDACTED_NAME
+literal:<LAST_NAME>==>REDACTED_NAME
+literal:<FIRST_NAME>==>REDACTED_NAME
+# Combined username MUST come before separate lowercase parts
+literal:<USERNAME_COMBINED>==>redacted_user
+# Lowercase forms (from function names, variable names, filenames)
+literal:<LAST_NAME_LOWER>==>redacted_name
+literal:<FIRST_NAME_LOWER>==>redacted_name
+
+# === HIGH: Email Addresses (full email before domain parts) ===
+literal:<EMAIL_1>==>redacted@example.com
+literal:<EMAIL_2>==>redacted@example.com
+
+# === MEDIUM: Domain Names (with TLD before without) ===
+literal:<DOMAIN_1>.com==>example.com
+literal:<DOMAIN_2>.com==>example.com
+literal:<DOMAIN_1>==>redacted_domain
+literal:<DOMAIN_2>==>redacted_domain
+
+# === MEDIUM: GitHub Identity ===
+# GitHub username linking to personal identity
+literal:<GITHUB_USERNAME_TITLE>==>FinanceGuruDev
+literal:<GITHUB_USERNAME_UPPER>==>FinanceGuruDev
+literal:<GITHUB_USERNAME_LOWER>==>financegurudev
+
+# === MEDIUM: Financial Amounts ===
+# Include all format variants: $X,XXX.XX, X,XXX.XX, XXXXX.XX
+# literal:$<AMOUNT_1>==>REDACTED_AMOUNT
+# literal:<AMOUNT_1>==>REDACTED_AMOUNT
+
+# === HIGH: File path patterns with account numbers ===
+regex:Balances_for_Account_Z\d+==>Balances_for_Account_REDACTED
+regex:History_for_Account_Z\d+==>History_for_Account_REDACTED
+regex:Portfolio_Positions_\w+-\d+-\d+\.csv==>Portfolio_Positions_REDACTED.csv

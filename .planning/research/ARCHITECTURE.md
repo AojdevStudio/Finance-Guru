@@ -407,11 +407,11 @@ This is the first CLI in the codebase to use subcommands. Document this as an ex
 
 ### Anti-Pattern 5: Hardcoded User Data in Public Code
 
-**What:** Embedding "Ossie", specific portfolio values, or personal ticker lists in code that will be public.
+**What:** Embedding personal names, specific portfolio values, or personal ticker lists in code that will be public.
 
 **Why bad:** This is a public release milestone. Private data in git history is permanent.
 
-**Instead:** All personal references flow through `user-profile.yaml` and template variables (`{user_name}`, `{portfolio_value}`). The existing codebase has some hardcoded "Ossie" references that must be removed as part of ONBD-14.
+**Instead:** All personal references flow through `user-profile.yaml` and template variables (`{user_name}`, `{portfolio_value}`). The existing codebase has some hardcoded personal name references that must be removed as part of ONBD-14.
 
 ## Component Integration Matrix
 

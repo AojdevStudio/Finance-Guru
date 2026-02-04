@@ -13,7 +13,7 @@ tools:
   gdrive:
     type: mcp
     purpose: "Google Sheets operations: read/write portfolio tracker, update dividend tracker, margin dashboard"
-    spreadsheet_id: "1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4"
+    spreadsheet_id: "{spreadsheet_id}"
     safety_rules: "Follow spreadsheet-architecture.md rules - only write to allowed columns (A,B,G)"
 
   cli-tools:

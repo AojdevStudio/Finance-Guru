@@ -6,7 +6,7 @@
 
 ## Summary
 
-This phase addresses a critical prerequisite for public release: the git history contains severe PII exposure across 157 commits. The audit found **1,645 matches** for the primary PII search pattern (`account|brokerage|Z057|net.worth|LLC`) in `git log --all -p`. Specific exposures include a real Fidelity brokerage account number (Z05724592), real financial data ($192K brokerage value, $365K mortgage, $500K net worth), LLC names (MaryFinds LLC, KC Ventures Consulting Group LLC), employer names (Avanade, CBN), a Google Sheets spreadsheet ID (1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4), a Bright Data API token committed in .mcp.json, personal email addresses (admin@kamdental.com, admin@unifiedental.com), and the full Google Forms financial assessment CSV with detailed personal financial data.
+This phase addresses a critical prerequisite for public release: the git history contains severe PII exposure across 157 commits. The audit found **1,645 matches** for the primary PII search pattern (`account|brokerage|Z057|net.worth|LLC`) in `git log --all -p`. Specific exposures include a real Fidelity brokerage account number (<ACCOUNT_ID>), real financial data ($192K brokerage value, $365K mortgage, $500K net worth), LLC names (<LLC_NAME_1> LLC, <LLC_FULL_NAME_2> LLC), employer names (<EMPLOYER_1>, CBN), a Google Sheets spreadsheet ID (<SPREADSHEET_ID>), a Bright Data API token committed in .mcp.json, personal email addresses (<EMAIL_1>, <EMAIL_2>), and the full Google Forms financial assessment CSV with detailed personal financial data.
 
 The standard approach uses `git-filter-repo --replace-text` with an expressions file to scrub PII from all blob content across history, `--replace-message` to scrub commit messages, and `--mailmap` to rewrite author identities. Post-scrub, a `gitleaks` pre-commit hook prevents future PII leaks, and a CI grep test validates zero PII matches on every push.
 
@@ -71,21 +71,21 @@ brew install pre-commit   # or: pip install pre-commit
 # Prefix: literal: (default), regex:, glob:
 
 # Fidelity account number
-literal:Z05724592==>REDACTED_ACCOUNT
+literal:<ACCOUNT_ID>==>REDACTED_ACCOUNT
 regex:Z0\d{7,}==>REDACTED_ACCOUNT
 
 # Google Sheets spreadsheet ID
-literal:1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4==>REDACTED_SPREADSHEET_ID
+literal:<SPREADSHEET_ID>==>REDACTED_SPREADSHEET_ID
 
 # Bright Data API token
-literal:9424526a719032acbe090cc883accedb1b7eb167e89f855d78a7a0fec0aaf441==>REDACTED_API_TOKEN
+literal:<BRIGHTDATA_API_TOKEN>==>REDACTED_API_TOKEN
 
 # LLC names
-literal:MaryFinds LLC==>REDACTED_LLC_1
-literal:KC Ventures Consulting Group LLC==>REDACTED_LLC_2
+literal:<LLC_NAME_1> LLC==>REDACTED_LLC_1
+literal:<LLC_FULL_NAME_2> LLC==>REDACTED_LLC_2
 
 # Employer names
-literal:Avanade==>REDACTED_EMPLOYER_1
+literal:<EMPLOYER_1>==>REDACTED_EMPLOYER_1
 literal:CBN==>REDACTED_EMPLOYER_2
 
 # Personal financial amounts from user-profile.yaml
@@ -93,12 +93,12 @@ literal:365139.76==>REDACTED_AMOUNT
 literal:1712.68==>REDACTED_AMOUNT
 
 # Personal name
-literal:Ossie Irondi==>REDACTED_NAME
-literal:Ossie==>REDACTED_NAME
+literal:<OWNER_NAME>==>REDACTED_NAME
+literal:<FIRST_NAME>==>REDACTED_NAME
 
 # Email addresses
-literal:admin@kamdental.com==>redacted@example.com
-literal:admin@unifiedental.com==>redacted@example.com
+literal:<EMAIL_1>==>redacted@example.com
+literal:<EMAIL_2>==>redacted@example.com
 
 # File paths with account numbers
 regex:Balances_for_Account_Z\d+==>Balances_for_Account_REDACTED
@@ -115,9 +115,9 @@ regex:Portfolio_Positions_\w+-\d+-\d+\.csv==>Portfolio_Positions_REDACTED.csv
 ```
 # File: .mailmap
 # Format: New Name <new@email> Old Name <old@email>
-Finance Guru Developer <dev@example.com> AOJDevStudio <admin@unifiedental.com>
-Finance Guru Developer <dev@example.com> AOJDevStudio <admin@kamdental.com>
-Finance Guru Developer <dev@example.com> Ossie Irondi <admin@unifiedental.com>
+Finance Guru Developer <dev@example.com> AOJDevStudio <<EMAIL_2>>
+Finance Guru Developer <dev@example.com> AOJDevStudio <<EMAIL_1>>
+Finance Guru Developer <dev@example.com> <OWNER_NAME> <<EMAIL_2>>
 ```
 
 ### Pattern 3: Custom Gitleaks Rules
@@ -144,20 +144,20 @@ keywords = ["spreadsheet", "sheets", "docs.google.com"]
 [[rules]]
 id = "personal-llc-names"
 description = "Known LLC business entity names"
-regex = '''(?i)(MaryFinds|KC\s*Ventures\s*Consulting\s*Group)\s*LLC'''
+regex = '''(?i)(<LLC_NAME_1>|<LLC_FULL_NAME_2>)\s*LLC'''
 keywords = ["LLC"]
 
 [[rules]]
 id = "employer-names"
 description = "Known employer names"
-regex = '''\b(Avanade|CBN)\b'''
-keywords = ["Avanade", "CBN"]
+regex = '''\b(<EMPLOYER_1>|CBN)\b'''
+keywords = ["<EMPLOYER_1>", "CBN"]
 
 [[rules]]
 id = "personal-names"
 description = "Personal name references"
-regex = '''(?i)\b(Ossie|Irondi)\b'''
-keywords = ["Ossie", "Irondi"]
+regex = '''(?i)\b(<FIRST_NAME>|<LAST_NAME>)\b'''
+keywords = ["<FIRST_NAME>", "<LAST_NAME>"]
 
 [[rules]]
 id = "brightdata-api-token"
@@ -213,7 +213,7 @@ paths = [
 **Warning signs:** grep -c for the pattern returns more matches than expected PII occurrences.
 
 ### Pitfall 4: Forgetting to Scrub Commit Messages
-**What goes wrong:** File contents are clean but commit messages still contain "Z05724592" or "MaryFinds LLC" or financial amounts.
+**What goes wrong:** File contents are clean but commit messages still contain "<ACCOUNT_ID>" or "<LLC_NAME_1> LLC" or financial amounts.
 **Why it happens:** `--replace-text` only operates on blob content (file data). Commit messages require `--replace-message`.
 **How to avoid:** Use BOTH `--replace-text expressions.txt` AND `--replace-message expressions.txt` in the same git-filter-repo invocation.
 **Warning signs:** Post-scrub, `git log --all --oneline | grep -i "PII_PATTERN"` still returns matches.
@@ -255,7 +255,7 @@ git filter-repo \
   --force
 
 # Step 3: Verify scrub is complete
-git log --all -p | grep -ciE "Z05724592|MaryFinds|KC Ventures|Avanade|1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4|admin@kamdental|admin@unifiedental|9424526a719032acbe090cc883accedb1b7eb167e89f855d78a7a0fec0aaf441"
+git log --all -p | grep -ciE "<ACTUAL_PII_VALUES_FROM_PRIVATE_CONFIG>"
 # MUST return 0
 
 # Step 4: Verify the broader pattern
@@ -300,7 +300,9 @@ jobs:
       - name: Check for known PII patterns in working tree
         run: |
           # Patterns specific to this repo's known PII
-          PATTERNS="Z05724592|Z0[0-9]{7,}|MaryFinds|KC.Ventures|1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4|admin@kamdental|admin@unifiedental|9424526a[a-f0-9]{56}"
+          # Source actual PII values from private config or CI secrets
+          PATTERNS="Z0[0-9]{7,}|[a-f0-9]{64}"
+          # Extend with actual values from private pii-replacements.txt for full coverage
 
           # Scan all tracked files (exclude binary, test fixtures, and this workflow itself)
           MATCHES=$(git ls-files | grep -v '.github/workflows/pii-check.yml' | xargs grep -rlE "$PATTERNS" 2>/dev/null || true)
@@ -315,7 +317,7 @@ jobs:
 
       - name: Scan git history for PII
         run: |
-          PATTERNS="Z05724592|MaryFinds LLC|KC Ventures|1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4|admin@kamdental|admin@unifiedental"
+          PATTERNS="<ACCOUNT_ID>|<LLC_NAME_1> LLC|<LLC_NAME_2>|<SPREADSHEET_ID>|<EMAIL_1>|<EMAIL_2>"
           COUNT=$(git log --all -p | grep -ciE "$PATTERNS" || true)
 
           if [ "$COUNT" -gt 0 ]; then
@@ -376,25 +378,25 @@ fin-guru-private/
 
 | Category | Pattern | Occurrences in History | In Working Tree | Severity |
 |----------|---------|----------------------|-----------------|----------|
-| Fidelity Account Number | `Z05724592` | ~15 commits | 13 tracked files | CRITICAL |
-| Google Sheets ID | `1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4` | ~10 commits | 3 tracked files | HIGH |
+| Fidelity Account Number | `<ACCOUNT_ID>` | ~15 commits | 13 tracked files | CRITICAL |
+| Google Sheets ID | `<SPREADSHEET_ID>` | ~10 commits | 3 tracked files | HIGH |
 | Bright Data API Token | `9424526a719032...` | 4 occurrences | 0 (deleted from tree) | CRITICAL |
-| LLC Name: MaryFinds | `MaryFinds LLC` | ~5 commits | 0 (in planning docs only) | HIGH |
-| LLC Name: KC Ventures | `KC Ventures Consulting Group LLC` | ~5 commits | 0 (in planning docs only) | HIGH |
-| Employer: Avanade | `Avanade` | ~3 commits | 0 (in planning docs only) | MEDIUM |
+| LLC Name: <LLC_NAME_1> | `<LLC_NAME_1> LLC` | ~5 commits | 0 (in planning docs only) | HIGH |
+| LLC Name: <LLC_NAME_2> | `<LLC_FULL_NAME_2> LLC` | ~5 commits | 0 (in planning docs only) | HIGH |
+| Employer: <EMPLOYER_1> | `<EMPLOYER_1>` | ~3 commits | 0 (in planning docs only) | MEDIUM |
 | Employer: CBN | `CBN` | ~5 commits | 2 tracked files | MEDIUM |
-| Personal Name | `Ossie Irondi` / `Ossie` | ~20+ commits | 21 tracked files | MEDIUM |
-| Email: kamdental | `admin@kamdental.com` | In author metadata | In author metadata | HIGH |
-| Email: unifiedental | `admin@unifiedental.com` | In author metadata | In author metadata | HIGH |
+| Personal Name | `<OWNER_NAME>` / `<FIRST_NAME>` | ~20+ commits | 21 tracked files | MEDIUM |
+| Email: <DOMAIN_1> | `<EMAIL_1>` | In author metadata | In author metadata | HIGH |
+| Email: <DOMAIN_2> | `<EMAIL_2>` | In author metadata | In author metadata | HIGH |
 | Financial Assessment CSV | Full financial survey data | 2 commits (added then deleted) | 0 (deleted from tree) | CRITICAL |
 | user-profile.yaml | $192K brokerage, holdings, mortgage | 2 commits (added then deleted) | 0 (gitignored) | CRITICAL |
 | .mcp.json | API token | 3 commits (added, modified, deleted) | 0 (gitignored) | CRITICAL |
-| File naming: Account_ | `Balances_for_Account_Z05724592.csv` | ~8 commits | 13 tracked files | HIGH |
+| File naming: Account_ | `Balances_for_Account_<ACCOUNT_ID>.csv` | ~8 commits | 13 tracked files | HIGH |
 | Mortgage balance | `365139.76` | ~3 commits | 0 | MEDIUM |
 
 ### Files in Working Tree Requiring Cleanup (ONBD-14)
 
-**13 tracked files** still contain `Z05724592` in the working tree:
+**13 tracked files** still contain `<ACCOUNT_ID>` in the working tree:
 1. `.claude/hooks/load-fin-core-config.ts`
 2. `.claude/skills/PortfolioSyncing/SKILL.md`
 3. `.claude/skills/PortfolioSyncing/workflows/SyncPortfolio.md`
@@ -411,7 +413,7 @@ fin-guru-private/
 
 **3 tracked files** contain the Google Sheets spreadsheet ID.
 **2 tracked files** contain "CBN" as employer reference.
-**21 tracked files** contain "Ossie" or "Irondi" references.
+**21 tracked files** contain "<FIRST_NAME>" or "<LAST_NAME>" references.
 
 ### .gitignore Gaps (ONBD-15)
 
@@ -431,9 +433,9 @@ Current .gitignore coverage:
 ### Author Metadata Exposure
 
 Git commit author fields contain:
-- `AOJDevStudio <admin@unifiedental.com>` (majority of commits)
-- `AOJDevStudio <admin@kamdental.com>` (older commits)
-- `Ossie Irondi <admin@unifiedental.com>` (1 commit)
+- `AOJDevStudio <<EMAIL_2>>` (majority of commits)
+- `AOJDevStudio <<EMAIL_1>>` (older commits)
+- `<OWNER_NAME> <<EMAIL_2>>` (1 commit)
 - `Claude <noreply@anthropic.com>` (co-author, safe to keep)
 
 ### Remote Repository Status
@@ -445,7 +447,7 @@ Git commit author fields contain:
 ## Open Questions
 
 1. **What should replace personal references in working tree files?**
-   - The 13 files with `Z05724592` need the account number replaced with a variable/placeholder. What format? `{ACCOUNT_NUMBER}`, `EXAMPLE_ACCOUNT`, or something else?
+   - The 13 files with `<ACCOUNT_ID>` need the account number replaced with a variable/placeholder. What format? `{ACCOUNT_NUMBER}`, `EXAMPLE_ACCOUNT`, or something else?
    - Recommendation: Use template variables like `{account_id}` for code, `EXAMPLE_ACCOUNT_123` for documentation examples, consistent with the existing `{user_name}` pattern.
 
 2. **Should author identity be anonymized or just genericized?**

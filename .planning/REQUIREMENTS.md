@@ -18,7 +18,7 @@
 
 | ID | Requirement | Scope | Phase | Notes |
 |----|-------------|-------|-------|-------|
-| ONBD-14 | Remove all hardcoded personal references from public codebase | v1 | 1 | Expand beyond "Ossie" to account numbers, LLC names, employer names, spreadsheet IDs |
+| ONBD-14 | Remove all hardcoded personal references from public codebase | v1 | 1 | Expand beyond personal names to account numbers, LLC names, employer names, spreadsheet IDs |
 | ONBD-15 | Update .gitignore to protect all private data | v1 | 1 | user-profile.yaml, .env, CSV exports, fin-guru-private/, .onboarding-progress.json |
 | SEC-01 | Run git filter-repo to scrub PII from git history | v1 | 1 | CRITICAL: brokerage account numbers, net worth figures, personal data in prior commits |
 | SEC-02 | Pre-commit secrets hook prevents future PII commits | v1 | 1 | gitleaks or trufflehog pattern scanning |
