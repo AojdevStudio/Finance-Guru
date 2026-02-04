@@ -260,6 +260,338 @@ check_all_deps() {
 }
 
 # ============================================================
+# Summary Tracking
+# ============================================================
+# Track items for the final summary report.
+
+CREATED_ITEMS=()
+SKIPPED_ITEMS=()
+
+# ============================================================
+# Progress Tracking
+# ============================================================
+# Tracks completed setup steps in .setup-progress for resumable re-runs.
+# Step names: deps_checked, dirs_created, dirs_verified, config_scaffolded,
+# python_deps_installed
+
+PROGRESS_FILE="$PROJECT_ROOT/.setup-progress"
+TOTAL_STEPS=5
+
+is_step_complete() {
+  [ -f "$PROGRESS_FILE" ] && grep -q "^$1$" "$PROGRESS_FILE"
+}
+
+mark_step_complete() {
+  if ! is_step_complete "$1"; then
+    echo "$1" >> "$PROGRESS_FILE"
+  fi
+}
+
+show_progress() {
+  if [ -f "$PROGRESS_FILE" ]; then
+    local completed
+    completed=$(wc -l < "$PROGRESS_FILE" | tr -d ' ')
+    printf "\n  ${YELLOW}Resuming setup...${NC} (%s/%s steps completed)\n" "$completed" "$TOTAL_STEPS"
+    while IFS= read -r step; do
+      printf "  ${GREEN}[done]${NC} %s\n" "$step"
+    done < "$PROGRESS_FILE"
+    printf "\n"
+  fi
+}
+
+# ============================================================
+# Directory Functions
+# ============================================================
+
+create_dir() {
+  if [ ! -d "$1" ]; then
+    mkdir -p "$1"
+    printf "  ${GREEN}Created:${NC} %s\n" "$1"
+    CREATED_ITEMS+=("dir: $1")
+  else
+    printf "  ${YELLOW}Already exists:${NC} %s\n" "$1"
+    SKIPPED_ITEMS+=("dir: $1")
+  fi
+}
+
+create_directory_structure() {
+  # fin-guru-private tree
+  create_dir "$PROJECT_ROOT/fin-guru-private"
+  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru"
+  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies"
+  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/active"
+  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/archive"
+  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/risk-management"
+  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/tickets"
+  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/analysis"
+  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/analysis/reports"
+  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/reports"
+  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/archive"
+  create_dir "$PROJECT_ROOT/fin-guru-private/guides"
+  create_dir "$PROJECT_ROOT/fin-guru-private/hedging"
+
+  # Portfolio data directories
+  create_dir "$PROJECT_ROOT/notebooks"
+  create_dir "$PROJECT_ROOT/notebooks/updates"
+  create_dir "$PROJECT_ROOT/notebooks/retirement-accounts"
+  create_dir "$PROJECT_ROOT/notebooks/transactions"
+  create_dir "$PROJECT_ROOT/notebooks/tools-needed"
+  create_dir "$PROJECT_ROOT/notebooks/tools-needed/done"
+
+  # Finance Guru data directory
+  create_dir "$PROJECT_ROOT/fin-guru/data"
+}
+
+verify_directory_structure() {
+  local missing=0
+  local dirs=(
+    "$PROJECT_ROOT/fin-guru-private"
+    "$PROJECT_ROOT/fin-guru-private/fin-guru"
+    "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies"
+    "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/active"
+    "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/archive"
+    "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/risk-management"
+    "$PROJECT_ROOT/fin-guru-private/fin-guru/tickets"
+    "$PROJECT_ROOT/fin-guru-private/fin-guru/analysis"
+    "$PROJECT_ROOT/fin-guru-private/fin-guru/analysis/reports"
+    "$PROJECT_ROOT/fin-guru-private/fin-guru/reports"
+    "$PROJECT_ROOT/fin-guru-private/fin-guru/archive"
+    "$PROJECT_ROOT/fin-guru-private/guides"
+    "$PROJECT_ROOT/fin-guru-private/hedging"
+    "$PROJECT_ROOT/notebooks"
+    "$PROJECT_ROOT/notebooks/updates"
+    "$PROJECT_ROOT/notebooks/retirement-accounts"
+    "$PROJECT_ROOT/notebooks/transactions"
+    "$PROJECT_ROOT/notebooks/tools-needed"
+    "$PROJECT_ROOT/notebooks/tools-needed/done"
+    "$PROJECT_ROOT/fin-guru/data"
+  )
+
+  for dir in "${dirs[@]}"; do
+    if [ ! -d "$dir" ]; then
+      mkdir -p "$dir"
+      printf "  ${GREEN}Recreated:${NC} %s\n" "$dir"
+      CREATED_ITEMS+=("dir (recreated): $dir")
+      missing=$((missing + 1))
+    fi
+  done
+
+  if [ "$missing" -eq 0 ]; then
+    printf "  ${GREEN}[OK]${NC} All directories verified\n"
+  else
+    printf "  ${YELLOW}Recreated %d missing directory(ies)${NC}\n" "$missing"
+  fi
+}
+
+# ============================================================
+# Config Scaffolding
+# ============================================================
+
+scaffold_file() {
+  local target="$1"
+  local description="$2"
+  local basename_target
+  basename_target=$(basename "$target")
+
+  if [ -f "$target" ]; then
+    if [ -t 0 ]; then
+      printf "  %s already exists. Overwrite? [y/N] " "$basename_target"
+      read -r response
+      if [[ "$response" =~ ^[Yy]$ ]]; then
+        return 0  # Caller writes content
+      else
+        printf "  ${YELLOW}Kept existing:${NC} %s\n" "$target"
+        SKIPPED_ITEMS+=("file: $target")
+        return 1
+      fi
+    else
+      printf "  ${YELLOW}Kept existing:${NC} %s (non-interactive)\n" "$target"
+      SKIPPED_ITEMS+=("file: $target")
+      return 1
+    fi
+  fi
+
+  # File doesn't exist -- caller will write it
+  return 0
+}
+
+scaffold_config_files() {
+  # 1. user-profile.yaml
+  local user_profile="$PROJECT_ROOT/fin-guru/data/user-profile.yaml"
+  if scaffold_file "$user_profile" "user profile template"; then
+    cat > "$user_profile" << 'PROFILE_EOF'
+# Finance Guru User Profile Configuration
+# Complete this profile during onboarding with the Onboarding Specialist
+
+system_ownership:
+  type: "private_family_office"
+  owner: "sole_client"
+  mode: "exclusive_service"
+  data_location: "local_only"
+
+orientation_status:
+  completed: false
+  assessment_path: ""
+  last_updated: ""
+  onboarding_phase: "pending"  # pending | assessment | profiled | active
+
+user_profile:
+  # Will be populated during onboarding
+  liquid_assets:
+    total: 0
+    accounts_count: 0
+    average_yield: 0.0
+
+  investment_portfolio:
+    total_value: 0
+    retirement_accounts: 0
+    allocation: ""
+    risk_profile: ""
+
+  cash_flow:
+    monthly_income: 0
+    fixed_expenses: 0
+    variable_expenses: 0
+    investment_capacity: 0
+
+  debt_profile:
+    mortgage_balance: 0
+    mortgage_payment: 0
+    weighted_interest_rate: 0.0
+
+  preferences:
+    risk_tolerance: ""
+    investment_philosophy: ""
+    time_horizon: ""
+
+# Google Sheets Integration (optional)
+google_sheets:
+  portfolio_tracker:
+    spreadsheet_id: ""
+    url: ""
+    purpose: "Finance Guru portfolio tracking"
+PROFILE_EOF
+    printf "  ${GREEN}Created:${NC} %s\n" "$user_profile"
+    CREATED_ITEMS+=("file: $user_profile")
+  fi
+
+  # 2. .env from .env.example
+  local env_file="$PROJECT_ROOT/.env"
+  if [ -f "$PROJECT_ROOT/.env.example" ]; then
+    if scaffold_file "$env_file" "environment config"; then
+      cp "$PROJECT_ROOT/.env.example" "$env_file"
+      printf "  ${GREEN}Created:${NC} %s (from .env.example)\n" "$env_file"
+      CREATED_ITEMS+=("file: $env_file")
+    fi
+  else
+    warn ".env.example not found -- skipping .env creation"
+  fi
+
+  # 3. fin-guru-private/README.md
+  local private_readme="$PROJECT_ROOT/fin-guru-private/README.md"
+  if scaffold_file "$private_readme" "private directory README"; then
+    cat > "$private_readme" << 'README_EOF'
+# Finance Guru Private Documentation
+
+This directory contains your personal Finance Guru documentation:
+
+- **fin-guru/strategies/** - Your portfolio strategies
+- **fin-guru/tickets/** - Buy/sell execution tickets
+- **fin-guru/analysis/** - Deep research and modeling
+- **fin-guru/reports/** - Monthly market reviews
+- **guides/** - Tool usage guides
+
+## Important
+
+This directory is gitignored and will not be committed to version control.
+Your financial data stays private on your local machine.
+
+## Getting Started
+
+After running the setup script, activate the Onboarding Specialist:
+
+```
+/fin-guru:agents:onboarding-specialist
+```
+
+The specialist will guide you through:
+1. Financial assessment
+2. Portfolio profile creation
+3. Strategy recommendations
+
+Once onboarding is complete, you can use the Finance Orchestrator:
+
+```
+/finance-orchestrator
+```
+README_EOF
+    printf "  ${GREEN}Created:${NC} %s\n" "$private_readme"
+    CREATED_ITEMS+=("file: $private_readme")
+  fi
+}
+
+# ============================================================
+# Python Dependencies
+# ============================================================
+
+install_python_deps() {
+  if [ ! -f "$PROJECT_ROOT/pyproject.toml" ]; then
+    warn "pyproject.toml not found -- skipping Python dependency install"
+    return 0
+  fi
+
+  if (cd "$PROJECT_ROOT" && uv sync); then
+    success "Python dependencies installed via uv sync"
+    CREATED_ITEMS+=("Python dependencies (uv sync)")
+  else
+    error "uv sync failed -- you can retry with: cd $PROJECT_ROOT && uv sync"
+    return 1
+  fi
+}
+
+# ============================================================
+# Summary
+# ============================================================
+
+print_summary() {
+  printf "\n"
+  printf "==========================================\n"
+  printf "  ${GREEN}${BOLD}Setup Complete!${NC}\n"
+  printf "==========================================\n"
+  printf "\n"
+
+  # Created section
+  if [ ${#CREATED_ITEMS[@]} -gt 0 ]; then
+    printf "  ${BOLD}Created:${NC}\n"
+    for item in "${CREATED_ITEMS[@]}"; do
+      printf "    - %s\n" "$item"
+    done
+    printf "\n"
+  fi
+
+  # Skipped section
+  if [ ${#SKIPPED_ITEMS[@]} -gt 0 ]; then
+    printf "  ${BOLD}Skipped (already existed):${NC}\n"
+    for item in "${SKIPPED_ITEMS[@]}"; do
+      printf "    - %s\n" "$item"
+    done
+    printf "\n"
+  fi
+
+  # Next steps
+  printf "  ${BOLD}Next steps:${NC}\n"
+  printf "\n"
+  printf "  1. Edit .env to add your API keys (optional)\n"
+  printf "     yfinance works without API keys for basic market data.\n"
+  printf "\n"
+  printf "  2. Run the onboarding wizard:\n"
+  printf "     uv run python scripts/onboarding/main.py\n"
+  printf "\n"
+  printf "  3. After onboarding: /finance-orchestrator\n"
+  printf "\n"
+}
+
+# ============================================================
 # CLI Argument Parsing
 # ============================================================
 
@@ -305,6 +637,9 @@ printf "  ${BOLD}Finance Guru Setup${NC}\n"
 printf "==========================================\n"
 printf "\n"
 
+# Show resume status if re-running
+show_progress
+
 # Detect OS
 detect_os
 info "Detected OS: $DETECTED_OS (package manager: $PKG_MANAGER)"
@@ -348,13 +683,48 @@ else
   fi
 fi
 
-# --- Phase functions (Plan 02) ---
-# create_directory_structure
-# scaffold_config_files
-# install_python_deps
-# print_summary
+mark_step_complete "deps_checked"
 
-printf "\n"
-header "Next steps"
-info "Dependencies verified. Directory creation and config scaffolding coming in next plan."
-printf "\n"
+# Step 2: Create directory structure + ALWAYS validate
+# NOTE: verify_directory_structure runs on EVERY path (first run AND re-run).
+# On first run with pre-existing dirs, mkdir -p is idempotent but we must still
+# validate expected structure. On re-run, we skip creation but still validate.
+# This satisfies CONTEXT.md decision: "Verify state of skipped items -- not just
+# existence but expected structure."
+if is_step_complete "dirs_created"; then
+  header "Verifying directory structure..."
+  verify_directory_structure
+  mark_step_complete "dirs_verified"
+else
+  header "Creating directory structure..."
+  create_directory_structure
+  # Always validate after creation -- catches pre-existing dirs with missing subdirs
+  header "Validating directory structure..."
+  verify_directory_structure
+  mark_step_complete "dirs_created"
+  mark_step_complete "dirs_verified"
+fi
+
+# Step 3: Scaffold config files
+if is_step_complete "config_scaffolded"; then
+  header "Verifying config files..."
+  # Still run scaffold_config_files -- it handles overwrite prompts internally
+  scaffold_config_files
+else
+  header "Scaffolding config files..."
+  scaffold_config_files
+  mark_step_complete "config_scaffolded"
+fi
+
+# Step 4: Install Python dependencies
+if is_step_complete "python_deps_installed"; then
+  header "Python dependencies..."
+  printf "  ${GREEN}[done]${NC} Python dependencies already installed\n"
+else
+  header "Installing Python dependencies..."
+  install_python_deps
+  mark_step_complete "python_deps_installed"
+fi
+
+# Step 5: Summary
+print_summary
