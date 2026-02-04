@@ -175,7 +175,7 @@ function processHook(inputData: string) {
     const systemContext = loadFile(systemContextPath);
     
     // Load latest portfolio updates
-    const latestBalances = getLatestFile(updatesDir, /^Balances_for_Account_{account_id}\.csv$/);
+    const latestBalances = getLatestFile(updatesDir, /^Balances_for_Account_[^/]+\.csv$/);
     const latestPositions = getLatestPositionsFile(updatesDir);
 
     // Check file status

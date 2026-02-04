@@ -542,7 +542,7 @@ To update your profile later, run: ./setup.sh
 | System | Files Modified | Integration Points | Breaking Changes |
 |--------|----------------|-------------------|------------------|
 | **setup.sh** | `setup.sh` | Orchestrates onboarding, calls Python CLI | None (new functionality) |
-| **fin-guru config** | `fin-guru/config.yaml` | Remove `author: {user_name}`, add `{user_name}` | Yes: hardcoded author removed |
+| **fin-guru config** | `fin-guru/config.yaml` | Replace hardcoded author with `{user_name}` placeholder | Yes: hardcoded author removed |
 | **User profile** | `fin-guru/data/user-profile.yaml` | Transform to template, populated by onboarding | Yes: empty template by default |
 | **CLAUDE.md** | `CLAUDE.md` | Convert to template with path variables | No: variables resolved at runtime |
 | **Hooks** | `.claude/hooks/*` | Complete refactor to Bun TypeScript | Yes: bash/ts hooks removed |
