@@ -266,16 +266,16 @@ async def client(mocker):
 @pytest.mark.asyncio
 async def test_create_user_success(client, mocker):
     service = mocker.AsyncMock()
-    service.create.return_value = {"id": "1", "email": "admin@unifiedental.com"}
+    service.create.return_value = {"id": "1", "email": "user@example.com"}
     app.dependency_overrides[get_user_service] = lambda: service
 
     response = await client.post(
         "/api/users",
-        json={"email": "admin@unifiedental.com", "supabase_id": "abc"},
+        json={"email": "user@example.com", "supabase_id": "abc"},
     )
 
     assert response.status_code == 201
-    assert response.json()["email"] == "admin@unifiedental.com"
+    assert response.json()["email"] == "user@example.com"
     app.dependency_overrides.clear()
 
 

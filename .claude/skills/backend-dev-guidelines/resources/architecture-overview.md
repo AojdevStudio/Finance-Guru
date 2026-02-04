@@ -211,7 +211,7 @@ def configure_middlewares(app: FastAPI) -> None:
     app.add_middleware(GZipMiddleware)             # 2. Registered second → runs before CORS
     app.add_middleware(                            # 3. Registered last → runs closest to handlers
         TrustedHostMiddleware,
-        allowed_hosts=["unifiedental.com", "*.unifiedental.com"],
+        allowed_hosts=["example.com", "*.example.com"],
     )
 
 

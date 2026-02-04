@@ -70,7 +70,7 @@ async def test_create_user_rejects_duplicates():
     service = UserService(repository=repo)
 
     with pytest.raises(DuplicateEmailError):
-        await service.create(UserCreate(email="admin@unifiedental.com", supabase_id="abc"))
+        await service.create(UserCreate(email="user@example.com", supabase_id="abc"))
 
 
 @pytest.mark.asyncio
@@ -80,7 +80,7 @@ async def test_create_user_persists_record():
     repo.create.return_value = {"id": "123"}
 
     service = UserService(repository=repo)
-    result = await service.create(UserCreate(email="admin@unifiedental.com", supabase_id="abc"))
+    result = await service.create(UserCreate(email="user@example.com", supabase_id="abc"))
 
     repo.create.assert_awaited_once()
     assert result["id"] == "123"
@@ -110,12 +110,12 @@ async def test_client():
 
 @pytest.mark.asyncio
 async def test_get_current_user(test_client: AsyncClient, mocker):
-    mock_user = User(id="123", email="admin@unifiedental.com")
+    mock_user = User(id="123", email="user@example.com")
     mocker.patch("app.middleware.supabase_auth.get_current_user", return_value=mock_user)
 
     response = await test_client.get("/api/users/me")
     assert response.status_code == 200
-    assert response.json()["email"] == "admin@unifiedental.com"
+    assert response.json()["email"] == "user@example.com"
 ```
 
 - Use `app.dependency_overrides` to supply fake services or sessions during tests.
@@ -127,7 +127,7 @@ async def test_get_current_user(test_client: AsyncClient, mocker):
 @pytest.fixture
 def override_user_service(mocker):
     fake_service = mocker.AsyncMock()
-    fake_service.create.return_value = {"id": "1", "email": "admin@unifiedental.com"}
+    fake_service.create.return_value = {"id": "1", "email": "user@example.com"}
     app.dependency_overrides[get_user_service] = lambda: fake_service
     yield fake_service
     app.dependency_overrides.clear()
@@ -184,7 +184,7 @@ async def transactional_session(test_session):
 ```python
 @pytest.fixture
 def mock_admin_user(mocker):
-    mock_user = User(id="admin", email="admin@unifiedental.com", role="admin")
+    mock_user = User(id="admin", email="user@example.com", role="admin")
     mocker.patch("app.middleware.supabase_auth.get_current_admin_user", return_value=mock_user)
 ```
 
