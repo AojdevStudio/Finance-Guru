@@ -1,388 +1,360 @@
 #!/bin/bash
 
 # Finance Guru Setup Script
-# Run this after cloning the repository to set up your private data directories
+# Checks dependencies, creates directories, scaffolds config files.
+# Run this after cloning the repository to set up your environment.
 
 set -e
 
+# ============================================================
+# Path Setup
+# ============================================================
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"  # Script is in project root
+PROJECT_ROOT="$SCRIPT_DIR"
 
-echo "=========================================="
-echo "  Finance Guru™ Setup Script"
-echo "=========================================="
-echo ""
+# ============================================================
+# Terminal Color Detection
+# ============================================================
+# Detect whether stdout is an interactive terminal that supports
+# color output. Fall back to plain text for pipes, CI, and cron.
+# Use ${TERM:-dumb} to handle unset TERM (not just empty).
 
-# Colors for output
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+if [ -t 1 ] && [ "${TERM:-dumb}" != "dumb" ]; then
+  GREEN='\033[0;32m'
+  RED='\033[0;31m'
+  YELLOW='\033[1;33m'
+  BLUE='\033[0;34m'
+  BOLD='\033[1m'
+  NC='\033[0m'
+else
+  GREEN=''
+  RED=''
+  YELLOW=''
+  BLUE=''
+  BOLD=''
+  NC=''
+fi
 
-# Function to create directory and report
-create_dir() {
-    if [ ! -d "$1" ]; then
-        mkdir -p "$1"
-        echo -e "${GREEN}Created:${NC} $1"
-    else
-        echo -e "${YELLOW}Exists:${NC} $1"
-    fi
+# ============================================================
+# Output Helper Functions
+# ============================================================
+
+info() {
+  printf "  %s\n" "$1"
 }
 
-echo "Step 1: Creating private documentation structure..."
-echo ""
+success() {
+  printf "  ${GREEN}[OK]${NC} %s\n" "$1"
+}
 
-# Create fin-guru-private directory structure
-create_dir "$PROJECT_ROOT/fin-guru-private"
-create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru"
-create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies"
-create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/active"
-create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/archive"
-create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/risk-management"
-create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/tickets"
-create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/analysis"
-create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/analysis/reports"
-create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/reports"
-create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/archive"
-create_dir "$PROJECT_ROOT/fin-guru-private/guides"
+warn() {
+  printf "  ${YELLOW}[WARN]${NC} %s\n" "$1"
+}
 
-echo ""
-echo "Step 2: Creating portfolio data directories..."
-echo ""
+error() {
+  printf "  ${RED}[FAIL]${NC} %s\n" "$1"
+}
 
-# Create notebooks structure for CSV exports and analysis
-create_dir "$PROJECT_ROOT/notebooks"
-create_dir "$PROJECT_ROOT/notebooks/updates"
-create_dir "$PROJECT_ROOT/notebooks/retirement-accounts"
-create_dir "$PROJECT_ROOT/notebooks/transactions"
-create_dir "$PROJECT_ROOT/notebooks/tools-needed"
-create_dir "$PROJECT_ROOT/notebooks/tools-needed/done"
+header() {
+  printf "\n${BOLD}%s${NC}\n" "$1"
+}
 
-echo ""
-echo "Step 3: Creating Finance Guru data directory..."
-echo ""
+# ============================================================
+# OS Detection
+# ============================================================
+# Sets two globals: DETECTED_OS (macos/linux/wsl)
+# and PKG_MANAGER (brew/apt/none)
 
-# Create fin-guru/data directory (required for user profile)
-create_dir "$PROJECT_ROOT/fin-guru/data"
+DETECTED_OS=""
+PKG_MANAGER=""
 
-echo ""
-echo "Step 4: Creating user profile template..."
-echo ""
+detect_os() {
+  local kernel
+  kernel=$(uname -s)
+  case "$kernel" in
+    Darwin)
+      DETECTED_OS="macos"
+      if command -v brew &>/dev/null; then
+        PKG_MANAGER="brew"
+      else
+        PKG_MANAGER="none"
+      fi
+      ;;
+    Linux)
+      if grep -qi microsoft /proc/version 2>/dev/null; then
+        DETECTED_OS="wsl"
+      else
+        DETECTED_OS="linux"
+      fi
+      if command -v apt &>/dev/null; then
+        PKG_MANAGER="apt"
+      else
+        PKG_MANAGER="none"
+      fi
+      ;;
+    *)
+      DETECTED_OS="linux"
+      PKG_MANAGER="none"
+      ;;
+  esac
+}
 
-# Create user profile template if it doesn't exist
-USER_PROFILE="$PROJECT_ROOT/fin-guru/data/user-profile.yaml"
-if [ ! -f "$USER_PROFILE" ]; then
-    cat > "$USER_PROFILE" << 'EOF'
-# Finance Guru™ User Profile Configuration
-# Complete this profile during onboarding with the Onboarding Specialist
+# ============================================================
+# Version Comparison
+# ============================================================
+# Returns 0 if $1 >= $2, 1 otherwise.
+# Uses sort -V (verified on macOS Apple sort and GNU coreutils).
 
-system_ownership:
-  type: "private_family_office"
-  owner: "sole_client"
-  mode: "exclusive_service"
-  data_location: "local_only"
+version_gte() {
+  [ "$(printf '%s\n' "$1" "$2" | sort -V | head -1)" = "$2" ]
+}
 
-orientation_status:
-  completed: false
-  assessment_path: ""
-  last_updated: ""
-  onboarding_phase: "pending"  # pending | assessment | profiled | active
+# ============================================================
+# Install Command Lookup
+# ============================================================
+# Returns the OS-specific install command for a dependency.
 
-user_profile:
-  # Will be populated during onboarding
-  liquid_assets:
-    total: 0
-    accounts_count: 0
-    average_yield: 0.0
+get_install_command() {
+  local dep_name="$1"
 
-  investment_portfolio:
-    total_value: 0
-    retirement_accounts: 0
-    allocation: ""
-    risk_profile: ""
+  case "$dep_name" in
+    python3)
+      case "$DETECTED_OS" in
+        macos)
+          if [ "$PKG_MANAGER" = "brew" ]; then
+            printf "brew install python@3.12"
+          else
+            printf 'Install Homebrew first:\n  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"\nThen:\n  brew install python@3.12'
+          fi
+          ;;
+        linux|wsl)
+          if [ "$PKG_MANAGER" = "apt" ]; then
+            printf "sudo apt update && sudo apt install python3.12"
+          else
+            printf "Visit https://www.python.org/downloads/"
+          fi
+          ;;
+      esac
+      ;;
+    uv)
+      printf "curl -LsSf https://astral.sh/uv/install.sh | sh"
+      ;;
+    bun)
+      printf "curl -fsSL https://bun.sh/install | bash"
+      ;;
+  esac
+}
 
-  cash_flow:
-    monthly_income: 0
-    fixed_expenses: 0
-    variable_expenses: 0
-    investment_capacity: 0
+# ============================================================
+# Auto-Install Prompt
+# ============================================================
+# Prompts user to install a missing dependency. Only works in
+# interactive mode (stdin is a tty). Skips in CI/pipes.
 
-  debt_profile:
-    mortgage_balance: 0
-    mortgage_payment: 0
-    weighted_interest_rate: 0.0
+prompt_install() {
+  local dep_name="$1"
+  local install_cmd="$2"
 
-  preferences:
-    risk_tolerance: ""
-    investment_philosophy: ""
-    time_horizon: ""
+  # Check if stdin is a tty before prompting
+  if [ ! -t 0 ]; then
+    warn "Skipped: $dep_name (non-interactive)"
+    return 1
+  fi
 
-# Google Sheets Integration (optional)
-google_sheets:
-  portfolio_tracker:
-    spreadsheet_id: ""
-    url: ""
-    purpose: "Finance Guru portfolio tracking"
+  printf "  %s not found. Install now? [y/N] " "$dep_name"
+  read -r response
+  if [[ "$response" =~ ^[Yy]$ ]]; then
+    info "Installing $dep_name..."
+    eval "$install_cmd"
+    # Re-check if install succeeded
+    case "$dep_name" in
+      Python)  command -v python3 &>/dev/null && success "Installed: $dep_name" && return 0 ;;
+      uv)     command -v uv &>/dev/null && success "Installed: $dep_name" && return 0 ;;
+      Bun)    command -v bun &>/dev/null && success "Installed: $dep_name" && return 0 ;;
+    esac
+    error "Installation may have failed for $dep_name"
+    return 1
+  else
+    printf "  ${YELLOW}Skipped:${NC} %s (user declined)\n" "$dep_name"
+    return 1
+  fi
+}
 
-EOF
-    echo -e "${GREEN}Created:${NC} $USER_PROFILE"
-else
-    echo -e "${YELLOW}Exists:${NC} $USER_PROFILE"
-fi
+# ============================================================
+# Single Dependency Check
+# ============================================================
+# Checks if a command exists and optionally verifies minimum version.
+# Returns 0 on success, 1 on failure.
 
-echo ""
-echo "Step 5: Creating README for private directory..."
-echo ""
+check_dependency() {
+  local cmd="$1"
+  local name="$2"
+  local min_version="$3"
 
-# Create README for fin-guru-private
-PRIVATE_README="$PROJECT_ROOT/fin-guru-private/README.md"
-if [ ! -f "$PRIVATE_README" ]; then
-    cat > "$PRIVATE_README" << 'EOF'
-# Finance Guru Private Documentation
+  # Check if command exists
+  if ! command -v "$cmd" &>/dev/null; then
+    local install_cmd
+    install_cmd=$(get_install_command "$cmd")
+    printf "  ${RED}[MISSING]${NC} %s (not found)\n" "$name"
+    info "Install with: $install_cmd"
+    return 1
+  fi
 
-This directory contains your personal Finance Guru documentation:
+  # Extract version
+  local found_version=""
+  case "$cmd" in
+    python3) found_version=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1) ;;
+    uv)      found_version=$(uv --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) ;;
+    bun)     found_version=$(bun --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) ;;
+  esac
 
-- **fin-guru/strategies/** - Your portfolio strategies
-- **fin-guru/tickets/** - Buy/sell execution tickets
-- **fin-guru/analysis/** - Deep research and modeling
-- **fin-guru/reports/** - Monthly market reviews
-- **guides/** - Tool usage guides
-
-## Important
-
-This directory is gitignored and will not be committed to version control.
-Your financial data stays private on your local machine.
-
-## Getting Started
-
-After running the setup script, activate the Onboarding Specialist:
-
-```
-/fin-guru:agents:onboarding-specialist
-```
-
-The specialist will guide you through:
-1. Financial assessment
-2. Portfolio profile creation
-3. Strategy recommendations
-
-Once onboarding is complete, you can use the Finance Orchestrator:
-
-```
-/finance-orchestrator
-```
-EOF
-    echo -e "${GREEN}Created:${NC} $PRIVATE_README"
-else
-    echo -e "${YELLOW}Exists:${NC} $PRIVATE_README"
-fi
-
-echo ""
-echo "Step 6: Setting up environment..."
-echo ""
-
-# Create .env from example if it doesn't exist
-if [ ! -f "$PROJECT_ROOT/.env" ]; then
-    if [ -f "$PROJECT_ROOT/.env.example" ]; then
-        cp "$PROJECT_ROOT/.env.example" "$PROJECT_ROOT/.env"
-        echo -e "${GREEN}Created:${NC} .env from .env.example"
-        echo -e "${YELLOW}Note:${NC} Edit .env to add your API keys"
+  # Check minimum version if specified
+  if [ -n "$min_version" ] && [ -n "$found_version" ]; then
+    if ! version_gte "$found_version" "$min_version"; then
+      local install_cmd
+      install_cmd=$(get_install_command "$cmd")
+      printf "  ${RED}[MISSING]${NC} %s %s (>= %s required)\n" "$name" "$found_version" "$min_version"
+      info "Install with: $install_cmd"
+      return 1
     fi
-else
-    echo -e "${YELLOW}Exists:${NC} .env"
-fi
+  fi
 
-echo ""
-echo "Step 7: Installing Python dependencies..."
-echo ""
+  # Success
+  if [ -n "$min_version" ]; then
+    printf "  ${GREEN}[OK]${NC} %s %s (>= %s required)\n" "$name" "$found_version" "$min_version"
+  else
+    printf "  ${GREEN}[OK]${NC} %s %s\n" "$name" "$found_version"
+  fi
+  return 0
+}
 
-# Check if uv is installed
-if command -v uv &> /dev/null; then
-    cd "$PROJECT_ROOT"
-    uv sync
-    echo -e "${GREEN}Dependencies installed via uv${NC}"
-else
-    echo -e "${YELLOW}Warning:${NC} uv not found. Install with: curl -LsSf https://astral.sh/uv/install.sh | sh"
-    echo "Then run: uv sync"
-fi
+# ============================================================
+# Check All Dependencies
+# ============================================================
+# Checks all dependencies in a single pass, accumulating failures
+# without triggering set -e. Reports all results before failing.
 
-echo ""
-echo "Step 8: Loading Finance Guru agent commands..."
-echo ""
+# Arrays to track failed deps for auto-install
+FAILED_DEPS=()
+FAILED_NAMES=()
+FAILED_CMDS=()
 
-# Create ~/.claude/commands if it doesn't exist
-GLOBAL_COMMANDS_DIR="$HOME/.claude/commands"
-create_dir "$GLOBAL_COMMANDS_DIR"
+check_all_deps() {
+  local missing=0
+  FAILED_DEPS=()
+  FAILED_NAMES=()
+  FAILED_CMDS=()
 
-# Create symlink to Finance Guru agent commands
-FIN_GURU_COMMANDS="$PROJECT_ROOT/.claude/commands/fin-guru"
-GLOBAL_FIN_GURU_LINK="$GLOBAL_COMMANDS_DIR/fin-guru"
+  check_dependency "python3" "Python" "3.12" || { missing=$((missing + 1)); FAILED_DEPS+=("python3"); FAILED_NAMES+=("Python"); FAILED_CMDS+=("$(get_install_command python3)"); }
+  check_dependency "uv" "uv" "" || { missing=$((missing + 1)); FAILED_DEPS+=("uv"); FAILED_NAMES+=("uv"); FAILED_CMDS+=("$(get_install_command uv)"); }
+  check_dependency "bun" "Bun" "" || { missing=$((missing + 1)); FAILED_DEPS+=("bun"); FAILED_NAMES+=("Bun"); FAILED_CMDS+=("$(get_install_command bun)"); }
 
-if [ -d "$FIN_GURU_COMMANDS" ]; then
-    if [ -L "$GLOBAL_FIN_GURU_LINK" ]; then
-        echo -e "${YELLOW}Exists:${NC} Finance Guru commands symlink"
-    elif [ -d "$GLOBAL_FIN_GURU_LINK" ]; then
-        echo -e "${YELLOW}Warning:${NC} $GLOBAL_FIN_GURU_LINK exists but is not a symlink"
-        echo "Skipping symlink creation (manual cleanup needed)"
-    else
-        ln -s "$FIN_GURU_COMMANDS" "$GLOBAL_FIN_GURU_LINK"
-        echo -e "${GREEN}Linked:${NC} Finance Guru agent commands → ~/.claude/commands/fin-guru"
-    fi
-else
-    echo -e "${YELLOW}Warning:${NC} Finance Guru commands not found at $FIN_GURU_COMMANDS"
-fi
+  if [ "$missing" -gt 0 ]; then
+    printf "\n  ${RED}%d dependency(ies) missing${NC}\n" "$missing"
+    return 1
+  fi
 
-echo ""
-echo "Step 9: Loading Finance Guru skills..."
-echo ""
+  printf "\n  ${GREEN}All dependencies satisfied${NC}\n"
+  return 0
+}
 
-# Create ~/.claude/skills if it doesn't exist
-GLOBAL_SKILLS_DIR="$HOME/.claude/skills"
-create_dir "$GLOBAL_SKILLS_DIR"
+# ============================================================
+# CLI Argument Parsing
+# ============================================================
 
-# List of Finance Guru skills to symlink
-FIN_GURU_SKILLS=(
-    "fin-core"
-    "margin-management"
-    "PortfolioSyncing"
-    "MonteCarlo"
-    "retirement-syncing"
-    "dividend-tracking"
-    "FinanceReport"
-    "TransactionSyncing"
-    "formula-protection"
-)
+CHECK_DEPS_ONLY=false
 
-# Create symlinks for each skill
-for skill in "${FIN_GURU_SKILLS[@]}"; do
-    SKILL_SOURCE="$PROJECT_ROOT/.claude/skills/$skill"
-    SKILL_LINK="$GLOBAL_SKILLS_DIR/$skill"
+show_usage() {
+  printf "Usage: ./setup.sh [OPTIONS]\n"
+  printf "\n"
+  printf "Options:\n"
+  printf "  --check-deps-only    Check dependencies without modifying anything\n"
+  printf "  --help, -h           Show this help message\n"
+  printf "\n"
+  printf "Setup creates fin-guru-private/ directory structure, scaffolds config\n"
+  printf "files, and installs Python dependencies. Run after cloning the repo.\n"
+}
 
-    if [ -d "$SKILL_SOURCE" ]; then
-        if [ -L "$SKILL_LINK" ]; then
-            echo -e "${YELLOW}Exists:${NC} $skill skill symlink"
-        elif [ -d "$SKILL_LINK" ]; then
-            echo -e "${YELLOW}Warning:${NC} $SKILL_LINK exists but is not a symlink"
-            echo "Skipping $skill symlink creation (manual cleanup needed)"
-        else
-            ln -s "$SKILL_SOURCE" "$SKILL_LINK"
-            echo -e "${GREEN}Linked:${NC} $skill skill → ~/.claude/skills/$skill"
-        fi
-    else
-        echo -e "${YELLOW}Warning:${NC} Skill not found at $SKILL_SOURCE"
-    fi
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --check-deps-only)
+      CHECK_DEPS_ONLY=true
+      shift
+      ;;
+    --help|-h)
+      show_usage
+      exit 0
+      ;;
+    *)
+      printf "Unknown option: %s\n" "$1"
+      printf "Run './setup.sh --help' for usage information.\n"
+      exit 1
+      ;;
+  esac
 done
 
-echo ""
-echo "Step 10: Running onboarding wizard..."
-echo ""
+# ============================================================
+# Main Flow
+# ============================================================
 
-# Check if bun is installed
-if command -v bun &> /dev/null; then
-    cd "$PROJECT_ROOT"
+# Banner
+printf "\n"
+printf "==========================================\n"
+printf "  ${BOLD}Finance Guru Setup${NC}\n"
+printf "==========================================\n"
+printf "\n"
 
-    # Check if onboarding has already been completed
-    if [ -f ".onboarding-state.json" ]; then
-        echo -e "${YELLOW}Onboarding state detected.${NC} Resuming..."
-        bun run scripts/onboarding/index.ts --resume
-    else
-        echo "Starting fresh onboarding..."
-        bun run scripts/onboarding/index.ts
-    fi
+# Detect OS
+detect_os
+info "Detected OS: $DETECTED_OS (package manager: $PKG_MANAGER)"
+
+# Check dependencies
+header "Checking dependencies..."
+
+if check_all_deps; then
+  # All deps present
+  if [ "$CHECK_DEPS_ONLY" = true ]; then
+    printf "\n"
+    header "Dependency check complete"
+    info "All dependencies are installed and meet version requirements."
+    exit 0
+  fi
 else
-    echo -e "${YELLOW}Warning:${NC} bun not found. Install with: curl -fsSL https://bun.sh/install | bash"
-    echo "Then run: bun run scripts/onboarding/index.ts"
-    echo ""
-    echo "Skipping onboarding wizard for now."
+  # Some deps missing
+  if [ "$CHECK_DEPS_ONLY" = true ]; then
+    printf "\n"
+    header "Dependency check complete"
+    error "Some dependencies are missing. Install them and re-run."
+    exit 1
+  fi
+
+  # Offer auto-install for each missing dep
+  printf "\n"
+  header "Auto-install missing dependencies"
+
+  for i in "${!FAILED_NAMES[@]}"; do
+    prompt_install "${FAILED_NAMES[$i]}" "${FAILED_CMDS[$i]}" || true
+  done
+
+  # Re-check all deps after install attempts
+  printf "\n"
+  header "Re-checking dependencies..."
+
+  if ! check_all_deps; then
+    printf "\n"
+    error "Please install missing dependencies and re-run setup.sh"
+    exit 1
+  fi
 fi
 
-echo ""
-echo "Step 11: Verifying MCP Launchpad setup..."
-echo ""
+# --- Phase functions (Plan 02) ---
+# create_directory_structure
+# scaffold_config_files
+# install_python_deps
+# print_summary
 
-# Check if mcpl is installed
-if command -v mcpl &> /dev/null; then
-    MCPL_VERSION=$(mcpl --version 2>&1 | head -n1)
-    echo -e "${GREEN}Found:${NC} $MCPL_VERSION"
-    echo ""
-
-    # Run mcpl verify to check server connections
-    echo "Checking MCP server connections..."
-    mcpl verify
-    echo ""
-
-    # Check for Finance Guru required servers
-    echo "Checking Finance Guru required MCP servers..."
-
-    MISSING_SERVERS=()
-    SERVER_LIST=$(mcpl list 2>&1)
-
-    # Check for required servers by looking for server name at start of line with bracket
-    if ! echo "$SERVER_LIST" | grep -q "^\s*\[exa\]"; then
-        MISSING_SERVERS+=("exa")
-    fi
-
-    if ! echo "$SERVER_LIST" | grep -q "^\s*\[bright-data\]"; then
-        MISSING_SERVERS+=("bright-data")
-    fi
-
-    if ! echo "$SERVER_LIST" | grep -q "^\s*\[sequential-thinking\]"; then
-        MISSING_SERVERS+=("sequential-thinking")
-    fi
-
-    if [ ${#MISSING_SERVERS[@]} -gt 0 ]; then
-        echo -e "${YELLOW}Warning:${NC} Missing required MCP servers: ${MISSING_SERVERS[*]}"
-        echo "Finance Guru requires these servers for full functionality."
-        echo "Configure them in your MCP config (~/.claude/mcp.json or ./mcp.json)"
-        echo "See docs/SETUP.md for configuration examples."
-        echo ""
-    else
-        echo -e "${GREEN}All required MCP servers configured!${NC}"
-        echo ""
-    fi
-else
-    echo -e "${YELLOW}MCP Launchpad not found${NC}"
-    echo ""
-    echo "MCP Launchpad (mcpl) provides unified access to all MCP servers."
-    echo "Finance Guru uses it for market research, data extraction, and analysis."
-    echo ""
-    echo "To install mcpl:"
-    echo -e "  ${BLUE}uv tool install https://github.com/kenneth-liao/mcp-launchpad.git${NC}"
-    echo ""
-    echo "After installation, configure required MCP servers:"
-    echo "  - exa (market intelligence)"
-    echo "  - bright-data (web scraping)"
-    echo "  - sequential-thinking (complex reasoning)"
-    echo ""
-    echo "See docs/SETUP.md for detailed MCP configuration instructions."
-    echo ""
-fi
-
-echo ""
-echo "=========================================="
-echo -e "${GREEN}  Setup Complete!${NC}"
-echo "=========================================="
-echo ""
-echo "Next steps:"
-echo ""
-echo -e "  1. ${BLUE}Edit .env${NC} to add your API keys (optional):"
-echo "     - FINNHUB_API_KEY (for real-time prices)"
-echo "     - ITC_API_KEY (for external risk scores)"
-echo "     Note: yfinance works without API keys for basic market data."
-echo ""
-echo -e "  2. ${BLUE}Install MCP Launchpad${NC} if not already installed:"
-echo "     uv tool install https://github.com/kenneth-liao/mcp-launchpad.git"
-echo ""
-echo -e "  3. ${BLUE}Configure MCP servers${NC} in MCP config file"
-echo "     Required: exa, bright-data, sequential-thinking"
-echo "     Optional: gdrive, perplexity, financial-datasets"
-echo "     See docs/SETUP.md for configuration examples."
-echo ""
-echo -e "  4. ${BLUE}If you skipped onboarding, run it manually${NC}:"
-echo "     bun run scripts/onboarding/index.ts"
-echo ""
-echo "  5. After onboarding, use the Finance Orchestrator:"
-echo "     /finance-orchestrator"
-echo ""
-echo "See docs/index.md for full documentation."
-echo ""
+printf "\n"
+header "Next steps"
+info "Dependencies verified. Directory creation and config scaffolding coming in next plan."
+printf "\n"
