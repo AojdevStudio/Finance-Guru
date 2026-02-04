@@ -153,8 +153,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Dependency checker with fail-fast behavior and --check-deps-only flag
-- [ ] 02-02-PLAN.md -- Setup orchestration restructure with idempotent directory creation and config scaffolding
+- [ ] 02-01-PLAN.md -- Rewrite setup.sh: dependency checker, OS detection, color output, CLI args, --check-deps-only, auto-install prompts (SETUP-01, SETUP-03)
+- [ ] 02-02-PLAN.md -- Directory creation, config scaffolding, .setup-progress tracking, idempotent re-runs, integration test update (ONBD-05, ONBD-06, SETUP-02)
 
 ---
 
