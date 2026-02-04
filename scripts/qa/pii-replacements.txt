@@ -1,0 +1,92 @@
+# =====================================================================
+# PII Replacement Expressions for git-filter-repo
+# Format: literal:PATTERN==>REPLACEMENT or regex:PATTERN==>REPLACEMENT
+# Applied to ALL blobs and commit messages via --replace-text/--replace-message
+#
+# ORDERING: More specific (longer) patterns are listed before less specific
+# patterns within each category to prevent partial match conflicts.
+# git-filter-repo applies replacements sequentially.
+# =====================================================================
+
+# === CRITICAL: API Tokens ===
+# Bright Data API token committed in .mcp.json (64 hex chars)
+literal:9424526a719032acbe090cc883accedb1b7eb167e89f855d78a7a0fec0aaf441==>REDACTED_API_TOKEN
+
+# === CRITICAL: Account Numbers ===
+# Fidelity brokerage account number (exact match)
+literal:Z05724592==>REDACTED_ACCOUNT
+# Catch any similar Fidelity-style account number patterns
+regex:Z0\d{7,}==>REDACTED_ACCOUNT
+
+# === HIGH: Google Sheets Spreadsheet ID ===
+# 44-character spreadsheet ID from portfolio tracker
+literal:1HtHRP3CbnOePb8RQ0RwzFYOQxk0uWC6L8ZMJeQYfWk4==>REDACTED_SPREADSHEET_ID
+
+# === HIGH: LLC Names (longer patterns first) ===
+literal:KC Ventures Consulting Group LLC==>REDACTED_LLC
+literal:KC Ventures Consulting Group==>REDACTED_LLC
+literal:KC Ventures==>REDACTED_LLC
+literal:MaryFinds LLC==>REDACTED_LLC
+literal:MaryFinds==>REDACTED_LLC
+
+# === MEDIUM: Employer Names ===
+# Avanade - unique enough for global replacement
+literal:Avanade==>REDACTED_EMPLOYER
+# CBN - context-specific ONLY (3 chars, blanket replacement causes collateral damage)
+# Longer CBN patterns first
+literal:CBN 401(K) PLAN==>REDACTED_EMPLOYER 401(K) PLAN
+literal:CBN 401(k) Plan==>REDACTED_EMPLOYER 401(k) Plan
+literal:CBN 401(k)==>REDACTED_EMPLOYER 401(k)
+literal:CBN 401(K)==>REDACTED_EMPLOYER 401(K)
+literal:CBN 401k==>REDACTED_EMPLOYER 401k
+
+# === HIGH: Personal Names (longer patterns first) ===
+literal:Ossie Irondi==>REDACTED_NAME
+literal:Irondi==>REDACTED_NAME
+literal:Ossie==>REDACTED_NAME
+
+# === HIGH: Email Addresses (full email before domain parts) ===
+literal:admin@kamdental.com==>redacted@example.com
+literal:admin@unifiedental.com==>redacted@example.com
+
+# === MEDIUM: Domain Names (with TLD before without) ===
+literal:kamdental.com==>example.com
+literal:unifiedental.com==>example.com
+literal:kamdental==>redacted_domain
+literal:unifiedental==>redacted_domain
+
+# === MEDIUM: GitHub Identity ===
+# GitHub username linking to personal identity (102 occurrences in file content)
+literal:AojdevStudio==>FinanceGuruDev
+literal:AOJDevStudio==>FinanceGuruDev
+
+# === MEDIUM: Financial Amounts ===
+# Mortgage balance - formatted variants (most specific first)
+literal:$365,139.76==>REDACTED_AMOUNT
+literal:365,139.76==>REDACTED_AMOUNT
+literal:365139.76==>REDACTED_AMOUNT
+# Portfolio total value - from margin analysis logs
+literal:$228,809.41==>REDACTED_AMOUNT
+literal:228,809.41==>REDACTED_AMOUNT
+literal:228809.41==>REDACTED_AMOUNT
+# Brokerage value
+literal:$192,000==>REDACTED_AMOUNT
+literal:192,000==>REDACTED_AMOUNT
+literal:192000==>REDACTED_AMOUNT
+# Margin balance - from portfolio/margin reports
+literal:$2,992.70==>REDACTED_AMOUNT
+literal:2,992.70==>REDACTED_AMOUNT
+literal:2992.70==>REDACTED_AMOUNT
+# Other financial amounts from user-profile and margin data
+literal:2191.14==>REDACTED_AMOUNT
+literal:1712.68==>REDACTED_AMOUNT
+
+# === HIGH: File path patterns with account numbers ===
+regex:Balances_for_Account_Z\d+==>Balances_for_Account_REDACTED
+regex:History_for_Account_Z\d+==>History_for_Account_REDACTED
+regex:Portfolio_Positions_\w+-\d+-\d+\.csv==>Portfolio_Positions_REDACTED.csv
+
+# === MEDIUM: OS-level user paths ===
+# macOS username in file paths (/Users/ossieirondi/...)
+# Case-sensitive: only matches lowercase username, not "Ossie" or "Irondi"
+literal:ossieirondi==>redacted_user
