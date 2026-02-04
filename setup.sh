@@ -162,10 +162,13 @@ prompt_install() {
     return 1
   fi
 
-  # Skip auto-install for multiline/instructional strings (not executable)
-  if [[ "$install_cmd" == *$'\n'* ]]; then
+  # Skip auto-install for non-executable strings (multiline instructions,
+  # manual URLs, or instructional text that would fail under eval)
+  if [[ "$install_cmd" == *$'\n'* ]] || [[ "$install_cmd" =~ ^(Visit|Install|See|Go\ to) ]]; then
     info "$dep_name requires manual installation:"
-    printf "  %s\n" "$install_cmd"
+    printf "%s\n" "$install_cmd" | while IFS= read -r line; do
+      printf "    %s\n" "$line"
+    done
     return 1
   fi
 
