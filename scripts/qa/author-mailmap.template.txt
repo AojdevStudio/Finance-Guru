@@ -9,10 +9,12 @@
 # =====================================================================
 
 # Remap old identities to canonical project identity
-Finance Guru Developer <dev@example.com> <OLD_USERNAME> <OLD_EMAIL_1>
-Finance Guru Developer <dev@example.com> <OLD_USERNAME> <OLD_EMAIL_2>
-Finance Guru Developer <dev@example.com> <REAL_NAME> <OLD_EMAIL_1>
-Finance Guru Developer <dev@example.com> <REAL_NAME> <OLD_EMAIL_2>
+# Replace OLD_USERNAME, REAL_NAME, and email addresses with actual values
+# Keep angle brackets around emails — mailmap format requires them
+Finance Guru Developer <dev@example.com> OLD_USERNAME <old-email-1@example.com>
+Finance Guru Developer <dev@example.com> OLD_USERNAME <old-email-2@example.com>
+Finance Guru Developer <dev@example.com> Real Name <old-email-1@example.com>
+Finance Guru Developer <dev@example.com> Real Name <old-email-2@example.com>
 
 # Note: The following identities are intentionally NOT remapped:
 # - Claude <noreply@anthropic.com> (co-author, safe to keep)
