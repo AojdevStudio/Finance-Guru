@@ -5,32 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 2 - Setup Automation & Dependency Checking
+**Current focus:** Phase 2 complete -- Setup Automation & Dependency Checking
 
 ## Current Position
 
 Phase: 2 of 12 (Setup Automation & Dependency Checking)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-04 -- Completed 02-01-PLAN.md
+Plan: 2 of 2 in current phase (PHASE COMPLETE)
+Status: Phase complete
+Last activity: 2026-02-04 -- Completed 02-02-PLAN.md
 
-Progress: [█░░░░░░░░░░░░░░░░░░░] 3%
+Progress: [██░░░░░░░░░░░░░░░░░░] 6%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 6 min
-- Total execution time: 0.1 hours
+- Total plans completed: 2
+- Average duration: 9 min
+- Total execution time: 0.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 02-setup-automation | 1/2 | 6 min | 6 min |
+| 02-setup-automation | 2/2 | 17 min | 9 min |
 
 **Recent Trend:**
-- Last 5 plans: 6 min
+- Last 5 plans: 6 min, 11 min
 - Trend: --
 
 *Updated after each plan completion*
@@ -49,6 +49,9 @@ Recent decisions affecting current work:
 - [Roadmap]: Phase 5 (Agent Readiness Hardening) added at end of M1 based on agent-readiness-report (2026-02-02). L1→L2 quick wins: ruff linter, expanded pre-commit hooks, issue/PR templates, test coverage thresholds, CODEOWNERS.
 - [02-01]: Used sort -V for version comparison (avoids Python 4.x false negative from arithmetic)
 - [02-01]: check-all-then-fail pattern with set -e + || guards for dependency checking
+- [02-02]: File-level idempotency only for setup.sh; field-level YAML merging deferred to Phase 3 onboarding wizard
+- [02-02]: verify_directory_structure runs on every execution path (first run and re-run) to catch missing subdirs
+- [02-02]: user-profile.yaml template at fin-guru/data/ (tracked in git as template, Phase 3 will populate)
 
 ### Pending Todos
 
@@ -62,7 +65,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-02-04T03:46:21Z
+Stopped at: Completed 02-02-PLAN.md (Phase 2 complete)
 Resume file: None
-Next action: /gsd:execute-phase 2 (02-02-PLAN.md remaining)
+Next action: /gsd:plan-phase 3 (Onboarding Wizard -- depends on Phase 2 which is now complete)
