@@ -5,32 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 1 - Git History Scrub & Security Foundation
+**Current focus:** Phase 2 - Setup Automation & Dependency Checking
 
 ## Current Position
 
-Phase: 1 of 12 (Git History Scrub & Security Foundation)
-Plan: 0 of 3 in current phase
-Status: Planned (3 plans in 3 waves, verified)
-Last activity: 2026-02-03 -- Phase 5 (Agent Readiness Hardening) added to M1. Phases 5-11 renumbered to 6-12. All 12 phases now planned.
+Phase: 2 of 12 (Setup Automation & Dependency Checking)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-04 -- Completed 02-01-PLAN.md
 
-Progress: [                    ] 0%
+Progress: [█░░░░░░░░░░░░░░░░░░░] 3%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: --
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 6 min
+- Total execution time: 0.1 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 02-setup-automation | 1/2 | 6 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: --
+- Last 5 plans: 6 min
 - Trend: --
 
 *Updated after each plan completion*
@@ -47,6 +47,8 @@ Recent decisions affecting current work:
 - [Roadmap]: Phase 9 (SQQQ comparison) isolated due to highest-risk calculation (was Phase 8, renumbered)
 - [Roadmap]: Phases 1, 9, 10 flagged for /gsd:research-phase before planning (renumbered from 1, 8, 9)
 - [Roadmap]: Phase 5 (Agent Readiness Hardening) added at end of M1 based on agent-readiness-report (2026-02-02). L1→L2 quick wins: ruff linter, expanded pre-commit hooks, issue/PR templates, test coverage thresholds, CODEOWNERS.
+- [02-01]: Used sort -V for version comparison (avoids Python 4.x false negative from arithmetic)
+- [02-01]: check-all-then-fail pattern with set -e + || guards for dependency checking
 
 ### Pending Todos
 
@@ -60,7 +62,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-02
-Stopped at: Phase 10 planning complete
+Last session: 2026-02-04
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
-Next action: /gsd:execute-phase 1
+Next action: /gsd:execute-phase 2 (02-02-PLAN.md remaining)
