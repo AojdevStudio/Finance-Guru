@@ -1,3 +1,9 @@
+---
+title: "Contributing to Finance Guru"
+description: "Development guidelines, code standards, and contribution workflow for Finance Guru"
+category: root
+---
+
 # Contributing to Finance Guru
 
 This is a private family office system. These guidelines are for the primary developer and any collaborators.
@@ -320,7 +326,7 @@ uv run pytest --cov=src --cov-report=html
 When adding features, update:
 
 1. **CLAUDE.md** - Tool reference, agent-tool matrix
-2. **docs/api.md** - CLI usage examples
+2. **docs/reference/api.md** - CLI usage examples
 3. **README.md** - If it affects quick start or architecture
 
 ## Questions?

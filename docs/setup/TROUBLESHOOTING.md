@@ -1,3 +1,9 @@
+---
+title: "Troubleshooting Guide"
+description: "Comprehensive troubleshooting for installation, configuration, and operational issues"
+category: setup
+---
+
 # Troubleshooting Guide
 
 Comprehensive troubleshooting for Finance Guru™ installation, configuration, and operational issues.

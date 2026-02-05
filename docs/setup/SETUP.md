@@ -1,3 +1,9 @@
+---
+title: "Finance Guru Setup Guide"
+description: "Complete installation and configuration guide for Finance Guru"
+category: setup
+---
+
 # Finance Guru™ Setup Guide
 
 Complete installation and configuration guide for Finance Guru™ - your AI-powered private family office.

@@ -1,3 +1,9 @@
+---
+title: "CLI Tools API Reference"
+description: "Complete reference for all Finance Guru Python CLI tools"
+category: reference
+---
+
 # CLI Tools API Reference
 
 Finance Guru provides 12 production-ready CLI tools for financial analysis. All tools follow a consistent 3-layer architecture:

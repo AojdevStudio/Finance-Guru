@@ -1,3 +1,9 @@
+---
+title: "Required CSV Uploads"
+description: "Complete reference for all CSV files required by Finance Guru system"
+category: guides
+---
+
 # Required CSV Uploads
 
 Complete reference for all CSV files required by Finance Guru™ system.

@@ -1,3 +1,9 @@
+---
+title: "Codex Full Review Report"
+description: "Comprehensive code review of Finance Guru system using OpenAI Codex"
+category: reports
+---
+
 # Codex Full Review Report
 
 **Date**: 2026-01-16

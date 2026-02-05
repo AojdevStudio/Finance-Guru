@@ -1,3 +1,9 @@
+---
+title: "Available Tools Reference"
+description: "Quick reference for all available CLI tools and their capabilities"
+category: reference
+---
+
 ### Available Tools
 
 #### Risk Metrics Calculator (✅ Production Ready)

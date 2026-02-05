@@ -1,3 +1,9 @@
+---
+title: "Pre-Codex Validation Report"
+description: "Validation checklist results before Codex full review"
+category: reports
+---
+
 # Pre-Codex Validation Report
 
 **Date**: 2026-01-16

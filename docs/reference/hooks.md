@@ -1,3 +1,9 @@
+---
+title: "Hooks System Documentation"
+description: "How Claude Code hooks enable automatic context loading and skill activation"
+category: reference
+---
+
 # Hooks System Documentation
 
 Finance Guru uses Claude Code hooks to enable automatic context loading, skill activation, and validation. This document explains how the hooks system works and how to customize it.

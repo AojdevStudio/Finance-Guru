@@ -1,3 +1,9 @@
+---
+title: "API Key Acquisition Guide"
+description: "How to obtain and configure API keys for Finance Guru integrations"
+category: setup
+---
+
 # API Key Acquisition Guide
 
 Complete guide for obtaining and configuring API keys for Finance Guru™.

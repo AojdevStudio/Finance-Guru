@@ -1,3 +1,9 @@
+---
+title: "Onboarding Flow Evaluation"
+description: "Assessment of onboarding implementation vs specification"
+category: reports
+---
+
 # Finance Guru Onboarding Flow Evaluation
 
 **Date**: 2026-01-16

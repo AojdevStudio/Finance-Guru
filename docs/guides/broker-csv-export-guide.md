@@ -1,3 +1,9 @@
+---
+title: "Broker CSV Export Guide"
+description: "How to export portfolio data from Fidelity, Schwab, Vanguard and other brokers"
+category: guides
+---
+
 # Broker CSV Export Guide
 
 This guide explains how to export your portfolio data from various brokerages for use with Finance Guru.

@@ -1,3 +1,9 @@
+---
+title: "Manual Test Checklist"
+description: "Comprehensive manual testing checklist for Finance Guru system validation"
+category: reports
+---
+
 # Manual Test Checklist
 
 > **Purpose**: Comprehensive manual testing checklist for Finance Guru™ system validation
