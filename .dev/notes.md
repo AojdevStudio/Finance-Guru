@@ -79,3 +79,7 @@ None of these block merge. They’re plan-level inconsistencies that get resolve
 **Next:** Wait for checks to pass, then merge. You can resume Codex with `codex resume` for follow-up analysis.
 
 **Obi:** PR #8 is now mergeable. Checks are running — once they pass, it’s ready to merge. Codex found only cosmetic plan-doc inconsistencies, nothing blocking.
+
+## Current Remote Sessions
+
+I'm planning phase five on remote. Looks like phase four didn't take on my wife's pod account. Phase three had an issue and that was the execution phase, so I still need to execute phase three. Phase four has already been planned, but I'm not sure.
