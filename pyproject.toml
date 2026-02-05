@@ -11,6 +11,7 @@ dependencies = [
     "numpy>=2.3.3",
     "openpyxl>=3.1.5",
     "pandas>=2.3.2",
+    "protobuf>=6.33.5",
     "plotly>=6.3.0",
     "pydantic>=2.10.6",
     "python-dotenv>=1.1.1",
