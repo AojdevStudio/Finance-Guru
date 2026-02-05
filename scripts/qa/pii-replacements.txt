@@ -16,7 +16,7 @@ literal:9424526a719032acbe090cc883accedb1b7eb167e89f855d78a7a0fec0aaf441==>REDAC
 # Fidelity brokerage account number (exact match)
 literal:Z05724592==>REDACTED_ACCOUNT
 # Catch any similar Fidelity-style account number patterns
-regex:Z0\d{7,}==>REDACTED_ACCOUNT
+regex:\bZ0\d{7,}\b==>REDACTED_ACCOUNT
 # Vanguard IRA account numbers (found in PITFALLS.md and onboarding specs)
 literal:39321600==>REDACTED_ACCOUNT
 literal:35407271==>REDACTED_ACCOUNT

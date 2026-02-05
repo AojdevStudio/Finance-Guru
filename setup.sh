@@ -24,14 +24,12 @@ if [ -t 1 ] && [ "${TERM:-dumb}" != "dumb" ]; then
   GREEN='\033[0;32m'
   RED='\033[0;31m'
   YELLOW='\033[1;33m'
-  BLUE='\033[0;34m'
   BOLD='\033[1m'
   NC='\033[0m'
 else
   GREEN=''
   RED=''
   YELLOW=''
-  BLUE=''
   BOLD=''
   NC=''
 fi
@@ -410,7 +408,7 @@ scaffold_file() {
 
   if [ -f "$target" ]; then
     if [ -t 0 ]; then
-      printf "  %s already exists. Overwrite? [y/N] " "$basename_target"
+      printf "  %s (%s) already exists. Overwrite? [y/N] " "$basename_target" "$description"
       read -r response
       if [[ "$response" =~ ^[Yy]$ ]]; then
         return 0  # Caller writes content
