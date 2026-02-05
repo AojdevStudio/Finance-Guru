@@ -24,14 +24,12 @@ if [ -t 1 ] && [ "${TERM:-dumb}" != "dumb" ]; then
   GREEN='\033[0;32m'
   RED='\033[0;31m'
   YELLOW='\033[1;33m'
-  BLUE='\033[0;34m'
   BOLD='\033[1m'
   NC='\033[0m'
 else
   GREEN=''
   RED=''
   YELLOW=''
-  BLUE=''
   BOLD=''
   NC=''
 fi
@@ -214,13 +212,15 @@ check_dependency() {
     return 1
   fi
 
-  # Extract version
-  local found_version=""
+  # Extract version (sentinel "0.0" ensures predictable behavior under set -e)
+  local found_version="0.0"
   case "$cmd" in
-    python3) found_version=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1) ;;
-    uv)      found_version=$(uv --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) ;;
-    bun)     found_version=$(bun --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) ;;
+    python3) found_version=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1) || found_version="0.0" ;;
+    uv)      found_version=$(uv --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) || found_version="0.0" ;;
+    bun)     found_version=$(bun --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) || found_version="0.0" ;;
   esac
+  # Ensure fallback if extraction returned empty
+  [ -z "$found_version" ] && found_version="0.0"
 
   # Check minimum version if specified
   if [ -n "$min_version" ] && [ -n "$found_version" ]; then
@@ -408,7 +408,7 @@ scaffold_file() {
 
   if [ -f "$target" ]; then
     if [ -t 0 ]; then
-      printf "  %s already exists. Overwrite? [y/N] " "$basename_target"
+      printf "  %s (%s) already exists. Overwrite? [y/N] " "$basename_target" "$description"
       read -r response
       if [[ "$response" =~ ^[Yy]$ ]]; then
         return 0  # Caller writes content
