@@ -1415,8 +1415,8 @@ If your issue isn't covered here:
 ### 1. Check Other Documentation
 - [SETUP.md](SETUP.md) - Installation guide
 - [api-keys.md](api-keys.md) - API key configuration
-- [hooks.md](hooks.md) - Hook system details
-- [api.md](api.md) - API reference
+- [hooks.md](../reference/hooks.md) - Hook system details
+- [api.md](../reference/api.md) - API reference
 
 ### 2. Search GitHub Issues
 - Visit: [GitHub Issues](https://github.com/YOUR-USERNAME/family-office/issues)

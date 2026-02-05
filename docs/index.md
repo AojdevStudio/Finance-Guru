@@ -1,27 +1,70 @@
+---
+title: "Finance Guru Documentation"
+description: "Documentation hub for Finance Guru - your AI-powered private family office"
+category: root
+---
+
 # Finance Guru Documentation
 
 Welcome to the Finance Guru documentation. This hub provides navigation to all technical documentation for the system.
+
+## Setup
+
+Installation, configuration, and troubleshooting guides.
+
+| Document | Description |
+|----------|-------------|
+| [Setup Guide](setup/SETUP.md) | Complete installation and configuration guide |
+| [API Keys Guide](setup/api-keys.md) | How to obtain and configure API keys |
+| [Troubleshooting](setup/TROUBLESHOOTING.md) | Comprehensive troubleshooting guide |
+
+## Guides
+
+User walkthroughs and how-to guides.
+
+| Document | Description |
+|----------|-------------|
+| [Broker CSV Export Guide](guides/broker-csv-export-guide.md) | How to export CSVs from Fidelity, Schwab, Vanguard, etc. |
+| [Required CSV Uploads](guides/required-csv-uploads.md) | Complete guide to broker CSV formats and upload workflow |
+
+## Reference
+
+Technical reference documentation.
+
+| Document | Description |
+|----------|-------------|
+| [API Reference](reference/api.md) | CLI tools documentation |
+| [Hooks System](reference/hooks.md) | How hooks power auto-activation |
+| [Tools Reference](reference/tools.md) | Quick reference for available tools |
+
+## Reports
+
+Evaluation and review reports.
+
+| Document | Description |
+|----------|-------------|
+| [Codex Full Review Report](reports/codex-full-review-report.md) | Comprehensive code review using OpenAI Codex |
+| [Onboarding Flow Evaluation](reports/onboarding-flow-evaluation.md) | Assessment of onboarding implementation |
+| [Pre-Codex Validation Report](reports/pre-codex-validation-report.md) | Validation checklist results |
+| [Manual Test Checklist](reports/MANUAL_TEST_CHECKLIST.md) | Comprehensive manual testing checklist |
+
+## Resources
+
+Additional resources and data files.
+
+| Resource | Description |
+|----------|-------------|
+| [CSV Mappings](csv-mappings/) | CSV column mapping configurations |
+| [Images](images/) | Architecture diagrams and screenshots |
+| [Solutions](solutions/) | Problem-specific solution documents |
 
 ## Quick Links
 
 | Document | Description |
 |----------|-------------|
 | [README](../README.md) | Project overview, quick start, architecture |
-| [Setup Guide](SETUP.md) | **Complete installation and configuration guide** |
-| [API Keys Guide](api-keys.md) | **How to obtain and configure API keys** |
-| [Required CSV Uploads](required-csv-uploads.md) | **Complete guide to broker CSV formats and upload workflow** |
-| [Broker CSV Export Guide](broker-csv-export-guide.md) | **How to export CSVs from Fidelity, Schwab, Vanguard, etc.** |
-| [Troubleshooting](TROUBLESHOOTING.md) | **Comprehensive troubleshooting guide** |
-| [API Reference](api.md) | CLI tools documentation |
-| [Hooks System](hooks.md) | How hooks power auto-activation |
-| [Contributing](contributing.md) | How to contribute |
-
-## Finance Guru Module Docs
-
-| Document | Description |
-|----------|-------------|
+| [CONTRIBUTING](CONTRIBUTING.md) | How to contribute |
 | [Finance Guru Module](../fin-guru/README.md) | Module configuration and agents |
-| [fin-guru-private/](../fin-guru-private/) | Your personal strategies and analysis (created by setup.sh) |
 
 ## Architecture Overview
 
@@ -102,9 +145,11 @@ family-office/
 │       └── skill-rules.json # Activation rules
 ├── docs/                # Public documentation (tracked in git)
 │   ├── index.md         # This file
-│   ├── api.md           # CLI tools reference
-│   ├── hooks.md         # Hooks documentation
-│   └── contributing.md  # Contribution guide
+│   ├── CONTRIBUTING.md  # Contribution guide
+│   ├── setup/           # Installation and configuration
+│   ├── guides/          # User walkthroughs
+│   ├── reference/       # Technical reference
+│   └── reports/         # Evaluation reports
 ├── fin-guru/            # Agent system module
 │   ├── agents/          # Agent definitions
 │   ├── config.yaml      # Module configuration
@@ -123,12 +168,12 @@ family-office/
 ## Getting Help
 
 1. **README.md** - Start here for setup and quick start
-2. **api.md** - CLI tool usage and examples
-3. **hooks.md** - Understanding the hooks system
+2. **reference/api.md** - CLI tool usage and examples
+3. **reference/hooks.md** - Understanding the hooks system
 4. **fin-guru/INDEX.md** - Active strategies and analysis
 
 ## Version
 
 - **Finance Guru**: v2.0.0
 - **BMAD-CORE**: v6.0.0
-- **Last Updated**: 2026-01-10
+- **Last Updated**: 2026-02-05

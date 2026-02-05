@@ -884,7 +884,7 @@ If all checks pass, you're ready to run onboarding!
 2. ✅ **Import portfolio data**: Export CSV from Fidelity → `notebooks/updates/`
 3. ✅ **Sync to Google Sheets** (optional): Use `/portfolio-sync` skill
 4. ✅ **Run first analysis**: Try "*quant Analyze TSLA risk profile"
-5. ✅ **Review documentation**: See [docs/index.md](index.md)
+5. ✅ **Review documentation**: See [docs/index.md](../index.md)
 
 ---
 
@@ -892,11 +892,11 @@ If all checks pass, you're ready to run onboarding!
 
 | Resource | Link |
 |----------|------|
-| **Main README** | [README.md](../README.md) |
-| **API Reference** | [docs/api.md](api.md) |
-| **Hooks Documentation** | [docs/hooks.md](hooks.md) |
-| **Finance Guru Module** | [fin-guru/README.md](../fin-guru/README.md) |
-| **Contributing Guide** | [docs/contributing.md](contributing.md) |
+| **Main README** | [README.md](../../README.md) |
+| **API Reference** | [api.md](../reference/api.md) |
+| **Hooks Documentation** | [hooks.md](../reference/hooks.md) |
+| **Finance Guru Module** | [fin-guru/README.md](../../fin-guru/README.md) |
+| **Contributing Guide** | [CONTRIBUTING.md](../CONTRIBUTING.md) |
 
 ---
 
@@ -905,7 +905,7 @@ If all checks pass, you're ready to run onboarding!
 If you encounter issues not covered here:
 
 1. Check [Troubleshooting](#troubleshooting) section above
-2. Review [docs/index.md](index.md) for architecture details
+2. Review [docs/index.md](../index.md) for architecture details
 3. Search issues: [GitHub Issues](https://github.com/YOUR-USERNAME/family-office/issues)
 4. Open a new issue with:
    - Error message

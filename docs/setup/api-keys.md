@@ -732,10 +732,10 @@ load_dotenv(f".env.{env}")
 
 | Resource | Link |
 |----------|------|
-| **Setup Guide** | [docs/SETUP.md](SETUP.md) |
-| **API Reference** | [docs/api.md](api.md) |
-| **Hooks Documentation** | [docs/hooks.md](hooks.md) |
-| **Main README** | [README.md](../README.md) |
+| **Setup Guide** | [SETUP.md](SETUP.md) |
+| **API Reference** | [api.md](../reference/api.md) |
+| **Hooks Documentation** | [hooks.md](../reference/hooks.md) |
+| **Main README** | [README.md](../../README.md) |
 
 ---
 
@@ -745,7 +745,7 @@ If you encounter API key issues:
 
 1. Check this guide's [Troubleshooting](#troubleshooting) section
 2. Verify API provider's status page (e.g., [finnhub.io/status](https://finnhub.io/status))
-3. Review [docs/SETUP.md](SETUP.md) for general setup issues
+3. Review [SETUP.md](SETUP.md) for general setup issues
 4. Open an issue: [GitHub Issues](https://github.com/YOUR-USERNAME/family-office/issues)
 
 ---
