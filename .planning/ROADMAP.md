@@ -219,18 +219,19 @@ Plans:
   4. `pytest --cov=src --cov-fail-under=80` enforces minimum 80% coverage on the src/ directory
   5. CODEOWNERS file exists mapping src/ and tests/ to the repository owner
 
-**Plans**: 9 plans
+**Plans**: 10 plans
 
 Plans:
 - [ ] 05-01-PLAN.md -- Ruff linter configuration and lint error fixes (84 errors to zero)
 - [ ] 05-02-PLAN.md -- GitHub issue templates, PR template, and CODEOWNERS
-- [ ] 05-03-PLAN.md -- Mypy error fixes (50 errors) and pre-commit hook setup (ruff + mypy + gitleaks)
-- [ ] 05-04-PLAN.md -- Test coverage: utility calculators (volatility, momentum, moving_averages, market_data)
-- [ ] 05-05-PLAN.md -- Test coverage: analysis and strategy calculators (correlation, risk_metrics, backtester, optimizer)
-- [ ] 05-06-PLAN.md -- Test coverage: data validation, screener, and uncovered Pydantic models
-- [ ] 05-07-PLAN.md -- Test coverage: utility CLI scripts (momentum, volatility, moving_averages, yaml_generator, input_validation)
-- [ ] 05-08-PLAN.md -- Test coverage: analysis and strategy CLI scripts (backtester, optimizer, correlation, risk_metrics, itc_risk, screener, data_validator)
-- [ ] 05-09-PLAN.md -- Coverage threshold enforcement (pyproject.toml --cov-fail-under=80) and final Phase 5 verification
+- [ ] 05-03-PLAN.md -- Mypy type error fixes (50 errors across 16 files to zero)
+- [ ] 05-04-PLAN.md -- Pre-commit hook setup (ruff + mypy + gitleaks)
+- [ ] 05-05-PLAN.md -- Test coverage: utility calculators (volatility, momentum, moving_averages, market_data)
+- [ ] 05-06-PLAN.md -- Test coverage: analysis and strategy calculators (correlation, risk_metrics, backtester, optimizer)
+- [ ] 05-07-PLAN.md -- Test coverage: data validation, screener, and uncovered Pydantic models
+- [ ] 05-08-PLAN.md -- Test coverage: utility CLI scripts (momentum, volatility, moving_averages, yaml_generator, input_validation)
+- [ ] 05-09-PLAN.md -- Test coverage: analysis and strategy CLI scripts (backtester, optimizer, correlation, risk_metrics, itc_risk, screener, data_validator)
+- [ ] 05-10-PLAN.md -- Coverage threshold enforcement (pyproject.toml --cov-fail-under=80) and final Phase 5 verification
 
 ---
 
@@ -529,7 +530,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 2. Setup Automation | M1 | 2/2 | Complete | 2026-02-04 |
 | 3. Onboarding Wizard | M1 | 0/2 | Planned | - |
 | 4. Polish & Hooks | M1 | 0/2 | Planned | - |
-| 5. Agent Readiness | M1 | 0/9 | Planned | - |
+| 5. Agent Readiness | M1 | 0/10 | Planned | - |
 | 6. Config & Models | M2 | 0/3 | Planned | - |
 | 7. Total Return | M2 | 0/2 | Planned | - |
 | 8. Tracker & Sizer | M2 | 0/6 | Planned | - |
