@@ -163,9 +163,9 @@ function processHook(inputData: string) {
     
     // File paths (all project-specific)
     const skillPath = join(projectRoot, '.claude/skills/fin-core/SKILL.md');
-    const configPath = join(projectRoot, 'fin-guru/config.yaml');
-    const profilePath = join(projectRoot, 'fin-guru/data/user-profile.yaml');
-    const systemContextPath = join(projectRoot, 'fin-guru/data/system-context.md');
+    const configPath = join(projectRoot, 'fin-guru-private/fin-guru/config.yaml');
+    const profilePath = join(projectRoot, 'fin-guru-private/fin-guru/data/user-profile.yaml');
+    const systemContextPath = join(projectRoot, 'fin-guru-private/fin-guru/data/system-context.md');
     const updatesDir = join(projectRoot, 'notebooks/updates');
     
     // Load core files
