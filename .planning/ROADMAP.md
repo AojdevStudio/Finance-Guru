@@ -33,7 +33,7 @@ Phase 1 rewrites git history (`git filter-repo`), so it must land directly on `m
 
 - [ ] **Phase 1: Git History Scrub & Security Foundation** - Remove all PII from git history and prevent future leaks
 - [ ] **Phase 2: Setup Automation & Dependency Checking** - First-run setup script that works on any fresh machine
-- [ ] **Phase 3: Onboarding Wizard** - Interactive CLI that collects financial profile and generates config files
+- [x] **Phase 3: Onboarding Wizard** - Interactive CLI that collects financial profile and generates config files
 - [ ] **Phase 4: Onboarding Polish & Hook Refactoring** - Save/resume, regression testing, and Bun hook ports
 - [ ] **Phase 5: Agent Readiness Hardening** - Linter, pre-commit hooks, issue/PR templates, and test coverage thresholds
 - [ ] **Phase 6: Config Loader & Shared Hedging Models** - Foundation layer all four hedging CLIs depend on
@@ -519,7 +519,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 |-------|-----------|----------------|--------|-----------|
 | 1. Git Scrub & Security | M1 | 0/3 | Planned | - |
 | 2. Setup Automation | M1 | 2/2 | Complete | 2026-02-04 |
-| 3. Onboarding Wizard | M1 | 0/2 | Planned | - |
+| 3. Onboarding Wizard | M1 | 2/2 | Complete | 2026-02-05 |
 | 4. Polish & Hooks | M1 | 0/2 | Planned | - |
 | 5. Agent Readiness | M1 | 0/0 | Planned | - |
 | 6. Config & Models | M2 | 0/3 | Planned | - |

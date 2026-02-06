@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 3 in progress -- Onboarding Wizard
+**Current focus:** Phase 3 complete -- Onboarding Wizard
 
 ## Current Position
 
@@ -86,4 +86,4 @@ None yet.
 Last session: 2026-02-06T01:13:35Z
 Stopped at: Completed 03-02-PLAN.md (Phase 3 complete)
 Resume file: None
-Next action: Phase 4 (save/resume) or next milestone phase
+Next action: /gsd:discuss-phase 4 (Onboarding Polish & Hook Refactoring -- depends on Phase 3 which is now complete)

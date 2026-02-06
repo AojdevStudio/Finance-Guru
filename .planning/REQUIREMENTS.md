@@ -36,15 +36,15 @@
 
 ### Onboarding Wizard
 
-| ID | Requirement | Scope | Phase | Notes |
-|----|-------------|-------|-------|-------|
-| ONBD-01 | Interactive CLI onboarding wizard collects user financial profile | v1 | 3 | questionary library, 8 sections: liquid assets, investments, cash flow, debt, preferences, broker, env, summary |
-| ONBD-02 | Input validation handles dollar amounts, percentages, enums, dates with retry | v1 | 3 | Pydantic validators, 3 retries then skip option |
-| ONBD-04 | YAML generator populates user-profile.template.yaml from answers | v1 | 3 | Template uses {{variable}} placeholders |
-| ONBD-07 | CLAUDE.md generated from template with {user_name}, {project-root} variables | v1 | 3 | Replace hardcoded values with template variables |
-| ONBD-08 | Interactive .env setup with optional API key collection | v1 | 3 | Alpha Vantage, ITC Risk, etc. — all optional |
-| ONBD-09 | MCP.json template generation with exa, perplexity, gdrive servers | v1 | 3 | Backup existing, generate fresh, show merge instructions |
-| ONBD-17 | Finance Guru agents work with generic user profile | v1 | 3 | Uses {user_name} not hardcoded names |
+| ID | Requirement | Scope | Phase | Status | Notes |
+|----|-------------|-------|-------|--------|-------|
+| ONBD-01 | Interactive CLI onboarding wizard collects user financial profile | v1 | 3 | Complete | questionary library, 8 sections: liquid assets, investments, cash flow, debt, preferences, broker, env, summary |
+| ONBD-02 | Input validation handles dollar amounts, percentages, enums, dates with retry | v1 | 3 | Complete | Pydantic validators, 3 retries then skip option, 25k/1.5M shorthand |
+| ONBD-04 | YAML generator populates user-profile.template.yaml from answers | v1 | 3 | Complete | Template uses {{variable}} placeholders, _safe_enum conversion |
+| ONBD-07 | CLAUDE.md generated from template with {user_name}, {project-root} variables | v1 | 3 | Complete | Replace hardcoded values with template variables, backup existing |
+| ONBD-08 | Interactive .env setup with optional API key collection | v1 | 3 | Complete | Alpha Vantage, BrightData — all optional, yfinance works without keys |
+| ONBD-09 | MCP.json template generation with exa, perplexity, gdrive servers | v1 | 3 | Complete | Backup existing, generate fresh, show merge instructions |
+| ONBD-17 | Finance Guru agents work with generic user profile | v1 | 3 | Complete | Hook reads from fin-guru-private/, {user_name} in all agent files |
 | ONBD-03 | Progress save/resume persists to .onboarding-progress.json | v1 | 4 | Resume after interruption, Ctrl+C safe via SIGINT handler |
 | ONBD-16 | All existing 365+ tests still pass after changes | v1 | 4 | No regressions from onboarding changes |
 
@@ -256,4 +256,4 @@
 | **11: Integration** | EXPL-07, EXPL-10, EXPL-12, EXPL-13 |
 
 ---
-*Last updated: 2026-02-04 (Phase 2 requirements marked Complete)*
+*Last updated: 2026-02-05 (Phase 3 requirements marked Complete)*
