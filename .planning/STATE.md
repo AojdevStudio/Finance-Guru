@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 2 complete -- Setup Automation & Dependency Checking
+**Current focus:** Phase 3 in progress -- Onboarding Wizard
 
 ## Current Position
 
-Phase: 2 of 12 (Setup Automation & Dependency Checking)
-Plan: 2 of 2 in current phase (PHASE COMPLETE)
-Status: Phase complete
-Last activity: 2026-02-04 -- Completed 02-02-PLAN.md
+Phase: 3 of 12 (Onboarding Wizard)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-05 -- Completed 03-01-PLAN.md
 
-Progress: [██░░░░░░░░░░░░░░░░░░] 6%
+Progress: [███░░░░░░░░░░░░░░░░░] 10%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: ~11 min
-- Total execution time: ~0.55 hours
+- Total plans completed: 4
+- Average duration: ~10 min
+- Total execution time: ~0.65 hours
 
 **By Phase:**
 
@@ -29,9 +29,10 @@ Progress: [██░░░░░░░░░░░░░░░░░░] 6%
 |-------|-------|-------|----------|
 | 01-git-scrub | 1/3 | ~15 min | ~15 min |
 | 02-setup-automation | 2/2 | 17 min | 9 min |
+| 03-onboarding-wizard | 1/2 | 6 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~15 min), 02-01 (6 min), 02-02 (11 min)
+- Last 5 plans: 01-01 (~15 min), 02-01 (6 min), 02-02 (11 min), 03-01 (6 min)
 - Trend: Accelerating
 
 *Updated after each plan completion*
@@ -56,6 +57,9 @@ Recent decisions affecting current work:
 - [02-02]: File-level idempotency only for setup.sh; field-level YAML merging deferred to Phase 3 onboarding wizard
 - [02-02]: verify_directory_structure runs on every execution path (first run and re-run) to catch missing subdirs
 - [02-02]: user-profile.yaml template at fin-guru/data/ (tracked in git as template, Phase 3 will populate)
+- [03-01]: State stores raw strings for enum fields; string-to-enum conversion deferred to Plan 02 convert_state_to_user_data
+- [03-01]: Percentages collected as human-friendly (4.5 for 4.5%) then divided by 100 for decimal storage
+- [03-01]: 25k/1.5M shorthand multipliers supported in currency parsing (usability win per CONTEXT.md)
 
 ### Pending Todos
 
@@ -75,7 +79,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T14:57:53Z
-Stopped at: Completed quick-001 (docs reorganization)
+Last session: 2026-02-06T00:58:38Z
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None
-Next action: /gsd:plan-phase 3 (Onboarding Wizard -- depends on Phase 2 which is now complete)
+Next action: /gsd:execute-phase 03-onboarding-wizard plan 02 (wizard CLI, convert_state_to_user_data, YAML generation)
