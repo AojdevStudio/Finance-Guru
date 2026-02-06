@@ -25,6 +25,7 @@ dependencies = [
     "urllib3>=2.6.3",
     "xlsxwriter>=3.2.9",
     "yfinance>=0.2.66",
+    "questionary>=2.1.1",
 ]
 
 [dependency-groups]
