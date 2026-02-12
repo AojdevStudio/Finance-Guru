@@ -34,7 +34,7 @@ Phase 1 rewrites git history (`git filter-repo`), so it must land directly on `m
 - [ ] **Phase 1: Git History Scrub & Security Foundation** - Remove all PII from git history and prevent future leaks
 - [ ] **Phase 2: Setup Automation & Dependency Checking** - First-run setup script that works on any fresh machine
 - [x] **Phase 3: Onboarding Wizard** - Interactive CLI that collects financial profile and generates config files
-- [ ] **Phase 4: Onboarding Polish & Hook Refactoring** - Save/resume, regression testing, and Bun hook ports
+- [x] **Phase 4: Onboarding Polish & Hook Refactoring** - Save/resume, regression testing, and Bun hook ports
 - [ ] **Phase 5: Agent Readiness Hardening** - Linter, pre-commit hooks, issue/PR templates, and test coverage thresholds
 - [ ] **Phase 6: Config Loader & Shared Hedging Models** - Foundation layer all four hedging CLIs depend on
 - [ ] **Phase 7: Total Return Calculator** - Price + dividend return CLI with DRIP modeling
@@ -199,8 +199,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Hook cleanup, settings.json update, dead .sh deletion, and Bun performance test suite (ONBD-10, ONBD-11, ONBD-12, ONBD-13)
-- [ ] 04-02-PLAN.md -- Onboarding save/resume with SIGINT handler, progress file, and full regression suite (ONBD-03, ONBD-16)
+- [x] 04-01-PLAN.md -- Hook cleanup, settings.json update, dead .sh deletion, and Bun performance test suite (ONBD-10, ONBD-11, ONBD-12, ONBD-13)
+- [x] 04-02-PLAN.md -- Onboarding save/resume with SIGINT handler, progress file, and full regression suite (ONBD-03, ONBD-16)
 
 ---
 
@@ -520,7 +520,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 1. Git Scrub & Security | M1 | 0/3 | Planned | - |
 | 2. Setup Automation | M1 | 2/2 | Complete | 2026-02-04 |
 | 3. Onboarding Wizard | M1 | 2/2 | Complete | 2026-02-05 |
-| 4. Polish & Hooks | M1 | 0/2 | Planned | - |
+| 4. Polish & Hooks | M1 | 2/2 | Complete | 2026-02-12 |
 | 5. Agent Readiness | M1 | 0/0 | Planned | - |
 | 6. Config & Models | M2 | 0/3 | Planned | - |
 | 7. Total Return | M2 | 0/2 | Planned | - |

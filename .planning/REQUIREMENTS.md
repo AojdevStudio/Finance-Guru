@@ -45,17 +45,17 @@
 | ONBD-08 | Interactive .env setup with optional API key collection | v1 | 3 | Complete | Alpha Vantage, BrightData — all optional, yfinance works without keys |
 | ONBD-09 | MCP.json template generation with exa, perplexity, gdrive servers | v1 | 3 | Complete | Backup existing, generate fresh, show merge instructions |
 | ONBD-17 | Finance Guru agents work with generic user profile | v1 | 3 | Complete | Hook reads from fin-guru-private/, {user_name} in all agent files |
-| ONBD-03 | Progress save/resume persists to .onboarding-progress.json | v1 | 4 | Resume after interruption, Ctrl+C safe via SIGINT handler |
-| ONBD-16 | All existing 365+ tests still pass after changes | v1 | 4 | No regressions from onboarding changes |
+| ONBD-03 | Progress save/resume persists to .onboarding-progress.json | v1 | 4 | Complete | Resume after interruption, Ctrl+C safe via SIGINT handler |
+| ONBD-16 | All existing 365+ tests still pass after changes | v1 | 4 | Complete | 438 tests pass, 0 regressions |
 
 ### Hook Refactoring
 
-| ID | Requirement | Scope | Phase | Notes |
-|----|-------------|-------|-------|-------|
-| ONBD-10 | Refactor load-fin-core-config hook to Bun TypeScript | v1 | 4 | 1:1 behavior port, output comparison testing |
-| ONBD-11 | Refactor skill-activation-prompt hook to Bun TypeScript | v1 | 4 | Convert from bash to Bun |
-| ONBD-12 | Refactor post-tool-use-tracker hook to Bun TypeScript | v1 | 4 | Convert from bash |
-| ONBD-13 | Bun hook test suite with performance assertions (< 500ms) | v1 | 4 | All hooks must complete under 500ms |
+| ID | Requirement | Scope | Phase | Status | Notes |
+|----|-------------|-------|-------|--------|-------|
+| ONBD-10 | Refactor load-fin-core-config hook to Bun TypeScript | v1 | 4 | Complete | Direct bun run .ts invocation in settings.json |
+| ONBD-11 | Refactor skill-activation-prompt hook to Bun TypeScript | v1 | 4 | Complete | Dead .sh wrapper deleted, direct bun run .ts |
+| ONBD-12 | Refactor post-tool-use-tracker hook to Bun TypeScript | v1 | 4 | Complete | Dead .sh original deleted, direct bun run .ts |
+| ONBD-13 | Bun hook test suite with performance assertions (< 500ms) | v1 | 4 | Complete | 4 tests (warmup + 3 timed), all under 500ms |
 
 ### Deferred (M1)
 
