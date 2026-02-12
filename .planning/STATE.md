@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 4 in progress -- Onboarding Polish & Hook Refactoring
+**Current focus:** Phase 4 complete -- Onboarding Polish & Hook Refactoring
 
 ## Current Position
 
 Phase: 4 of 12 (Onboarding Polish & Hook Refactoring)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-12 -- Completed 04-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-12 -- Completed 04-02-PLAN.md
 
-Progress: [█████░░░░░░░░░░░░░░░] 17%
+Progress: [██████░░░░░░░░░░░░░░] 21%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: ~9 min
-- Total execution time: ~0.94 hours
+- Total plans completed: 7
+- Average duration: ~8 min
+- Total execution time: ~1.02 hours
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [█████░░░░░░░░░░░░░░░] 17%
 | 01-git-scrub | 1/3 | ~15 min | ~15 min |
 | 02-setup-automation | 2/2 | 17 min | 9 min |
 | 03-onboarding-wizard | 2/2 | 16 min | 8 min |
-| 04-onboarding-polish-hook-refactoring | 1/2 | 7 min | 7 min |
+| 04-onboarding-polish-hook-refactoring | 2/2 | 12 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (11 min), 03-01 (6 min), 03-02 (10 min), 04-01 (7 min)
-- Trend: Consistent ~8 min/plan
+- Last 5 plans: 03-01 (6 min), 03-02 (10 min), 04-01 (7 min), 04-02 (5 min)
+- Trend: Consistent ~7 min/plan
 
 *Updated after each plan completion*
 
@@ -67,6 +67,8 @@ Recent decisions affecting current work:
 - [03-02]: pytest-mock added as dev dependency for questionary mocking in tests
 - [04-01]: Recreated settings.json (was deleted in e3f008e) with all .ts direct invocations including SessionStart
 - [04-01]: 500ms performance threshold with warmup run for Bun transpile cache priming
+- [04-02]: Atomic write pattern (tempfile+rename) for crash-safe progress persistence
+- [04-02]: WizardInterruptHandler as backup; primary interrupt detection is questionary returning None on Ctrl+C
 
 ### Pending Todos
 
@@ -86,7 +88,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12T15:37:15Z
-Stopped at: Completed 04-01-PLAN.md (hook migration cleanup)
+Last session: 2026-02-12T15:46:40Z
+Stopped at: Completed 04-02-PLAN.md (onboarding save/resume)
 Resume file: None
-Next action: Execute 04-02-PLAN.md (onboarding save/resume)
+Next action: Phase 5 planning (Agent Readiness Hardening)
