@@ -6,18 +6,25 @@ Tests the complete pipeline:
 - Config file generation to correct paths
 - Backup of existing files
 - SECTION_ORDER structure
+- Save/resume progress persistence (Phase 4)
 
 Author: Finance Guru Development Team
 Created: 2026-02-05
 """
 
+import json
+
 import pytest
 from pathlib import Path
 
 from src.cli.onboarding_wizard import (
+    PROGRESS_FILE,
     SECTION_ORDER,
     convert_state_to_user_data,
+    delete_progress,
     generate_config_files,
+    load_progress,
+    save_progress,
 )
 from src.models.onboarding_inputs import OnboardingState, SectionName
 from src.models.yaml_generation_inputs import (
@@ -405,3 +412,288 @@ class TestGenerateConfigFiles:
         assert mcp_path.exists()
         content = mcp_path.read_text()
         assert len(content) > 0
+
+
+# ---------------------------------------------------------------------------
+# Save/Resume progress persistence (Phase 4)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def progress_file(tmp_path, monkeypatch):
+    """Override PROGRESS_FILE to use a temp directory."""
+    progress_path = tmp_path / ".onboarding-progress.json"
+    monkeypatch.setattr(
+        "src.cli.onboarding_wizard.PROGRESS_FILE", progress_path
+    )
+    return progress_path
+
+
+@pytest.fixture
+def partial_state() -> OnboardingState:
+    """Create an OnboardingState with 2 sections completed."""
+    state = OnboardingState.create_new()
+    state.data[SectionName.LIQUID_ASSETS.value] = {
+        "total": 25000.0,
+        "accounts_count": 3,
+        "average_yield": 0.045,
+        "structure": "2 checking, 1 HYSA",
+    }
+    state.data[SectionName.INVESTMENTS.value] = {
+        "total_value": 150000.0,
+        "brokerage": "Fidelity",
+        "has_retirement": True,
+        "retirement_value": 60000.0,
+        "allocation_strategy": "aggressive_growth",
+        "risk_tolerance": "aggressive",
+        "google_sheets_id": "abc123",
+        "account_number": "4567",
+    }
+    state.completed_sections = [
+        SectionName.LIQUID_ASSETS,
+        SectionName.INVESTMENTS,
+    ]
+    state.current_section = SectionName.CASH_FLOW
+    return state
+
+
+class TestSaveProgress:
+    """Test save_progress writes valid JSON."""
+
+    def test_creates_valid_json(self, progress_file, partial_state):
+        """save_progress creates a readable JSON file."""
+        save_progress(partial_state)
+        assert progress_file.exists()
+        data = json.loads(progress_file.read_text())
+        assert data["current_section"] == "cash_flow"
+        assert len(data["completed_sections"]) == 2
+
+    def test_round_trips_to_equivalent_state(self, progress_file, partial_state):
+        """Saved state can be loaded back into an equivalent OnboardingState."""
+        save_progress(partial_state)
+        data = json.loads(progress_file.read_text())
+        restored = OnboardingState.model_validate(data)
+        assert restored.current_section == partial_state.current_section
+        assert restored.completed_sections == partial_state.completed_sections
+        assert restored.data == partial_state.data
+
+    def test_atomic_write_no_partial_on_error(self, tmp_path, monkeypatch):
+        """If JSON serialization fails, no progress file is left behind."""
+        progress_path = tmp_path / ".onboarding-progress.json"
+        monkeypatch.setattr(
+            "src.cli.onboarding_wizard.PROGRESS_FILE", progress_path
+        )
+        state = OnboardingState.create_new()
+        # Inject an unserializable object to force an error
+        state.data["bad"] = {"value": object()}
+        with pytest.raises(Exception):
+            save_progress(state)
+        assert not progress_path.exists()
+
+
+class TestLoadProgress:
+    """Test load_progress with various file states."""
+
+    def test_returns_saved_state(self, progress_file, partial_state):
+        """load_progress returns a state matching what was saved."""
+        save_progress(partial_state)
+        loaded = load_progress()
+        assert loaded is not None
+        assert loaded.current_section == SectionName.CASH_FLOW
+        assert len(loaded.completed_sections) == 2
+        assert loaded.data[SectionName.LIQUID_ASSETS.value]["total"] == 25000.0
+
+    def test_returns_none_for_missing_file(self, progress_file):
+        """load_progress returns None when no progress file exists."""
+        assert not progress_file.exists()
+        result = load_progress()
+        assert result is None
+
+    def test_returns_none_for_corrupt_json(self, progress_file):
+        """load_progress returns None for invalid JSON (no crash)."""
+        progress_file.write_text("not valid json {{{")
+        result = load_progress()
+        assert result is None
+
+    def test_returns_none_for_invalid_schema(self, progress_file):
+        """load_progress returns None when JSON has wrong schema that fails validation."""
+        # current_section must be a valid SectionName enum value;
+        # an invalid value triggers a Pydantic ValidationError.
+        progress_file.write_text(
+            json.dumps({"current_section": "nonexistent_section_xyz"})
+        )
+        result = load_progress()
+        assert result is None
+
+
+class TestDeleteProgress:
+    """Test delete_progress file cleanup."""
+
+    def test_removes_existing_file(self, progress_file, partial_state):
+        """delete_progress removes the progress file."""
+        save_progress(partial_state)
+        assert progress_file.exists()
+        delete_progress()
+        assert not progress_file.exists()
+
+    def test_noop_if_no_file(self, progress_file):
+        """delete_progress does not raise when no file exists."""
+        assert not progress_file.exists()
+        delete_progress()  # Should not raise
+
+
+class TestWizardSaveResume:
+    """Integration tests for wizard save/resume behavior."""
+
+    def test_wizard_saves_progress_after_section(
+        self, progress_file, monkeypatch
+    ):
+        """Progress file is created after completing sections."""
+        from unittest.mock import MagicMock, patch
+
+        from src.cli.onboarding_wizard import run_wizard
+
+        # Track section calls
+        call_count = 0
+        sections_completed = 0
+
+        def mock_section_runner(state):
+            nonlocal call_count, sections_completed
+            call_count += 1
+            section_name = SECTION_ORDER[sections_completed][0]
+
+            # Simulate filling in data
+            state.data[section_name.value] = {"mock": True}
+            next_idx = sections_completed + 1
+            next_section = (
+                SECTION_ORDER[next_idx][0]
+                if next_idx < len(SECTION_ORDER)
+                else None
+            )
+            state.mark_complete(section_name, next_section)
+            sections_completed += 1
+
+            # After 2 sections, simulate Ctrl+C by raising KeyboardInterrupt
+            if sections_completed == 2:
+                raise KeyboardInterrupt()
+            return state
+
+        # Patch all section runners
+        with patch(
+            "src.cli.onboarding_wizard.SECTION_ORDER",
+            [(name, mock_section_runner) for name, _ in SECTION_ORDER],
+        ):
+            # Patch load_progress to return None (fresh start)
+            with patch("src.cli.onboarding_wizard.load_progress", return_value=None):
+                run_wizard()
+
+        # Verify progress file was created with 2 completed sections
+        assert progress_file.exists()
+        data = json.loads(progress_file.read_text())
+        assert len(data["completed_sections"]) == 2
+
+    def test_wizard_resumes_from_saved_progress(
+        self, progress_file, partial_state, monkeypatch
+    ):
+        """Wizard resumes from saved progress when user confirms."""
+        from unittest.mock import MagicMock, patch
+
+        from src.cli.onboarding_wizard import run_wizard
+
+        # Save the partial state
+        save_progress(partial_state)
+
+        # Track which sections get executed
+        executed_sections = []
+
+        def mock_section_runner(state):
+            # Find which section this is by looking at current_section
+            section_name = state.current_section
+            executed_sections.append(section_name)
+            state.data[section_name.value] = {"mock": True}
+            # Mark complete and advance
+            section_names = [name for name, _ in SECTION_ORDER]
+            idx = section_names.index(section_name)
+            next_section = (
+                SECTION_ORDER[idx + 1][0]
+                if idx + 1 < len(SECTION_ORDER)
+                else None
+            )
+            state.mark_complete(section_name, next_section)
+
+            # On summary section, mark confirmed
+            if section_name == SectionName.SUMMARY:
+                state.data[SectionName.SUMMARY.value] = {"confirmed": False}
+            return state
+
+        # Patch questionary.confirm to return True (resume)
+        mock_confirm = MagicMock()
+        mock_confirm.ask.return_value = True
+
+        with patch("src.cli.onboarding_wizard.questionary") as mock_q:
+            mock_q.confirm.return_value = mock_confirm
+            with patch(
+                "src.cli.onboarding_wizard.SECTION_ORDER",
+                [(name, mock_section_runner) for name, _ in SECTION_ORDER],
+            ):
+                run_wizard()
+
+        # Should have skipped the first 2 sections (LIQUID_ASSETS, INVESTMENTS)
+        assert SectionName.LIQUID_ASSETS not in executed_sections
+        assert SectionName.INVESTMENTS not in executed_sections
+        # Should have executed remaining 6 sections starting from CASH_FLOW
+        assert SectionName.CASH_FLOW in executed_sections
+
+    def test_wizard_deletes_progress_on_completion(
+        self, progress_file, completed_state, monkeypatch
+    ):
+        """Progress file is deleted after successful wizard completion."""
+        from unittest.mock import MagicMock, patch
+
+        from src.cli.onboarding_wizard import run_wizard
+
+        # Save progress first
+        save_progress(completed_state)
+        assert progress_file.exists()
+
+        # Mock all sections to just pass through (already complete)
+        def passthrough(state):
+            return state
+
+        # Patch load_progress to return None so it starts fresh,
+        # and mock all sections to fill data and confirm
+        section_index = 0
+
+        def mock_runner(state):
+            nonlocal section_index
+            sname = SECTION_ORDER[section_index][0]
+            if sname == SectionName.SUMMARY:
+                state.data[sname.value] = {"confirmed": True}
+            else:
+                state.data[sname.value] = {"mock": True}
+            next_idx = section_index + 1
+            next_section = (
+                SECTION_ORDER[next_idx][0]
+                if next_idx < len(SECTION_ORDER)
+                else None
+            )
+            state.mark_complete(sname, next_section)
+            section_index += 1
+            return state
+
+        with patch("src.cli.onboarding_wizard.load_progress", return_value=None):
+            with patch(
+                "src.cli.onboarding_wizard.SECTION_ORDER",
+                [(name, mock_runner) for name, _ in SECTION_ORDER],
+            ):
+                with patch(
+                    "src.cli.onboarding_wizard.convert_state_to_user_data"
+                ) as mock_convert:
+                    with patch(
+                        "src.cli.onboarding_wizard.generate_config_files"
+                    ):
+                        mock_convert.return_value = MagicMock()
+                        run_wizard()
+
+        # Progress file should be deleted after completion
+        assert not progress_file.exists()
