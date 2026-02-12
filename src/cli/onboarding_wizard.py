@@ -19,8 +19,12 @@ Created: 2026-02-05
 """
 
 import argparse
+import atexit
+import json
 import shutil
+import signal
 import sys
+import tempfile
 import warnings
 from pathlib import Path
 
@@ -54,6 +58,11 @@ from src.utils.onboarding_sections import (
 )
 from src.utils.yaml_generator import YAMLGenerator, write_config_files
 
+try:
+    import questionary
+except ImportError:
+    questionary = None  # type: ignore[assignment]
+
 # ---------------------------------------------------------------------------
 # Section execution order
 # ---------------------------------------------------------------------------
@@ -68,6 +77,108 @@ SECTION_ORDER: list[tuple[SectionName, callable]] = [
     (SectionName.ENV_SETUP, run_env_setup_section),
     (SectionName.SUMMARY, run_summary_section),
 ]
+
+# ---------------------------------------------------------------------------
+# Progress file persistence (save/resume on Ctrl+C)
+# ---------------------------------------------------------------------------
+
+PROGRESS_FILE = Path(".onboarding-progress.json")
+
+
+def save_progress(state: OnboardingState) -> None:
+    """Atomically save wizard progress to .onboarding-progress.json.
+
+    Uses tempfile + rename pattern for crash safety:
+    write to temp file in same directory, then atomic rename.
+    """
+    data = state.model_dump(mode="json")
+    parent = PROGRESS_FILE.parent if str(PROGRESS_FILE.parent) != "." else Path(".")
+    tmp_fd, tmp_path = tempfile.mkstemp(
+        dir=str(parent),
+        suffix=".tmp",
+        prefix=".onboarding-progress-",
+    )
+    try:
+        with open(tmp_fd, "w") as f:
+            json.dump(data, f, indent=2)
+        Path(tmp_path).rename(PROGRESS_FILE)
+    except Exception:
+        Path(tmp_path).unlink(missing_ok=True)
+        raise
+
+
+def load_progress() -> "OnboardingState | None":
+    """Load saved progress, return None if not found or corrupt.
+
+    A corrupt file (invalid JSON or schema mismatch) is silently
+    ignored -- the wizard starts fresh. This handles edge cases
+    where a prior save was interrupted mid-write (though atomic
+    rename makes this unlikely).
+    """
+    if not PROGRESS_FILE.exists():
+        return None
+    try:
+        data = json.loads(PROGRESS_FILE.read_text())
+        return OnboardingState.model_validate(data)
+    except (json.JSONDecodeError, Exception):
+        return None
+
+
+def delete_progress() -> None:
+    """Delete progress file after successful completion."""
+    PROGRESS_FILE.unlink(missing_ok=True)
+
+
+class WizardInterruptHandler:
+    """Two-layer safety net for saving wizard progress on interrupt.
+
+    Layer 1: SIGINT handler -- catches Ctrl+C, saves progress, prints message.
+    Layer 2: atexit handler -- backup save on any clean exit.
+
+    Note: questionary (via prompt_toolkit) installs its own SIGINT handler
+    during prompts, so .ask() returns None on Ctrl+C. The SIGINT handler
+    here is a BACKUP for interrupts between prompts (during processing).
+    The primary interrupt detection is checking for None return from .ask().
+    """
+
+    def __init__(self) -> None:
+        self._state: "OnboardingState | None" = None
+        self._active: bool = False
+
+    def setup(self) -> None:
+        """Register signal and atexit handlers."""
+        signal.signal(signal.SIGINT, self._handle_sigint)
+        atexit.register(self._save_on_exit)
+        self._active = True
+
+    def update_state(self, state: OnboardingState) -> None:
+        """Update the current state reference after each section."""
+        self._state = state
+
+    def deactivate(self) -> None:
+        """Deactivate after successful completion (prevent stale saves)."""
+        self._active = False
+        self._state = None
+
+    def _handle_sigint(self, signum: int, frame: object) -> None:
+        """SIGINT handler: save progress and exit."""
+        self._save_on_exit()
+        print("\n\nProgress saved. Run the wizard again to resume.")
+        raise SystemExit(0)
+
+    def _save_on_exit(self) -> None:
+        """Save progress if there is anything to save."""
+        if not self._active or self._state is None:
+            return
+        if (
+            hasattr(self._state, "completed_sections")
+            and len(self._state.completed_sections) > 0
+        ):
+            try:
+                save_progress(self._state)
+            except Exception:
+                pass  # Best effort on exit
+
 
 # ---------------------------------------------------------------------------
 # Welcome / completion banners
@@ -330,6 +441,11 @@ def generate_config_files(
 def run_wizard(dry_run: bool = False) -> None:
     """Run the full 8-section onboarding wizard.
 
+    Supports save/resume: if a previous session was interrupted, the wizard
+    detects .onboarding-progress.json and offers to resume from where the
+    user left off. Progress is saved after each completed section and on
+    Ctrl+C. The progress file is deleted on successful completion.
+
     Args:
         dry_run: If True, skip file generation and print what would
             be generated instead.
@@ -338,11 +454,54 @@ def run_wizard(dry_run: bool = False) -> None:
     print(_BANNER)
     print()
 
-    state = OnboardingState.create_new()
+    # --- Check for saved progress ---
+    saved_state = load_progress()
+    start_index = 0
 
-    # Execute each section in order
-    for _section_name, runner_fn in SECTION_ORDER:
-        state = runner_fn(state)
+    if (
+        saved_state is not None
+        and len(saved_state.completed_sections) > 0
+    ):
+        n_complete = len(saved_state.completed_sections)
+        print(
+            f"  Found saved progress: {n_complete} of "
+            f"{len(SECTION_ORDER)} sections complete."
+        )
+        resume = questionary.confirm(
+            "Resume from where you left off?", default=True
+        ).ask()
+        if resume:
+            state = saved_state
+            # Find the index to resume from (current_section)
+            section_names = [name for name, _ in SECTION_ORDER]
+            if state.current_section in section_names:
+                start_index = section_names.index(state.current_section)
+            else:
+                start_index = n_complete
+        else:
+            # User declined resume -- start fresh, delete old progress
+            delete_progress()
+            state = OnboardingState.create_new()
+    else:
+        state = OnboardingState.create_new()
+
+    # --- Set up interrupt handler ---
+    handler = WizardInterruptHandler()
+    handler.setup()
+
+    # --- Execute sections from start_index ---
+    try:
+        for section_name, runner_fn in SECTION_ORDER[start_index:]:
+            state = runner_fn(state)
+            handler.update_state(state)
+            # Save progress after each completed section (if any progress)
+            if len(state.completed_sections) > 0:
+                save_progress(state)
+    except KeyboardInterrupt:
+        if len(state.completed_sections) > 0:
+            save_progress(state)
+        print("\n\n  Progress saved. Run the wizard again to resume.\n")
+        return
 
     # Check if summary was confirmed
     summary_data = state.data.get(SectionName.SUMMARY.value, {})
@@ -371,10 +530,17 @@ def run_wizard(dry_run: bool = False) -> None:
         print(f"    - {project_root / '.env'}")
         print(f"    - {project_root / '.claude' / 'mcp.json'}")
         print()
+        # Deactivate handler and clean up progress on dry-run completion too
+        handler.deactivate()
+        delete_progress()
         return
 
     # Generate and write config files
     generate_config_files(user_data, project_root)
+
+    # --- Successful completion: deactivate handler and delete progress ---
+    handler.deactivate()
+    delete_progress()
 
     print(_COMPLETION)
     print()
@@ -406,8 +572,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print()
         print()
-        print("  Onboarding interrupted. Progress not saved "
-              "(save/resume is Phase 4).")
+        print("  Onboarding interrupted.")
         print()
         sys.exit(130)
 
