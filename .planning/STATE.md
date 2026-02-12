@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 3 complete -- Onboarding Wizard
+**Current focus:** Phase 4 in progress -- Onboarding Polish & Hook Refactoring
 
 ## Current Position
 
-Phase: 3 of 12 (Onboarding Wizard)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-06 -- Completed 03-02-PLAN.md
+Phase: 4 of 12 (Onboarding Polish & Hook Refactoring)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-12 -- Completed 04-01-PLAN.md
 
-Progress: [████░░░░░░░░░░░░░░░░] 14%
+Progress: [█████░░░░░░░░░░░░░░░] 17%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: ~10 min
-- Total execution time: ~0.82 hours
+- Total plans completed: 6
+- Average duration: ~9 min
+- Total execution time: ~0.94 hours
 
 **By Phase:**
 
@@ -30,9 +30,10 @@ Progress: [████░░░░░░░░░░░░░░░░] 14%
 | 01-git-scrub | 1/3 | ~15 min | ~15 min |
 | 02-setup-automation | 2/2 | 17 min | 9 min |
 | 03-onboarding-wizard | 2/2 | 16 min | 8 min |
+| 04-onboarding-polish-hook-refactoring | 1/2 | 7 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (6 min), 02-02 (11 min), 03-01 (6 min), 03-02 (10 min)
+- Last 5 plans: 02-02 (11 min), 03-01 (6 min), 03-02 (10 min), 04-01 (7 min)
 - Trend: Consistent ~8 min/plan
 
 *Updated after each plan completion*
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - [03-02]: Private configs via write_config_files(base_dir='fin-guru-private'), project-root files via explicit Path.write_text()
 - [03-02]: Agent files already genericized ({user_name}); no modifications needed
 - [03-02]: pytest-mock added as dev dependency for questionary mocking in tests
+- [04-01]: Recreated settings.json (was deleted in e3f008e) with all .ts direct invocations including SessionStart
+- [04-01]: 500ms performance threshold with warmup run for Bun transpile cache priming
 
 ### Pending Todos
 
@@ -83,7 +86,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-06T01:13:35Z
-Stopped at: Completed 03-02-PLAN.md (Phase 3 complete)
+Last session: 2026-02-12T15:37:15Z
+Stopped at: Completed 04-01-PLAN.md (hook migration cleanup)
 Resume file: None
-Next action: /gsd:discuss-phase 4 (Onboarding Polish & Hook Refactoring -- depends on Phase 3 which is now complete)
+Next action: Execute 04-02-PLAN.md (onboarding save/resume)
