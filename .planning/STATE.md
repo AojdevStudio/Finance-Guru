@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 Phase: 5 of 12 (Agent Readiness Hardening)
 Plan: 2 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-13 -- Completed 05-02-PLAN.md
+Last activity: 2026-02-13 -- Completed 05-01-PLAN.md
 
-Progress: [██████░░░░░░░░░░░░░░] 24%
+Progress: [██████░░░░░░░░░░░░░░] 26%
 
 ## Performance Metrics
 
@@ -31,11 +31,11 @@ Progress: [██████░░░░░░░░░░░░░░] 24%
 | 02-setup-automation | 2/2 | 17 min | 9 min |
 | 03-onboarding-wizard | 2/2 | 16 min | 8 min |
 | 04-onboarding-polish-hook-refactoring | 2/2 | 12 min | 6 min |
-| 05-agent-readiness-hardening | 2/5 | 4 min | 2 min |
+| 05-agent-readiness-hardening | 2/5 | 21 min | 11 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (10 min), 04-01 (7 min), 04-02 (5 min), 05-01 (~2 min), 05-02 (2 min)
-- Trend: Consistent ~5 min/plan
+- Last 5 plans: 04-01 (7 min), 04-02 (5 min), 05-02 (2 min), 05-01 (17 min)
+- Trend: ~8 min/plan
 
 *Updated after each plan completion*
 
@@ -73,6 +73,9 @@ Recent decisions affecting current work:
 - [05-02]: Coverage threshold starts at 0 (--cov-fail-under=0); TODO for plan 05-05 to raise to 80
 - [05-02]: CI uses astral-sh/setup-uv@v6 and concurrency group with cancel-in-progress
 - [05-02]: YAML form format (not markdown) for GitHub issue templates
+- [05-01]: Ruff replaces black as sole linter+formatter; D205/D100/D107/B028/E402 ignored globally
+- [05-01]: N803/N806 per-file ignored in analysis/strategies/utils -- financial code uses uppercase single-letter vars
+- [05-01]: C901 noqa on 12 complex CLI format functions -- refactoring deferred
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 05-02-PLAN.md (GitHub templates + CI)
+Stopped at: Completed 05-01-PLAN.md (ruff lint setup)
 Resume file: None
-Next action: Execute 05-03-PLAN.md
+Next action: Execute 05-03-PLAN.md (pre-commit hooks)
