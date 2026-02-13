@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 ## Current Position
 
 Phase: 5 of 12 (Agent Readiness Hardening)
-Plan: 2 of 5 in current phase
+Plan: 3 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-13 -- Completed 05-01-PLAN.md
+Last activity: 2026-02-13 -- Completed 05-03-PLAN.md
 
-Progress: [██████░░░░░░░░░░░░░░] 26%
+Progress: [████████░░░░░░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: ~8 min
-- Total execution time: ~1.02 hours
+- Total execution time: ~1.22 hours
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [██████░░░░░░░░░░░░░░] 26%
 | 02-setup-automation | 2/2 | 17 min | 9 min |
 | 03-onboarding-wizard | 2/2 | 16 min | 8 min |
 | 04-onboarding-polish-hook-refactoring | 2/2 | 12 min | 6 min |
-| 05-agent-readiness-hardening | 2/5 | 21 min | 11 min |
+| 05-agent-readiness-hardening | 3/5 | 33 min | 11 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (7 min), 04-02 (5 min), 05-02 (2 min), 05-01 (17 min)
-- Trend: ~8 min/plan
+- Last 5 plans: 04-02 (5 min), 05-02 (2 min), 05-01 (17 min), 05-03 (12 min)
+- Trend: ~9 min/plan
 
 *Updated after each plan completion*
 
@@ -76,6 +76,9 @@ Recent decisions affecting current work:
 - [05-01]: Ruff replaces black as sole linter+formatter; D205/D100/D107/B028/E402 ignored globally
 - [05-01]: N803/N806 per-file ignored in analysis/strategies/utils -- financial code uses uppercase single-letter vars
 - [05-01]: C901 noqa on 12 complex CLI format functions -- refactoring deferred
+- [05-03]: mypy standard mode (not --strict) to avoid requiring full annotations on 23k-line codebase
+- [05-03]: Per-module relaxed mypy overrides for 20+ existing financial modules; tightening deferred
+- [05-03]: pre-commit install uses default migration mode, preserving bd hooks as .legacy
 
 ### Pending Todos
 
@@ -96,6 +99,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 05-01-PLAN.md (ruff lint setup)
+Stopped at: Completed 05-03-PLAN.md (pre-commit hooks)
 Resume file: None
-Next action: Execute 05-03-PLAN.md (pre-commit hooks)
+Next action: Execute 05-04-PLAN.md (test infrastructure)
