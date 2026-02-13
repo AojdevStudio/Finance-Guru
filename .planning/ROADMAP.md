@@ -219,10 +219,14 @@ Plans:
   4. `pytest --cov=src --cov-fail-under=80` enforces minimum 80% coverage on the src/ directory
   5. CODEOWNERS file exists mapping src/ and tests/ to the repository owner
 
-**Plans**: 0 plans
+**Plans**: 5 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 5 to break down)
+- [ ] 05-01-PLAN.md -- Ruff config, lint cleanup pass, replace black with ruff
+- [ ] 05-02-PLAN.md -- GitHub templates (bug, feature, PR), CODEOWNERS, CI workflow
+- [ ] 05-03-PLAN.md -- Pre-commit framework config (ruff, mypy, gitleaks), setup.sh integration
+- [ ] 05-04-PLAN.md -- Coverage ramp part 1: tests for core analysis modules (risk, momentum, volatility, correlation, moving averages)
+- [ ] 05-05-PLAN.md -- Coverage ramp part 2: remaining tests + enable 80% enforcement in pre-commit and CI
 
 ---
 
@@ -521,7 +525,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 2. Setup Automation | M1 | 2/2 | Complete | 2026-02-04 |
 | 3. Onboarding Wizard | M1 | 2/2 | Complete | 2026-02-05 |
 | 4. Polish & Hooks | M1 | 2/2 | Complete | 2026-02-12 |
-| 5. Agent Readiness | M1 | 0/0 | Planned | - |
+| 5. Agent Readiness | M1 | 0/5 | Planned | - |
 | 6. Config & Models | M2 | 0/3 | Planned | - |
 | 7. Total Return | M2 | 0/2 | Planned | - |
 | 8. Tracker & Sizer | M2 | 0/6 | Planned | - |
