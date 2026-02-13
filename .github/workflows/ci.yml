@@ -39,7 +39,7 @@ jobs:
             --cov=src \
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing \
-            --cov-fail-under=0  # TODO(05-05): Raise to 80 once test coverage plan completes
+            --cov-fail-under=80
 
       - name: Coverage badge
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'

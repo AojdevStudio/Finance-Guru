@@ -33,6 +33,17 @@ repos:
         args: [--config-file=pyproject.toml]
         exclude: '^(fin-guru-private/|tests/|\.claude/|\.agents/)'
 
+  # Test coverage enforcement
+  - repo: local
+    hooks:
+      - id: pytest-coverage
+        name: pytest with coverage
+        entry: uv run pytest --cov=src --cov-fail-under=80 --cov-report=term-missing -q
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
   # Secret scanning
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.24.2

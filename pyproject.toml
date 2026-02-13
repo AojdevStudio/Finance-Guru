@@ -41,7 +41,7 @@ dev = [
 testpaths = ["tests/python"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --cov=src --cov-report=term-missing --cov-fail-under=80"
 pythonpath = ["."]
 markers = [
     "integration: marks tests as integration tests (require real API keys)",
