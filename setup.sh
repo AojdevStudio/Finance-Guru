@@ -288,7 +288,7 @@ SKIPPED_ITEMS=()
 # python_deps_installed
 
 PROGRESS_FILE="$PROJECT_ROOT/.setup-progress"
-TOTAL_STEPS=5
+TOTAL_STEPS=6
 
 is_step_complete() {
   [ -f "$PROGRESS_FILE" ] && grep -q "^$1$" "$PROGRESS_FILE"
@@ -563,6 +563,35 @@ install_python_deps() {
 }
 
 # ============================================================
+# Pre-commit Hooks
+# ============================================================
+
+install_pre_commit_hooks() {
+  # Skip if no pre-commit config exists
+  if [ ! -f "$PROJECT_ROOT/.pre-commit-config.yaml" ]; then
+    info "No .pre-commit-config.yaml found -- skipping pre-commit setup"
+    return 0
+  fi
+
+  # Check if pre-commit is available; install via uv tool if not
+  if ! command -v pre-commit &>/dev/null; then
+    info "Installing pre-commit via uv tool..."
+    if ! uv tool install pre-commit; then
+      warn "Failed to install pre-commit -- you can install manually: uv tool install pre-commit"
+      return 0
+    fi
+  fi
+
+  # Install hooks (default migration mode preserves existing hooks as .legacy)
+  if (cd "$PROJECT_ROOT" && pre-commit install); then
+    success "Pre-commit hooks installed"
+    CREATED_ITEMS+=("Pre-commit hooks (pre-commit install)")
+  else
+    warn "pre-commit install failed -- you can retry with: cd $PROJECT_ROOT && pre-commit install"
+  fi
+}
+
+# ============================================================
 # Summary
 # ============================================================
 
@@ -739,5 +768,15 @@ else
   mark_step_complete "python_deps_installed"
 fi
 
-# Step 5: Summary
+# Step 5: Install pre-commit hooks
+if is_step_complete "precommit_installed"; then
+  header "Pre-commit hooks..."
+  printf "  ${GREEN}[done]${NC} Pre-commit hooks already installed\n"
+else
+  header "Installing pre-commit hooks..."
+  install_pre_commit_hooks
+  mark_step_complete "precommit_installed"
+fi
+
+# Step 6: Summary
 print_summary
