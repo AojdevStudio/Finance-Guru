@@ -235,7 +235,7 @@ async def invite_user(
 | Direct database access inside route handler | Couples HTTP layer to persistence, hard to test | Move queries to repositories, inject via service |
 | Manual JSON serialization | Bypasses Pydantic, loses validation | Return Pydantic models or dicts from services |
 | Catch-all `Exception` in handlers | Masks real errors, breaks global handlers | Let exceptions bubble or raise domain-specific errors |
-| Instantiate services manually per call | Duplicates dependency logic, complicates tests | Use dependency providers | 
+| Instantiate services manually per call | Duplicates dependency logic, complicates tests | Use dependency providers |
 | Multiple endpoints in same function | Hard to trace behavior | One handler per HTTP verb + path |
 
 ### Example: What NOT to do

@@ -80,3 +80,70 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+ignore_missing_imports = false
+
+[[tool.mypy.overrides]]
+module = [
+    "yfinance.*",
+    "streamlit.*",
+    "textual.*",
+    "sklearn.*",
+    "scipy.*",
+    "matplotlib.*",
+    "plotly.*",
+    "reportlab.*",
+    "openpyxl.*",
+    "xlsxwriter.*",
+    "questionary.*",
+    "numpy.*",
+    "pytest.*",
+    "dotenv.*",
+    "rich.*",
+    "rich.text",
+    "rich.table",
+]
+ignore_missing_imports = true
+
+# Relaxed checks for existing financial analysis codebase.
+# These modules use dynamic Literal types and pandas patterns
+# that produce false positives with strict mypy. Tightening
+# is deferred to a dedicated type-safety hardening plan.
+[[tool.mypy.overrides]]
+module = [
+    "src.utils.screener",
+    "src.utils.screener_cli",
+    "src.utils.momentum_cli",
+    "src.utils.moving_averages",
+    "src.utils.moving_averages_cli",
+    "src.utils.input_validation",
+    "src.utils.input_validation_cli",
+    "src.utils.data_validator",
+    "src.utils.volatility",
+    "src.utils.yaml_generator_cli",
+    "src.analysis.factors_cli",
+    "src.analysis.correlation",
+    "src.analysis.options_chain_cli",
+    "src.strategies.backtester",
+    "src.strategies.backtester_cli",
+    "src.strategies.optimizer",
+    "src.ui.services.portfolio_loader",
+    "src.models.dashboard_inputs",
+    "src.analysis.options",
+    "src.analysis.itc_risk",
+    "src.cli.onboarding_wizard",
+    "src.models.yaml_generation_inputs",
+    "src.models.itc_risk_inputs",
+    "src.utils.market_data",
+    "src.ui.widgets.results_panel",
+    "src.ui.widgets.portfolio_header",
+]
+warn_unused_ignores = false
+disable_error_code = ["arg-type", "assignment", "no-any-return", "operator", "var-annotated", "call-arg", "index", "return-value", "attr-defined", "union-attr", "type-var", "prop-decorator", "import-not-found"]

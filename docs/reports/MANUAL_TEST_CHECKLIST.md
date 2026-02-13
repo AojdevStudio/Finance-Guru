@@ -88,7 +88,7 @@ category: reports
   - [ ] `tests/integration/`
   - [ ] `tests/onboarding/`
   - [ ] `tests/python/`
-  
+
 ### Agent Infrastructure
 
 - [ ] Finance Orchestrator command exists: `.claude/commands/fin-guru/agents/finance-orchestrator.md`

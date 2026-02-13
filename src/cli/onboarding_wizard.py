@@ -25,7 +25,9 @@ import signal
 import sys
 import tempfile
 import warnings
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 # Add project root to path for direct invocation
 _project_root = Path(__file__).parent.parent.parent
@@ -66,7 +68,7 @@ except ImportError:
 # Section execution order
 # ---------------------------------------------------------------------------
 
-SECTION_ORDER: list[tuple[SectionName, callable]] = [
+SECTION_ORDER: list[tuple[SectionName, Callable[..., Any]]] = [
     (SectionName.LIQUID_ASSETS, run_liquid_assets_section),
     (SectionName.INVESTMENTS, run_investments_section),
     (SectionName.CASH_FLOW, run_cash_flow_section),

@@ -8,7 +8,7 @@ Claude Code hooks that enable skill auto-activation, file tracking, and validati
 
 Hooks are scripts that run at specific points in Claude's workflow:
 - **UserPromptSubmit**: When user submits a prompt
-- **PreToolUse**: Before a tool executes  
+- **PreToolUse**: Before a tool executes
 - **PostToolUse**: After a tool completes
 - **Stop**: When user requests to stop
 
@@ -154,7 +154,7 @@ chmod +x your-project/.claude/hooks/post-tool-use-tracker.sh
 
 1. **Read [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md)** first
 2. **Always start with the two essential hooks**
-3. **Ask before adding Stop hooks** - they can block if misconfigured  
+3. **Ask before adding Stop hooks** - they can block if misconfigured
 4. **Verify after setup:**
    ```bash
    ls -la .claude/hooks/*.sh | grep rwx

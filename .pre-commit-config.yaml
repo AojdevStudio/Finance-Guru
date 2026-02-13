@@ -1,0 +1,40 @@
+repos:
+  # Baseline hygiene hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        exclude: '^scripts/onboarding/modules/templates/.*\.template\.yaml$'
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+
+  # Ruff linter + formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.1
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: '^fin-guru-private/'
+      - id: ruff-format
+        exclude: '^fin-guru-private/'
+
+  # Type checking with mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.19.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pydantic>=2.10.6
+          - types-requests
+          - types-PyYAML
+          - pandas-stubs
+        args: [--config-file=pyproject.toml]
+        exclude: '^(fin-guru-private/|tests/|\.claude/|\.agents/)'
+
+  # Secret scanning
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks

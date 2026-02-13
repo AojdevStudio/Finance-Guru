@@ -136,7 +136,7 @@ When you start your next Claude Code session in this project, you'll see:
 Session: {session_id}
 
 📘 FIN-CORE SKILL
-⚙️ SYSTEM CONFIGURATION  
+⚙️ SYSTEM CONFIGURATION
 👤 USER PROFILE
 🌐 SYSTEM CONTEXT
 💰 LATEST PORTFOLIO BALANCES
