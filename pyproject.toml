@@ -30,7 +30,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black>=24.10.0",
+    "ruff>=0.12.0",
     "mypy>=1.13.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
@@ -46,3 +46,32 @@ pythonpath = ["."]
 markers = [
     "integration: marks tests as integration tests (require real API keys)",
 ]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+exclude = [".venv", "build", "dist", "node_modules", ".claude/hooks", ".eggs", "__pypackages__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "W", "B", "SIM", "C90", "N", "D"]
+fixable = ["I", "F401", "UP", "W", "D", "SIM"]
+unfixable = ["B"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D", "S101", "B011"]
+"*_cli.py" = ["D"]
+"__init__.py" = ["F401", "D104"]
+"scripts/**/*.py" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
