@@ -81,6 +81,32 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
+[tool.coverage.run]
+branch = true
+source = ["src"]
+omit = [
+    "src/*/*_cli.py",
+    "src/*_cli.py",
+    "src/ui/*",
+    "src/cli/*",
+    "src/data/*",
+    "src/reports/*",
+    "src/utils/screener.py",
+    "src/models/screener_inputs.py",
+    "src/models/dashboard_inputs.py",
+]
+
+[tool.coverage.report]
+precision = 1
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
 [tool.mypy]
 python_version = "3.12"
 warn_return_any = true
