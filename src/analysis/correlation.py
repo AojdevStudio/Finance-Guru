@@ -342,8 +342,11 @@ class CorrelationEngine:
                     if len(rolling_corr) == 0:
                         continue
 
-                    # Extract values
-                    dates = [d.date() for d in rolling_corr.index]
+                    # Extract values (handle both datetime and date index types)
+                    dates = [
+                        d.date() if hasattr(d, "date") and callable(d.date) else d
+                        for d in rolling_corr.index
+                    ]
                     correlations = rolling_corr.tolist()
                     current_corr = float(correlations[-1])
                     avg_corr = float(np.mean(correlations))
