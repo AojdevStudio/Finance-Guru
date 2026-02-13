@@ -1,5 +1,4 @@
-"""
-Data Validation Pydantic Models for Finance Guru™
+"""Data Validation Pydantic Models for Finance Guru™.
 
 This module defines type-safe data structures for data quality validation.
 All models use Pydantic for automatic validation and type checking.
@@ -21,20 +20,19 @@ Created: 2025-10-13
 """
 
 from datetime import date
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
-class OutlierMethod(str, Enum):
-    """
-    Methods for detecting outliers in data.
+class OutlierMethod(StrEnum):
+    """Methods for detecting outliers in data.
 
     WHAT: Different statistical approaches to identify unusual data points
     WHY: Different methods catch different types of outliers
 
-    METHODS:
+    Methods:
         - Z_SCORE: Standard deviations from mean (assumes normal distribution)
         - IQR: Interquartile range method (robust to non-normal data)
         - MODIFIED_Z: Modified z-score using median (robust to extreme outliers)
@@ -44,14 +42,14 @@ class OutlierMethod(str, Enum):
     IQR works better for skewed data (trading volumes).
     Modified z-score is most robust when you suspect extreme outliers.
     """
+
     Z_SCORE = "z_score"
     IQR = "iqr"
     MODIFIED_Z = "modified_z"
 
 
 class PriceSeriesInput(BaseModel):
-    """
-    Historical price series for validation.
+    """Historical price series for validation.
 
     WHAT: Container for price data that needs quality checking
     WHY: Ensures basic data structure is valid before validation
@@ -98,8 +96,7 @@ class PriceSeriesInput(BaseModel):
     @field_validator("prices")
     @classmethod
     def prices_must_be_positive(cls, v: list[float]) -> list[float]:
-        """
-        Ensure all prices are positive.
+        """Ensure all prices are positive.
 
         EDUCATIONAL NOTE:
         Negative or zero prices indicate data errors.
@@ -130,18 +127,16 @@ class PriceSeriesInput(BaseModel):
                 f"Length mismatch: {len(self.prices)} prices but {len(self.dates)} dates."
             )
 
-        if self.volumes is not None:
-            if len(self.volumes) != len(self.prices):
-                raise ValueError(
-                    f"Length mismatch: {len(self.prices)} prices but {len(self.volumes)} volumes."
-                )
+        if self.volumes is not None and len(self.volumes) != len(self.prices):
+            raise ValueError(
+                f"Length mismatch: {len(self.prices)} prices but {len(self.volumes)} volumes."
+            )
 
         return self
 
 
 class ValidationConfig(BaseModel):
-    """
-    Configuration for data validation checks.
+    """Configuration for data validation checks.
 
     WHAT: Settings that control how strictly we validate data
     WHY: Different use cases need different validation sensitivity
@@ -157,8 +152,7 @@ class ValidationConfig(BaseModel):
     """
 
     outlier_method: OutlierMethod = Field(
-        default=OutlierMethod.Z_SCORE,
-        description="Method for detecting outliers"
+        default=OutlierMethod.Z_SCORE, description="Method for detecting outliers"
     )
 
     outlier_threshold: float = Field(
@@ -170,78 +164,65 @@ class ValidationConfig(BaseModel):
             "  - z_score: Number of standard deviations (default: 3.0)\n"
             "  - iqr: Multiplier for IQR (default: 3.0)\n"
             "  - modified_z: Modified z-score threshold (default: 3.0)"
-        )
+        ),
     )
 
     missing_data_threshold: float = Field(
         default=0.05,
         ge=0.0,
         le=0.50,
-        description="Maximum acceptable missing data ratio (0.05 = 5%)"
+        description="Maximum acceptable missing data ratio (0.05 = 5%)",
     )
 
     max_gap_days: int = Field(
         default=10,
         ge=1,
         le=90,
-        description="Maximum acceptable gap between dates (in days)"
+        description="Maximum acceptable gap between dates (in days)",
     )
 
     check_splits: bool = Field(
-        default=True,
-        description="Check for stock splits/dividends (large price jumps)"
+        default=True, description="Check for stock splits/dividends (large price jumps)"
     )
 
     split_threshold: float = Field(
         default=0.25,
         ge=0.10,
         le=0.50,
-        description="Price change threshold for split detection (0.25 = 25%)"
+        description="Price change threshold for split detection (0.25 = 25%)",
     )
 
 
 class DataAnomaly(BaseModel):
-    """
-    Details about a detected anomaly.
+    """Details about a detected anomaly.
 
     WHAT: Information about a specific data quality issue
     WHY: Helps users understand and fix data problems
     """
 
     anomaly_type: Literal["missing", "outlier", "gap", "split", "duplicate"] = Field(
-        ...,
-        description="Type of anomaly detected"
+        ..., description="Type of anomaly detected"
     )
 
     severity: Literal["low", "medium", "high", "critical"] = Field(
-        ...,
-        description="Severity level of the anomaly"
+        ..., description="Severity level of the anomaly"
     )
 
-    description: str = Field(
-        ...,
-        description="Human-readable description of the issue"
-    )
+    description: str = Field(..., description="Human-readable description of the issue")
 
     location: str | None = Field(
-        default=None,
-        description="Where the anomaly was found (e.g., date, index)"
+        default=None, description="Where the anomaly was found (e.g., date, index)"
     )
 
     value: float | str | None = Field(
-        default=None,
-        description="The problematic value (if applicable)"
+        default=None, description="The problematic value (if applicable)"
     )
 
-    recommendation: str = Field(
-        ...,
-        description="Suggested action to fix the issue"
-    )
+    recommendation: str = Field(..., description="Suggested action to fix the issue")
 
 
 class ValidationOutput(BaseModel):
-    """
-    Comprehensive data validation results.
+    """Comprehensive data validation results.
 
     WHAT: Complete report of data quality checks
     WHY: Provides actionable insights for data cleaning
@@ -258,95 +239,65 @@ class ValidationOutput(BaseModel):
     4. Should I fix it or reject it? (recommendations)
     """
 
-    ticker: str = Field(
-        ...,
-        description="Stock ticker symbol"
-    )
+    ticker: str = Field(..., description="Stock ticker symbol")
 
-    validation_date: date = Field(
-        ...,
-        description="Date when validation was performed"
-    )
+    validation_date: date = Field(..., description="Date when validation was performed")
 
     is_valid: bool = Field(
-        ...,
-        description="Overall validation result (True = data is usable)"
+        ..., description="Overall validation result (True = data is usable)"
     )
 
     # Counts
     total_points: int = Field(
-        ...,
-        ge=0,
-        description="Total number of data points analyzed"
+        ..., ge=0, description="Total number of data points analyzed"
     )
 
     missing_count: int = Field(
-        default=0,
-        ge=0,
-        description="Number of missing data points"
+        default=0, ge=0, description="Number of missing data points"
     )
 
     outlier_count: int = Field(
-        default=0,
-        ge=0,
-        description="Number of outliers detected"
+        default=0, ge=0, description="Number of outliers detected"
     )
 
     gap_count: int = Field(
-        default=0,
-        ge=0,
-        description="Number of suspicious date gaps"
+        default=0, ge=0, description="Number of suspicious date gaps"
     )
 
     potential_splits: int = Field(
-        default=0,
-        ge=0,
-        description="Number of potential stock splits detected"
+        default=0, ge=0, description="Number of potential stock splits detected"
     )
 
     # Quality Scores (0.0 to 1.0)
     completeness_score: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Data completeness (1.0 = no missing data)"
+        ..., ge=0.0, le=1.0, description="Data completeness (1.0 = no missing data)"
     )
 
     consistency_score: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Data consistency (1.0 = no outliers)"
+        ..., ge=0.0, le=1.0, description="Data consistency (1.0 = no outliers)"
     )
 
     reliability_score: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Overall reliability (weighted average)"
+        ..., ge=0.0, le=1.0, description="Overall reliability (weighted average)"
     )
 
     # Detailed Anomalies
     anomalies: list[DataAnomaly] = Field(
-        default_factory=list,
-        description="List of all detected anomalies"
+        default_factory=list, description="List of all detected anomalies"
     )
 
     # Summary
     warnings: list[str] = Field(
-        default_factory=list,
-        description="General warnings about data quality"
+        default_factory=list, description="General warnings about data quality"
     )
 
     recommendations: list[str] = Field(
-        default_factory=list,
-        description="Suggested actions to improve data quality"
+        default_factory=list, description="Suggested actions to improve data quality"
     )
 
     @model_validator(mode="after")
     def calculate_reliability(self) -> "ValidationOutput":
-        """
-        Calculate overall reliability score.
+        """Calculate overall reliability score.
 
         EDUCATIONAL NOTE:
         Reliability is a weighted average of completeness and consistency.
@@ -354,8 +305,7 @@ class ValidationOutput(BaseModel):
         Consistency is weighted 40% (outliers can sometimes be real).
         """
         self.reliability_score = (
-            0.6 * self.completeness_score +
-            0.4 * self.consistency_score
+            0.6 * self.completeness_score + 0.4 * self.consistency_score
         )
         return self
 
@@ -381,16 +331,14 @@ class ValidationOutput(BaseModel):
                             "description": "Price outlier detected",
                             "location": "2025-09-15",
                             "value": 285.50,
-                            "recommendation": "Verify price data from alternative source"
+                            "recommendation": "Verify price data from alternative source",
                         }
                     ],
-                    "warnings": [
-                        "Found 5 outliers (2.0% of data)"
-                    ],
+                    "warnings": ["Found 5 outliers (2.0% of data)"],
                     "recommendations": [
                         "Data quality is excellent - proceed with analysis",
-                        "Review outliers to ensure they're legitimate price movements"
-                    ]
+                        "Review outliers to ensure they're legitimate price movements",
+                    ],
                 }
             ]
         }

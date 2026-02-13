@@ -13,16 +13,15 @@ Test Categories:
 4. Edge Cases - Handle unusual but valid scenarios
 """
 
-import pytest
-import numpy as np
 from datetime import date, timedelta
 
+import numpy as np
+import pytest
+
 from src.models.validation_inputs import (
-    DataAnomaly,
     OutlierMethod,
     PriceSeriesInput,
     ValidationConfig,
-    ValidationOutput,
 )
 from src.utils.input_validation import InputValidator
 
@@ -156,7 +155,9 @@ class TestInputValidatorBasics:
         # Create data with 30-day gap
         prices = [100.0] * 20
         dates_list = [date(2025, 1, i) for i in range(1, 11)]  # Jan 1-10
-        dates_list.extend([date(2025, 2, i) for i in range(10, 20)])  # Feb 10-19 (30 day gap)
+        dates_list.extend(
+            [date(2025, 2, i) for i in range(10, 20)]
+        )  # Feb 10-19 (30 day gap)
 
         price_series = PriceSeriesInput(
             ticker="GAP",
@@ -195,8 +196,7 @@ class TestOutlierDetectionMethods:
         )
 
         config = ValidationConfig(
-            outlier_method=OutlierMethod.Z_SCORE,
-            outlier_threshold=3.0
+            outlier_method=OutlierMethod.Z_SCORE, outlier_threshold=3.0
         )
         validator = InputValidator(config)
         result = validator.validate_price_series(price_series)
@@ -218,8 +218,7 @@ class TestOutlierDetectionMethods:
         )
 
         config = ValidationConfig(
-            outlier_method=OutlierMethod.IQR,
-            outlier_threshold=1.5
+            outlier_method=OutlierMethod.IQR, outlier_threshold=1.5
         )
         validator = InputValidator(config)
         result = validator.validate_price_series(price_series)
@@ -244,7 +243,7 @@ class TestOutlierDetectionMethods:
         config = ValidationConfig(
             outlier_method=OutlierMethod.MODIFIED_Z,
             outlier_threshold=3.0,
-            check_splits=False  # Disable split detection for this test
+            check_splits=False,  # Disable split detection for this test
         )
         validator = InputValidator(config)
         result = validator.validate_price_series(price_series)
@@ -271,7 +270,7 @@ class TestStockSplitDetection:
 
         config = ValidationConfig(
             check_splits=True,
-            split_threshold=0.25  # 25% change threshold
+            split_threshold=0.25,  # 25% change threshold
         )
         validator = InputValidator(config)
         result = validator.validate_price_series(price_series)
@@ -297,10 +296,7 @@ class TestStockSplitDetection:
             dates=dates_list,
         )
 
-        config = ValidationConfig(
-            check_splits=True,
-            split_threshold=0.25
-        )
+        config = ValidationConfig(check_splits=True, split_threshold=0.25)
         validator = InputValidator(config)
         result = validator.validate_price_series(price_series)
 

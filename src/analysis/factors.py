@@ -1,5 +1,4 @@
-"""
-Factor Analysis Engine for Finance Guru™
+"""Factor Analysis Engine for Finance Guru™.
 
 This module implements Fama-French factor models for return decomposition.
 All calculations follow academic finance methodologies.
@@ -53,8 +52,7 @@ from src.models.factors_inputs import (
 
 
 class FactorAnalyzer:
-    """
-    Factor analysis engine for Fama-French models.
+    """Factor analysis engine for Fama-French models.
 
     WHAT: Decomposes returns into systematic factor exposures
     WHY: Understand what drives performance (skill vs exposure)
@@ -81,8 +79,7 @@ class FactorAnalyzer:
     """
 
     def analyze(self, data: FactorDataInput) -> FactorAnalysisOutput:
-        """
-        Perform complete factor analysis.
+        """Perform complete factor analysis.
 
         Args:
             data: Validated factor data (Pydantic model)
@@ -143,8 +140,7 @@ class FactorAnalyzer:
         mom: np.ndarray | None,
         ticker: str,
     ) -> FactorExposureOutput:
-        """
-        Estimate factor exposures using OLS regression.
+        """Estimate factor exposures using OLS regression.
 
         WHAT: Run regression of asset returns on factor returns
         WHY: Betas tell us factor sensitivities
@@ -198,7 +194,7 @@ class FactorAnalyzer:
         n = len(y)
         k = X.shape[1]
         residuals = y - y_pred
-        mse = np.sum(residuals ** 2) / (n - k - 1)
+        mse = np.sum(residuals**2) / (n - k - 1)
 
         # Standard error of alpha
         X_with_intercept = np.column_stack([np.ones(n), X])
@@ -214,9 +210,15 @@ class FactorAnalyzer:
         market_beta = float(betas[0])
         market_beta_tstat = float(beta_tstats[0])
 
-        size_beta = float(betas[1]) if len(betas) > 1 and "smb" in factor_names else None
-        value_beta = float(betas[2]) if len(betas) > 2 and "hml" in factor_names else None
-        momentum_beta = float(betas[3]) if len(betas) > 3 and "mom" in factor_names else None
+        size_beta = (
+            float(betas[1]) if len(betas) > 1 and "smb" in factor_names else None
+        )
+        value_beta = (
+            float(betas[2]) if len(betas) > 2 and "hml" in factor_names else None
+        )
+        momentum_beta = (
+            float(betas[3]) if len(betas) > 3 and "mom" in factor_names else None
+        )
 
         return FactorExposureOutput(
             ticker=ticker,
@@ -241,8 +243,7 @@ class FactorAnalyzer:
         asset_returns: np.ndarray,
         ticker: str,
     ) -> AttributionOutput:
-        """
-        Calculate return attribution by factor.
+        """Calculate return attribution by factor.
 
         WHAT: Decompose total return into factor contributions
         WHY: Shows where returns came from
@@ -315,9 +316,15 @@ class FactorAnalyzer:
             analysis_date=date.today(),
             total_return=total_return,
             market_attribution=float(market_attribution),
-            size_attribution=float(size_attribution) if size_attribution is not None else None,
-            value_attribution=float(value_attribution) if value_attribution is not None else None,
-            momentum_attribution=float(momentum_attribution) if momentum_attribution is not None else None,
+            size_attribution=float(size_attribution)
+            if size_attribution is not None
+            else None,
+            value_attribution=float(value_attribution)
+            if value_attribution is not None
+            else None,
+            momentum_attribution=float(momentum_attribution)
+            if momentum_attribution is not None
+            else None,
             alpha_attribution=float(alpha_attribution),
             residual=float(residual),
             market_importance=float(market_importance),
@@ -325,20 +332,22 @@ class FactorAnalyzer:
         )
 
     def _generate_summary(
-        self,
-        exposure: FactorExposureOutput,
-        attribution: AttributionOutput
+        self, exposure: FactorExposureOutput, attribution: AttributionOutput
     ) -> str:
         """Generate human-readable summary."""
         lines = []
         lines.append(f"Factor Analysis for {exposure.ticker}:")
         lines.append(f"- Model explains {exposure.r_squared:.1%} of variance")
-        lines.append(f"- Market beta: {exposure.market_beta:.2f} (t-stat: {exposure.market_beta_tstat:.2f})")
+        lines.append(
+            f"- Market beta: {exposure.market_beta:.2f} (t-stat: {exposure.market_beta_tstat:.2f})"
+        )
 
         if exposure.alpha_tstat > 2.0:
             lines.append(f"- Alpha: {exposure.alpha:.1%} (statistically significant!)")
         else:
-            lines.append(f"- Alpha: {exposure.alpha:.1%} (not statistically significant)")
+            lines.append(
+                f"- Alpha: {exposure.alpha:.1%} (not statistically significant)"
+            )
 
         lines.append(f"- Total return: {attribution.total_return:.1%} annualized")
         lines.append(f"  ∟ {attribution.market_importance:.0%} from market exposure")
@@ -347,34 +356,46 @@ class FactorAnalyzer:
         return "\n".join(lines)
 
     def _generate_recommendations(
-        self,
-        exposure: FactorExposureOutput,
-        attribution: AttributionOutput
+        self, exposure: FactorExposureOutput, attribution: AttributionOutput
     ) -> list[str]:
         """Generate actionable recommendations."""
         recs = []
 
         # Beta interpretation
         if exposure.market_beta > 1.5:
-            recs.append("High market beta (>1.5) suggests aggressive positioning - consider hedging in downturns")
+            recs.append(
+                "High market beta (>1.5) suggests aggressive positioning - consider hedging in downturns"
+            )
         elif exposure.market_beta < 0.5:
-            recs.append("Low market beta (<0.5) suggests defensive positioning - suitable for risk-averse investors")
+            recs.append(
+                "Low market beta (<0.5) suggests defensive positioning - suitable for risk-averse investors"
+            )
 
         # Alpha significance
         if exposure.alpha_tstat > 2.0:
-            recs.append(f"Significant positive alpha ({exposure.alpha:.1%}) - strategy shows skill beyond factor exposure")
+            recs.append(
+                f"Significant positive alpha ({exposure.alpha:.1%}) - strategy shows skill beyond factor exposure"
+            )
         elif exposure.alpha_tstat < -2.0:
-            recs.append(f"Significant negative alpha ({exposure.alpha:.1%}) - underperforming risk-adjusted expectations")
+            recs.append(
+                f"Significant negative alpha ({exposure.alpha:.1%}) - underperforming risk-adjusted expectations"
+            )
 
         # R-squared interpretation
         if exposure.r_squared < 0.30:
-            recs.append("Low R² (<30%) suggests returns are driven by idiosyncratic factors, not systematic ones")
+            recs.append(
+                "Low R² (<30%) suggests returns are driven by idiosyncratic factors, not systematic ones"
+            )
         elif exposure.r_squared > 0.80:
-            recs.append("High R² (>80%) suggests returns closely track factor exposures - limited diversification")
+            recs.append(
+                "High R² (>80%) suggests returns closely track factor exposures - limited diversification"
+            )
 
         # Factor tilts
         if exposure.size_beta and exposure.size_beta > 0.5:
-            recs.append("Strong small-cap tilt detected - adds size premium but increases volatility")
+            recs.append(
+                "Strong small-cap tilt detected - adds size premium but increases volatility"
+            )
         if exposure.value_beta and exposure.value_beta < -0.5:
             recs.append("Strong growth tilt detected - reduces value premium exposure")
 
@@ -389,10 +410,9 @@ def analyze_factors(
     smb_returns: list[float] | None = None,
     hml_returns: list[float] | None = None,
     mom_returns: list[float] | None = None,
-    risk_free_rate: float = 0.045
+    risk_free_rate: float = 0.045,
 ) -> FactorAnalysisOutput:
-    """
-    Convenience function for factor analysis.
+    """Convenience function for factor analysis.
 
     Args:
         ticker: Asset ticker symbol

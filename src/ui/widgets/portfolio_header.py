@@ -1,5 +1,4 @@
-"""
-Portfolio Header Widget for Finance Guru™ TUI
+"""Portfolio Header Widget for Finance Guru™ TUI.
 
 WHAT: Displays live portfolio statistics in dashboard header
 WHY: Provides at-a-glance portfolio overview from latest CSV
@@ -9,30 +8,31 @@ Author: Finance Guru™ Development Team
 Created: 2025-11-17
 """
 
-from textual.widget import Widget
-from textual.reactive import reactive
 from rich.text import Text
+from textual.reactive import reactive
+from textual.widget import Widget
+
 from src.models.dashboard_inputs import PortfolioSnapshotInput
 
 
 class PortfolioHeader(Widget):
-    """
-    Display live portfolio statistics.
-    
+    """Display live portfolio statistics.
+
     Shows total value, day change, and timestamp from latest CSV snapshot.
     """
 
     portfolio = reactive(None)
 
     def render(self) -> Text:
-        """
-        Render portfolio header with formatted statistics.
-        
+        """Render portfolio header with formatted statistics.
+
         Returns:
             Rich Text object with formatted portfolio display
         """
         if not self.portfolio:
-            return Text("📥 No portfolio data - upload CSV to notebooks/updates/", style="dim")
+            return Text(
+                "📥 No portfolio data - upload CSV to notebooks/updates/", style="dim"
+            )
 
         p: PortfolioSnapshotInput = self.portfolio
         total = f"${p.total_value:,.2f}"
@@ -52,5 +52,3 @@ class PortfolioHeader(Widget):
             " | ",
             (f"📅 {timestamp}", "dim"),
         )
-
-

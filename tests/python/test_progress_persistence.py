@@ -17,14 +17,10 @@ Test Categories:
 """
 
 import json
-import pytest
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from src.utils.progress_persistence import (
     ALL_SECTIONS,
-    OnboardingState,
-    SectionName,
     clear_state,
     create_new_state,
     get_next_section,
@@ -118,6 +114,7 @@ class TestStateManagement:
 
         # Small delay to ensure timestamp difference
         import time
+
         time.sleep(0.01)
 
         save_state(state)
@@ -204,10 +201,7 @@ class TestDataPersistence:
         """Should save data for a section."""
         state = create_new_state()
 
-        section_data = {
-            "total_value": 50000,
-            "accounts": ["checking", "savings"]
-        }
+        section_data = {"total_value": 50000, "accounts": ["checking", "savings"]}
 
         state = save_section_data(state, "liquid_assets", section_data)
 
@@ -417,7 +411,7 @@ class TestEdgeCases:
         """Should handle corrupted JSON gracefully."""
         # Write invalid JSON
         state_path = get_state_path()
-        state_path.write_text("{ invalid json }", encoding='utf-8')
+        state_path.write_text("{ invalid json }", encoding="utf-8")
 
         result = load_state()
 
@@ -426,7 +420,7 @@ class TestEdgeCases:
     def test_empty_state_file(self):
         """Should handle empty file gracefully."""
         state_path = get_state_path()
-        state_path.write_text("", encoding='utf-8')
+        state_path.write_text("", encoding="utf-8")
 
         result = load_state()
 
@@ -444,10 +438,10 @@ class TestEdgeCases:
             "completed_sections": [],
             "current_section": None,
             "data": {},
-            "extra_field": "should be ignored"
+            "extra_field": "should be ignored",
         }
 
-        state_path.write_text(json.dumps(data), encoding='utf-8')
+        state_path.write_text(json.dumps(data), encoding="utf-8")
 
         result = load_state()
 

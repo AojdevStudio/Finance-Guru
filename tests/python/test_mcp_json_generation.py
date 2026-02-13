@@ -18,8 +18,9 @@ Test Categories:
 """
 
 import json
-import pytest
 from pathlib import Path
+
+import pytest
 
 from src.models.yaml_generation_inputs import (
     AllocationStrategy,
@@ -168,8 +169,7 @@ def valid_user_data_only_alphavantage() -> UserDataInput:
 def generator() -> YAMLGenerator:
     """Create YAMLGenerator instance with template directory."""
     template_dir = (
-        Path(__file__).parent.parent.parent
-        / "scripts/onboarding/modules/templates"
+        Path(__file__).parent.parent.parent / "scripts/onboarding/modules/templates"
     )
     return YAMLGenerator(str(template_dir))
 
@@ -223,9 +223,7 @@ def test_generated_mcp_json_is_valid_json(
 
     # Should have top-level mcpServers key
     assert "mcpServers" in parsed, "Generated JSON missing 'mcpServers' key"
-    assert isinstance(
-        parsed["mcpServers"], dict
-    ), "'mcpServers' should be a dictionary"
+    assert isinstance(parsed["mcpServers"], dict), "'mcpServers' should be a dictionary"
 
 
 def test_generated_mcp_json_has_metadata(
@@ -246,9 +244,7 @@ def test_generated_mcp_json_has_metadata(
     assert "version" in meta, "Metadata missing 'version'"
 
     # User should be correct
-    assert (
-        meta["user"] == "Alex"
-    ), f"Expected user 'Alex', got '{meta['user']}'"
+    assert meta["user"] == "Alex", f"Expected user 'Alex', got '{meta['user']}'"
 
 
 # ============================================================================
@@ -269,9 +265,9 @@ def test_required_mcp_servers_always_present(
     required_servers = ["exa", "perplexity", "gdrive", "context7"]
 
     for server in required_servers:
-        assert (
-            server in mcp_servers
-        ), f"Required server '{server}' missing from mcpServers"
+        assert server in mcp_servers, (
+            f"Required server '{server}' missing from mcpServers"
+        )
 
 
 def test_required_servers_have_command_and_args(
@@ -306,19 +302,19 @@ def test_alphavantage_included_when_has_key(
     mcp_servers = parsed["mcpServers"]
 
     # Should have financial-datasets
-    assert (
-        "financial-datasets" in mcp_servers
-    ), "financial-datasets should be present when has_alphavantage=True"
+    assert "financial-datasets" in mcp_servers, (
+        "financial-datasets should be present when has_alphavantage=True"
+    )
 
     # Should have env with API key
     financial_datasets = mcp_servers["financial-datasets"]
     assert "env" in financial_datasets, "financial-datasets missing 'env' section"
-    assert (
-        "ALPHA_VANTAGE_API_KEY" in financial_datasets["env"]
-    ), "financial-datasets env missing ALPHA_VANTAGE_API_KEY"
-    assert (
-        financial_datasets["env"]["ALPHA_VANTAGE_API_KEY"] == "test-alpha-key-123"
-    ), "Alpha Vantage API key mismatch"
+    assert "ALPHA_VANTAGE_API_KEY" in financial_datasets["env"], (
+        "financial-datasets env missing ALPHA_VANTAGE_API_KEY"
+    )
+    assert financial_datasets["env"]["ALPHA_VANTAGE_API_KEY"] == "test-alpha-key-123", (
+        "Alpha Vantage API key mismatch"
+    )
 
 
 def test_alphavantage_excluded_when_no_key(
@@ -331,9 +327,9 @@ def test_alphavantage_excluded_when_no_key(
     mcp_servers = parsed["mcpServers"]
 
     # Should NOT have financial-datasets
-    assert (
-        "financial-datasets" not in mcp_servers
-    ), "financial-datasets should be excluded when has_alphavantage=False"
+    assert "financial-datasets" not in mcp_servers, (
+        "financial-datasets should be excluded when has_alphavantage=False"
+    )
 
 
 def test_brightdata_included_when_has_key(
@@ -346,19 +342,19 @@ def test_brightdata_included_when_has_key(
     mcp_servers = parsed["mcpServers"]
 
     # Should have bright-data
-    assert (
-        "bright-data" in mcp_servers
-    ), "bright-data should be present when has_brightdata=True"
+    assert "bright-data" in mcp_servers, (
+        "bright-data should be present when has_brightdata=True"
+    )
 
     # Should have env with API key
     bright_data = mcp_servers["bright-data"]
     assert "env" in bright_data, "bright-data missing 'env' section"
-    assert (
-        "BRIGHT_DATA_API_KEY" in bright_data["env"]
-    ), "bright-data env missing BRIGHT_DATA_API_KEY"
-    assert (
-        bright_data["env"]["BRIGHT_DATA_API_KEY"] == "test-bright-key-456"
-    ), "BrightData API key mismatch"
+    assert "BRIGHT_DATA_API_KEY" in bright_data["env"], (
+        "bright-data env missing BRIGHT_DATA_API_KEY"
+    )
+    assert bright_data["env"]["BRIGHT_DATA_API_KEY"] == "test-bright-key-456", (
+        "BrightData API key mismatch"
+    )
 
 
 def test_brightdata_excluded_when_no_key(
@@ -371,9 +367,9 @@ def test_brightdata_excluded_when_no_key(
     mcp_servers = parsed["mcpServers"]
 
     # Should NOT have bright-data
-    assert (
-        "bright-data" not in mcp_servers
-    ), "bright-data should be excluded when has_brightdata=False"
+    assert "bright-data" not in mcp_servers, (
+        "bright-data should be excluded when has_brightdata=False"
+    )
 
 
 def test_only_alphavantage_no_brightdata(
@@ -386,14 +382,10 @@ def test_only_alphavantage_no_brightdata(
     mcp_servers = parsed["mcpServers"]
 
     # Should have financial-datasets
-    assert (
-        "financial-datasets" in mcp_servers
-    ), "financial-datasets should be present"
+    assert "financial-datasets" in mcp_servers, "financial-datasets should be present"
 
     # Should NOT have bright-data
-    assert (
-        "bright-data" not in mcp_servers
-    ), "bright-data should be excluded"
+    assert "bright-data" not in mcp_servers, "bright-data should be excluded"
 
 
 # ============================================================================
@@ -412,9 +404,9 @@ def test_user_name_substitution_in_metadata(
     assert parsed["_meta"]["user"] == "Alex", "User name not substituted correctly"
 
     # Should NOT contain template variable
-    assert (
-        "{{user_name}}" not in result
-    ), "Generated JSON contains unreplaced {{user_name}}"
+    assert "{{user_name}}" not in result, (
+        "Generated JSON contains unreplaced {{user_name}}"
+    )
 
 
 def test_timestamp_substitution(
@@ -430,9 +422,9 @@ def test_timestamp_substitution(
     assert "-" in generated_at, "generated_at should be ISO format (YYYY-MM-DD)"
 
     # Should NOT contain template variable
-    assert (
-        "{{timestamp}}" not in result
-    ), "Generated JSON contains unreplaced {{timestamp}}"
+    assert "{{timestamp}}" not in result, (
+        "Generated JSON contains unreplaced {{timestamp}}"
+    )
 
 
 def test_no_unreplaced_variables(
@@ -450,9 +442,9 @@ def test_no_unreplaced_variables(
     ]
 
     for var in template_vars:
-        assert (
-            var not in result
-        ), f"Generated MCP JSON contains unreplaced variable: {var}"
+        assert var not in result, (
+            f"Generated MCP JSON contains unreplaced variable: {var}"
+        )
 
 
 # ============================================================================

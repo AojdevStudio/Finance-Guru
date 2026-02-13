@@ -1,5 +1,4 @@
-"""
-Onboarding Wizard Validation Utilities for Finance Guru
+"""Onboarding Wizard Validation Utilities for Finance Guru.
 
 Domain-specific validators for financial input (currency, percentage,
 positive integer) and a retry-with-skip wrapper around questionary prompts
@@ -11,10 +10,10 @@ Created: 2026-02-05
 """
 
 import re
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 import questionary
-
 
 # ---------------------------------------------------------------------------
 # Domain validators
@@ -38,9 +37,7 @@ def validate_currency(value: str) -> float:
     """
     cleaned = value.strip().lstrip("$").replace(",", "").strip()
     if not cleaned:
-        raise ValueError(
-            "Please enter a dollar amount. Try: 25000, $25,000, or 25k"
-        )
+        raise ValueError("Please enter a dollar amount. Try: 25000, $25,000, or 25k")
 
     # Handle shorthand multipliers: 25k, 1.5m
     multiplier = 1.0
@@ -55,11 +52,11 @@ def validate_currency(value: str) -> float:
 
     try:
         result = float(cleaned) * multiplier
-    except ValueError:
+    except ValueError as e:
         raise ValueError(
             f"'{value.strip()}' doesn't look like a dollar amount. "
             "Try: 25000, $25,000, or 25k"
-        )
+        ) from e
 
     if result < 0:
         raise ValueError("Dollar amounts cannot be negative.")
@@ -84,17 +81,14 @@ def validate_percentage(value: str) -> float:
     """
     cleaned = value.strip().rstrip("%").strip()
     if not cleaned:
-        raise ValueError(
-            "Please enter a percentage. Try: 4.5 for 4.5%"
-        )
+        raise ValueError("Please enter a percentage. Try: 4.5 for 4.5%")
 
     try:
         result = float(cleaned)
-    except ValueError:
+    except ValueError as e:
         raise ValueError(
-            f"'{value.strip()}' doesn't look like a percentage. "
-            "Try: 4.5 for 4.5%"
-        )
+            f"'{value.strip()}' doesn't look like a percentage. Try: 4.5 for 4.5%"
+        ) from e
 
     if result < 0 or result > 100:
         raise ValueError(
@@ -123,10 +117,10 @@ def validate_positive_integer(value: str) -> int:
 
     try:
         result = int(cleaned)
-    except ValueError:
+    except ValueError as e:
         raise ValueError(
             f"'{cleaned}' is not a whole number. Please enter a positive integer."
-        )
+        ) from e
 
     if result <= 0:
         raise ValueError(
@@ -143,7 +137,7 @@ def validate_positive_integer(value: str) -> int:
 
 def ask_with_retry(
     prompt_fn: Callable[[], Any],
-    validator: Optional[Callable[[Any], Any]] = None,
+    validator: Callable[[Any], Any] | None = None,
     default: Any = None,
     max_retries: int = 3,
 ) -> Any:
@@ -189,13 +183,9 @@ def ask_with_retry(
             attempts += 1
             remaining = max_retries - attempts
             if remaining > 0:
-                print(
-                    f"  Invalid input (attempt {attempts}/{max_retries}): {exc}"
-                )
+                print(f"  Invalid input (attempt {attempts}/{max_retries}): {exc}")
             else:
-                print(
-                    f"  Invalid input (attempt {attempts}/{max_retries}): {exc}"
-                )
+                print(f"  Invalid input (attempt {attempts}/{max_retries}): {exc}")
 
     # All retries exhausted -- offer skip with default
     default_display = default if default is not None else "empty"

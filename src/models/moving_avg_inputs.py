@@ -1,5 +1,4 @@
-"""
-Moving Average Pydantic Models for Finance Guru™
+"""Moving Average Pydantic Models for Finance Guru™.
 
 This module defines type-safe data structures for moving average calculations.
 All models use Pydantic for automatic validation and type checking.
@@ -36,8 +35,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class MovingAverageDataInput(BaseModel):
-    """
-    Price data for moving average calculations.
+    """Price data for moving average calculations.
 
     WHAT: Container for price and date data
     WHY: Moving averages need historical price series
@@ -79,8 +77,7 @@ class MovingAverageDataInput(BaseModel):
     @field_validator("prices")
     @classmethod
     def prices_must_be_positive(cls, v: list[float]) -> list[float]:
-        """
-        Ensure all prices are positive.
+        """Ensure all prices are positive.
 
         WHY: Negative prices indicate data errors.
         Zero prices indicate delisted securities or missing data.
@@ -95,8 +92,7 @@ class MovingAverageDataInput(BaseModel):
     @field_validator("dates")
     @classmethod
     def dates_must_be_sorted(cls, v: list[date]) -> list[date]:
-        """
-        Ensure dates are chronologically ordered.
+        """Ensure dates are chronologically ordered.
 
         WHY: Moving averages require sequential time-series data.
         Out-of-order dates produce incorrect MA values.
@@ -110,8 +106,7 @@ class MovingAverageDataInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_data_alignment(self) -> MovingAverageDataInput:
-        """
-        Ensure prices array has the same length as dates.
+        """Ensure prices array has the same length as dates.
 
         WHY: Each date needs a corresponding price.
         Misalignment causes index errors in calculations.
@@ -128,7 +123,7 @@ class MovingAverageDataInput(BaseModel):
                 {
                     "ticker": "TSLA",
                     "dates": ["2025-09-01", "2025-09-02", "2025-09-03"],
-                    "prices": [250.0, 252.5, 248.0]
+                    "prices": [250.0, 252.5, 248.0],
                 }
             ]
         }
@@ -136,8 +131,7 @@ class MovingAverageDataInput(BaseModel):
 
 
 class MovingAverageConfig(BaseModel):
-    """
-    Configuration for moving average calculations.
+    """Configuration for moving average calculations.
 
     WHAT: Standard parameters for MA calculations
     WHY: Ensures consistent calculations across agents
@@ -160,34 +154,31 @@ class MovingAverageConfig(BaseModel):
     """
 
     ma_type: Literal["SMA", "EMA", "WMA", "HMA"] = Field(
-        default="SMA",
-        description="Type of moving average to calculate"
+        default="SMA", description="Type of moving average to calculate"
     )
 
     period: int = Field(
         default=50,
         ge=5,
         le=200,
-        description="MA period in days (default: 50, range: 5-200)"
+        description="MA period in days (default: 50, range: 5-200)",
     )
 
     # Optional second MA for crossover detection
     secondary_ma_type: Literal["SMA", "EMA", "WMA", "HMA"] | None = Field(
-        default=None,
-        description="Type of second MA for crossover detection (optional)"
+        default=None, description="Type of second MA for crossover detection (optional)"
     )
 
     secondary_period: int | None = Field(
         default=None,
         ge=5,
         le=200,
-        description="Second MA period for crossover detection (optional)"
+        description="Second MA period for crossover detection (optional)",
     )
 
     @model_validator(mode="after")
     def validate_crossover_config(self) -> MovingAverageConfig:
-        """
-        Validate crossover configuration.
+        """Validate crossover configuration.
 
         WHY: For crossovers, we need two different periods.
         Fast MA (shorter period) must be less than slow MA (longer period).
@@ -203,15 +194,18 @@ class MovingAverageConfig(BaseModel):
             )
 
         # If both are set, ensure periods are different and properly ordered
-        if has_secondary_type and has_secondary_period:
-            if self.period == self.secondary_period:
-                raise ValueError(
-                    f"Primary period ({self.period}) must differ from "
-                    f"secondary period ({self.secondary_period}) for crossover detection"
-                )
+        if (
+            has_secondary_type
+            and has_secondary_period
+            and self.period == self.secondary_period
+        ):
+            raise ValueError(
+                f"Primary period ({self.period}) must differ from "
+                f"secondary period ({self.secondary_period}) for crossover detection"
+            )
 
-            # Warn if the "fast" MA is actually slower (unusual but not invalid)
-            # We'll just ensure they're different - user decides which is fast/slow
+        # Warn if the "fast" MA is actually slower (unusual but not invalid)
+        # We'll just ensure they're different - user decides which is fast/slow
 
         return self
 
@@ -222,7 +216,7 @@ class MovingAverageConfig(BaseModel):
                     "ma_type": "SMA",
                     "period": 50,
                     "secondary_ma_type": "SMA",
-                    "secondary_period": 200
+                    "secondary_period": 200,
                 }
             ]
         }
@@ -230,8 +224,7 @@ class MovingAverageConfig(BaseModel):
 
 
 class MovingAverageOutput(BaseModel):
-    """
-    Single moving average output.
+    """Single moving average output.
 
     WHAT: Calculated MA values and metadata
     WHY: Provides complete MA information for trend analysis
@@ -252,54 +245,46 @@ class MovingAverageOutput(BaseModel):
 
     ticker: str
     calculation_date: date = Field(
-        ...,
-        description="Most recent date in calculation (today's value)"
+        ..., description="Most recent date in calculation (today's value)"
     )
     ma_type: Literal["SMA", "EMA", "WMA", "HMA"] = Field(
-        ...,
-        description="Type of moving average calculated"
+        ..., description="Type of moving average calculated"
     )
-    period: int = Field(
-        ...,
-        description="Period used for calculation (in days)"
-    )
+    period: int = Field(..., description="Period used for calculation (in days)")
     current_value: float | None = Field(
         ...,
-        description="Current MA value (most recent calculation), None if insufficient data"
+        description="Current MA value (most recent calculation), None if insufficient data",
     )
     current_price: float = Field(
-        ...,
-        gt=0.0,
-        description="Current price (for comparison with MA)"
+        ..., gt=0.0, description="Current price (for comparison with MA)"
     )
     price_vs_ma: Literal["ABOVE", "BELOW", "AT"] = Field(
-        ...,
-        description="Price position relative to MA (trend indicator)"
+        ..., description="Price position relative to MA (trend indicator)"
     )
     ma_values: list[float] = Field(
-        ...,
-        description="Full MA series (for charting/analysis)"
+        ..., description="Full MA series (for charting/analysis)"
     )
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "ticker": "TSLA",
-                "calculation_date": "2025-10-13",
-                "ma_type": "SMA",
-                "period": 50,
-                "current_value": 248.50,
-                "current_price": 252.30,
-                "price_vs_ma": "ABOVE",
-                "ma_values": [245.0, 246.5, 248.5]
-            }]
+            "examples": [
+                {
+                    "ticker": "TSLA",
+                    "calculation_date": "2025-10-13",
+                    "ma_type": "SMA",
+                    "period": 50,
+                    "current_value": 248.50,
+                    "current_price": 252.30,
+                    "price_vs_ma": "ABOVE",
+                    "ma_values": [245.0, 246.5, 248.5],
+                }
+            ]
         }
     }
 
 
 class CrossoverOutput(BaseModel):
-    """
-    Moving average crossover analysis.
+    """Moving average crossover analysis.
 
     WHAT: Detects and interprets MA crossovers
     WHY: Crossovers are powerful trading signals
@@ -339,49 +324,45 @@ class CrossoverOutput(BaseModel):
     slow_value: float = Field(..., gt=0.0)
 
     current_signal: Literal["BULLISH", "BEARISH", "NEUTRAL"] = Field(
-        ...,
-        description="Current crossover signal based on MA positions"
+        ..., description="Current crossover signal based on MA positions"
     )
 
     last_crossover_date: date | None = Field(
-        default=None,
-        description="Date of most recent crossover (if any)"
+        default=None, description="Date of most recent crossover (if any)"
     )
 
     crossover_type: Literal["GOLDEN_CROSS", "DEATH_CROSS", "NONE"] = Field(
-        ...,
-        description="Type of most recent crossover (if 50/200 SMA)"
+        ..., description="Type of most recent crossover (if 50/200 SMA)"
     )
 
     days_since_crossover: int | None = Field(
-        default=None,
-        ge=0,
-        description="Days since last crossover (signal freshness)"
+        default=None, ge=0, description="Days since last crossover (signal freshness)"
     )
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "ticker": "TSLA",
-                "calculation_date": "2025-10-13",
-                "fast_ma_type": "SMA",
-                "fast_period": 50,
-                "fast_value": 248.50,
-                "slow_ma_type": "SMA",
-                "slow_period": 200,
-                "slow_value": 242.30,
-                "current_signal": "BULLISH",
-                "last_crossover_date": "2025-09-15",
-                "crossover_type": "GOLDEN_CROSS",
-                "days_since_crossover": 28
-            }]
+            "examples": [
+                {
+                    "ticker": "TSLA",
+                    "calculation_date": "2025-10-13",
+                    "fast_ma_type": "SMA",
+                    "fast_period": 50,
+                    "fast_value": 248.50,
+                    "slow_ma_type": "SMA",
+                    "slow_period": 200,
+                    "slow_value": 242.30,
+                    "current_signal": "BULLISH",
+                    "last_crossover_date": "2025-09-15",
+                    "crossover_type": "GOLDEN_CROSS",
+                    "days_since_crossover": 28,
+                }
+            ]
         }
     }
 
 
 class MovingAverageAnalysis(BaseModel):
-    """
-    Complete moving average analysis including optional crossover.
+    """Complete moving average analysis including optional crossover.
 
     WHAT: Single or dual MA analysis with full interpretation
     WHY: Convenient for comprehensive trend analysis
@@ -395,32 +376,32 @@ class MovingAverageAnalysis(BaseModel):
     calculation_date: date
     primary_ma: MovingAverageOutput
     secondary_ma: MovingAverageOutput | None = Field(
-        default=None,
-        description="Second MA if crossover analysis requested"
+        default=None, description="Second MA if crossover analysis requested"
     )
     crossover_analysis: CrossoverOutput | None = Field(
-        default=None,
-        description="Crossover signals if dual MA analysis"
+        default=None, description="Crossover signals if dual MA analysis"
     )
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "ticker": "TSLA",
-                "calculation_date": "2025-10-13",
-                "primary_ma": {
+            "examples": [
+                {
                     "ticker": "TSLA",
                     "calculation_date": "2025-10-13",
-                    "ma_type": "SMA",
-                    "period": 50,
-                    "current_value": 248.50,
-                    "current_price": 252.30,
-                    "price_vs_ma": "ABOVE",
-                    "ma_values": []
-                },
-                "secondary_ma": None,
-                "crossover_analysis": None
-            }]
+                    "primary_ma": {
+                        "ticker": "TSLA",
+                        "calculation_date": "2025-10-13",
+                        "ma_type": "SMA",
+                        "period": 50,
+                        "current_value": 248.50,
+                        "current_price": 252.30,
+                        "price_vs_ma": "ABOVE",
+                        "ma_values": [],
+                    },
+                    "secondary_ma": None,
+                    "crossover_analysis": None,
+                }
+            ]
         }
     }
 

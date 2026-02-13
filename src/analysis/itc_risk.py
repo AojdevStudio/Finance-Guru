@@ -1,5 +1,4 @@
-"""
-ITC Risk Calculator for Finance Guru™
+"""ITC Risk Calculator for Finance Guru™.
 
 This module implements the calculator layer for ITC (Into The Cryptoverse)
 Risk Models API integration.
@@ -29,17 +28,16 @@ import os
 import time
 import warnings
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Any
 
 import requests
 import yfinance as yf
 
-from src.models.itc_risk_inputs import ITCRiskRequest, ITCRiskResponse, RiskBand
+from src.models.itc_risk_inputs import ITCRiskResponse, RiskBand
 
 
 class ITCRiskCalculator:
-    """
-    Calculator for ITC Risk Models API integration.
+    """Calculator for ITC Risk Models API integration.
 
     WHAT: Fetches market-implied risk scores from Into The Cryptoverse
     WHY: Provides a "second opinion" on risk that complements internal metrics
@@ -79,30 +77,61 @@ class ITCRiskCalculator:
 
     # Supported assets for each universe
     # NOTE: These are the ONLY assets ITC covers. For others, use risk_metrics_cli.py
-    SUPPORTED_TRADFI: List[str] = [
+    SUPPORTED_TRADFI: list[str] = [
         # Stocks (4)
-        "TSLA", "AAPL", "MSTR", "NFLX",
+        "TSLA",
+        "AAPL",
+        "MSTR",
+        "NFLX",
         # Index (1)
         "SP500",
         # Currency (1)
         "DXY",
         # Commodities (7)
-        "XAUUSD", "XAGUSD", "XPDUSD", "PL", "HG", "NICKEL",
+        "XAUUSD",
+        "XAGUSD",
+        "XPDUSD",
+        "PL",
+        "HG",
+        "NICKEL",
     ]
 
-    SUPPORTED_CRYPTO: List[str] = [
+    SUPPORTED_CRYPTO: list[str] = [
         # Major coins
-        "BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "LINK",
-        "AVAX", "DOT", "SHIB", "LTC", "AAVE", "ATOM", "POL", "ALGO",
-        "HBAR", "RENDER", "VET", "TRX", "TON", "SUI", "XLM", "XMR",
-        "XTZ", "SKY",
+        "BTC",
+        "ETH",
+        "BNB",
+        "SOL",
+        "XRP",
+        "ADA",
+        "DOGE",
+        "LINK",
+        "AVAX",
+        "DOT",
+        "SHIB",
+        "LTC",
+        "AAVE",
+        "ATOM",
+        "POL",
+        "ALGO",
+        "HBAR",
+        "RENDER",
+        "VET",
+        "TRX",
+        "TON",
+        "SUI",
+        "XLM",
+        "XMR",
+        "XTZ",
+        "SKY",
         # Meta metrics
-        "BTC.D", "TOTAL", "TOTAL6",
+        "BTC.D",
+        "TOTAL",
+        "TOTAL6",
     ]
 
-    def __init__(self, api_key: Optional[str] = None):
-        """
-        Initialize calculator with API key.
+    def __init__(self, api_key: str | None = None):
+        """Initialize calculator with API key.
 
         Args:
             api_key: ITC API key. If None, loads from ITC_API_KEY env var.
@@ -129,8 +158,7 @@ class ITCRiskCalculator:
             )
 
     def validate_ticker(self, symbol: str, universe: str) -> None:
-        """
-        Validate ticker is supported by ITC API.
+        """Validate ticker is supported by ITC API.
 
         Args:
             symbol: Ticker symbol (case-insensitive, will be normalized)
@@ -174,8 +202,7 @@ class ITCRiskCalculator:
         enrich_with_price: bool = True,
         retry_count: int = 3,
     ) -> ITCRiskResponse:
-        """
-        Fetch risk score and bands for a ticker.
+        """Fetch risk score and bands for a ticker.
 
         Args:
             symbol: Ticker symbol (e.g., TSLA, BTC)
@@ -223,7 +250,6 @@ class ITCRiskCalculator:
         }
 
         # Retry logic with exponential backoff
-        last_exception: Optional[Exception] = None
         for attempt in range(retry_count):
             try:
                 # Make API request with timeout
@@ -234,10 +260,10 @@ class ITCRiskCalculator:
                     # Rate limit hit - log and retry
                     warnings.warn(
                         f"ITC API rate limit hit (attempt {attempt + 1}/{retry_count}). "
-                        f"Retrying in {2 ** attempt} seconds..."
+                        f"Retrying in {2**attempt} seconds..."
                     )
                     if attempt < retry_count - 1:
-                        time.sleep(2 ** attempt)
+                        time.sleep(2**attempt)
                         continue
                     else:
                         raise requests.RequestException(
@@ -253,13 +279,12 @@ class ITCRiskCalculator:
                 break
 
             except requests.Timeout as e:
-                last_exception = e
                 warnings.warn(
                     f"ITC API timeout (attempt {attempt + 1}/{retry_count}). "
-                    f"Retrying in {2 ** attempt} seconds..."
+                    f"Retrying in {2**attempt} seconds..."
                 )
                 if attempt < retry_count - 1:
-                    time.sleep(2 ** attempt)
+                    time.sleep(2**attempt)
                 else:
                     raise requests.RequestException(
                         f"ITC API timed out after {retry_count} attempts. "
@@ -267,14 +292,13 @@ class ITCRiskCalculator:
                     ) from e
 
             except requests.RequestException as e:
-                last_exception = e
                 # Network or HTTP error
                 if attempt < retry_count - 1:
                     warnings.warn(
                         f"ITC API error (attempt {attempt + 1}/{retry_count}): {e}. "
-                        f"Retrying in {2 ** attempt} seconds..."
+                        f"Retrying in {2**attempt} seconds..."
                     )
-                    time.sleep(2 ** attempt)
+                    time.sleep(2**attempt)
                 else:
                     raise requests.RequestException(
                         f"Unable to reach ITC API after {retry_count} attempts: {e}\n"
@@ -314,9 +338,8 @@ class ITCRiskCalculator:
             source="Into The Cryptoverse API",
         )
 
-    def get_all_risks(self, universe: str) -> Dict[str, Any]:
-        """
-        Get risk scores for all assets in a universe.
+    def get_all_risks(self, universe: str) -> dict[str, Any]:
+        """Get risk scores for all assets in a universe.
 
         Args:
             universe: "crypto" or "tradfi"
@@ -345,9 +368,8 @@ class ITCRiskCalculator:
 
         return response.json()
 
-    def _parse_risk_bands(self, data: Dict[str, Any]) -> List[RiskBand]:
-        """
-        Parse risk bands from ITC API response.
+    def _parse_risk_bands(self, data: dict[str, Any]) -> list[RiskBand]:
+        """Parse risk bands from ITC API response.
 
         Args:
             data: Raw JSON response from ITC API
@@ -399,9 +421,8 @@ class ITCRiskCalculator:
 
         return risk_bands
 
-    def _fetch_current_price(self, symbol: str) -> Optional[float]:
-        """
-        Fetch current market price from yfinance.
+    def _fetch_current_price(self, symbol: str) -> float | None:
+        """Fetch current market price from yfinance.
 
         Args:
             symbol: Ticker symbol (uppercase)
@@ -448,8 +469,7 @@ class ITCRiskCalculator:
         return None
 
     def is_ticker_supported(self, symbol: str, universe: str) -> bool:
-        """
-        Check if a ticker is supported without raising an exception.
+        """Check if a ticker is supported without raising an exception.
 
         Args:
             symbol: Ticker symbol (case-insensitive)
@@ -470,9 +490,8 @@ class ITCRiskCalculator:
         else:
             return symbol_upper in self.SUPPORTED_TRADFI
 
-    def get_supported_tickers(self, universe: str) -> List[str]:
-        """
-        Get list of supported tickers for a universe.
+    def get_supported_tickers(self, universe: str) -> list[str]:
+        """Get list of supported tickers for a universe.
 
         Args:
             universe: "crypto" or "tradfi"

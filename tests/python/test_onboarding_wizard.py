@@ -13,12 +13,11 @@ Created: 2026-02-05
 """
 
 import json
-
-import pytest
 from pathlib import Path
 
+import pytest
+
 from src.cli.onboarding_wizard import (
-    PROGRESS_FILE,
     SECTION_ORDER,
     convert_state_to_user_data,
     delete_progress,
@@ -40,7 +39,6 @@ from src.models.yaml_generation_inputs import (
     UserIdentityInput,
     UserPreferencesInput,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -67,7 +65,7 @@ def completed_state() -> OnboardingState:
         "has_retirement": True,
         "retirement_value": 60000.0,
         "allocation_strategy": "aggressive_growth",  # string, not enum
-        "risk_tolerance": "aggressive",              # string, not enum
+        "risk_tolerance": "aggressive",  # string, not enum
         "google_sheets_id": "abc123",
         "account_number": "4567",
     }
@@ -193,9 +191,7 @@ class TestConvertStateToUserData:
 
     def test_returns_valid_user_data(self, completed_state):
         """Produces a validated UserDataInput from completed wizard state."""
-        result = convert_state_to_user_data(
-            completed_state, "/tmp/test-project"
-        )
+        result = convert_state_to_user_data(completed_state, "/tmp/test-project")
         assert isinstance(result, UserDataInput)
 
     def test_identity_from_env_setup(self, completed_state):
@@ -221,12 +217,9 @@ class TestConvertStateToUserData:
     def test_string_to_enum_conversion_allocation(self, completed_state):
         """Allocation string 'aggressive_growth' -> AllocationStrategy.AGGRESSIVE_GROWTH."""
         result = convert_state_to_user_data(completed_state, "/tmp/test")
-        assert isinstance(
-            result.portfolio.allocation_strategy, AllocationStrategy
-        )
+        assert isinstance(result.portfolio.allocation_strategy, AllocationStrategy)
         assert (
-            result.portfolio.allocation_strategy
-            == AllocationStrategy.AGGRESSIVE_GROWTH
+            result.portfolio.allocation_strategy == AllocationStrategy.AGGRESSIVE_GROWTH
         )
 
     def test_string_to_enum_conversion_philosophy(self, completed_state):
@@ -235,16 +228,11 @@ class TestConvertStateToUserData:
         assert isinstance(
             result.preferences.investment_philosophy, InvestmentPhilosophy
         )
-        assert (
-            result.preferences.investment_philosophy
-            == InvestmentPhilosophy.GROWTH
-        )
+        assert result.preferences.investment_philosophy == InvestmentPhilosophy.GROWTH
 
     def test_project_root_set(self, completed_state):
         """Project root is passed through."""
-        result = convert_state_to_user_data(
-            completed_state, "/custom/project/root"
-        )
+        result = convert_state_to_user_data(completed_state, "/custom/project/root")
         assert result.project_root == "/custom/project/root"
 
     def test_mcp_config_from_env_setup(self, completed_state):
@@ -256,14 +244,12 @@ class TestConvertStateToUserData:
 
     def test_unknown_enum_falls_back_to_default(self, completed_state):
         """Unknown enum string falls back gracefully."""
-        completed_state.data[SectionName.INVESTMENTS.value][
-            "risk_tolerance"
-        ] = "extremely_risky"
+        completed_state.data[SectionName.INVESTMENTS.value]["risk_tolerance"] = (
+            "extremely_risky"
+        )
 
         with pytest.warns(UserWarning, match="Unknown RiskTolerance"):
-            result = convert_state_to_user_data(
-                completed_state, "/tmp/test"
-            )
+            result = convert_state_to_user_data(completed_state, "/tmp/test")
         # Falls back to default (MODERATE)
         assert result.portfolio.risk_tolerance == RiskTolerance.MODERATE
 
@@ -320,9 +306,7 @@ class TestGenerateConfigFiles:
         assert (
             tmp_path / "fin-guru-private" / "fin-guru" / "data" / "user-profile.yaml"
         ).exists()
-        assert (
-            tmp_path / "fin-guru-private" / "fin-guru" / "config.yaml"
-        ).exists()
+        assert (tmp_path / "fin-guru-private" / "fin-guru" / "config.yaml").exists()
         assert (
             tmp_path / "fin-guru-private" / "fin-guru" / "data" / "system-context.md"
         ).exists()
@@ -348,11 +332,7 @@ class TestGenerateConfigFiles:
         generate_config_files(valid_user_data, tmp_path)
 
         profile = (
-            tmp_path
-            / "fin-guru-private"
-            / "fin-guru"
-            / "data"
-            / "user-profile.yaml"
+            tmp_path / "fin-guru-private" / "fin-guru" / "data" / "user-profile.yaml"
         ).read_text()
         assert "TestUser" in profile
         assert "{{user_name}}" not in profile
@@ -423,9 +403,7 @@ class TestGenerateConfigFiles:
 def progress_file(tmp_path, monkeypatch):
     """Override PROGRESS_FILE to use a temp directory."""
     progress_path = tmp_path / ".onboarding-progress.json"
-    monkeypatch.setattr(
-        "src.cli.onboarding_wizard.PROGRESS_FILE", progress_path
-    )
+    monkeypatch.setattr("src.cli.onboarding_wizard.PROGRESS_FILE", progress_path)
     return progress_path
 
 
@@ -480,13 +458,11 @@ class TestSaveProgress:
     def test_atomic_write_no_partial_on_error(self, tmp_path, monkeypatch):
         """If JSON serialization fails, no progress file is left behind."""
         progress_path = tmp_path / ".onboarding-progress.json"
-        monkeypatch.setattr(
-            "src.cli.onboarding_wizard.PROGRESS_FILE", progress_path
-        )
+        monkeypatch.setattr("src.cli.onboarding_wizard.PROGRESS_FILE", progress_path)
         state = OnboardingState.create_new()
         # Inject an unserializable object to force an error
         state.data["bad"] = {"value": object()}
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             save_progress(state)
         assert not progress_path.exists()
 
@@ -545,11 +521,9 @@ class TestDeleteProgress:
 class TestWizardSaveResume:
     """Integration tests for wizard save/resume behavior."""
 
-    def test_wizard_saves_progress_after_section(
-        self, progress_file, monkeypatch
-    ):
+    def test_wizard_saves_progress_after_section(self, progress_file, monkeypatch):
         """Progress file is created after completing sections."""
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import patch
 
         from src.cli.onboarding_wizard import run_wizard
 
@@ -566,9 +540,7 @@ class TestWizardSaveResume:
             state.data[section_name.value] = {"mock": True}
             next_idx = sections_completed + 1
             next_section = (
-                SECTION_ORDER[next_idx][0]
-                if next_idx < len(SECTION_ORDER)
-                else None
+                SECTION_ORDER[next_idx][0] if next_idx < len(SECTION_ORDER) else None
             )
             state.mark_complete(section_name, next_section)
             sections_completed += 1
@@ -579,13 +551,14 @@ class TestWizardSaveResume:
             return state
 
         # Patch all section runners
-        with patch(
-            "src.cli.onboarding_wizard.SECTION_ORDER",
-            [(name, mock_section_runner) for name, _ in SECTION_ORDER],
+        with (
+            patch(
+                "src.cli.onboarding_wizard.SECTION_ORDER",
+                [(name, mock_section_runner) for name, _ in SECTION_ORDER],
+            ),
+            patch("src.cli.onboarding_wizard.load_progress", return_value=None),
         ):
-            # Patch load_progress to return None (fresh start)
-            with patch("src.cli.onboarding_wizard.load_progress", return_value=None):
-                run_wizard()
+            run_wizard()
 
         # Verify progress file was created with 2 completed sections
         assert progress_file.exists()
@@ -615,9 +588,7 @@ class TestWizardSaveResume:
             section_names = [name for name, _ in SECTION_ORDER]
             idx = section_names.index(section_name)
             next_section = (
-                SECTION_ORDER[idx + 1][0]
-                if idx + 1 < len(SECTION_ORDER)
-                else None
+                SECTION_ORDER[idx + 1][0] if idx + 1 < len(SECTION_ORDER) else None
             )
             state.mark_complete(section_name, next_section)
 
@@ -673,27 +644,25 @@ class TestWizardSaveResume:
                 state.data[sname.value] = {"mock": True}
             next_idx = section_index + 1
             next_section = (
-                SECTION_ORDER[next_idx][0]
-                if next_idx < len(SECTION_ORDER)
-                else None
+                SECTION_ORDER[next_idx][0] if next_idx < len(SECTION_ORDER) else None
             )
             state.mark_complete(sname, next_section)
             section_index += 1
             return state
 
-        with patch("src.cli.onboarding_wizard.load_progress", return_value=None):
-            with patch(
+        with (
+            patch("src.cli.onboarding_wizard.load_progress", return_value=None),
+            patch(
                 "src.cli.onboarding_wizard.SECTION_ORDER",
                 [(name, mock_runner) for name, _ in SECTION_ORDER],
-            ):
-                with patch(
-                    "src.cli.onboarding_wizard.convert_state_to_user_data"
-                ) as mock_convert:
-                    with patch(
-                        "src.cli.onboarding_wizard.generate_config_files"
-                    ):
-                        mock_convert.return_value = MagicMock()
-                        run_wizard()
+            ),
+            patch(
+                "src.cli.onboarding_wizard.convert_state_to_user_data"
+            ) as mock_convert,
+            patch("src.cli.onboarding_wizard.generate_config_files"),
+        ):
+            mock_convert.return_value = MagicMock()
+            run_wizard()
 
         # Progress file should be deleted after completion
         assert not progress_file.exists()

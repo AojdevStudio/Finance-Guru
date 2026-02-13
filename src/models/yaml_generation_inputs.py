@@ -1,5 +1,4 @@
-"""
-YAML Generation Input Models for Finance Guru™
+"""YAML Generation Input Models for Finance Guru™.
 
 Pydantic models for type-safe YAML configuration generation.
 These models validate user onboarding data before generating config files.
@@ -15,13 +14,12 @@ Created: 2026-01-16
 """
 
 from datetime import date
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class RiskTolerance(str, Enum):
+class RiskTolerance(StrEnum):
     """User risk tolerance levels."""
 
     CONSERVATIVE = "conservative"
@@ -29,7 +27,7 @@ class RiskTolerance(str, Enum):
     AGGRESSIVE = "aggressive"
 
 
-class AllocationStrategy(str, Enum):
+class AllocationStrategy(StrEnum):
     """Portfolio allocation strategies."""
 
     PASSIVE = "passive"
@@ -39,7 +37,7 @@ class AllocationStrategy(str, Enum):
     INCOME_FOCUSED = "income_focused"
 
 
-class InvestmentPhilosophy(str, Enum):
+class InvestmentPhilosophy(StrEnum):
     """Investment philosophy options."""
 
     GROWTH = "growth"
@@ -75,28 +73,26 @@ class LiquidAssetsInput(BaseModel):
     average_yield: float = Field(
         ..., ge=0, le=1, description="Average yield (as decimal, e.g., 0.04)"
     )
-    structure: Optional[str] = Field(
-        None, description="Description of account structure"
-    )
+    structure: str | None = Field(None, description="Description of account structure")
 
 
 class InvestmentPortfolioInput(BaseModel):
     """Investment portfolio details."""
 
     total_value: float = Field(..., ge=0, description="Total portfolio value")
-    brokerage: Optional[str] = Field(None, description="Primary brokerage name")
+    brokerage: str | None = Field(None, description="Primary brokerage name")
     has_retirement: bool = Field(default=False, description="Has retirement accounts")
-    retirement_value: Optional[float] = Field(
+    retirement_value: float | None = Field(
         None, ge=0, description="Total retirement account value"
     )
     allocation_strategy: AllocationStrategy = Field(
         ..., description="Portfolio allocation strategy"
     )
     risk_tolerance: RiskTolerance = Field(..., description="Risk tolerance level")
-    google_sheets_id: Optional[str] = Field(
+    google_sheets_id: str | None = Field(
         None, description="Google Sheets portfolio tracker ID"
     )
-    account_number: Optional[str] = Field(
+    account_number: str | None = Field(
         None, description="Primary account number (last 4 digits or masked)"
     )
 
@@ -129,30 +125,30 @@ class DebtProfileInput(BaseModel):
     """Debt obligations and rates."""
 
     has_mortgage: bool = Field(default=False, description="Has mortgage")
-    mortgage_balance: Optional[float] = Field(None, ge=0, description="Mortgage balance")
-    mortgage_payment: Optional[float] = Field(
+    mortgage_balance: float | None = Field(None, ge=0, description="Mortgage balance")
+    mortgage_payment: float | None = Field(
         None, ge=0, description="Monthly mortgage payment"
     )
     has_student_loans: bool = Field(default=False, description="Has student loans")
-    student_loan_balance: Optional[float] = Field(
+    student_loan_balance: float | None = Field(
         None, ge=0, description="Student loan balance"
     )
-    student_loan_rate: Optional[float] = Field(
+    student_loan_rate: float | None = Field(
         None, ge=0, le=1, description="Student loan interest rate (decimal)"
     )
     has_auto_loans: bool = Field(default=False, description="Has auto loans")
-    auto_loan_balance: Optional[float] = Field(None, ge=0, description="Auto loan balance")
-    auto_loan_rate: Optional[float] = Field(
+    auto_loan_balance: float | None = Field(None, ge=0, description="Auto loan balance")
+    auto_loan_rate: float | None = Field(
         None, ge=0, le=1, description="Auto loan interest rate (decimal)"
     )
     has_credit_cards: bool = Field(default=False, description="Has credit card debt")
-    credit_card_balance: Optional[float] = Field(
+    credit_card_balance: float | None = Field(
         None, ge=0, description="Credit card balance"
     )
-    weighted_rate: Optional[float] = Field(
+    weighted_rate: float | None = Field(
         None, ge=0, le=1, description="Weighted average debt interest rate"
     )
-    other_debt: Optional[str] = Field(None, description="Other debt description")
+    other_debt: str | None = Field(None, description="Other debt description")
 
 
 class UserPreferencesInput(BaseModel):
@@ -172,10 +168,12 @@ class UserPreferencesInput(BaseModel):
 class MCPConfigInput(BaseModel):
     """MCP server configuration."""
 
-    has_alphavantage: bool = Field(default=False, description="Has Alpha Vantage API key")
-    alphavantage_key: Optional[str] = Field(None, description="Alpha Vantage API key")
+    has_alphavantage: bool = Field(
+        default=False, description="Has Alpha Vantage API key"
+    )
+    alphavantage_key: str | None = Field(None, description="Alpha Vantage API key")
     has_brightdata: bool = Field(default=False, description="Has BrightData API key")
-    brightdata_key: Optional[str] = Field(None, description="BrightData API key")
+    brightdata_key: str | None = Field(None, description="BrightData API key")
 
 
 class UserDataInput(BaseModel):
@@ -190,8 +188,8 @@ class UserDataInput(BaseModel):
     mcp: MCPConfigInput = Field(default_factory=MCPConfigInput)
 
     # Environment
-    project_root: Optional[str] = Field(None, description="Project root directory")
-    google_sheets_credentials: Optional[str] = Field(
+    project_root: str | None = Field(None, description="Project root directory")
+    google_sheets_credentials: str | None = Field(
         None, description="Path to Google Sheets credentials JSON"
     )
 
@@ -199,7 +197,9 @@ class UserDataInput(BaseModel):
 class YAMLGenerationOutput(BaseModel):
     """Output from YAML generation."""
 
-    user_profile_yaml: str = Field(..., description="Generated user-profile.yaml content")
+    user_profile_yaml: str = Field(
+        ..., description="Generated user-profile.yaml content"
+    )
     config_yaml: str = Field(..., description="Generated config.yaml content")
     system_context_md: str = Field(
         ..., description="Generated system-context.md content"

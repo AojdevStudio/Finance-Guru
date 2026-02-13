@@ -1,5 +1,4 @@
-"""
-Backtesting Framework for Finance Guru.
+"""Backtesting Framework for Finance Guru.
 
 WHAT: Historical strategy validation with realistic cost modeling
 WHY: Test investment strategies before risking real capital
@@ -29,10 +28,9 @@ from src.models.backtest_inputs import (
 
 
 class Backtester:
-    """
-    WHAT: Executes and analyzes trading strategies on historical data
+    """WHAT: Executes and analyzes trading strategies on historical data
     WHY: Validates strategy performance before real capital deployment
-    HOW: Uses Pydantic models for inputs/outputs, simulates realistic trading
+    HOW: Uses Pydantic models for inputs/outputs, simulates realistic trading.
 
     EDUCATIONAL NOTE:
     A backtest answers: "If I had traded this strategy in the past, what would have happened?"
@@ -47,8 +45,7 @@ class Backtester:
     """
 
     def __init__(self, config: BacktestConfig):
-        """
-        Initialize backtester with configuration.
+        """Initialize backtester with configuration.
 
         Args:
             config: BacktestConfig with capital, costs, and sizing rules
@@ -65,8 +62,7 @@ class Backtester:
         ticker: str,
         strategy_name: str = "Unnamed Strategy",
     ) -> BacktestResults:
-        """
-        Execute backtest on a series of trading signals.
+        """Execute backtest on a series of trading signals.
 
         EXPLANATION:
         This is the main entry point. It processes signals chronologically,
@@ -110,7 +106,9 @@ class Backtester:
         # Close any open position at the end
         if self.current_position is not None:
             last_signal = signals[-1]
-            self._close_position(last_signal.signal_date, last_signal.price, "Backtest end")
+            self._close_position(
+                last_signal.signal_date, last_signal.price, "Backtest end"
+            )
 
         # Calculate performance metrics
         performance = self._calculate_performance_metrics()
@@ -137,8 +135,7 @@ class Backtester:
         )
 
     def _process_signal(self, signal: TradeSignal) -> None:
-        """
-        Process a single trading signal.
+        """Process a single trading signal.
 
         LOGIC:
         - BUY: Open new position (if no current position)
@@ -151,11 +148,12 @@ class Backtester:
         if signal.action == "BUY" and self.current_position is None:
             self._open_position(signal)
         elif signal.action == "SELL" and self.current_position is not None:
-            self._close_position(signal.signal_date, signal.price, signal.reason or "Sell signal")
+            self._close_position(
+                signal.signal_date, signal.price, signal.reason or "Sell signal"
+            )
 
     def _open_position(self, signal: TradeSignal) -> None:
-        """
-        Open a new trading position with realistic execution costs.
+        """Open a new trading position with realistic execution costs.
 
         EXECUTION MODEL:
         1. Calculate position size based on config
@@ -200,7 +198,7 @@ class Backtester:
             return
 
         # Deduct capital and commission
-        self.capital -= (capital_needed + commission)
+        self.capital -= capital_needed + commission
 
         # Create trade execution record
         self.current_position = TradeExecution(
@@ -218,8 +216,7 @@ class Backtester:
         )
 
     def _close_position(self, exit_date, exit_price: float, reason: str) -> None:
-        """
-        Close the current position with realistic execution costs.
+        """Close the current position with realistic execution costs.
 
         EXECUTION MODEL:
         1. Apply slippage to exit price (price moves against you)
@@ -277,8 +274,7 @@ class Backtester:
         self.current_position = None
 
     def _calculate_current_equity(self, current_price: float) -> float:
-        """
-        Calculate total account equity (cash + position value).
+        """Calculate total account equity (cash + position value).
 
         Args:
             current_price: Current market price
@@ -296,8 +292,7 @@ class Backtester:
         return equity
 
     def _calculate_performance_metrics(self) -> BacktestPerformanceMetrics:
-        """
-        Calculate comprehensive performance statistics.
+        """Calculate comprehensive performance statistics.
 
         METRICS CALCULATED:
         - Returns (total, percentage)
@@ -383,9 +378,10 @@ class Backtester:
             total_slippage=total_slippage,
         )
 
-    def _calculate_max_drawdown(self, equity_values: list[float]) -> tuple[float, float]:
-        """
-        Calculate maximum drawdown (worst peak-to-trough decline).
+    def _calculate_max_drawdown(
+        self, equity_values: list[float]
+    ) -> tuple[float, float]:
+        """Calculate maximum drawdown (worst peak-to-trough decline).
 
         FORMULA:
         Drawdown = (Trough - Peak) / Peak
@@ -434,8 +430,7 @@ class Backtester:
         self,
         performance: BacktestPerformanceMetrics,
     ) -> tuple[str, str]:
-        """
-        Generate deployment recommendation based on performance.
+        """Generate deployment recommendation based on performance.
 
         DECISION CRITERIA:
         - DEPLOY: Strong performance, acceptable risk
@@ -465,7 +460,9 @@ class Backtester:
             reasons.append(f"Low return ({performance.total_return_pct:.1f}%)")
 
         # Check Sharpe ratio
-        good_sharpe = performance.sharpe_ratio is not None and performance.sharpe_ratio > 1.0
+        good_sharpe = (
+            performance.sharpe_ratio is not None and performance.sharpe_ratio > 1.0
+        )
         if good_sharpe:
             reasons.append(f"Good Sharpe ratio ({performance.sharpe_ratio:.2f})")
         else:
@@ -477,9 +474,13 @@ class Backtester:
         # Check max drawdown
         acceptable_dd = performance.max_drawdown_pct < 25.0
         if acceptable_dd:
-            reasons.append(f"Acceptable max drawdown ({performance.max_drawdown_pct:.1f}%)")
+            reasons.append(
+                f"Acceptable max drawdown ({performance.max_drawdown_pct:.1f}%)"
+            )
         else:
-            reasons.append(f"Excessive max drawdown ({performance.max_drawdown_pct:.1f}%)")
+            reasons.append(
+                f"Excessive max drawdown ({performance.max_drawdown_pct:.1f}%)"
+            )
 
         # Check win rate
         decent_win_rate = performance.win_rate > 0.4

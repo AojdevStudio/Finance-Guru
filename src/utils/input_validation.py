@@ -1,5 +1,4 @@
-"""
-Input Validation Calculator for Finance Guru™
+"""Input Validation Calculator for Finance Guru™.
 
 This module implements data quality validation for financial time series data.
 Uses validated Pydantic models from validation_inputs.py to ensure type safety.
@@ -28,7 +27,7 @@ Author: Finance Guru™ Development Team
 Created: 2026-01-16
 """
 
-from datetime import date, timedelta
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -43,8 +42,7 @@ from src.models.validation_inputs import (
 
 
 class InputValidator:
-    """
-    Data quality validation calculator.
+    """Data quality validation calculator.
 
     WHAT: Validates financial time series data for quality issues
     WHY: Ensures data is reliable before analysis and trading decisions
@@ -73,8 +71,7 @@ class InputValidator:
     """
 
     def __init__(self, config: ValidationConfig):
-        """
-        Initialize validator with configuration.
+        """Initialize validator with configuration.
 
         Args:
             config: Validated configuration (Pydantic model ensures correctness)
@@ -82,8 +79,7 @@ class InputValidator:
         self.config = config
 
     def validate_price_series(self, price_data: PriceSeriesInput) -> ValidationOutput:
-        """
-        Perform comprehensive validation on price series data.
+        """Perform comprehensive validation on price series data.
 
         Args:
             price_data: Historical price data (validated by Pydantic)
@@ -96,13 +92,15 @@ class InputValidator:
         and combines them into a single comprehensive report.
         """
         # Convert to pandas for easier calculations
-        df = pd.DataFrame({
-            'date': price_data.dates,
-            'price': price_data.prices,
-        })
+        df = pd.DataFrame(
+            {
+                "date": price_data.dates,
+                "price": price_data.prices,
+            }
+        )
 
         if price_data.volumes is not None:
-            df['volume'] = price_data.volumes
+            df["volume"] = price_data.volumes
 
         # Initialize anomaly list
         anomalies: list[DataAnomaly] = []
@@ -130,18 +128,12 @@ class InputValidator:
 
         # 6. Determine overall validity
         is_valid = self._determine_validity(
-            completeness_score,
-            consistency_score,
-            anomalies
+            completeness_score, consistency_score, anomalies
         )
 
         # 7. Generate recommendations
         self._generate_recommendations(
-            is_valid,
-            completeness_score,
-            consistency_score,
-            anomalies,
-            recommendations
+            is_valid, completeness_score, consistency_score, anomalies, recommendations
         )
 
         # Build and return output (Pydantic calculates reliability_score)
@@ -163,13 +155,9 @@ class InputValidator:
         )
 
     def _check_missing_data(
-        self,
-        df: pd.DataFrame,
-        anomalies: list[DataAnomaly],
-        warnings: list[str]
+        self, df: pd.DataFrame, anomalies: list[DataAnomaly], warnings: list[str]
     ) -> int:
-        """
-        Check for missing data points.
+        """Check for missing data points.
 
         EDUCATIONAL NOTE:
         Missing data can occur due to:
@@ -179,36 +167,34 @@ class InputValidator:
         """
         # For now, we consider missing data as NULL values
         # More sophisticated version would check for expected trading days
-        missing_count = df['price'].isna().sum()
+        missing_count = df["price"].isna().sum()
 
         if missing_count > 0:
             missing_ratio = missing_count / len(df)
 
             if missing_ratio > self.config.missing_data_threshold:
                 severity = "critical" if missing_ratio > 0.10 else "high"
-                anomalies.append(DataAnomaly(
-                    anomaly_type="missing",
-                    severity=severity,
-                    description=f"Found {missing_count} missing data points ({missing_ratio:.1%})",
-                    location=None,
-                    value=missing_count,
-                    recommendation=(
-                        "Fill missing data using forward-fill or interpolation. "
-                        "For large gaps, consider fetching data from alternative source."
+                anomalies.append(
+                    DataAnomaly(
+                        anomaly_type="missing",
+                        severity=severity,
+                        description=f"Found {missing_count} missing data points ({missing_ratio:.1%})",
+                        location=None,
+                        value=missing_count,
+                        recommendation=(
+                            "Fill missing data using forward-fill or interpolation. "
+                            "For large gaps, consider fetching data from alternative source."
+                        ),
                     )
-                ))
+                )
                 warnings.append(f"Missing data: {missing_ratio:.1%} of series")
 
         return missing_count
 
     def _detect_outliers(
-        self,
-        df: pd.DataFrame,
-        anomalies: list[DataAnomaly],
-        warnings: list[str]
+        self, df: pd.DataFrame, anomalies: list[DataAnomaly], warnings: list[str]
     ) -> int:
-        """
-        Detect price outliers using configured method.
+        """Detect price outliers using configured method.
 
         EDUCATIONAL NOTE:
         Outliers can be:
@@ -221,7 +207,7 @@ class InputValidator:
         - IQR: Robust to skewed data
         - Modified Z: Best for extreme outliers
         """
-        prices = df['price'].values
+        prices = df["price"].values
 
         if self.config.outlier_method == OutlierMethod.Z_SCORE:
             outliers, outlier_indices = self._zscore_outliers(prices)
@@ -232,23 +218,31 @@ class InputValidator:
 
         # Record anomalies
         for idx in outlier_indices:
-            severity = "medium" if abs(outliers[idx]) < self.config.outlier_threshold * 1.5 else "high"
-            anomalies.append(DataAnomaly(
-                anomaly_type="outlier",
-                severity=severity,
-                description=f"Price outlier detected (z-score: {outliers[idx]:.2f})",
-                location=str(df.iloc[idx]['date']),
-                value=float(prices[idx]),
-                recommendation=(
-                    "Verify price from alternative data source. "
-                    "If legitimate, consider if it's a corporate action."
+            severity = (
+                "medium"
+                if abs(outliers[idx]) < self.config.outlier_threshold * 1.5
+                else "high"
+            )
+            anomalies.append(
+                DataAnomaly(
+                    anomaly_type="outlier",
+                    severity=severity,
+                    description=f"Price outlier detected (z-score: {outliers[idx]:.2f})",
+                    location=str(df.iloc[idx]["date"]),
+                    value=float(prices[idx]),
+                    recommendation=(
+                        "Verify price from alternative data source. "
+                        "If legitimate, consider if it's a corporate action."
+                    ),
                 )
-            ))
+            )
 
         outlier_count = len(outlier_indices)
         if outlier_count > 0:
             outlier_ratio = outlier_count / len(df)
-            warnings.append(f"Found {outlier_count} outliers ({outlier_ratio:.1%} of data)")
+            warnings.append(
+                f"Found {outlier_count} outliers ({outlier_ratio:.1%} of data)"
+            )
 
         return outlier_count
 
@@ -280,14 +274,19 @@ class InputValidator:
 
         # Calculate "scores" for compatibility (distance from bounds in IQR units)
         scores = np.zeros_like(prices)
-        scores[prices < lower_bound] = (lower_bound - prices[prices < lower_bound]) / iqr
-        scores[prices > upper_bound] = (prices[prices > upper_bound] - upper_bound) / iqr
+        scores[prices < lower_bound] = (
+            lower_bound - prices[prices < lower_bound]
+        ) / iqr
+        scores[prices > upper_bound] = (
+            prices[prices > upper_bound] - upper_bound
+        ) / iqr
 
         return scores, outlier_indices
 
-    def _modified_zscore_outliers(self, prices: np.ndarray) -> tuple[np.ndarray, list[int]]:
-        """
-        Calculate outliers using modified z-score (median-based).
+    def _modified_zscore_outliers(
+        self, prices: np.ndarray
+    ) -> tuple[np.ndarray, list[int]]:
+        """Calculate outliers using modified z-score (median-based).
 
         EDUCATIONAL NOTE:
         Modified z-score is more robust than regular z-score because:
@@ -309,20 +308,16 @@ class InputValidator:
         return np.abs(modified_z), outlier_indices
 
     def _check_date_gaps(
-        self,
-        df: pd.DataFrame,
-        anomalies: list[DataAnomaly],
-        warnings: list[str]
+        self, df: pd.DataFrame, anomalies: list[DataAnomaly], warnings: list[str]
     ) -> int:
-        """
-        Check for suspicious gaps between dates.
+        """Check for suspicious gaps between dates.
 
         EDUCATIONAL NOTE:
         Normal gaps (3-4 days) = weekends
         Longer gaps (7-10 days) = holidays
         Very long gaps (>10 days) = potential data issues or stock halts
         """
-        dates = pd.to_datetime(df['date'])
+        dates = pd.to_datetime(df["date"])
         date_diffs = dates.diff().dt.days
 
         # Find gaps exceeding threshold
@@ -333,17 +328,19 @@ class InputValidator:
             gap_days = int(date_diffs.iloc[idx])
             severity = "medium" if gap_days < 30 else "high"
 
-            anomalies.append(DataAnomaly(
-                anomaly_type="gap",
-                severity=severity,
-                description=f"Large date gap of {gap_days} days",
-                location=f"{dates.iloc[idx-1]} to {dates.iloc[idx]}",
-                value=gap_days,
-                recommendation=(
-                    f"Verify no data available for this period. "
-                    f"Check if stock was halted or delisted."
+            anomalies.append(
+                DataAnomaly(
+                    anomaly_type="gap",
+                    severity=severity,
+                    description=f"Large date gap of {gap_days} days",
+                    location=f"{dates.iloc[idx - 1]} to {dates.iloc[idx]}",
+                    value=gap_days,
+                    recommendation=(
+                        "Verify no data available for this period. "
+                        "Check if stock was halted or delisted."
+                    ),
                 )
-            ))
+            )
 
         gap_count = len(gap_indices)
         if gap_count > 0:
@@ -352,13 +349,9 @@ class InputValidator:
         return gap_count
 
     def _detect_splits(
-        self,
-        df: pd.DataFrame,
-        anomalies: list[DataAnomaly],
-        warnings: list[str]
+        self, df: pd.DataFrame, anomalies: list[DataAnomaly], warnings: list[str]
     ) -> int:
-        """
-        Detect potential stock splits or reverse splits.
+        """Detect potential stock splits or reverse splits.
 
         EDUCATIONAL NOTE:
         Stock splits cause large price jumps:
@@ -368,8 +361,8 @@ class InputValidator:
         These are NOT real returns - they're corporate actions.
         Most data providers adjust for splits, but sometimes they miss them.
         """
-        prices = df['price'].values
-        dates = df['date'].values
+        prices = df["price"].values
+        dates = df["date"].values
 
         # Calculate daily returns
         returns = np.diff(prices) / prices[:-1]
@@ -382,17 +375,19 @@ class InputValidator:
             return_pct = returns[idx]
             severity = "medium" if abs(return_pct) < 0.40 else "high"
 
-            anomalies.append(DataAnomaly(
-                anomaly_type="split",
-                severity=severity,
-                description=f"Potential stock split detected ({return_pct:.1%} price change)",
-                location=f"{dates[idx]} to {dates[idx+1]}",
-                value=float(return_pct),
-                recommendation=(
-                    "Verify if this is a stock split or reverse split. "
-                    "Ensure all historical prices are split-adjusted."
+            anomalies.append(
+                DataAnomaly(
+                    anomaly_type="split",
+                    severity=severity,
+                    description=f"Potential stock split detected ({return_pct:.1%} price change)",
+                    location=f"{dates[idx]} to {dates[idx + 1]}",
+                    value=float(return_pct),
+                    recommendation=(
+                        "Verify if this is a stock split or reverse split. "
+                        "Ensure all historical prices are split-adjusted."
+                    ),
                 )
-            ))
+            )
 
         split_count = len(split_indices)
         if split_count > 0:
@@ -404,10 +399,9 @@ class InputValidator:
         self,
         completeness_score: float,
         consistency_score: float,
-        anomalies: list[DataAnomaly]
+        anomalies: list[DataAnomaly],
     ) -> bool:
-        """
-        Determine if data is valid for analysis.
+        """Determine if data is valid for analysis.
 
         EDUCATIONAL NOTE:
         Data is considered invalid if:
@@ -419,11 +413,13 @@ class InputValidator:
         has_critical = any(a.severity == "critical" for a in anomalies)
 
         # Check if scores meet thresholds
-        completeness_ok = completeness_score >= (1.0 - self.config.missing_data_threshold)
+        completeness_ok = completeness_score >= (
+            1.0 - self.config.missing_data_threshold
+        )
 
         # Consistency threshold derived from outlier checks
         # If we allow 5% outliers, we need 95% consistency
-        expected_consistency = 1.0 - (self.config.outlier_threshold / 100.0)
+        1.0 - (self.config.outlier_threshold / 100.0)
         consistency_ok = consistency_score >= 0.90  # 90% minimum
 
         return completeness_ok and consistency_ok and not has_critical
@@ -434,10 +430,9 @@ class InputValidator:
         completeness_score: float,
         consistency_score: float,
         anomalies: list[DataAnomaly],
-        recommendations: list[str]
+        recommendations: list[str],
     ) -> None:
-        """
-        Generate actionable recommendations based on validation results.
+        """Generate actionable recommendations based on validation results.
 
         EDUCATIONAL NOTE:
         Recommendations guide users on next steps:

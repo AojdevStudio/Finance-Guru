@@ -1,5 +1,4 @@
-"""
-Technical Screener Engine for Finance Guru™
+"""Technical Screener Engine for Finance Guru™.
 
 This module implements multi-criteria technical screening for finding trading opportunities.
 Integrates with existing momentum and moving average tools.
@@ -35,22 +34,20 @@ from datetime import date
 
 import pandas as pd
 
+# Import existing momentum and MA calculators
+from src.models.momentum_inputs import MomentumConfig, MomentumDataInput
 from src.models.screener_inputs import (
     PatternType,
-    ScreeningCriteria,
-    TechnicalSignal,
-    ScreeningResult,
     PortfolioScreeningOutput,
+    ScreeningCriteria,
+    ScreeningResult,
+    TechnicalSignal,
 )
-
-# Import existing momentum and MA calculators
-from src.models.momentum_inputs import MomentumDataInput, MomentumConfig
 from src.utils.momentum import MomentumIndicators
 
 
 class TechnicalScreener:
-    """
-    Multi-criteria technical screening engine.
+    """Multi-criteria technical screening engine.
 
     WHAT: Screens stocks for technical trading opportunities
     WHY: Automates pattern detection across multiple stocks
@@ -77,8 +74,7 @@ class TechnicalScreener:
     """
 
     def __init__(self, criteria: ScreeningCriteria):
-        """
-        Initialize screener with criteria.
+        """Initialize screener with criteria.
 
         Args:
             criteria: Validated screening criteria (Pydantic model)
@@ -104,10 +100,9 @@ class TechnicalScreener:
         ticker: str,
         prices: list[float],
         dates: list[date],
-        volumes: list[float] | None = None
+        volumes: list[float] | None = None,
     ) -> ScreeningResult:
-        """
-        Screen a single ticker against criteria.
+        """Screen a single ticker against criteria.
 
         Args:
             ticker: Stock ticker symbol
@@ -124,13 +119,15 @@ class TechnicalScreener:
         The overall score is the sum of all signal strengths.
         """
         # Convert to pandas for easier analysis
-        df = pd.DataFrame({
-            'date': dates,
-            'price': prices,
-        })
+        df = pd.DataFrame(
+            {
+                "date": dates,
+                "price": prices,
+            }
+        )
         if volumes:
-            df['volume'] = volumes
-        df = df.set_index('date')
+            df["volume"] = volumes
+        df = df.set_index("date")
 
         # Initialize signals list
         signals: list[TechnicalSignal] = []
@@ -151,7 +148,7 @@ class TechnicalScreener:
         recommendation, confidence = self._generate_recommendation(signals, score)
 
         # Get current metrics
-        current_price = float(df['price'].iloc[-1])
+        current_price = float(df["price"].iloc[-1])
         current_rsi = self._get_current_rsi(df)
 
         # Generate notes
@@ -173,10 +170,9 @@ class TechnicalScreener:
 
     def screen_portfolio(
         self,
-        tickers_data: dict[str, tuple[list[float], list[date], list[float] | None]]
+        tickers_data: dict[str, tuple[list[float], list[date], list[float] | None]],
     ) -> PortfolioScreeningOutput:
-        """
-        Screen multiple tickers and rank results.
+        """Screen multiple tickers and rank results.
 
         Args:
             tickers_data: Dict mapping ticker -> (prices, dates, volumes)
@@ -227,13 +223,9 @@ class TechnicalScreener:
         )
 
     def _detect_pattern(
-        self,
-        ticker: str,
-        pattern: PatternType,
-        df: pd.DataFrame
+        self, ticker: str, pattern: PatternType, df: pd.DataFrame
     ) -> TechnicalSignal | None:
-        """
-        Detect a specific technical pattern.
+        """Detect a specific technical pattern.
 
         EDUCATIONAL NOTE:
         Each pattern has specific detection logic:
@@ -266,12 +258,14 @@ class TechnicalScreener:
             # If detection fails, log for debugging (in production, would use logging module)
             # For now, silently skip failed patterns but allow non-failing ones to proceed
             import sys
-            print(f"⚠️  Pattern detection failed for {pattern.value}: {e}", file=sys.stderr)
+
+            print(
+                f"⚠️  Pattern detection failed for {pattern.value}: {e}", file=sys.stderr
+            )
             return None
 
     def _detect_golden_cross(self, df: pd.DataFrame) -> TechnicalSignal | None:
-        """
-        Detect golden cross pattern.
+        """Detect golden cross pattern.
 
         WHAT: 50-day MA crosses above 200-day MA
         WHY: Classic bullish signal used by institutional traders
@@ -280,8 +274,8 @@ class TechnicalScreener:
             return None
 
         # Calculate moving averages
-        ma50 = df['price'].rolling(window=self.criteria.ma_fast).mean()
-        ma200 = df['price'].rolling(window=self.criteria.ma_slow).mean()
+        ma50 = df["price"].rolling(window=self.criteria.ma_fast).mean()
+        ma200 = df["price"].rolling(window=self.criteria.ma_slow).mean()
 
         # Check for recent crossover (within last 10 days)
         recent_df = df.iloc[-10:]
@@ -290,7 +284,7 @@ class TechnicalScreener:
 
         # Look for crossover: MA50 was below MA200, now above
         for i in range(1, len(recent_df)):
-            prev_below = recent_ma50.iloc[i-1] < recent_ma200.iloc[i-1]
+            prev_below = recent_ma50.iloc[i - 1] < recent_ma200.iloc[i - 1]
             now_above = recent_ma50.iloc[i] > recent_ma200.iloc[i]
 
             if prev_below and now_above:
@@ -299,7 +293,7 @@ class TechnicalScreener:
 
                 # Determine strength based on how decisive the cross was
                 separation = abs(recent_ma50.iloc[i] - recent_ma200.iloc[i])
-                avg_price = df['price'].mean()
+                avg_price = df["price"].mean()
                 separation_pct = separation / avg_price
 
                 if separation_pct > 0.05:
@@ -324,23 +318,29 @@ class TechnicalScreener:
         if len(df) < 200:
             return None
 
-        ma50 = df['price'].rolling(window=self.criteria.ma_fast).mean()
-        ma200 = df['price'].rolling(window=self.criteria.ma_slow).mean()
+        ma50 = df["price"].rolling(window=self.criteria.ma_fast).mean()
+        ma200 = df["price"].rolling(window=self.criteria.ma_slow).mean()
 
         recent_df = df.iloc[-10:]
         recent_ma50 = ma50.iloc[-10:]
         recent_ma200 = ma200.iloc[-10:]
 
         for i in range(1, len(recent_df)):
-            prev_above = recent_ma50.iloc[i-1] > recent_ma200.iloc[i-1]
+            prev_above = recent_ma50.iloc[i - 1] > recent_ma200.iloc[i - 1]
             now_below = recent_ma50.iloc[i] < recent_ma200.iloc[i]
 
             if prev_above and now_below:
                 crossover_date = recent_df.index[i]
                 separation = abs(recent_ma50.iloc[i] - recent_ma200.iloc[i])
-                separation_pct = separation / df['price'].mean()
+                separation_pct = separation / df["price"].mean()
 
-                strength = "strong" if separation_pct > 0.05 else "moderate" if separation_pct > 0.02 else "weak"
+                strength = (
+                    "strong"
+                    if separation_pct > 0.05
+                    else "moderate"
+                    if separation_pct > 0.02
+                    else "weak"
+                )
 
                 return TechnicalSignal(
                     signal_type=PatternType.DEATH_CROSS,
@@ -361,7 +361,7 @@ class TechnicalScreener:
         try:
             momentum_data = MomentumDataInput(
                 ticker="TEMP",
-                prices=df['price'].tolist(),
+                prices=df["price"].tolist(),
                 dates=df.index.tolist(),
             )
             rsi_result = self.momentum_calc.calculate_rsi(momentum_data)
@@ -397,7 +397,7 @@ class TechnicalScreener:
         try:
             momentum_data = MomentumDataInput(
                 ticker="TEMP",
-                prices=df['price'].tolist(),
+                prices=df["price"].tolist(),
                 dates=df.index.tolist(),
             )
             rsi_result = self.momentum_calc.calculate_rsi(momentum_data)
@@ -431,14 +431,19 @@ class TechnicalScreener:
         try:
             momentum_data = MomentumDataInput(
                 ticker="TEMP",
-                prices=df['price'].tolist(),
+                prices=df["price"].tolist(),
                 dates=df.index.tolist(),
             )
             macd_result = self.momentum_calc.calculate_macd(momentum_data)
 
             # Check if MACD line recently crossed above signal line
-            if macd_result.signal == "bullish" or macd_result.signal == "strong_bullish":
-                strength = "strong" if macd_result.signal == "strong_bullish" else "moderate"
+            if (
+                macd_result.signal == "bullish"
+                or macd_result.signal == "strong_bullish"
+            ):
+                strength = (
+                    "strong" if macd_result.signal == "strong_bullish" else "moderate"
+                )
 
                 return TechnicalSignal(
                     signal_type=PatternType.MACD_BULLISH,
@@ -460,13 +465,18 @@ class TechnicalScreener:
         try:
             momentum_data = MomentumDataInput(
                 ticker="TEMP",
-                prices=df['price'].tolist(),
+                prices=df["price"].tolist(),
                 dates=df.index.tolist(),
             )
             macd_result = self.momentum_calc.calculate_macd(momentum_data)
 
-            if macd_result.signal == "bearish" or macd_result.signal == "strong_bearish":
-                strength = "strong" if macd_result.signal == "strong_bearish" else "moderate"
+            if (
+                macd_result.signal == "bearish"
+                or macd_result.signal == "strong_bearish"
+            ):
+                strength = (
+                    "strong" if macd_result.signal == "strong_bearish" else "moderate"
+                )
 
                 return TechnicalSignal(
                     signal_type=PatternType.MACD_BEARISH,
@@ -482,16 +492,16 @@ class TechnicalScreener:
 
     def _detect_breakout(self, df: pd.DataFrame) -> TechnicalSignal | None:
         """Detect price breakout with volume confirmation."""
-        if 'volume' not in df.columns or len(df) < 20:
+        if "volume" not in df.columns or len(df) < 20:
             return None
 
         # Calculate 20-day high and average volume
-        high_20d = df['price'].rolling(window=20).max()
-        avg_volume = df['volume'].rolling(window=20).mean()
+        high_20d = df["price"].rolling(window=20).max()
+        avg_volume = df["volume"].rolling(window=20).mean()
 
-        current_price = df['price'].iloc[-1]
+        current_price = df["price"].iloc[-1]
         recent_high = high_20d.iloc[-2]  # High before today
-        current_volume = df['volume'].iloc[-1]
+        current_volume = df["volume"].iloc[-1]
         recent_avg_volume = avg_volume.iloc[-1]
 
         # Check if price broke above recent high with volume
@@ -518,15 +528,15 @@ class TechnicalScreener:
 
     def _detect_breakdown(self, df: pd.DataFrame) -> TechnicalSignal | None:
         """Detect price breakdown with volume confirmation."""
-        if 'volume' not in df.columns or len(df) < 20:
+        if "volume" not in df.columns or len(df) < 20:
             return None
 
-        low_20d = df['price'].rolling(window=20).min()
-        avg_volume = df['volume'].rolling(window=20).mean()
+        low_20d = df["price"].rolling(window=20).min()
+        avg_volume = df["volume"].rolling(window=20).mean()
 
-        current_price = df['price'].iloc[-1]
+        current_price = df["price"].iloc[-1]
         recent_low = low_20d.iloc[-2]
-        current_volume = df['volume'].iloc[-1]
+        current_volume = df["volume"].iloc[-1]
         recent_avg_volume = avg_volume.iloc[-1]
 
         if current_price < recent_low * 0.99:  # 1% below low
@@ -558,7 +568,7 @@ class TechnicalScreener:
         try:
             momentum_data = MomentumDataInput(
                 ticker="TEMP",
-                prices=df['price'].tolist(),
+                prices=df["price"].tolist(),
                 dates=df.index.tolist(),
             )
             rsi_result = self.momentum_calc.calculate_rsi(momentum_data)
@@ -567,8 +577,7 @@ class TechnicalScreener:
             return None
 
     def _calculate_score(self, signals: list[TechnicalSignal]) -> float:
-        """
-        Calculate composite score from signals.
+        """Calculate composite score from signals.
 
         SCORING:
         - Strong signal: +3 points
@@ -591,8 +600,7 @@ class TechnicalScreener:
         return score * self.criteria.pattern_weight
 
     def _matches_criteria(self, signals: list[TechnicalSignal]) -> bool:
-        """
-        Determine if signals meet screening criteria.
+        """Determine if signals meet screening criteria.
 
         CRITERIA FOR MATCH:
         - At least 1 strong signal, OR
@@ -613,14 +621,11 @@ class TechnicalScreener:
         return (strong_count >= 1) or (moderate_count >= 2) or (weak_count >= 3)
 
     def _generate_recommendation(
-        self,
-        signals: list[TechnicalSignal],
-        score: float
+        self, signals: list[TechnicalSignal], score: float
     ) -> tuple[str, float]:
-        """
-        Generate recommendation based on signals.
+        """Generate recommendation based on signals.
 
-        RETURNS:
+        Returns:
             (recommendation, confidence)
 
         LOGIC:
@@ -633,15 +638,33 @@ class TechnicalScreener:
             return ("hold", 0.5)
 
         # Count bullish vs bearish signals
-        bullish_patterns = {PatternType.GOLDEN_CROSS, PatternType.RSI_OVERSOLD,
-                           PatternType.MACD_BULLISH, PatternType.BREAKOUT}
-        bearish_patterns = {PatternType.DEATH_CROSS, PatternType.RSI_OVERBOUGHT,
-                           PatternType.MACD_BEARISH, PatternType.BREAKDOWN}
+        bullish_patterns = {
+            PatternType.GOLDEN_CROSS,
+            PatternType.RSI_OVERSOLD,
+            PatternType.MACD_BULLISH,
+            PatternType.BREAKOUT,
+        }
+        bearish_patterns = {
+            PatternType.DEATH_CROSS,
+            PatternType.RSI_OVERBOUGHT,
+            PatternType.MACD_BEARISH,
+            PatternType.BREAKDOWN,
+        }
 
-        bullish_score = sum(s.strength == "strong" and s.signal_type in bullish_patterns
-                           for s in signals) * 3
-        bearish_score = sum(s.strength == "strong" and s.signal_type in bearish_patterns
-                           for s in signals) * 3
+        bullish_score = (
+            sum(
+                s.strength == "strong" and s.signal_type in bullish_patterns
+                for s in signals
+            )
+            * 3
+        )
+        bearish_score = (
+            sum(
+                s.strength == "strong" and s.signal_type in bearish_patterns
+                for s in signals
+            )
+            * 3
+        )
 
         net_score = bullish_score - bearish_score
 
@@ -656,7 +679,9 @@ class TechnicalScreener:
         else:
             return ("sell", 0.60)
 
-    def _generate_notes(self, signals: list[TechnicalSignal], df: pd.DataFrame) -> list[str]:
+    def _generate_notes(
+        self, signals: list[TechnicalSignal], df: pd.DataFrame
+    ) -> list[str]:
         """Generate helpful notes about the signals."""
         notes = []
 
@@ -667,18 +692,27 @@ class TechnicalScreener:
         # Group signals by type
         signal_types = [s.signal_type for s in signals]
 
-        if PatternType.GOLDEN_CROSS in signal_types and PatternType.RSI_OVERSOLD in signal_types:
-            notes.append("Strong setup: Golden cross combined with oversold RSI suggests bullish reversal")
+        if (
+            PatternType.GOLDEN_CROSS in signal_types
+            and PatternType.RSI_OVERSOLD in signal_types
+        ):
+            notes.append(
+                "Strong setup: Golden cross combined with oversold RSI suggests bullish reversal"
+            )
 
         if PatternType.BREAKOUT in signal_types:
-            notes.append("Volume-confirmed breakout increases probability of continuation")
+            notes.append(
+                "Volume-confirmed breakout increases probability of continuation"
+            )
 
         if len([s for s in signals if s.strength == "strong"]) >= 2:
             notes.append("Multiple strong signals increase conviction")
 
         return notes
 
-    def _generate_summary(self, results: list[ScreeningResult], matching_count: int) -> str:
+    def _generate_summary(
+        self, results: list[ScreeningResult], matching_count: int
+    ) -> str:
         """Generate human-readable summary."""
         total = len(results)
 

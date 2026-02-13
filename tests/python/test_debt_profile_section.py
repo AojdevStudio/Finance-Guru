@@ -12,8 +12,8 @@ This validates:
 
 import json
 import subprocess
-import tempfile
 from pathlib import Path
+
 import pytest
 
 
@@ -39,22 +39,22 @@ class TestDebtProfileSection:
                     "total": 14491,
                     "accounts_count": 10,
                     "average_yield": 0.04,
-                    "structure": []
+                    "structure": [],
                 },
                 "investments": {
                     "total_value": 243382.67,
                     "retirement_accounts": 308000,
                     "allocation": "aggressive_growth",
-                    "risk_profile": "aggressive"
+                    "risk_profile": "aggressive",
                 },
                 "cash_flow": {
                     "monthly_income": 25000,
                     "fixed_expenses": 4500,
                     "variable_expenses": 10000,
                     "current_savings": 5000,
-                    "investment_capacity": 10500
-                }
-            }
+                    "investment_capacity": 10500,
+                },
+            },
         }
         state_file = temp_dir / ".onboarding-state.json"
         state_file.write_text(json.dumps(state, indent=2))
@@ -63,9 +63,14 @@ class TestDebtProfileSection:
     def test_section_exports_run_function(self):
         """Test that debt-profile.ts exports runDebtProfileSection"""
         result = subprocess.run(
-            ["bun", "run", "-e", "import { runDebtProfileSection } from './scripts/onboarding/sections/debt-profile.ts'; console.log(typeof runDebtProfileSection)"],
+            [
+                "bun",
+                "run",
+                "-e",
+                "import { runDebtProfileSection } from './scripts/onboarding/sections/debt-profile.ts'; console.log(typeof runDebtProfileSection)",
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
         assert result.returncode == 0
         assert "function" in result.stdout
@@ -115,7 +120,7 @@ class TestDebtProfileSection:
             ["bun", "run", "scripts/onboarding/sections/debt-profile.ts", "--help"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
         )
         # Should not have TypeScript compilation errors
         assert "error TS" not in result.stderr
@@ -154,19 +159,25 @@ class TestDebtProfileSection:
 
         # Should reference next section (preferences or opportunities)
         # Check for any reasonable next section
-        assert "preferences" in content or "opportunities" in content or "goals" in content
+        assert (
+            "preferences" in content or "opportunities" in content or "goals" in content
+        )
 
     def test_validation_integration(self):
         """Test that validation functions are properly integrated"""
         # Test currency validation integration
         result = subprocess.run(
-            ["bun", "-e", """
+            [
+                "bun",
+                "-e",
+                """
             import { validateCurrency } from './scripts/onboarding/modules/input-validator.ts';
             console.log(validateCurrency('365139.76'));
             console.log(validateCurrency('$1,712.68'));
-            """],
+            """,
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
         assert result.returncode == 0
         assert "365139.76" in result.stdout
@@ -175,14 +186,18 @@ class TestDebtProfileSection:
         """Test that percentage validation is properly integrated"""
         # Test percentage validation
         result = subprocess.run(
-            ["bun", "-e", """
+            [
+                "bun",
+                "-e",
+                """
             import { validatePercentage } from './scripts/onboarding/modules/input-validator.ts';
             console.log(validatePercentage('8'));
             console.log(validatePercentage('8%'));
             console.log(validatePercentage('0.08'));
-            """],
+            """,
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
         assert result.returncode == 0
 
@@ -263,7 +278,12 @@ class TestDebtProfileSection:
 
         # Should handle cases where user has no mortgage or no other debt
         # This could be through allowEmpty or conditional logic
-        assert "allowEmpty" in content or "optional" in content.lower() or "skip" in content.lower() or "none" in content.lower()
+        assert (
+            "allowEmpty" in content
+            or "optional" in content.lower()
+            or "skip" in content.lower()
+            or "none" in content.lower()
+        )
 
     def test_all_currency_fields_validated(self):
         """Test that all currency fields use validateCurrency"""
@@ -273,7 +293,9 @@ class TestDebtProfileSection:
         # Should use validateCurrency for mortgage balance and payment
         # At least 2 calls expected (balance, payment)
         validate_count = content.count("validateCurrency")
-        assert validate_count >= 2, f"Expected at least 2 validateCurrency calls, found {validate_count}"
+        assert validate_count >= 2, (
+            f"Expected at least 2 validateCurrency calls, found {validate_count}"
+        )
 
     def test_weighted_interest_calculation(self):
         """Test that weighted interest rate is calculated or collected"""

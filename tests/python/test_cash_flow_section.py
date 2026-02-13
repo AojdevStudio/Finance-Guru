@@ -12,8 +12,8 @@ This validates:
 
 import json
 import subprocess
-import tempfile
 from pathlib import Path
+
 import pytest
 
 
@@ -39,15 +39,15 @@ class TestCashFlowSection:
                     "total": 14491,
                     "accounts_count": 10,
                     "average_yield": 0.04,
-                    "structure": []
+                    "structure": [],
                 },
                 "investments": {
                     "total_value": 243382.67,
                     "retirement_accounts": 308000,
                     "allocation": "aggressive_growth",
-                    "risk_profile": "aggressive"
-                }
-            }
+                    "risk_profile": "aggressive",
+                },
+            },
         }
         state_file = temp_dir / ".onboarding-state.json"
         state_file.write_text(json.dumps(state, indent=2))
@@ -56,9 +56,14 @@ class TestCashFlowSection:
     def test_section_exports_run_function(self):
         """Test that cash-flow.ts exports runCashFlowSection"""
         result = subprocess.run(
-            ["bun", "run", "-e", "import { runCashFlowSection } from './scripts/onboarding/sections/cash-flow.ts'; console.log(typeof runCashFlowSection)"],
+            [
+                "bun",
+                "run",
+                "-e",
+                "import { runCashFlowSection } from './scripts/onboarding/sections/cash-flow.ts'; console.log(typeof runCashFlowSection)",
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
         assert result.returncode == 0
         assert "function" in result.stdout
@@ -99,7 +104,7 @@ class TestCashFlowSection:
             ["bun", "run", "scripts/onboarding/sections/cash-flow.ts", "--help"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
         )
         # Should not have TypeScript compilation errors
         assert "error TS" not in result.stderr
@@ -144,13 +149,17 @@ class TestCashFlowSection:
         """Test that validation functions are properly integrated"""
         # Test currency validation integration
         result = subprocess.run(
-            ["bun", "-e", """
+            [
+                "bun",
+                "-e",
+                """
             import { validateCurrency } from './scripts/onboarding/modules/input-validator.ts';
             console.log(validateCurrency('25000'));
             console.log(validateCurrency('$25,000'));
-            """],
+            """,
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
         assert result.returncode == 0
         assert "25000" in result.stdout
@@ -179,10 +188,18 @@ class TestCashFlowSection:
         content = section_file.read_text()
 
         # Should provide examples of fixed expenses
-        assert "rent" in content.lower() or "insurance" in content.lower() or "recurring" in content.lower()
+        assert (
+            "rent" in content.lower()
+            or "insurance" in content.lower()
+            or "recurring" in content.lower()
+        )
 
         # Should provide examples of variable expenses
-        assert "groceries" in content.lower() or "dining" in content.lower() or "entertainment" in content.lower()
+        assert (
+            "groceries" in content.lower()
+            or "dining" in content.lower()
+            or "entertainment" in content.lower()
+        )
 
     def test_section_number_correct(self):
         """Test that section is numbered as Section 3 of 7"""
@@ -233,7 +250,9 @@ class TestCashFlowSection:
         # Should use validateCurrency for all monetary inputs
         # Count should be at least 5 (income, fixed, variable, savings, capacity)
         validate_count = content.count("validateCurrency")
-        assert validate_count >= 4, f"Expected at least 4 validateCurrency calls, found {validate_count}"
+        assert validate_count >= 4, (
+            f"Expected at least 4 validateCurrency calls, found {validate_count}"
+        )
 
 
 if __name__ == "__main__":

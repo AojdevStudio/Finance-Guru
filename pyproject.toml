@@ -54,15 +54,20 @@ exclude = [".venv", "build", "dist", "node_modules", ".claude/hooks", ".eggs", "
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "W", "B", "SIM", "C90", "N", "D"]
-fixable = ["I", "F401", "UP", "W", "D", "SIM"]
+fixable = ["I", "F401", "UP", "W", "D", "SIM", "F541", "F841", "E"]
 unfixable = ["B"]
-ignore = ["E501"]
+ignore = ["E501", "E402", "D107", "D205", "D100", "B028"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["D", "S101", "B011"]
 "*_cli.py" = ["D"]
 "__init__.py" = ["F401", "D104"]
 "scripts/**/*.py" = ["D"]
+".agents/**/*.py" = ["D"]
+".claude/**/*.py" = ["D"]
+"src/analysis/**/*.py" = ["N803", "N806"]
+"src/strategies/**/*.py" = ["N803", "N806"]
+"src/utils/**/*.py" = ["N803", "N806"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

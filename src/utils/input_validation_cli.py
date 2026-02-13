@@ -62,9 +62,9 @@ def print_validation_summary(result, output_format: str = "text") -> None:
         return
 
     # Text output for humans and Claude agents
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"DATA VALIDATION REPORT: {result.ticker}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
     print(f"Validation Date: {result.validation_date}")
     print(f"Total Data Points: {result.total_points}")
     print()
@@ -77,9 +77,15 @@ def print_validation_summary(result, output_format: str = "text") -> None:
 
     # Quality scores
     print("Quality Scores:")
-    print(f"  Completeness:  {result.completeness_score:>6.1%} ({_score_grade(result.completeness_score)})")
-    print(f"  Consistency:   {result.consistency_score:>6.1%} ({_score_grade(result.consistency_score)})")
-    print(f"  Reliability:   {result.reliability_score:>6.1%} ({_score_grade(result.reliability_score)})")
+    print(
+        f"  Completeness:  {result.completeness_score:>6.1%} ({_score_grade(result.completeness_score)})"
+    )
+    print(
+        f"  Consistency:   {result.consistency_score:>6.1%} ({_score_grade(result.consistency_score)})"
+    )
+    print(
+        f"  Reliability:   {result.reliability_score:>6.1%} ({_score_grade(result.reliability_score)})"
+    )
     print()
 
     # Issue summary
@@ -120,7 +126,7 @@ def print_validation_summary(result, output_format: str = "text") -> None:
     for rec in result.recommendations:
         print(f"  {rec}")
 
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")
 
 
 def _score_grade(score: float) -> str:
@@ -180,7 +186,7 @@ def validate_ticker(
         data = fetcher.get_historical_data(
             ticker=ticker,
             start_date=start_date.strftime("%Y-%m-%d"),
-            end_date=end_date.strftime("%Y-%m-%d")
+            end_date=end_date.strftime("%Y-%m-%d"),
         )
 
         if data is None or len(data) < 10:
@@ -190,9 +196,11 @@ def validate_ticker(
         # Convert to PriceSeriesInput
         price_series = PriceSeriesInput(
             ticker=ticker,
-            prices=data['Close'].tolist(),
-            dates=[date.fromisoformat(d) for d in data.index.strftime("%Y-%m-%d").tolist()],
-            volumes=data['Volume'].tolist() if 'Volume' in data.columns else None,
+            prices=data["Close"].tolist(),
+            dates=[
+                date.fromisoformat(d) for d in data.index.strftime("%Y-%m-%d").tolist()
+            ],
+            volumes=data["Volume"].tolist() if "Volume" in data.columns else None,
         )
 
     except Exception as e:
@@ -247,14 +255,12 @@ Agent Use Cases:
   Market Researcher:   Check new ticker data quality
   Compliance Officer:  Verify data integrity
   Strategy Advisor:    Ensure backtesting reliability
-        """
+        """,
     )
 
     # Required arguments
     parser.add_argument(
-        "ticker",
-        type=str,
-        help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
+        "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
     )
 
     # Optional arguments
@@ -262,7 +268,7 @@ Agent Use Cases:
         "--days",
         type=int,
         default=90,
-        help="Number of days of history to validate (default: 90, quarter)"
+        help="Number of days of history to validate (default: 90, quarter)",
     )
 
     parser.add_argument(
@@ -270,41 +276,39 @@ Agent Use Cases:
         type=str,
         choices=["z_score", "iqr", "modified_z"],
         default="z_score",
-        help="Method for detecting outliers (default: z_score)"
+        help="Method for detecting outliers (default: z_score)",
     )
 
     parser.add_argument(
         "--outlier-threshold",
         type=float,
         default=3.0,
-        help="Threshold for outlier detection (default: 3.0)"
+        help="Threshold for outlier detection (default: 3.0)",
     )
 
     parser.add_argument(
         "--missing-threshold",
         type=float,
         default=0.05,
-        help="Maximum acceptable missing data ratio (default: 0.05 = 5%%)"
+        help="Maximum acceptable missing data ratio (default: 0.05 = 5%%)",
     )
 
     parser.add_argument(
         "--max-gap-days",
         type=int,
         default=10,
-        help="Maximum acceptable gap between dates (default: 10 days)"
+        help="Maximum acceptable gap between dates (default: 10 days)",
     )
 
     parser.add_argument(
-        "--no-check-splits",
-        action="store_true",
-        help="Disable stock split detection"
+        "--no-check-splits", action="store_true", help="Disable stock split detection"
     )
 
     parser.add_argument(
         "--split-threshold",
         type=float,
         default=0.25,
-        help="Price change threshold for split detection (default: 0.25 = 25%%)"
+        help="Price change threshold for split detection (default: 0.25 = 25%%)",
     )
 
     parser.add_argument(
@@ -312,7 +316,7 @@ Agent Use Cases:
         type=str,
         choices=["text", "json"],
         default="text",
-        help="Output format (default: text)"
+        help="Output format (default: text)",
     )
 
     args = parser.parse_args()

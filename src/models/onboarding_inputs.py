@@ -1,5 +1,4 @@
-"""
-Onboarding Wizard State Models for Finance Guru
+"""Onboarding Wizard State Models for Finance Guru.
 
 Pydantic models for tracking wizard progress and section state.
 These models are wizard-specific -- they do NOT duplicate or replace
@@ -15,14 +14,14 @@ Author: Finance Guru Development Team
 Created: 2026-02-05
 """
 
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Optional
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class SectionName(str, Enum):
+class SectionName(StrEnum):
     """Wizard section identifiers, ordered by flow."""
 
     LIQUID_ASSETS = "liquid_assets"
@@ -67,7 +66,7 @@ class OnboardingState(BaseModel):
             current_section=SectionName.LIQUID_ASSETS,
             completed_sections=[],
             data={},
-            started_at=datetime.now(timezone.utc).isoformat(),
+            started_at=datetime.now(UTC).isoformat(),
         )
 
     def is_section_complete(self, section: SectionName) -> bool:
@@ -75,7 +74,7 @@ class OnboardingState(BaseModel):
         return section in self.completed_sections
 
     def mark_complete(
-        self, section: SectionName, next_section: Optional[SectionName] = None
+        self, section: SectionName, next_section: SectionName | None = None
     ) -> None:
         """Mark a section as complete and advance to the next one.
 

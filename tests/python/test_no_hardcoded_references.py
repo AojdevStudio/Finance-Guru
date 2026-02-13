@@ -11,10 +11,7 @@ Acceptance Criteria:
 - Only allowed locations: LICENSE, git history, migration specs
 """
 
-import os
-import re
 from pathlib import Path
-
 
 # The personal name pattern to scan for, split to avoid self-triggering in PII scans
 _OWNER_FIRST = "Oss" + "ie"
@@ -44,10 +41,7 @@ CRITICAL_FILES = [
 
 def is_allowed_file(file_path: str) -> bool:
     """Check if a file is allowed to contain the owner's name."""
-    for allowed in ALLOWED_FILES:
-        if allowed in file_path:
-            return True
-    return False
+    return any(allowed in file_path for allowed in ALLOWED_FILES)
 
 
 def test_no_hardcoded_name_in_critical_files():
@@ -60,14 +54,14 @@ def test_no_hardcoded_name_in_critical_files():
         if not full_path.exists():
             continue
 
-        with open(full_path, 'r', encoding='utf-8') as f:
+        with open(full_path, encoding="utf-8") as f:
             content = f.read()
 
         # Check for the owner's first name (case-sensitive)
         if _OWNER_FIRST in content:
             # Find line numbers
             lines_with_name = []
-            for i, line in enumerate(content.split('\n'), 1):
+            for i, line in enumerate(content.split("\n"), 1):
                 if _OWNER_FIRST in line:
                     lines_with_name.append((i, line.strip()))
 
@@ -87,16 +81,18 @@ def test_config_uses_template_variables():
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, encoding="utf-8") as f:
         content = f.read()
 
     # Should contain template variable
-    assert "{user_name}" in content or "user_name:" in content, \
+    assert "{user_name}" in content or "user_name:" in content, (
         "config.yaml should use {user_name} template variable"
+    )
 
     # Should NOT contain hardcoded personal name
-    assert _OWNER_FIRST not in content, \
+    assert _OWNER_FIRST not in content, (
         "config.yaml should not contain hardcoded personal name"
+    )
 
 
 def test_workflow_yaml_generic():
@@ -107,11 +103,12 @@ def test_workflow_yaml_generic():
     if not workflow_path.exists():
         return  # Skip if file doesn't exist
 
-    with open(workflow_path, 'r', encoding='utf-8') as f:
+    with open(workflow_path, encoding="utf-8") as f:
         content = f.read()
 
-    assert _OWNER_FIRST not in content, \
+    assert _OWNER_FIRST not in content, (
         "workflow.yaml should not contain hardcoded personal name"
+    )
 
 
 def test_readme_generic_author():
@@ -122,16 +119,18 @@ def test_readme_generic_author():
     if not readme_path.exists():
         return  # Skip if file doesn't exist
 
-    with open(readme_path, 'r', encoding='utf-8') as f:
+    with open(readme_path, encoding="utf-8") as f:
         content = f.read()
 
     # Should use template variable or placeholder
-    assert "{user_name}" in content or "[Your Name]" in content or "[User Name]" in content, \
-        "README should use template variable for author"
+    assert (
+        "{user_name}" in content or "[Your Name]" in content or "[User Name]" in content
+    ), "README should use template variable for author"
 
     # Should NOT contain hardcoded personal name
-    assert _OWNER_FIRST not in content, \
+    assert _OWNER_FIRST not in content, (
         "README should not contain hardcoded personal name"
+    )
 
 
 def test_scan_codebase_for_hardcoded_names():
@@ -148,11 +147,14 @@ def test_scan_codebase_for_hardcoded_names():
                 continue
 
             # Skip this test file itself and the fix script
-            if file_path.name in ["test_no_hardcoded_references.py", "fix_hardcoded_names.py"]:
+            if file_path.name in [
+                "test_no_hardcoded_references.py",
+                "fix_hardcoded_names.py",
+            ]:
                 continue
 
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, encoding="utf-8") as f:
                     content = f.read()
 
                 if _OWNER_FIRST in content:

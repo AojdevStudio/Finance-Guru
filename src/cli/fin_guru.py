@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Finance Guru TUI Dashboard Entry Point
+"""Finance Guru TUI Dashboard Entry Point.
 
 WHAT: CLI entry point for Finance Guru dashboard
 WHY: Provides single command (`fin-guru`) to launch dashboard
@@ -31,5 +30,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

@@ -1,5 +1,4 @@
-"""
-Ticker Input Widget for Finance Guru™ TUI
+"""Ticker Input Widget for Finance Guru™ TUI.
 
 WHAT: Ticker entry field and tool selection checkboxes
 WHY: Provides quick analysis interface for any ticker
@@ -10,21 +9,20 @@ Created: 2025-11-17
 """
 
 from textual.containers import Container, Horizontal
-from textual.widgets import Input, Button, Checkbox, Static
 from textual.message import Message
+from textual.widgets import Button, Checkbox, Input, Static
 
 
 class TickerInput(Container):
-    """
-    Ticker entry and tool selection.
-    
+    """Ticker entry and tool selection.
+
     Provides input field for ticker symbol, checkboxes for tool selection,
     and a button to run analysis.
     """
 
     class RunAnalysis(Message):
         """Message sent when user requests analysis."""
-        
+
         def __init__(self, ticker: str, timeframe: int, tools: list):
             self.ticker = ticker
             self.timeframe = timeframe
@@ -34,7 +32,9 @@ class TickerInput(Container):
     def compose(self):
         """Compose the widget layout."""
         yield Static("━━━ Quick Analysis ━━━", classes="section-title")
-        yield Static("💡 Type a ticker and press Enter or click the button below", classes="hint")
+        yield Static(
+            "💡 Type a ticker and press Enter or click the button below", classes="hint"
+        )
         with Horizontal(classes="input-row"):
             yield Static("Ticker: ", classes="label")
             yield Input(placeholder="Enter ticker (e.g., TSLA)", id="ticker-input")
@@ -43,7 +43,9 @@ class TickerInput(Container):
             yield Static("  ", classes="separator")
             yield Button("▶ Run Analysis", variant="primary", id="run-btn")
         yield Static("")  # Spacer
-        yield Static("Select tools to run (Space to toggle, Tab to navigate):", classes="hint")
+        yield Static(
+            "Select tools to run (Space to toggle, Tab to navigate):", classes="hint"
+        )
         with Horizontal(classes="tools-row"):
             yield Checkbox("📈 Momentum", id="tool-momentum", value=True)
             yield Checkbox("📊 Volatility", id="tool-volatility", value=True)
@@ -55,10 +57,7 @@ class TickerInput(Container):
         ticker = self.query_one("#ticker-input", Input).value.strip().upper()
         if not ticker:
             if self.app is not None:
-                self.app.notify(
-                    "⚠️ Please enter a ticker symbol",
-                    severity="warning"
-                )
+                self.app.notify("⚠️ Please enter a ticker symbol", severity="warning")
             return
 
         tools = []
@@ -76,7 +75,7 @@ class TickerInput(Container):
             if self.app is not None:
                 self.app.notify(
                     "⚠️ Select at least one tool before running analysis.",
-                    severity="error"
+                    severity="error",
                 )
             return
 
@@ -86,9 +85,8 @@ class TickerInput(Container):
         """Handle button press event."""
         if event.button.id == "run-btn":
             self._run_analysis()
-    
+
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle Enter key in ticker input."""
         if event.input.id == "ticker-input":
             self._run_analysis()
-

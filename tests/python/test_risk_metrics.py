@@ -2,8 +2,8 @@
 Tests for Finance Guru risk metrics calculations.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 
 class TestRiskMetricsBasics:

@@ -11,8 +11,8 @@ This validates:
 
 import json
 import subprocess
-import tempfile
 from pathlib import Path
+
 import pytest
 
 
@@ -33,7 +33,7 @@ class TestLiquidAssetsSection:
             "last_updated": "2026-01-16T00:00:00.000Z",
             "completed_sections": [],
             "current_section": None,
-            "data": {}
+            "data": {},
         }
         state_file = temp_dir / ".onboarding-state.json"
         state_file.write_text(json.dumps(state, indent=2))
@@ -42,9 +42,14 @@ class TestLiquidAssetsSection:
     def test_section_exports_run_function(self):
         """Test that liquid-assets.ts exports runLiquidAssetsSection"""
         result = subprocess.run(
-            ["bun", "run", "-e", "import { runLiquidAssetsSection } from './scripts/onboarding/sections/liquid-assets.ts'; console.log(typeof runLiquidAssetsSection)"],
+            [
+                "bun",
+                "run",
+                "-e",
+                "import { runLiquidAssetsSection } from './scripts/onboarding/sections/liquid-assets.ts'; console.log(typeof runLiquidAssetsSection)",
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
         assert result.returncode == 0
         assert "function" in result.stdout
@@ -86,7 +91,7 @@ class TestLiquidAssetsSection:
             ["bun", "run", "scripts/onboarding/sections/liquid-assets.ts", "--help"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
         )
         # Should not have TypeScript compilation errors
         assert "error TS" not in result.stderr
@@ -130,13 +135,17 @@ class TestLiquidAssetsSection:
         """Test that validation functions are properly integrated"""
         # Test currency validation integration
         result = subprocess.run(
-            ["bun", "-e", """
+            [
+                "bun",
+                "-e",
+                """
             import { validateCurrency } from './scripts/onboarding/modules/input-validator.ts';
             console.log(validateCurrency('10000'));
             console.log(validateCurrency('$10,000'));
-            """],
+            """,
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
         assert result.returncode == 0
         assert "10000" in result.stdout

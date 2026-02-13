@@ -1,5 +1,4 @@
-"""
-Finance Guru Onboarding Wizard CLI
+"""Finance Guru Onboarding Wizard CLI.
 
 Layer 3 CLI that orchestrates the 8-section interactive onboarding flow,
 converts collected data into Pydantic models, and generates all configuration
@@ -142,7 +141,7 @@ class WizardInterruptHandler:
     """
 
     def __init__(self) -> None:
-        self._state: "OnboardingState | None" = None
+        self._state: OnboardingState | None = None
         self._active: bool = False
 
     def setup(self) -> None:
@@ -174,10 +173,10 @@ class WizardInterruptHandler:
             hasattr(self._state, "completed_sections")
             and len(self._state.completed_sections) > 0
         ):
-            try:
+            import contextlib
+
+            with contextlib.suppress(Exception):
                 save_progress(self._state)
-            except Exception:
-                pass  # Best effort on exit
 
 
 # ---------------------------------------------------------------------------
@@ -375,9 +374,7 @@ def _backup_file(path: Path) -> None:
         print(f"  Backed up: {path} -> {backup_path}")
 
 
-def generate_config_files(
-    user_data: UserDataInput, project_root: Path
-) -> None:
+def generate_config_files(user_data: UserDataInput, project_root: Path) -> None:
     """Generate all configuration files and write to correct locations.
 
     Private config files (user-profile.yaml, config.yaml, system-context.md)
@@ -458,10 +455,7 @@ def run_wizard(dry_run: bool = False) -> None:
     saved_state = load_progress()
     start_index = 0
 
-    if (
-        saved_state is not None
-        and len(saved_state.completed_sections) > 0
-    ):
+    if saved_state is not None and len(saved_state.completed_sections) > 0:
         n_complete = len(saved_state.completed_sections)
         print(
             f"  Found saved progress: {n_complete} of "
@@ -491,7 +485,7 @@ def run_wizard(dry_run: bool = False) -> None:
 
     # --- Execute sections from start_index ---
     try:
-        for section_name, runner_fn in SECTION_ORDER[start_index:]:
+        for _section_name, runner_fn in SECTION_ORDER[start_index:]:
             state = runner_fn(state)
             handler.update_state(state)
             # Save progress after each completed section (if any progress)
@@ -523,9 +517,9 @@ def run_wizard(dry_run: bool = False) -> None:
         print(f"    Philosophy: {user_data.preferences.investment_philosophy.value}")
         print()
         print("  [DRY RUN] Files would be written to:")
-        print(f"    - fin-guru-private/fin-guru/data/user-profile.yaml")
-        print(f"    - fin-guru-private/fin-guru/config.yaml")
-        print(f"    - fin-guru-private/fin-guru/data/system-context.md")
+        print("    - fin-guru-private/fin-guru/data/user-profile.yaml")
+        print("    - fin-guru-private/fin-guru/config.yaml")
+        print("    - fin-guru-private/fin-guru/data/system-context.md")
         print(f"    - {project_root / 'CLAUDE.md'}")
         print(f"    - {project_root / '.env'}")
         print(f"    - {project_root / '.claude' / 'mcp.json'}")

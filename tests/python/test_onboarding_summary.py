@@ -13,8 +13,8 @@ This validates:
 
 import json
 import subprocess
-import tempfile
 from pathlib import Path
+
 import pytest
 
 
@@ -33,7 +33,13 @@ class TestSummarySection:
             "version": "1.0",
             "started_at": "2026-01-16T00:00:00.000Z",
             "last_updated": "2026-01-16T00:15:00.000Z",
-            "completed_sections": ["liquid_assets", "investments", "cash_flow", "debt", "preferences"],
+            "completed_sections": [
+                "liquid_assets",
+                "investments",
+                "cash_flow",
+                "debt",
+                "preferences",
+            ],
             "current_section": "summary",
             "data": {
                 "liquid_assets": {
@@ -43,31 +49,26 @@ class TestSummarySection:
                     "structure": [
                         "2 business accounts",
                         "4 checking accounts",
-                        "4 savings accounts"
-                    ]
+                        "4 savings accounts",
+                    ],
                 },
                 "investments": {
                     "total_value": 243382.67,
                     "retirement_accounts": 308000,
                     "allocation": "aggressive_growth",
-                    "risk_profile": "aggressive"
+                    "risk_profile": "aggressive",
                 },
                 "cash_flow": {
                     "monthly_income": 25000,
                     "fixed_expenses": 4500,
                     "variable_expenses": 10000,
                     "current_savings": 5000,
-                    "investment_capacity": 10500
+                    "investment_capacity": 10500,
                 },
                 "debt": {
                     "mortgage_balance": 365139.76,
                     "mortgage_payment": 1712.68,
-                    "other_debt": [
-                        {
-                            "type": "student_loans",
-                            "rate": 0.08
-                        }
-                    ]
+                    "other_debt": [{"type": "student_loans", "rate": 0.08}],
                 },
                 "preferences": {
                     "risk_tolerance": "aggressive",
@@ -75,10 +76,10 @@ class TestSummarySection:
                     "time_horizon": "long_term",
                     "focus_areas": [
                         "dividend_portfolio_construction",
-                        "margin_strategies"
-                    ]
-                }
-            }
+                        "margin_strategies",
+                    ],
+                },
+            },
         }
         state_file = temp_dir / ".onboarding-state.json"
         state_file.write_text(json.dumps(state, indent=2))
@@ -87,9 +88,14 @@ class TestSummarySection:
     def test_section_exports_run_function(self):
         """Test that summary.ts exports runSummarySection"""
         result = subprocess.run(
-            ["bun", "run", "-e", "import { runSummarySection } from './scripts/onboarding/sections/summary.ts'; console.log(typeof runSummarySection)"],
+            [
+                "bun",
+                "run",
+                "-e",
+                "import { runSummarySection } from './scripts/onboarding/sections/summary.ts'; console.log(typeof runSummarySection)",
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
         assert result.returncode == 0
         assert "function" in result.stdout
@@ -116,7 +122,7 @@ class TestSummarySection:
             ["bun", "run", "scripts/onboarding/sections/summary.ts", "--help"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
         )
         # Should not have TypeScript compilation errors
         assert "error TS" not in result.stderr
@@ -152,7 +158,11 @@ class TestSummarySection:
 
         # Should use sanitized display or summary format
         # Not displaying exact dollar amounts in code (displayed values should be from state data)
-        assert "summary" in content.lower() or "sanitize" in content.lower() or "format" in content.lower()
+        assert (
+            "summary" in content.lower()
+            or "sanitize" in content.lower()
+            or "format" in content.lower()
+        )
 
     def test_section_handles_yes_confirmation(self):
         """Test that section handles 'yes' confirmation correctly"""
@@ -221,9 +231,15 @@ class TestSummarySection:
         content = section_file.read_text()
 
         # Should access all section data
-        section_keys = ["liquid_assets", "investments", "cash_flow", "debt", "preferences"]
+        section_keys = [
+            "liquid_assets",
+            "investments",
+            "cash_flow",
+            "debt",
+            "preferences",
+        ]
         for key in section_keys:
-            assert key in content or key.replace('_', ' ') in content.lower()
+            assert key in content or key.replace("_", " ") in content.lower()
 
     def test_summary_format_organized(self):
         """Test that summary is well-formatted and organized"""
@@ -258,7 +274,11 @@ class TestSummarySection:
         content = section_file.read_text()
 
         # Should call yaml generation functions or mark state for generation
-        assert "generate" in content.lower() or "yaml" in content.lower() or "config" in content.lower()
+        assert (
+            "generate" in content.lower()
+            or "yaml" in content.lower()
+            or "config" in content.lower()
+        )
 
     def test_restart_option_clears_state(self):
         """Test that restart option clears existing state"""
@@ -284,7 +304,11 @@ class TestSummarySection:
         content = section_file.read_text()
 
         # Should show success/completion message
-        assert "✅" in content or "complete" in content.lower() or "success" in content.lower()
+        assert (
+            "✅" in content
+            or "complete" in content.lower()
+            or "success" in content.lower()
+        )
 
     def test_summary_shows_key_metrics_only(self):
         """Test that summary shows key metrics, not full detailed data"""
@@ -293,7 +317,11 @@ class TestSummarySection:
 
         # Should format or summarize data, not dump raw JSON
         # Look for formatting/helper functions
-        assert "format" in content.lower() or "display" in content.lower() or "console.log" in content
+        assert (
+            "format" in content.lower()
+            or "display" in content.lower()
+            or "console.log" in content
+        )
 
 
 if __name__ == "__main__":

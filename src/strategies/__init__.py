@@ -1,1 +1,1 @@
-"""Investment strategies and algorithms"""
+"""Investment strategies and algorithms."""

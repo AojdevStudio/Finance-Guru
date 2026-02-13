@@ -1,5 +1,4 @@
-"""
-Risk Metrics Calculator for Finance Guru™
+"""Risk Metrics Calculator for Finance Guru™.
 
 This module implements comprehensive risk calculations using validated Pydantic models.
 All calculations follow industry-standard financial engineering formulas.
@@ -33,7 +32,6 @@ Created: 2025-10-13
 """
 
 import warnings
-from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -47,8 +45,7 @@ from src.models.risk_inputs import (
 
 
 class RiskCalculator:
-    """
-    Comprehensive risk metrics calculator.
+    """Comprehensive risk metrics calculator.
 
     WHAT: Calculates all major risk metrics for Finance Guru agents
     WHY: Provides validated, type-safe risk analysis for portfolio decisions
@@ -75,8 +72,7 @@ class RiskCalculator:
     """
 
     def __init__(self, config: RiskCalculationConfig):
-        """
-        Initialize calculator with configuration.
+        """Initialize calculator with configuration.
 
         Args:
             config: Validated configuration (Pydantic model ensures correctness)
@@ -93,8 +89,7 @@ class RiskCalculator:
         price_data: PriceDataInput,
         benchmark_data: PriceDataInput | None = None,
     ) -> RiskMetricsOutput:
-        """
-        Calculate all risk metrics for a given price series.
+        """Calculate all risk metrics for a given price series.
 
         Args:
             price_data: Historical price data (validated by Pydantic)
@@ -114,22 +109,24 @@ class RiskCalculator:
         This prevents calculation errors from propagating to agents.
         """
         # Convert to pandas DataFrame for easier calculations
-        df = pd.DataFrame({
-            'date': price_data.dates,
-            'price': price_data.prices,
-        })
-        df = df.set_index('date')
+        df = pd.DataFrame(
+            {
+                "date": price_data.dates,
+                "price": price_data.prices,
+            }
+        )
+        df = df.set_index("date")
 
         # Calculate daily returns (percentage changes)
         # FORMULA: return_t = (price_t - price_{t-1}) / price_{t-1}
-        returns = df['price'].pct_change().dropna()
+        returns = df["price"].pct_change().dropna()
 
         # Calculate each risk metric
         var_95 = self._calculate_var(returns, self.config.confidence_level)
         cvar_95 = self._calculate_cvar(returns, self.config.confidence_level)
         sharpe = self._calculate_sharpe(returns, self.config.risk_free_rate)
         sortino = self._calculate_sortino(returns, self.config.risk_free_rate)
-        max_dd = self._calculate_max_drawdown(df['price'])
+        max_dd = self._calculate_max_drawdown(df["price"])
         calmar = self._calculate_calmar(returns, max_dd, self.config.risk_free_rate)
         vol = self._calculate_annual_volatility(returns)
 
@@ -159,8 +156,7 @@ class RiskCalculator:
         )
 
     def _calculate_var(self, returns: pd.Series, confidence: float) -> float:
-        """
-        Calculate Value at Risk using configured method.
+        """Calculate Value at Risk using configured method.
 
         WHAT: VaR is the maximum expected loss at a given confidence level
         WHY: Answers "What's the most I can lose on a typical bad day?"
@@ -202,8 +198,7 @@ class RiskCalculator:
         return var
 
     def _calculate_cvar(self, returns: pd.Series, confidence: float) -> float:
-        """
-        Calculate Conditional VaR (Expected Shortfall).
+        """Calculate Conditional VaR (Expected Shortfall).
 
         WHAT: CVaR is the expected loss WHEN losses exceed VaR
         WHY: VaR only tells you a threshold, CVaR tells you how bad it gets beyond that
@@ -245,8 +240,7 @@ class RiskCalculator:
         return float(tail_returns.mean())
 
     def _calculate_sharpe(self, returns: pd.Series, risk_free_rate: float) -> float:
-        """
-        Calculate Sharpe Ratio.
+        """Calculate Sharpe Ratio.
 
         WHAT: Risk-adjusted return metric
         WHY: Answers "Am I being paid enough for the risk I'm taking?"
@@ -294,8 +288,7 @@ class RiskCalculator:
         return float(annualized_sharpe)
 
     def _calculate_sortino(self, returns: pd.Series, risk_free_rate: float) -> float:
-        """
-        Calculate Sortino Ratio.
+        """Calculate Sortino Ratio.
 
         WHAT: Downside risk-adjusted return metric
         WHY: Like Sharpe but only penalizes downside volatility
@@ -356,8 +349,7 @@ class RiskCalculator:
         return float(annualized_sortino)
 
     def _calculate_max_drawdown(self, prices: pd.Series) -> float:
-        """
-        Calculate Maximum Drawdown.
+        """Calculate Maximum Drawdown.
 
         WHAT: Largest peak-to-trough decline
         WHY: Answers "What was the worst loss from peak to bottom?"
@@ -403,13 +395,9 @@ class RiskCalculator:
         return max_dd
 
     def _calculate_calmar(
-        self,
-        returns: pd.Series,
-        max_drawdown: float,
-        risk_free_rate: float
+        self, returns: pd.Series, max_drawdown: float, risk_free_rate: float
     ) -> float:
-        """
-        Calculate Calmar Ratio.
+        """Calculate Calmar Ratio.
 
         WHAT: Return per unit of maximum drawdown
         WHY: Measures risk-adjusted return using worst-case loss
@@ -454,7 +442,7 @@ class RiskCalculator:
                 "Maximum drawdown is zero. Calmar ratio is undefined. "
                 "This suggests the price only went up (very rare) or insufficient data."
             )
-            return float('inf')  # Infinite Calmar if no drawdown
+            return float("inf")  # Infinite Calmar if no drawdown
 
         # Calculate Calmar Ratio
         # Use absolute value of max_drawdown since it's negative
@@ -463,8 +451,7 @@ class RiskCalculator:
         return float(calmar)
 
     def _calculate_annual_volatility(self, returns: pd.Series) -> float:
-        """
-        Calculate annualized volatility.
+        """Calculate annualized volatility.
 
         WHAT: Annualized standard deviation of returns
         WHY: Measures how much the price "bounces around"
@@ -514,9 +501,8 @@ class RiskCalculator:
         returns: pd.Series,
         benchmark_data: PriceDataInput,
         risk_free_rate: float,
-    ) -> Tuple[float, float]:
-        """
-        Calculate Beta and Alpha vs a benchmark.
+    ) -> tuple[float, float]:
+        """Calculate Beta and Alpha vs a benchmark.
 
         WHAT:
             - Beta: Sensitivity to benchmark movements
@@ -562,18 +548,22 @@ class RiskCalculator:
             Tuple of (beta, alpha)
         """
         # Convert benchmark data to returns
-        benchmark_df = pd.DataFrame({
-            'date': benchmark_data.dates,
-            'price': benchmark_data.prices,
-        })
-        benchmark_df = benchmark_df.set_index('date')
-        benchmark_returns = benchmark_df['price'].pct_change().dropna()
+        benchmark_df = pd.DataFrame(
+            {
+                "date": benchmark_data.dates,
+                "price": benchmark_data.prices,
+            }
+        )
+        benchmark_df = benchmark_df.set_index("date")
+        benchmark_returns = benchmark_df["price"].pct_change().dropna()
 
         # Align dates (only use overlapping dates)
-        aligned_data = pd.DataFrame({
-            'asset': returns,
-            'benchmark': benchmark_returns,
-        }).dropna()
+        aligned_data = pd.DataFrame(
+            {
+                "asset": returns,
+                "benchmark": benchmark_returns,
+            }
+        ).dropna()
 
         if len(aligned_data) < 30:
             warnings.warn(
@@ -582,8 +572,8 @@ class RiskCalculator:
                 "Results may be unreliable."
             )
 
-        asset_returns = aligned_data['asset']
-        bench_returns = aligned_data['benchmark']
+        asset_returns = aligned_data["asset"]
+        bench_returns = aligned_data["benchmark"]
 
         # Calculate Beta using covariance method
         # FORMULA: Beta = Cov(asset, benchmark) / Var(benchmark)
@@ -616,10 +606,9 @@ def calculate_risk_metrics(
     benchmark_ticker: str | None = None,
     benchmark_prices: list[float] | None = None,
     benchmark_dates: list[str] | None = None,
-    **config_kwargs
+    **config_kwargs,
 ) -> RiskMetricsOutput:
-    """
-    Convenience function for calculating risk metrics without manually creating models.
+    """Convenience function for calculating risk metrics without manually creating models.
 
     EDUCATIONAL NOTE:
     This function is a "wrapper" that handles the Pydantic model creation for you.

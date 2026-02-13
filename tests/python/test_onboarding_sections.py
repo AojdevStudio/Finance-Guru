@@ -21,7 +21,6 @@ from src.utils.onboarding_sections import (
     run_summary_section,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -114,15 +113,13 @@ class TestLiquidAssetsSection:
 
     def test_collects_all_fields(self, mocker):
         """Section stores total, accounts_count, average_yield, structure."""
-        mock_text = mocker.patch(
-            "src.utils.onboarding_sections.questionary.text"
-        )
+        mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
         # Responses: total, accounts_count, yield, structure
         mock_text.return_value.ask.side_effect = [
             "15000",  # total
-            "3",      # accounts_count
-            "4.5",    # average_yield (%)
-            "",       # structure (skip)
+            "3",  # accounts_count
+            "4.5",  # average_yield (%)
+            "",  # structure (skip)
         ]
 
         state = _fresh_state()
@@ -136,9 +133,7 @@ class TestLiquidAssetsSection:
 
     def test_marks_section_complete(self, mocker):
         """Section marks liquid_assets as complete."""
-        mock_text = mocker.patch(
-            "src.utils.onboarding_sections.questionary.text"
-        )
+        mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
         mock_text.return_value.ask.side_effect = ["15000", "3", "4.5", ""]
 
         state = _fresh_state()
@@ -148,11 +143,12 @@ class TestLiquidAssetsSection:
 
     def test_with_structure(self, mocker):
         """Section stores structure when provided."""
-        mock_text = mocker.patch(
-            "src.utils.onboarding_sections.questionary.text"
-        )
+        mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
         mock_text.return_value.ask.side_effect = [
-            "25000", "2", "3.0", "1 checking, 1 HYSA"
+            "25000",
+            "2",
+            "3.0",
+            "1 checking, 1 HYSA",
         ]
 
         state = _fresh_state()
@@ -172,30 +168,24 @@ class TestInvestmentsSection:
 
     def test_collects_all_fields(self, mocker):
         """Section stores investment portfolio data with string enum values."""
-        mock_text = mocker.patch(
-            "src.utils.onboarding_sections.questionary.text"
-        )
-        mock_confirm = mocker.patch(
-            "src.utils.onboarding_sections.questionary.confirm"
-        )
-        mock_select = mocker.patch(
-            "src.utils.onboarding_sections.questionary.select"
-        )
+        mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
+        mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
+        mock_select = mocker.patch("src.utils.onboarding_sections.questionary.select")
 
         # text: total_value, brokerage, retirement_value, sheets_id, account_num
         mock_text.return_value.ask.side_effect = [
-            "100000",    # total_value
+            "100000",  # total_value
             "Fidelity",  # brokerage
-            "50000",     # retirement_value
-            "",          # google_sheets_id (skip)
-            "",          # account_number (skip)
+            "50000",  # retirement_value
+            "",  # google_sheets_id (skip)
+            "",  # account_number (skip)
         ]
         # confirm: has_retirement
         mock_confirm.return_value.ask.return_value = True
         # select: allocation_strategy, risk_tolerance (called twice)
         mock_select.return_value.ask.side_effect = [
             "aggressive_growth",  # allocation_strategy
-            "aggressive",         # risk_tolerance
+            "aggressive",  # risk_tolerance
         ]
 
         state = _fresh_state()
@@ -222,15 +212,13 @@ class TestCashFlowSection:
 
     def test_collects_five_fields(self, mocker):
         """Section stores all 5 cash flow fields correctly."""
-        mock_text = mocker.patch(
-            "src.utils.onboarding_sections.questionary.text"
-        )
+        mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
         mock_text.return_value.ask.side_effect = [
-            "8000",   # monthly_income
-            "3000",   # fixed_expenses
-            "2000",   # variable_expenses
-            "1000",   # current_savings
-            "2000",   # investment_capacity
+            "8000",  # monthly_income
+            "3000",  # fixed_expenses
+            "2000",  # variable_expenses
+            "1000",  # current_savings
+            "2000",  # investment_capacity
         ]
 
         state = _fresh_state()
@@ -255,12 +243,8 @@ class TestPreferencesSection:
 
     def test_collects_preferences(self, mocker):
         """Section stores philosophy string, focus areas list, emergency months."""
-        mock_text = mocker.patch(
-            "src.utils.onboarding_sections.questionary.text"
-        )
-        mock_select = mocker.patch(
-            "src.utils.onboarding_sections.questionary.select"
-        )
+        mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
+        mock_select = mocker.patch("src.utils.onboarding_sections.questionary.select")
         mock_checkbox = mocker.patch(
             "src.utils.onboarding_sections.questionary.checkbox"
         )
@@ -296,18 +280,14 @@ class TestEnvSetupSection:
 
     def test_all_api_keys_skipped(self, mocker):
         """Section stores user_name and language with all APIs skipped."""
-        mock_text = mocker.patch(
-            "src.utils.onboarding_sections.questionary.text"
-        )
-        mock_confirm = mocker.patch(
-            "src.utils.onboarding_sections.questionary.confirm"
-        )
+        mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
+        mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
 
         # text: user_name, language, google_sheets_credentials
         mock_text.return_value.ask.side_effect = [
-            "Alex",     # user_name
+            "Alex",  # user_name
             "English",  # language
-            "",         # google_sheets_credentials (skip)
+            "",  # google_sheets_credentials (skip)
         ]
         # confirm: has_alphavantage, has_brightdata (both False)
         mock_confirm.return_value.ask.return_value = False
@@ -326,20 +306,16 @@ class TestEnvSetupSection:
 
     def test_with_api_keys(self, mocker):
         """Section stores API keys when user provides them."""
-        mock_text = mocker.patch(
-            "src.utils.onboarding_sections.questionary.text"
-        )
-        mock_confirm = mocker.patch(
-            "src.utils.onboarding_sections.questionary.confirm"
-        )
+        mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
+        mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
 
         # text: user_name, language, av_key, bd_key, gs_creds
         mock_text.return_value.ask.side_effect = [
             "Alex",
             "English",
-            "my-av-key-123",    # alphavantage_key
-            "my-bd-key-456",    # brightdata_key
-            "/path/to/creds",   # google_sheets_credentials
+            "my-av-key-123",  # alphavantage_key
+            "my-bd-key-456",  # brightdata_key
+            "/path/to/creds",  # google_sheets_credentials
         ]
         # confirm: has_alphavantage=True, has_brightdata=True
         mock_confirm.return_value.ask.return_value = True
@@ -365,9 +341,7 @@ class TestSummarySection:
 
     def test_confirmed(self, mocker):
         """Summary confirmed stores confirmed=True and marks complete."""
-        mock_confirm = mocker.patch(
-            "src.utils.onboarding_sections.questionary.confirm"
-        )
+        mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
         mock_confirm.return_value.ask.return_value = True
 
         state = _prepopulated_state()
@@ -378,9 +352,7 @@ class TestSummarySection:
 
     def test_declined_no_restart(self, mocker):
         """Summary declined without restart stores confirmed=False."""
-        mock_confirm = mocker.patch(
-            "src.utils.onboarding_sections.questionary.confirm"
-        )
+        mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
         # First call: confirm save (False), second call: restart (False)
         mock_confirm.return_value.ask.side_effect = [False, False]
 
@@ -391,9 +363,7 @@ class TestSummarySection:
 
     def test_declined_with_restart(self, mocker):
         """Summary declined with restart clears state."""
-        mock_confirm = mocker.patch(
-            "src.utils.onboarding_sections.questionary.confirm"
-        )
+        mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
         # First call: confirm save (False), second call: restart (True)
         mock_confirm.return_value.ask.side_effect = [False, True]
 

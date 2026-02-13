@@ -1,5 +1,4 @@
-"""
-Options Analytics Pydantic Models for Finance Guru™
+"""Options Analytics Pydantic Models for Finance Guru™.
 
 This module defines type-safe data structures for options pricing and Greeks.
 All models use Pydantic for automatic validation and type checking.
@@ -39,8 +38,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class OptionInput(BaseModel):
-    """
-    Basic option contract specifications.
+    """Basic option contract specifications.
 
     WHAT: Defines an option contract
     WHY: Standard format for option identification
@@ -57,20 +55,12 @@ class OptionInput(BaseModel):
         max_length=10,
     )
 
-    strike: float = Field(
-        ...,
-        gt=0.0,
-        description="Strike price (must be positive)"
-    )
+    strike: float = Field(..., gt=0.0, description="Strike price (must be positive)")
 
-    expiry: date = Field(
-        ...,
-        description="Expiration date (must be future date)"
-    )
+    expiry: date = Field(..., description="Expiration date (must be future date)")
 
     option_type: Literal["call", "put"] = Field(
-        ...,
-        description="Option type: call or put"
+        ..., description="Option type: call or put"
     )
 
     @field_validator("expiry")
@@ -85,8 +75,7 @@ class OptionInput(BaseModel):
 
 
 class BlackScholesInput(BaseModel):
-    """
-    Inputs for Black-Scholes option pricing model.
+    """Inputs for Black-Scholes option pricing model.
 
     WHAT: Parameters needed for theoretical option valuation
     WHY: Black-Scholes is the standard model for European options
@@ -103,49 +92,37 @@ class BlackScholesInput(BaseModel):
     - Log-normal price distribution
     """
 
-    spot_price: float = Field(
-        ...,
-        gt=0.0,
-        description="Current stock price"
-    )
+    spot_price: float = Field(..., gt=0.0, description="Current stock price")
 
-    strike: float = Field(
-        ...,
-        gt=0.0,
-        description="Option strike price"
-    )
+    strike: float = Field(..., gt=0.0, description="Option strike price")
 
     time_to_expiry: float = Field(
         ...,
         gt=0.0,
         le=10.0,
-        description="Time to expiry in years (e.g., 0.25 = 3 months)"
+        description="Time to expiry in years (e.g., 0.25 = 3 months)",
     )
 
     volatility: float = Field(
         ...,
         ge=0.01,
         le=3.0,
-        description="Annual volatility as decimal (e.g., 0.35 = 35%)"
+        description="Annual volatility as decimal (e.g., 0.35 = 35%)",
     )
 
     risk_free_rate: float = Field(
         default=0.045,
         ge=0.0,
         le=0.20,
-        description="Annual risk-free rate (default: 4.5%)"
+        description="Annual risk-free rate (default: 4.5%)",
     )
 
     dividend_yield: float = Field(
-        default=0.0,
-        ge=0.0,
-        le=0.20,
-        description="Annual dividend yield (default: 0%)"
+        default=0.0, ge=0.0, le=0.20, description="Annual dividend yield (default: 0%)"
     )
 
     option_type: Literal["call", "put"] = Field(
-        ...,
-        description="Option type: call or put"
+        ..., description="Option type: call or put"
     )
 
     @field_validator("volatility")
@@ -154,6 +131,7 @@ class BlackScholesInput(BaseModel):
         """Warn if volatility is extreme."""
         if v > 1.5:
             import warnings
+
             warnings.warn(
                 f"Volatility of {v:.0%} is very high (>150%). "
                 "Verify this is correct for your asset."
@@ -162,8 +140,7 @@ class BlackScholesInput(BaseModel):
 
 
 class GreeksOutput(BaseModel):
-    """
-    Option Greeks and pricing output.
+    """Option Greeks and pricing output.
 
     WHAT: Complete option valuation with sensitivities
     WHY: Greeks help manage option risk
@@ -187,59 +164,38 @@ class GreeksOutput(BaseModel):
     calculation_date: date = Field(..., description="Date of calculation")
 
     # Pricing
-    option_price: float = Field(
-        ...,
-        ge=0.0,
-        description="Theoretical option price"
-    )
+    option_price: float = Field(..., ge=0.0, description="Theoretical option price")
 
     intrinsic_value: float = Field(
-        ...,
-        ge=0.0,
-        description="Intrinsic value (immediate exercise value)"
+        ..., ge=0.0, description="Intrinsic value (immediate exercise value)"
     )
 
     time_value: float = Field(
-        ...,
-        ge=0.0,
-        description="Time value (option_price - intrinsic_value)"
+        ..., ge=0.0, description="Time value (option_price - intrinsic_value)"
     )
 
     # Greeks (First Order)
     delta: float = Field(
-        ...,
-        ge=-1.0,
-        le=1.0,
-        description="Delta: Price sensitivity to $1 stock move"
+        ..., ge=-1.0, le=1.0, description="Delta: Price sensitivity to $1 stock move"
     )
 
     gamma: float = Field(
-        ...,
-        ge=0.0,
-        description="Gamma: Rate of Delta change (always positive)"
+        ..., ge=0.0, description="Gamma: Rate of Delta change (always positive)"
     )
 
     theta: float = Field(
-        ...,
-        le=0.0,
-        description="Theta: Daily time decay (always negative)"
+        ..., le=0.0, description="Theta: Daily time decay (always negative)"
     )
 
     vega: float = Field(
-        ...,
-        ge=0.0,
-        description="Vega: Sensitivity to 1% volatility change"
+        ..., ge=0.0, description="Vega: Sensitivity to 1% volatility change"
     )
 
-    rho: float = Field(
-        ...,
-        description="Rho: Sensitivity to 1% interest rate change"
-    )
+    rho: float = Field(..., description="Rho: Sensitivity to 1% interest rate change")
 
     # Moneyness
     moneyness: Literal["ITM", "ATM", "OTM"] = Field(
-        ...,
-        description="Moneyness: In/At/Out of the money"
+        ..., description="Moneyness: In/At/Out of the money"
     )
 
     # Input parameters (for reference)
@@ -267,7 +223,7 @@ class GreeksOutput(BaseModel):
                     "spot_price": 265.00,
                     "strike": 250.00,
                     "time_to_expiry": 0.25,
-                    "volatility": 0.45
+                    "volatility": 0.45,
                 }
             ]
         }
@@ -275,8 +231,7 @@ class GreeksOutput(BaseModel):
 
 
 class ImpliedVolInput(BaseModel):
-    """
-    Inputs for implied volatility calculation.
+    """Inputs for implied volatility calculation.
 
     WHAT: Reverse-engineer volatility from market option price
     WHY: Market price reflects market's volatility expectation
@@ -299,8 +254,7 @@ class ImpliedVolInput(BaseModel):
 
 
 class ImpliedVolOutput(BaseModel):
-    """
-    Implied volatility calculation result.
+    """Implied volatility calculation result.
 
     WHAT: Market-implied volatility from option price
     WHY: Shows market's fear/expectation
@@ -311,7 +265,7 @@ class ImpliedVolOutput(BaseModel):
         ...,
         ge=0.0,
         le=5.0,
-        description="Implied volatility (decimal, e.g., 0.45 = 45%)"
+        description="Implied volatility (decimal, e.g., 0.45 = 45%)",
     )
 
     iterations: int = Field(..., description="Solver iterations required")
@@ -321,14 +275,12 @@ class ImpliedVolOutput(BaseModel):
     calculated_price: float = Field(..., description="Price at implied vol")
 
     pricing_error: float = Field(
-        ...,
-        description="Absolute difference between market and calculated"
+        ..., description="Absolute difference between market and calculated"
     )
 
 
 class PutCallParityInput(BaseModel):
-    """
-    Inputs for put-call parity check.
+    """Inputs for put-call parity check.
 
     WHAT: Relationship between call, put, stock, and bond prices
     WHY: Detects arbitrage opportunities
@@ -352,6 +304,7 @@ class PutCallParityInput(BaseModel):
 
 class OptionContractData(BaseModel):
     """Market data + calculated Greeks for a single option contract."""
+
     contract_symbol: str = Field(..., description="Full option contract symbol")
     expiration: str = Field(..., description="Expiration date YYYY-MM-DD")
     strike: float = Field(..., gt=0.0, description="Strike price")
@@ -363,17 +316,24 @@ class OptionContractData(BaseModel):
     mid: float = Field(..., ge=0.0, description="Mid price (bid+ask)/2")
     volume: int = Field(default=0, ge=0, description="Trading volume")
     open_interest: int = Field(default=0, ge=0, description="Open interest")
-    implied_volatility: float = Field(default=0.0, ge=0.0, description="Implied volatility from market")
+    implied_volatility: float = Field(
+        default=0.0, ge=0.0, description="Implied volatility from market"
+    )
     delta: float | None = Field(default=None, description="Calculated delta")
     gamma: float | None = Field(default=None, description="Calculated gamma")
     theta: float | None = Field(default=None, description="Calculated theta (per day)")
     vega: float | None = Field(default=None, description="Calculated vega")
-    total_cost: float = Field(..., ge=0.0, description="Cost per contract (premium x 100)")
-    contracts_in_budget: int | None = Field(default=None, description="Max contracts affordable")
+    total_cost: float = Field(
+        ..., ge=0.0, description="Cost per contract (premium x 100)"
+    )
+    contracts_in_budget: int | None = Field(
+        default=None, description="Max contracts affordable"
+    )
 
 
 class OptionsChainOutput(BaseModel):
     """Full options chain scan result."""
+
     ticker: str
     spot_price: float
     scan_date: str

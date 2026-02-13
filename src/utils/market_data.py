@@ -1,6 +1,5 @@
-"""
-Market Data Utility Module
-Provides real-time and end-of-day stock price data for Finance Guru system
+"""Market Data Utility Module
+Provides real-time and end-of-day stock price data for Finance Guru system.
 
 USAGE:
     # End-of-day data (yfinance - free, always works)
@@ -16,7 +15,7 @@ USAGE:
 import argparse
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import requests
 import yfinance as yf
@@ -28,6 +27,8 @@ load_dotenv()
 
 
 class PriceData(BaseModel):
+    """Market price data for a single security."""
+
     symbol: str
     price: float
     change: float
@@ -36,9 +37,10 @@ class PriceData(BaseModel):
     source: str = "yfinance"  # Track data source
 
 
-def get_prices(symbols: Union[str, List[str]], realtime: bool = False) -> Dict[str, PriceData]:
-    """
-    Get current prices for one or more stock symbols
+def get_prices(
+    symbols: str | list[str], realtime: bool = False
+) -> dict[str, PriceData]:
+    """Get current prices for one or more stock symbols.
 
     Unified function handling both single and multiple tickers.
     Supports both yfinance (free, end-of-day) and Finnhub (free, real-time, 60/min).
@@ -68,8 +70,8 @@ def get_prices(symbols: Union[str, List[str]], realtime: bool = False) -> Dict[s
         return _get_prices_yfinance(symbols)
 
 
-def _get_prices_yfinance(symbols: List[str]) -> Dict[str, PriceData]:
-    """Get prices using yfinance (free, end-of-day data)"""
+def _get_prices_yfinance(symbols: list[str]) -> dict[str, PriceData]:
+    """Get prices using yfinance (free, end-of-day data)."""
     results = {}
 
     for symbol in symbols:
@@ -77,8 +79,10 @@ def _get_prices_yfinance(symbols: List[str]) -> Dict[str, PriceData]:
             ticker = yf.Ticker(symbol)
             info = ticker.info
 
-            current_price = info.get('currentPrice') or info.get('regularMarketPrice', 0)
-            previous_close = info.get('previousClose', 0)
+            current_price = info.get("currentPrice") or info.get(
+                "regularMarketPrice", 0
+            )
+            previous_close = info.get("previousClose", 0)
             change = current_price - previous_close
             change_percent = (change / previous_close * 100) if previous_close else 0
 
@@ -88,7 +92,7 @@ def _get_prices_yfinance(symbols: List[str]) -> Dict[str, PriceData]:
                 change=round(change, 2),
                 change_percent=round(change_percent, 2),
                 timestamp=datetime.now().isoformat(),
-                source="yfinance"
+                source="yfinance",
             )
         except Exception as e:
             print(f"⚠️  Error fetching {symbol} from yfinance: {e}")
@@ -97,11 +101,11 @@ def _get_prices_yfinance(symbols: List[str]) -> Dict[str, PriceData]:
     return results
 
 
-def _get_prices_polygon(symbols: List[str]) -> Dict[str, PriceData]:
-    """Get prices using Finnhub API (60 calls/min, unlimited daily!)"""
-    api_key = os.getenv('FINNHUB_API_KEY')
+def _get_prices_polygon(symbols: list[str]) -> dict[str, PriceData]:
+    """Get prices using Finnhub API (60 calls/min, unlimited daily!)."""
+    api_key = os.getenv("FINNHUB_API_KEY")
 
-    if not api_key or api_key == 'your_finnhub_api_key_here':
+    if not api_key or api_key == "your_finnhub_api_key_here":
         print("⚠️  FINNHUB_API_KEY not configured in .env - falling back to yfinance")
         return _get_prices_yfinance(symbols)
 
@@ -111,10 +115,7 @@ def _get_prices_polygon(symbols: List[str]) -> Dict[str, PriceData]:
         try:
             # Finnhub quote endpoint (real-time data, 60 calls/min!)
             url = "https://finnhub.io/api/v1/quote"
-            params = {
-                'symbol': symbol.upper(),
-                'token': api_key
-            }
+            params = {"symbol": symbol.upper(), "token": api_key}
 
             response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()
@@ -122,19 +123,19 @@ def _get_prices_polygon(symbols: List[str]) -> Dict[str, PriceData]:
             data = response.json()
 
             # Check for API error
-            if 'error' in data:
+            if "error" in data:
                 raise ValueError(f"Finnhub error: {data['error']}")
 
             # Finnhub returns empty dict {} for invalid symbols
-            if not data or data.get('c') == 0:
+            if not data or data.get("c") == 0:
                 raise ValueError(f"No quote data returned for {symbol}")
 
             # Finnhub quote structure
             # c = current price, d = change, dp = change percent
             # h = high, l = low, o = open, pc = previous close
-            current_price = float(data.get('c', 0))
-            change = float(data.get('d', 0))
-            change_percent = float(data.get('dp', 0))
+            current_price = float(data.get("c", 0))
+            change = float(data.get("d", 0))
+            change_percent = float(data.get("dp", 0))
 
             results[symbol.upper()] = PriceData(
                 symbol=symbol.upper(),
@@ -142,7 +143,7 @@ def _get_prices_polygon(symbols: List[str]) -> Dict[str, PriceData]:
                 change=round(change, 2),
                 change_percent=round(change_percent, 2),
                 timestamp=datetime.now().isoformat(),
-                source="finnhub"
+                source="finnhub",
             )
 
         except requests.exceptions.RequestException as e:
@@ -161,9 +162,8 @@ def _get_prices_polygon(symbols: List[str]) -> Dict[str, PriceData]:
     return results
 
 
-def get_option_chain(symbol: str, expiration: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Get option chain data for a symbol
+def get_option_chain(symbol: str, expiration: str | None = None) -> dict[str, Any]:
+    """Get option chain data for a symbol.
 
     Args:
         symbol: Stock ticker symbol
@@ -180,15 +180,15 @@ def get_option_chain(symbol: str, expiration: Optional[str] = None) -> Dict[str,
     opt = ticker.option_chain(expiration)
 
     return {
-        'expiration': expiration,
-        'calls': opt.calls.to_dict('records'),
-        'puts': opt.puts.to_dict('records')
+        "expiration": expiration,
+        "calls": opt.calls.to_dict("records"),
+        "puts": opt.puts.to_dict("records"),
     }
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description='Finance Guru™ Market Data Utility - Get stock prices',
+        description="Finance Guru™ Market Data Utility - Get stock prices",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -206,30 +206,28 @@ Examples:
 
   # Entire portfolio scan (15-20 tickers in ~20 seconds!)
   uv run python src/utils/market_data.py PLTR TSLA COIN NVDA AAPL GOOGL VOO JEPI JEPQ --realtime
-        """
+        """,
     )
 
     parser.add_argument(
-        'symbols',
-        nargs='+',
-        help='Stock ticker symbols (e.g., TSLA PLTR NVDA)'
+        "symbols", nargs="+", help="Stock ticker symbols (e.g., TSLA PLTR NVDA)"
     )
 
     parser.add_argument(
-        '--realtime',
-        action='store_true',
-        help='Use Finnhub API for real-time data (requires FINNHUB_API_KEY in .env, 60 calls/min!)'
+        "--realtime",
+        action="store_true",
+        help="Use Finnhub API for real-time data (requires FINNHUB_API_KEY in .env, 60 calls/min!)",
     )
 
     args = parser.parse_args()
 
     # Fetch prices
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     if args.realtime:
         print("📊 REAL-TIME MARKET DATA (Finnhub - 60 calls/min)")
     else:
         print("📊 END-OF-DAY MARKET DATA (yfinance)")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     data = get_prices(args.symbols, realtime=args.realtime)
 
@@ -242,9 +240,11 @@ Examples:
         source_label = f"[{price_info.source.upper()}]"
         change_symbol = "📈" if price_info.change >= 0 else "📉"
 
-        print(f"{change_symbol} {source_label:15} {symbol:6} ${price_info.price:8.2f} "
-              f"({price_info.change:+7.2f}, {price_info.change_percent:+6.2f}%)")
+        print(
+            f"{change_symbol} {source_label:15} {symbol:6} ${price_info.price:8.2f} "
+            f"({price_info.change:+7.2f}, {price_info.change_percent:+6.2f}%)"
+        )
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"⏰ Timestamp: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p %Z')}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")

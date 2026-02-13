@@ -1,5 +1,4 @@
-"""
-Onboarding Wizard Section Runners for Finance Guru
+"""Onboarding Wizard Section Runners for Finance Guru.
 
 Eight section runner functions that prompt users through the financial
 profile collection using questionary. Each function takes an
@@ -13,8 +12,6 @@ convert_state_to_user_data function.
 Author: Finance Guru Development Team
 Created: 2026-02-05
 """
-
-from typing import Optional
 
 import questionary
 
@@ -30,7 +27,6 @@ from src.utils.onboarding_validators import (
     validate_percentage,
     validate_positive_integer,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -111,7 +107,7 @@ def run_liquid_assets_section(state: OnboardingState) -> OnboardingState:
     # Convert percentage to decimal for storage (4.5 -> 0.045)
     average_yield = average_yield_pct / 100.0
 
-    structure: Optional[str] = questionary.text(
+    structure: str | None = questionary.text(
         "Describe your account structure (optional, press Enter to skip):"
     ).ask()
 
@@ -159,7 +155,7 @@ def run_investments_section(state: OnboardingState) -> OnboardingState:
     if total_value is None:
         return state
 
-    brokerage: Optional[str] = questionary.text(
+    brokerage: str | None = questionary.text(
         "Primary brokerage name (optional, press Enter to skip):"
     ).ask()
     if brokerage is not None:
@@ -172,7 +168,7 @@ def run_investments_section(state: OnboardingState) -> OnboardingState:
     if has_retirement is None:
         return state
 
-    retirement_value: Optional[float] = None
+    retirement_value: float | None = None
     if has_retirement:
         retirement_value = ask_with_retry(
             prompt_fn=lambda: questionary.text(
@@ -202,13 +198,13 @@ def run_investments_section(state: OnboardingState) -> OnboardingState:
     if risk_tolerance is None:
         return state
 
-    google_sheets_id: Optional[str] = questionary.text(
+    google_sheets_id: str | None = questionary.text(
         "Google Sheets portfolio tracker ID (optional, press Enter to skip):"
     ).ask()
     if google_sheets_id is not None:
         google_sheets_id = google_sheets_id.strip() or None
 
-    account_number: Optional[str] = questionary.text(
+    account_number: str | None = questionary.text(
         "Primary account number last 4 digits (optional, press Enter to skip):"
     ).ask()
     if account_number is not None:
@@ -269,7 +265,9 @@ def run_cash_flow_section(state: OnboardingState) -> OnboardingState:
     if fixed_expenses is None:
         return state
 
-    print("  Variable expenses include groceries, dining, entertainment, shopping, etc.")
+    print(
+        "  Variable expenses include groceries, dining, entertainment, shopping, etc."
+    )
     variable_expenses = ask_with_retry(
         prompt_fn=lambda: questionary.text(
             "What are your average variable monthly expenses?"
@@ -337,14 +335,12 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
     )
 
     # --- Mortgage ---
-    has_mortgage = questionary.confirm(
-        "Do you have a mortgage?", default=False
-    ).ask()
+    has_mortgage = questionary.confirm("Do you have a mortgage?", default=False).ask()
     if has_mortgage is None:
         return state
 
-    mortgage_balance: Optional[float] = None
-    mortgage_payment: Optional[float] = None
+    mortgage_balance: float | None = None
+    mortgage_payment: float | None = None
     if has_mortgage:
         mortgage_balance = ask_with_retry(
             prompt_fn=lambda: questionary.text(
@@ -368,8 +364,8 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
     if has_student_loans is None:
         return state
 
-    student_loan_balance: Optional[float] = None
-    student_loan_rate: Optional[float] = None
+    student_loan_balance: float | None = None
+    student_loan_rate: float | None = None
     if has_student_loans:
         student_loan_balance = ask_with_retry(
             prompt_fn=lambda: questionary.text(
@@ -396,8 +392,8 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
     if has_auto_loans is None:
         return state
 
-    auto_loan_balance: Optional[float] = None
-    auto_loan_rate: Optional[float] = None
+    auto_loan_balance: float | None = None
+    auto_loan_rate: float | None = None
     if has_auto_loans:
         auto_loan_balance = ask_with_retry(
             prompt_fn=lambda: questionary.text(
@@ -413,9 +409,7 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
             validator=validate_percentage,
             default=0.0,
         )
-        auto_loan_rate = (
-            auto_loan_rate_pct / 100.0 if auto_loan_rate_pct else 0.0
-        )
+        auto_loan_rate = auto_loan_rate_pct / 100.0 if auto_loan_rate_pct else 0.0
 
     # --- Credit Cards ---
     has_credit_cards = questionary.confirm(
@@ -424,7 +418,7 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
     if has_credit_cards is None:
         return state
 
-    credit_card_balance: Optional[float] = None
+    credit_card_balance: float | None = None
     if has_credit_cards:
         credit_card_balance = ask_with_retry(
             prompt_fn=lambda: questionary.text(
@@ -435,17 +429,17 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
         )
 
     # --- Weighted average & other ---
-    weighted_rate_pct_raw: Optional[str] = questionary.text(
+    weighted_rate_pct_raw: str | None = questionary.text(
         "Weighted average debt interest rate (optional, e.g., 4.5 for 4.5%, Enter to skip):"
     ).ask()
-    weighted_rate: Optional[float] = None
+    weighted_rate: float | None = None
     if weighted_rate_pct_raw is not None and weighted_rate_pct_raw.strip():
         try:
             weighted_rate = validate_percentage(weighted_rate_pct_raw) / 100.0
         except ValueError:
             weighted_rate = None
 
-    other_debt: Optional[str] = questionary.text(
+    other_debt: str | None = questionary.text(
         "Any other debt to describe? (optional, press Enter to skip):"
     ).ask()
     if other_debt is not None:
@@ -581,9 +575,7 @@ def run_broker_section(state: OnboardingState) -> OnboardingState:
         if keep:
             brokerage = existing_brokerage
         else:
-            brokerage_raw = questionary.text(
-                "Enter your primary brokerage name:"
-            ).ask()
+            brokerage_raw = questionary.text("Enter your primary brokerage name:").ask()
             if brokerage_raw is None:
                 return state
             brokerage = brokerage_raw.strip() or existing_brokerage
@@ -649,7 +641,9 @@ def run_env_setup_section(state: OnboardingState) -> OnboardingState:
     )
     if user_name_raw is None:
         return state
-    user_name = user_name_raw.strip() if isinstance(user_name_raw, str) else str(user_name_raw)
+    user_name = (
+        user_name_raw.strip() if isinstance(user_name_raw, str) else str(user_name_raw)
+    )
 
     # Preferred language
     language_raw = questionary.text(
@@ -671,11 +665,9 @@ def run_env_setup_section(state: OnboardingState) -> OnboardingState:
     if has_av is None:
         return state
 
-    av_key: Optional[str] = None
+    av_key: str | None = None
     if has_av:
-        av_key_raw = questionary.text(
-            "Alpha Vantage API key:"
-        ).ask()
+        av_key_raw = questionary.text("Alpha Vantage API key:").ask()
         if av_key_raw is not None:
             av_key = av_key_raw.strip() or None
 
@@ -686,19 +678,17 @@ def run_env_setup_section(state: OnboardingState) -> OnboardingState:
     if has_bd is None:
         return state
 
-    bd_key: Optional[str] = None
+    bd_key: str | None = None
     if has_bd:
-        bd_key_raw = questionary.text(
-            "BrightData API key:"
-        ).ask()
+        bd_key_raw = questionary.text("BrightData API key:").ask()
         if bd_key_raw is not None:
             bd_key = bd_key_raw.strip() or None
 
     # Google Sheets credentials
-    gs_creds_raw: Optional[str] = questionary.text(
+    gs_creds_raw: str | None = questionary.text(
         "Path to Google Sheets credentials JSON (optional, press Enter to skip):"
     ).ask()
-    gs_creds: Optional[str] = None
+    gs_creds: str | None = None
     if gs_creds_raw is not None:
         gs_creds = gs_creds_raw.strip() or None
 
@@ -781,7 +771,7 @@ def run_summary_section(state: OnboardingState) -> OnboardingState:
 # ---------------------------------------------------------------------------
 
 
-def _display_full_summary(state: OnboardingState) -> None:
+def _display_full_summary(state: OnboardingState) -> None:  # noqa: C901
     """Print a nicely formatted summary of all collected section data."""
     border = "\u2550" * 56
     print(f"  {border}")
@@ -795,7 +785,9 @@ def _display_full_summary(state: OnboardingState) -> None:
         print("  Liquid Assets")
         print(f"    Total:         {_format_currency(la.get('total', 0))}")
         print(f"    Accounts:      {la.get('accounts_count', 'N/A')}")
-        print(f"    Average Yield: {_format_percentage_display(la.get('average_yield', 0))}")
+        print(
+            f"    Average Yield: {_format_percentage_display(la.get('average_yield', 0))}"
+        )
         if la.get("structure"):
             print(f"    Structure:     {la['structure']}")
         print()
@@ -808,7 +800,9 @@ def _display_full_summary(state: OnboardingState) -> None:
         if inv.get("brokerage"):
             print(f"    Brokerage:     {inv['brokerage']}")
         if inv.get("has_retirement"):
-            print(f"    Retirement:    {_format_currency(inv.get('retirement_value', 0))}")
+            print(
+                f"    Retirement:    {_format_currency(inv.get('retirement_value', 0))}"
+            )
         print(f"    Allocation:    {inv.get('allocation_strategy', 'N/A')}")
         print(f"    Risk:          {inv.get('risk_tolerance', 'N/A')}")
         print()
@@ -817,11 +811,21 @@ def _display_full_summary(state: OnboardingState) -> None:
     cf = state.data.get(SectionName.CASH_FLOW.value)
     if cf:
         print("  Cash Flow")
-        print(f"    Monthly Income:      {_format_currency(cf.get('monthly_income', 0))}")
-        print(f"    Fixed Expenses:      {_format_currency(cf.get('fixed_expenses', 0))}")
-        print(f"    Variable Expenses:   {_format_currency(cf.get('variable_expenses', 0))}")
-        print(f"    Current Savings:     {_format_currency(cf.get('current_savings', 0))}")
-        print(f"    Investment Capacity: {_format_currency(cf.get('investment_capacity', 0))}")
+        print(
+            f"    Monthly Income:      {_format_currency(cf.get('monthly_income', 0))}"
+        )
+        print(
+            f"    Fixed Expenses:      {_format_currency(cf.get('fixed_expenses', 0))}"
+        )
+        print(
+            f"    Variable Expenses:   {_format_currency(cf.get('variable_expenses', 0))}"
+        )
+        print(
+            f"    Current Savings:     {_format_currency(cf.get('current_savings', 0))}"
+        )
+        print(
+            f"    Investment Capacity: {_format_currency(cf.get('investment_capacity', 0))}"
+        )
         print()
 
     # Debt
@@ -829,20 +833,36 @@ def _display_full_summary(state: OnboardingState) -> None:
     if debt:
         print("  Debt Profile")
         if debt.get("has_mortgage"):
-            print(f"    Mortgage Balance:  {_format_currency(debt.get('mortgage_balance', 0))}")
-            print(f"    Mortgage Payment:  {_format_currency(debt.get('mortgage_payment', 0))}")
+            print(
+                f"    Mortgage Balance:  {_format_currency(debt.get('mortgage_balance', 0))}"
+            )
+            print(
+                f"    Mortgage Payment:  {_format_currency(debt.get('mortgage_payment', 0))}"
+            )
         else:
             print("    Mortgage:          None")
         if debt.get("has_student_loans"):
-            print(f"    Student Loans:     {_format_currency(debt.get('student_loan_balance', 0))}")
-            print(f"    Student Loan Rate: {_format_percentage_display(debt.get('student_loan_rate', 0))}")
+            print(
+                f"    Student Loans:     {_format_currency(debt.get('student_loan_balance', 0))}"
+            )
+            print(
+                f"    Student Loan Rate: {_format_percentage_display(debt.get('student_loan_rate', 0))}"
+            )
         if debt.get("has_auto_loans"):
-            print(f"    Auto Loans:        {_format_currency(debt.get('auto_loan_balance', 0))}")
-            print(f"    Auto Loan Rate:    {_format_percentage_display(debt.get('auto_loan_rate', 0))}")
+            print(
+                f"    Auto Loans:        {_format_currency(debt.get('auto_loan_balance', 0))}"
+            )
+            print(
+                f"    Auto Loan Rate:    {_format_percentage_display(debt.get('auto_loan_rate', 0))}"
+            )
         if debt.get("has_credit_cards"):
-            print(f"    Credit Cards:      {_format_currency(debt.get('credit_card_balance', 0))}")
+            print(
+                f"    Credit Cards:      {_format_currency(debt.get('credit_card_balance', 0))}"
+            )
         if debt.get("weighted_rate") is not None:
-            print(f"    Weighted Rate:     {_format_percentage_display(debt['weighted_rate'])}")
+            print(
+                f"    Weighted Rate:     {_format_percentage_display(debt['weighted_rate'])}"
+            )
         if debt.get("other_debt"):
             print(f"    Other:             {debt['other_debt']}")
         print()
@@ -857,7 +877,9 @@ def _display_full_summary(state: OnboardingState) -> None:
             print(f"    Focus Areas:     {', '.join(focus)}")
         else:
             print("    Focus Areas:     None specified")
-        print(f"    Emergency Fund:  {prefs.get('emergency_fund_months', 'N/A')} months")
+        print(
+            f"    Emergency Fund:  {prefs.get('emergency_fund_months', 'N/A')} months"
+        )
         print()
 
     # Broker
@@ -873,9 +895,15 @@ def _display_full_summary(state: OnboardingState) -> None:
         print("  Environment")
         print(f"    User Name:       {env.get('user_name', 'N/A')}")
         print(f"    Language:        {env.get('language', 'English')}")
-        print(f"    Alpha Vantage:   {'Configured' if env.get('alphavantage_key') else 'Not set'}")
-        print(f"    BrightData:      {'Configured' if env.get('brightdata_key') else 'Not set'}")
-        print(f"    Google Sheets:   {'Configured' if env.get('google_sheets_credentials') else 'Not set'}")
+        print(
+            f"    Alpha Vantage:   {'Configured' if env.get('alphavantage_key') else 'Not set'}"
+        )
+        print(
+            f"    BrightData:      {'Configured' if env.get('brightdata_key') else 'Not set'}"
+        )
+        print(
+            f"    Google Sheets:   {'Configured' if env.get('google_sheets_credentials') else 'Not set'}"
+        )
         print()
 
     print(f"  {border}")

@@ -31,15 +31,15 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.models.factors_inputs import FactorDataInput
 from src.analysis.factors import FactorAnalyzer
+from src.models.factors_inputs import FactorDataInput
 
 
 def fetch_returns(ticker: str, days: int) -> list[float]:
     """Fetch returns for a ticker."""
     try:
+        import pandas as pd  # noqa: F401
         import yfinance as yf
-        import pandas as pd
 
         end_date = date.today()
         # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
@@ -51,7 +51,7 @@ def fetch_returns(ticker: str, days: int) -> list[float]:
         if hist.empty:
             raise ValueError(f"No data found for {ticker}")
 
-        returns = hist['Close'].pct_change().dropna().tolist()
+        returns = hist["Close"].pct_change().dropna().tolist()
         return returns
 
     except ImportError:
@@ -73,20 +73,34 @@ Examples:
 
   # JSON output
   %(prog)s TSLA --days 252 --benchmark SPY --output json
-        """
+        """,
     )
 
     parser.add_argument("ticker", type=str, help="Stock ticker to analyze")
-    parser.add_argument("--days", type=int, default=252, help="Days of data (default: 252)")
-    parser.add_argument("--benchmark", type=str, default="SPY", help="Market benchmark (default: SPY)")
-    parser.add_argument("--risk-free-rate", type=float, default=0.045, help="Annual risk-free rate (default: 4.5%%)")
-    parser.add_argument("--output", choices=["human", "json"], default="human", help="Output format")
+    parser.add_argument(
+        "--days", type=int, default=252, help="Days of data (default: 252)"
+    )
+    parser.add_argument(
+        "--benchmark", type=str, default="SPY", help="Market benchmark (default: SPY)"
+    )
+    parser.add_argument(
+        "--risk-free-rate",
+        type=float,
+        default=0.045,
+        help="Annual risk-free rate (default: 4.5%%)",
+    )
+    parser.add_argument(
+        "--output", choices=["human", "json"], default="human", help="Output format"
+    )
     parser.add_argument("--save-to", type=str, default=None, help="Save to file")
 
     args = parser.parse_args()
 
     try:
-        print(f"📥 Fetching data for {args.ticker} and {args.benchmark}...", file=sys.stderr)
+        print(
+            f"📥 Fetching data for {args.ticker} and {args.benchmark}...",
+            file=sys.stderr,
+        )
 
         asset_returns = fetch_returns(args.ticker, args.days)
         market_returns = fetch_returns(args.benchmark, args.days)
@@ -127,6 +141,7 @@ Examples:
     except Exception as e:
         print(f"❌ ERROR: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 
@@ -141,8 +156,12 @@ def format_human(results) -> str:
 
     output.append("🎯 FACTOR EXPOSURES (Betas)")
     output.append("-" * 70)
-    output.append(f"  Market Beta:              {results.exposure.market_beta:>10.2f}  (t-stat: {results.exposure.market_beta_tstat:.2f})")
-    output.append(f"  Alpha (Annual):           {results.exposure.alpha:>10.1%}  (t-stat: {results.exposure.alpha_tstat:.2f})")
+    output.append(
+        f"  Market Beta:              {results.exposure.market_beta:>10.2f}  (t-stat: {results.exposure.market_beta_tstat:.2f})"
+    )
+    output.append(
+        f"  Alpha (Annual):           {results.exposure.alpha:>10.1%}  (t-stat: {results.exposure.alpha_tstat:.2f})"
+    )
     output.append(f"  R-squared:                {results.exposure.r_squared:>10.1%}")
     output.append("")
 
@@ -156,9 +175,15 @@ def format_human(results) -> str:
 
     output.append("💰 RETURN ATTRIBUTION")
     output.append("-" * 70)
-    output.append(f"  Total Return (Annual):    {results.attribution.total_return:>10.1%}")
-    output.append(f"  Market Attribution:       {results.attribution.market_attribution:>10.1%}  ({results.attribution.market_importance:.0%} of total)")
-    output.append(f"  Alpha Attribution:        {results.attribution.alpha_attribution:>10.1%}  ({results.attribution.alpha_importance:.0%} of total)")
+    output.append(
+        f"  Total Return (Annual):    {results.attribution.total_return:>10.1%}"
+    )
+    output.append(
+        f"  Market Attribution:       {results.attribution.market_attribution:>10.1%}  ({results.attribution.market_importance:.0%} of total)"
+    )
+    output.append(
+        f"  Alpha Attribution:        {results.attribution.alpha_attribution:>10.1%}  ({results.attribution.alpha_importance:.0%} of total)"
+    )
     output.append(f"  Residual:                 {results.attribution.residual:>10.1%}")
     output.append("")
 

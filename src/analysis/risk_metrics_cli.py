@@ -58,12 +58,12 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import our type-safe components
+from src.analysis.risk_metrics import RiskCalculator
 from src.models.risk_inputs import (
     PriceDataInput,
     RiskCalculationConfig,
     RiskMetricsOutput,
 )
-from src.analysis.risk_metrics import RiskCalculator
 from src.utils.market_data import get_prices  # Finnhub integration
 
 
@@ -104,7 +104,7 @@ def fetch_price_data(ticker: str, days: int, realtime: bool = False) -> PriceDat
             raise ValueError(f"No data found for ticker {ticker}")
 
         # Extract prices and dates
-        prices = hist['Close'].tolist()
+        prices = hist["Close"].tolist()
         dates = [d.date() for d in hist.index]
 
         # FINNHUB INTEGRATION: Append real-time intraday price if requested
@@ -118,9 +118,15 @@ def fetch_price_data(ticker: str, days: int, realtime: bool = False) -> PriceDat
                     # Append today's date and current price to the data
                     prices.append(current_price)
                     dates.append(date.today())
-                    print(f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)", file=sys.stderr)
+                    print(
+                        f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)",
+                        file=sys.stderr,
+                    )
             except Exception as e:
-                print(f"⚠️  Real-time price unavailable, using EOD data only: {e}", file=sys.stderr)
+                print(
+                    f"⚠️  Real-time price unavailable, using EOD data only: {e}",
+                    file=sys.stderr,
+                )
 
         # Ensure we have minimum required data points
         if len(prices) < 30:
@@ -164,12 +170,16 @@ def format_output_human(results: RiskMetricsOutput) -> str:
     output = []
     output.append("=" * 70)
     output.append(f"📊 RISK ANALYSIS: {results.ticker}")
-    output.append(f"📅 Data Through: {results.calculation_date} (most recent market close)")
+    output.append(
+        f"📅 Data Through: {results.calculation_date} (most recent market close)"
+    )
 
     # Show if data is stale (more than 3 days old)
     days_old = (date_type.today() - results.calculation_date).days
     if days_old > 3:
-        output.append(f"⚠️  Note: Data is {days_old} days old - market may be closed or data delayed")
+        output.append(
+            f"⚠️  Note: Data is {days_old} days old - market may be closed or data delayed"
+        )
 
     output.append("=" * 70)
     output.append("")
@@ -180,8 +190,12 @@ def format_output_human(results: RiskMetricsOutput) -> str:
     output.append(f"  95% VaR (Daily):          {results.var_95:>10.2%}")
     output.append(f"  95% CVaR (Daily):         {results.cvar_95:>10.2%}")
     output.append("")
-    output.append(f"  💡 Interpretation: 95% of days, losses won't exceed {abs(results.var_95):.2%}")
-    output.append(f"     When losses DO exceed VaR, average loss is {abs(results.cvar_95):.2%}")
+    output.append(
+        f"  💡 Interpretation: 95% of days, losses won't exceed {abs(results.var_95):.2%}"
+    )
+    output.append(
+        f"     When losses DO exceed VaR, average loss is {abs(results.cvar_95):.2%}"
+    )
     output.append("")
 
     # Risk-Adjusted Returns Section
@@ -207,7 +221,9 @@ def format_output_human(results: RiskMetricsOutput) -> str:
     output.append(f"  Maximum Drawdown:         {results.max_drawdown:>10.2%}")
     output.append(f"  Calmar Ratio:             {results.calmar_ratio:>10.2f}")
     output.append("")
-    output.append(f"  💡 Worst peak-to-trough decline was {abs(results.max_drawdown):.2%}")
+    output.append(
+        f"  💡 Worst peak-to-trough decline was {abs(results.max_drawdown):.2%}"
+    )
     output.append("")
 
     # Volatility Section
@@ -249,12 +265,16 @@ def format_output_human(results: RiskMetricsOutput) -> str:
         if results.alpha > 0:
             output.append(f"     Alpha: Outperforming by {results.alpha:.2%} annually")
         else:
-            output.append(f"     Alpha: Underperforming by {abs(results.alpha):.2%} annually")
+            output.append(
+                f"     Alpha: Underperforming by {abs(results.alpha):.2%} annually"
+            )
         output.append("")
 
     # Footer
     output.append("=" * 70)
-    output.append("⚠️  DISCLAIMER: For educational purposes only. Not investment advice.")
+    output.append(
+        "⚠️  DISCLAIMER: For educational purposes only. Not investment advice."
+    )
     output.append("=" * 70)
 
     return "\n".join(output)
@@ -313,14 +333,12 @@ Examples:
 
   # Save to file
   %(prog)s TSLA --days 90 --output json --save-to analysis/risk.json
-        """
+        """,
     )
 
     # Required arguments
     parser.add_argument(
-        "ticker",
-        type=str,
-        help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
+        "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
     )
 
     # Data parameters
@@ -328,20 +346,20 @@ Examples:
         "--days",
         type=int,
         default=252,
-        help="Number of days of historical data (default: 252 = 1 year)"
+        help="Number of days of historical data (default: 252 = 1 year)",
     )
 
     parser.add_argument(
         "--benchmark",
         type=str,
         default=None,
-        help="Benchmark ticker for beta/alpha calculation (e.g., SPY)"
+        help="Benchmark ticker for beta/alpha calculation (e.g., SPY)",
     )
 
     parser.add_argument(
         "--realtime",
         action="store_true",
-        help="Append current intraday price from Finnhub for real-time risk analysis"
+        help="Append current intraday price from Finnhub for real-time risk analysis",
     )
 
     # Risk calculation parameters
@@ -349,7 +367,7 @@ Examples:
         "--confidence",
         type=float,
         default=0.95,
-        help="Confidence level for VaR (default: 0.95 = 95%%)"
+        help="Confidence level for VaR (default: 0.95 = 95%%)",
     )
 
     parser.add_argument(
@@ -357,14 +375,14 @@ Examples:
         type=str,
         choices=["historical", "parametric"],
         default="historical",
-        help="VaR calculation method (default: historical)"
+        help="VaR calculation method (default: historical)",
     )
 
     parser.add_argument(
         "--risk-free-rate",
         type=float,
         default=0.045,
-        help="Annual risk-free rate (default: 0.045 = 4.5%%)"
+        help="Annual risk-free rate (default: 0.045 = 4.5%%)",
     )
 
     # Output parameters
@@ -373,14 +391,11 @@ Examples:
         type=str,
         choices=["human", "json"],
         default="human",
-        help="Output format (default: human)"
+        help="Output format (default: human)",
     )
 
     parser.add_argument(
-        "--save-to",
-        type=str,
-        default=None,
-        help="Save output to file (optional)"
+        "--save-to", type=str, default=None, help="Save output to file (optional)"
     )
 
     # Parse arguments
@@ -388,13 +403,23 @@ Examples:
 
     # Validate days parameter
     if args.days < 30:
-        print("ERROR: --days must be at least 30 for statistical validity", file=sys.stderr)
+        print(
+            "ERROR: --days must be at least 30 for statistical validity",
+            file=sys.stderr,
+        )
         return 1
 
     try:
         # Step 1: Fetch price data
-        data_source = "real-time (Finnhub + yfinance)" if args.realtime else "end-of-day (yfinance)"
-        print(f"📥 Fetching {args.days} days of data for {args.ticker} ({data_source})...", file=sys.stderr)
+        data_source = (
+            "real-time (Finnhub + yfinance)"
+            if args.realtime
+            else "end-of-day (yfinance)"
+        )
+        print(
+            f"📥 Fetching {args.days} days of data for {args.ticker} ({data_source})...",
+            file=sys.stderr,
+        )
         price_data = fetch_price_data(args.ticker, args.days, realtime=args.realtime)
         print(f"✅ Fetched {len(price_data.prices)} data points", file=sys.stderr)
         print(f"📅 Latest data: {price_data.dates[-1]}", file=sys.stderr)
@@ -402,9 +427,17 @@ Examples:
         # Step 2: Fetch benchmark data (if requested)
         benchmark_data = None
         if args.benchmark:
-            print(f"📥 Fetching benchmark data for {args.benchmark} ({data_source})...", file=sys.stderr)
-            benchmark_data = fetch_price_data(args.benchmark, args.days, realtime=args.realtime)
-            print(f"✅ Fetched {len(benchmark_data.prices)} benchmark points", file=sys.stderr)
+            print(
+                f"📥 Fetching benchmark data for {args.benchmark} ({data_source})...",
+                file=sys.stderr,
+            )
+            benchmark_data = fetch_price_data(
+                args.benchmark, args.days, realtime=args.realtime
+            )
+            print(
+                f"✅ Fetched {len(benchmark_data.prices)} benchmark points",
+                file=sys.stderr,
+            )
 
         # Step 3: Create configuration
         config = RiskCalculationConfig(
@@ -446,6 +479,7 @@ Examples:
     except Exception as e:
         print(f"❌ ERROR: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         return 1
 

@@ -1,5 +1,4 @@
-"""
-Portfolio Optimization Engine for Finance Guru™
+"""Portfolio Optimization Engine for Finance Guru™.
 
 WHAT: Multi-method portfolio optimizer for $500k capital allocation
 WHY: Scientific portfolio construction using Modern Portfolio Theory
@@ -32,16 +31,15 @@ import pandas as pd
 from scipy.optimize import minimize
 
 from src.models.portfolio_inputs import (
+    EfficientFrontierOutput,
     OptimizationConfig,
     OptimizationOutput,
     PortfolioDataInput,
-    EfficientFrontierOutput,
 )
 
 
 class PortfolioOptimizer:
-    """
-    Multi-method portfolio optimizer.
+    """Multi-method portfolio optimizer.
 
     WHAT: Calculates optimal asset allocation using various optimization techniques
     WHY: Provides validated, type-safe portfolio optimization for Finance Guru agents
@@ -76,8 +74,7 @@ class PortfolioOptimizer:
     """
 
     def __init__(self, config: OptimizationConfig):
-        """
-        Initialize portfolio optimizer with configuration.
+        """Initialize portfolio optimizer with configuration.
 
         Args:
             config: OptimizationConfig with method and constraints
@@ -85,8 +82,7 @@ class PortfolioOptimizer:
         self.config = config
 
     def optimize(self, data: PortfolioDataInput) -> OptimizationOutput:
-        """
-        Optimize portfolio using configured method.
+        """Optimize portfolio using configured method.
 
         EXPLANATION:
         This is the main entry point. It routes to the appropriate
@@ -116,8 +112,7 @@ class PortfolioOptimizer:
             raise ValueError(f"Unknown optimization method: {self.config.method}")
 
     def optimize_mean_variance(self, data: PortfolioDataInput) -> OptimizationOutput:
-        """
-        Markowitz Mean-Variance Optimization.
+        """Markowitz Mean-Variance Optimization.
 
         FORMULA:
         Minimize: w^T Σ w  (portfolio variance)
@@ -158,15 +153,17 @@ class PortfolioOptimizer:
 
         # Constraints
         constraints = [
-            {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}  # Fully invested
+            {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}  # Fully invested
         ]
 
         # Add return constraint if target specified
         if self.config.target_return is not None:
-            constraints.append({
-                'type': 'ineq',
-                'fun': lambda w: w @ returns - self.config.target_return
-            })
+            constraints.append(
+                {
+                    "type": "ineq",
+                    "fun": lambda w: w @ returns - self.config.target_return,
+                }
+            )
 
         # Bounds (position limits)
         bounds = [self.config.position_limits for _ in range(n_assets)]
@@ -178,10 +175,10 @@ class PortfolioOptimizer:
         result = minimize(
             objective,
             x0,
-            method='SLSQP',
+            method="SLSQP",
             bounds=bounds,
             constraints=constraints,
-            options={'maxiter': 1000}
+            options={"maxiter": 1000},
         )
 
         if not result.success:
@@ -192,8 +189,7 @@ class PortfolioOptimizer:
         return self._create_output(weights, data, returns, cov_matrix)
 
     def optimize_risk_parity(self, data: PortfolioDataInput) -> OptimizationOutput:
-        """
-        Risk Parity Optimization (Equal Risk Contribution).
+        """Risk Parity Optimization (Equal Risk Contribution).
 
         CONCEPT:
         Each asset contributes EQUALLY to total portfolio risk.
@@ -212,7 +208,7 @@ class PortfolioOptimizer:
         Risk Parity was popularized by Bridgewater's "All Weather" portfolio.
         The key insight: equal DOLLAR allocation ≠ equal RISK allocation.
 
-        EXAMPLE:
+        Example:
         Portfolio with stocks and bonds (equal $):
             - Stocks: 50% of dollars, ~90% of risk (high volatility)
             - Bonds: 50% of dollars, ~10% of risk (low volatility)
@@ -251,7 +247,7 @@ class PortfolioOptimizer:
 
         # Constraints
         constraints = [
-            {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}  # Fully invested
+            {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}  # Fully invested
         ]
 
         # Bounds
@@ -264,10 +260,10 @@ class PortfolioOptimizer:
         result = minimize(
             objective,
             x0,
-            method='SLSQP',
+            method="SLSQP",
             bounds=bounds,
             constraints=constraints,
-            options={'maxiter': 1000}
+            options={"maxiter": 1000},
         )
 
         if not result.success:
@@ -277,8 +273,7 @@ class PortfolioOptimizer:
         return self._create_output(weights, data, returns, cov_matrix)
 
     def optimize_min_variance(self, data: PortfolioDataInput) -> OptimizationOutput:
-        """
-        Minimum Variance Portfolio Optimization.
+        """Minimum Variance Portfolio Optimization.
 
         FORMULA:
         Minimize: w^T Σ w  (portfolio variance)
@@ -323,7 +318,7 @@ class PortfolioOptimizer:
 
         # Constraints
         constraints = [
-            {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}  # Fully invested
+            {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}  # Fully invested
         ]
 
         # Bounds
@@ -336,10 +331,10 @@ class PortfolioOptimizer:
         result = minimize(
             objective,
             x0,
-            method='SLSQP',
+            method="SLSQP",
             bounds=bounds,
             constraints=constraints,
-            options={'maxiter': 1000}
+            options={"maxiter": 1000},
         )
 
         if not result.success:
@@ -349,8 +344,7 @@ class PortfolioOptimizer:
         return self._create_output(weights, data, returns, cov_matrix)
 
     def optimize_max_sharpe(self, data: PortfolioDataInput) -> OptimizationOutput:
-        """
-        Maximum Sharpe Ratio Optimization.
+        """Maximum Sharpe Ratio Optimization.
 
         FORMULA:
         Maximize: (w^T μ - r_f) / √(w^T Σ w)
@@ -407,7 +401,7 @@ class PortfolioOptimizer:
 
         # Constraints
         constraints = [
-            {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}  # Fully invested
+            {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}  # Fully invested
         ]
 
         # Bounds
@@ -420,10 +414,10 @@ class PortfolioOptimizer:
         result = minimize(
             objective,
             x0,
-            method='SLSQP',
+            method="SLSQP",
             bounds=bounds,
             constraints=constraints,
-            options={'maxiter': 1000}
+            options={"maxiter": 1000},
         )
 
         if not result.success:
@@ -433,8 +427,7 @@ class PortfolioOptimizer:
         return self._create_output(weights, data, returns, cov_matrix)
 
     def optimize_black_litterman(self, data: PortfolioDataInput) -> OptimizationOutput:
-        """
-        Black-Litterman Model Optimization.
+        """Black-Litterman Model Optimization.
 
         CONCEPT:
         Combines market equilibrium returns with investor-specific views
@@ -540,9 +533,7 @@ class PortfolioOptimizer:
         def objective(weights):
             return weights @ cov_matrix @ weights
 
-        constraints = [
-            {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}
-        ]
+        constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}]
 
         bounds = [self.config.position_limits for _ in range(n_assets)]
 
@@ -551,10 +542,10 @@ class PortfolioOptimizer:
         result = minimize(
             objective,
             x0,
-            method='SLSQP',
+            method="SLSQP",
             bounds=bounds,
             constraints=constraints,
-            options={'maxiter': 1000}
+            options={"maxiter": 1000},
         )
 
         if not result.success:
@@ -564,12 +555,9 @@ class PortfolioOptimizer:
         return self._create_output(weights, data, posterior_returns, cov_matrix)
 
     def generate_efficient_frontier(
-        self,
-        data: PortfolioDataInput,
-        n_points: int = 50
+        self, data: PortfolioDataInput, n_points: int = 50
     ) -> EfficientFrontierOutput:
-        """
-        Generate efficient frontier for visualization.
+        """Generate efficient frontier for visualization.
 
         EDUCATIONAL NOTE:
         The efficient frontier shows all optimal portfolios across risk levels.
@@ -641,8 +629,7 @@ class PortfolioOptimizer:
     # Helper Methods
 
     def _calculate_expected_returns(self, data: PortfolioDataInput) -> np.ndarray:
-        """
-        Calculate or use provided expected returns.
+        """Calculate or use provided expected returns.
 
         EDUCATIONAL NOTE:
         Expected returns are FUTURE returns, not historical averages.
@@ -676,8 +663,7 @@ class PortfolioOptimizer:
         return np.array(expected)
 
     def _calculate_covariance_matrix(self, data: PortfolioDataInput) -> np.ndarray:
-        """
-        Calculate covariance matrix from price data.
+        """Calculate covariance matrix from price data.
 
         EDUCATIONAL NOTE:
         Covariance matrix captures:
@@ -704,9 +690,10 @@ class PortfolioOptimizer:
 
         return cov_annual
 
-    def _validate_weights(self, weights: np.ndarray, tickers: list[str]) -> dict[str, float]:
-        """
-        Validate and convert weights array to dictionary.
+    def _validate_weights(
+        self, weights: np.ndarray, tickers: list[str]
+    ) -> dict[str, float]:
+        """Validate and convert weights array to dictionary.
 
         Args:
             weights: Array of weights
@@ -724,22 +711,28 @@ class PortfolioOptimizer:
         # Check all within bounds
         for w in weights:
             if w < self.config.position_limits[0] - 1e-6:
-                raise ValueError(f"Weight {w:.4f} below minimum {self.config.position_limits[0]}")
+                raise ValueError(
+                    f"Weight {w:.4f} below minimum {self.config.position_limits[0]}"
+                )
             if w > self.config.position_limits[1] + 1e-6:
-                raise ValueError(f"Weight {w:.4f} above maximum {self.config.position_limits[1]}")
+                raise ValueError(
+                    f"Weight {w:.4f} above maximum {self.config.position_limits[1]}"
+                )
 
         # Convert to dictionary
-        return {ticker: float(weight) for ticker, weight in zip(tickers, weights)}
+        return {
+            ticker: float(weight)
+            for ticker, weight in zip(tickers, weights, strict=True)
+        }
 
     def _calculate_portfolio_metrics(
         self,
         weights: dict[str, float],
         returns: np.ndarray,
         cov_matrix: np.ndarray,
-        tickers: list[str]
+        tickers: list[str],
     ) -> tuple[float, float, float, float]:
-        """
-        Calculate portfolio return, volatility, Sharpe, and diversification ratio.
+        """Calculate portfolio return, volatility, Sharpe, and diversification ratio.
 
         Args:
             weights: Portfolio weights
@@ -774,10 +767,9 @@ class PortfolioOptimizer:
         weights: dict[str, float],
         data: PortfolioDataInput,
         returns: np.ndarray,
-        cov_matrix: np.ndarray
+        cov_matrix: np.ndarray,
     ) -> OptimizationOutput:
-        """
-        Create OptimizationOutput from weights.
+        """Create OptimizationOutput from weights.
 
         Args:
             weights: Optimal weights
@@ -802,16 +794,21 @@ class PortfolioOptimizer:
             diversification_ratio=div_ratio,
         )
 
-    def _find_min_variance_weights(self, cov_matrix: np.ndarray, n_assets: int) -> np.ndarray:
+    def _find_min_variance_weights(
+        self, cov_matrix: np.ndarray, n_assets: int
+    ) -> np.ndarray:
         """Helper to find minimum variance portfolio weights."""
+
         def objective(weights):
             return weights @ cov_matrix @ weights
 
-        constraints = [{'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}]
+        constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}]
         bounds = [self.config.position_limits for _ in range(n_assets)]
         x0 = np.array([1.0 / n_assets] * n_assets)
 
-        result = minimize(objective, x0, method='SLSQP', bounds=bounds, constraints=constraints)
+        result = minimize(
+            objective, x0, method="SLSQP", bounds=bounds, constraints=constraints
+        )
         return result.x
 
     def _optimize_for_target_return(
@@ -819,21 +816,27 @@ class PortfolioOptimizer:
         returns: np.ndarray,
         cov_matrix: np.ndarray,
         target_return: float,
-        n_assets: int
+        n_assets: int,
     ) -> np.ndarray:
         """Helper to optimize for specific target return."""
+
         def objective(weights):
             return weights @ cov_matrix @ weights
 
         constraints = [
-            {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0},
-            {'type': 'eq', 'fun': lambda w: w @ returns - target_return}
+            {"type": "eq", "fun": lambda w: np.sum(w) - 1.0},
+            {"type": "eq", "fun": lambda w: w @ returns - target_return},
         ]
         bounds = [self.config.position_limits for _ in range(n_assets)]
         x0 = np.array([1.0 / n_assets] * n_assets)
 
         result = minimize(
-            objective, x0, method='SLSQP', bounds=bounds, constraints=constraints, options={'maxiter': 1000}
+            objective,
+            x0,
+            method="SLSQP",
+            bounds=bounds,
+            constraints=constraints,
+            options={"maxiter": 1000},
         )
 
         if not result.success:
@@ -847,8 +850,7 @@ def optimize_portfolio(
     data: PortfolioDataInput,
     config: OptimizationConfig | None = None,
 ) -> OptimizationOutput:
-    """
-    Convenience function to optimize portfolio with default or custom config.
+    """Convenience function to optimize portfolio with default or custom config.
 
     Args:
         data: PortfolioDataInput with price history

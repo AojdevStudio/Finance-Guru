@@ -1,5 +1,4 @@
-"""
-YAML Generator Calculator for Finance Guru™
+"""YAML Generator Calculator for Finance Guru™.
 
 This module generates configuration files from templates and validated user data.
 Uses validated Pydantic models from yaml_generation_inputs.py to ensure type safety.
@@ -31,8 +30,7 @@ from src.models.yaml_generation_inputs import (
 
 
 class YAMLGenerator:
-    """
-    Configuration file generator from templates.
+    """Configuration file generator from templates.
 
     WHAT: Generates Finance Guru config files from user onboarding data
     WHY: Enables user-agnostic distribution by templating personal data
@@ -51,8 +49,7 @@ class YAMLGenerator:
     """
 
     def __init__(self, template_dir: str):
-        """
-        Initialize YAML generator with template directory.
+        """Initialize YAML generator with template directory.
 
         Args:
             template_dir: Path to directory containing template files
@@ -62,8 +59,7 @@ class YAMLGenerator:
             raise FileNotFoundError(f"Template directory not found: {template_dir}")
 
     def _load_template(self, template_name: str, extension: str = "yaml") -> str:
-        """
-        Load a template file.
+        """Load a template file.
 
         Args:
             template_name: Name of template (without .template extension)
@@ -86,8 +82,7 @@ class YAMLGenerator:
         return template_path.read_text(encoding="utf-8")
 
     def _prepare_user_data(self, data: UserDataInput) -> dict[str, Any]:
-        """
-        Prepare user data with computed fields for template substitution.
+        """Prepare user data with computed fields for template substitution.
 
         Args:
             data: Validated user data input
@@ -99,11 +94,13 @@ class YAMLGenerator:
         user_name = data.identity.user_name
 
         # Compute possessive form (simple, just add 's)
-        possessive_name = f"{user_name}'" if user_name.endswith("s") else f"{user_name}'s"
+        possessive_name = (
+            f"{user_name}'" if user_name.endswith("s") else f"{user_name}'s"
+        )
 
         # Format currency values
         def format_currency(value: float) -> str:
-            """Format currency as $X,XXX.XX"""
+            """Format currency as $X,XXX.XX."""
             return f"${value:,.2f}"
 
         # Build template data dictionary
@@ -173,8 +170,7 @@ class YAMLGenerator:
         return template_data
 
     def _process_template(self, template: str, data: dict[str, Any]) -> str:
-        """
-        Process template with variable substitution.
+        """Process template with variable substitution.
 
         Supports:
         - Simple variables: {{variable}}
@@ -219,8 +215,7 @@ class YAMLGenerator:
         return result
 
     def generate_user_profile(self, data: UserDataInput) -> str:
-        """
-        Generate user-profile.yaml from template.
+        """Generate user-profile.yaml from template.
 
         Args:
             data: Validated user data
@@ -233,8 +228,7 @@ class YAMLGenerator:
         return self._process_template(template, prepared_data)
 
     def generate_config(self, data: UserDataInput) -> str:
-        """
-        Generate config.yaml from template.
+        """Generate config.yaml from template.
 
         Args:
             data: Validated user data
@@ -247,8 +241,7 @@ class YAMLGenerator:
         return self._process_template(template, prepared_data)
 
     def generate_system_context(self, data: UserDataInput) -> str:
-        """
-        Generate system-context.md from template.
+        """Generate system-context.md from template.
 
         Args:
             data: Validated user data
@@ -261,8 +254,7 @@ class YAMLGenerator:
         return self._process_template(template, prepared_data)
 
     def generate_claude_md(self, data: UserDataInput) -> str:
-        """
-        Generate CLAUDE.md from template.
+        """Generate CLAUDE.md from template.
 
         Args:
             data: Validated user data
@@ -275,8 +267,7 @@ class YAMLGenerator:
         return self._process_template(template, prepared_data)
 
     def generate_env(self, data: UserDataInput) -> str:
-        """
-        Generate .env file from template.
+        """Generate .env file from template.
 
         Args:
             data: Validated user data
@@ -289,8 +280,7 @@ class YAMLGenerator:
         return self._process_template(template, prepared_data)
 
     def generate_mcp_json(self, data: UserDataInput) -> str:
-        """
-        Generate MCP server configuration JSON from template.
+        """Generate MCP server configuration JSON from template.
 
         Args:
             data: Validated user data
@@ -303,8 +293,7 @@ class YAMLGenerator:
         return self._process_template(template, prepared_data)
 
     def generate_all_configs(self, data: UserDataInput) -> YAMLGenerationOutput:
-        """
-        Generate all configuration files.
+        """Generate all configuration files.
 
         Args:
             data: Complete validated user data
@@ -325,8 +314,7 @@ class YAMLGenerator:
 
 
 def write_config_files(output: YAMLGenerationOutput, base_dir: str = ".") -> None:
-    """
-    Write generated configuration files to disk.
+    """Write generated configuration files to disk.
 
     Args:
         output: YAMLGenerationOutput with generated content

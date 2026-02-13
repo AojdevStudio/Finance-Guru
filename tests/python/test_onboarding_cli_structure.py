@@ -3,9 +3,9 @@ Test suite for onboarding CLI structure
 Validates that all required files and modules exist
 """
 
-import os
-import pytest
 from pathlib import Path
+
+import pytest
 
 
 class TestOnboardingStructure:
@@ -71,7 +71,7 @@ class TestOnboardingStructure:
             "config.template.yaml",
             "system-context.template.md",
             "CLAUDE.template.md",
-            "env.template"
+            "env.template",
         ]
 
         for template_name in expected_templates:
@@ -106,7 +106,7 @@ class TestOnboardingStructure:
             "validateSpreadsheetId",
             "validateRiskTolerance",
             "validateInvestmentPhilosophy",
-            "validateBrokerage"
+            "validateBrokerage",
         ]
 
         for func_name in expected_functions:
@@ -127,7 +127,7 @@ class TestOnboardingStructure:
             "getSectionData",
             "clearState",
             "getNextSection",
-            "isComplete"
+            "isComplete",
         ]
 
         for func_name in expected_functions:
@@ -144,7 +144,7 @@ class TestOnboardingStructure:
             "generateSystemContext",
             "generateClaudeMd",
             "generateEnv",
-            "generateAllConfigs"
+            "generateAllConfigs",
         ]
 
         for func_name in expected_functions:
@@ -156,21 +156,25 @@ class TestOnboardingStructure:
         content = index_file.read_text()
 
         # Check for shebang
-        assert content.startswith("#!/usr/bin/env bun"), "index.ts should have bun shebang"
+        assert content.startswith("#!/usr/bin/env bun"), (
+            "index.ts should have bun shebang"
+        )
 
         # Check for key functions
         expected_functions = [
             "displayWelcome",
             "displayResume",
             "displayComplete",
-            "main"
+            "main",
         ]
 
         for func_name in expected_functions:
             assert func_name in content, f"index.ts should have {func_name} function"
 
         # Check for imports from modules
-        assert "from './modules/progress'" in content, "index.ts should import from progress module"
+        assert "from './modules/progress'" in content, (
+            "index.ts should import from progress module"
+        )
 
 
 if __name__ == "__main__":

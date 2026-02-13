@@ -1,5 +1,4 @@
-"""
-Momentum Indicators Calculator for Finance Guru™
+"""Momentum Indicators Calculator for Finance Guru™.
 
 This module implements comprehensive momentum indicator calculations using validated
 Pydantic models. All calculations follow industry-standard technical analysis formulas.
@@ -29,24 +28,24 @@ Author: Finance Guru™ Development Team
 Created: 2025-10-13
 """
 
-import pandas as pd
 from typing import Literal
 
+import pandas as pd
+
 from src.models.momentum_inputs import (
-    MomentumDataInput,
-    MomentumConfig,
-    RSIOutput,
+    AllMomentumOutput,
     MACDOutput,
+    MomentumConfig,
+    MomentumDataInput,
+    ROCOutput,
+    RSIOutput,
     StochasticOutput,
     WilliamsROutput,
-    ROCOutput,
-    AllMomentumOutput,
 )
 
 
 class MomentumIndicators:
-    """
-    Comprehensive momentum indicators calculator.
+    """Comprehensive momentum indicators calculator.
 
     WHAT: Calculates all major momentum indicators for Finance Guru agents
     WHY: Provides validated, type-safe momentum analysis for trading decisions
@@ -71,8 +70,7 @@ class MomentumIndicators:
     """
 
     def __init__(self, config: MomentumConfig):
-        """
-        Initialize calculator with configuration.
+        """Initialize calculator with configuration.
 
         Args:
             config: Validated configuration (Pydantic model ensures correctness)
@@ -85,8 +83,7 @@ class MomentumIndicators:
         self.config = config
 
     def calculate_rsi(self, data: MomentumDataInput) -> RSIOutput:
-        """
-        Calculate Relative Strength Index.
+        """Calculate Relative Strength Index.
 
         WHAT: RSI measures momentum on 0-100 scale
         WHY: Identifies overbought (>70) and oversold (<30) conditions
@@ -141,13 +138,11 @@ class MomentumIndicators:
         # Apply Wilder's smoothing to subsequent values
         for i in range(self.config.rsi_period, len(prices)):
             avg_gain.iloc[i] = (
-                (avg_gain.iloc[i-1] * (self.config.rsi_period - 1) + gains.iloc[i])
-                / self.config.rsi_period
-            )
+                avg_gain.iloc[i - 1] * (self.config.rsi_period - 1) + gains.iloc[i]
+            ) / self.config.rsi_period
             avg_loss.iloc[i] = (
-                (avg_loss.iloc[i-1] * (self.config.rsi_period - 1) + losses.iloc[i])
-                / self.config.rsi_period
-            )
+                avg_loss.iloc[i - 1] * (self.config.rsi_period - 1) + losses.iloc[i]
+            ) / self.config.rsi_period
 
         # Calculate RS and RSI
         rs = avg_gain / avg_loss
@@ -173,8 +168,7 @@ class MomentumIndicators:
         )
 
     def calculate_macd(self, data: MomentumDataInput) -> MACDOutput:
-        """
-        Calculate MACD (Moving Average Convergence Divergence).
+        """Calculate MACD (Moving Average Convergence Divergence).
 
         WHAT: MACD shows relationship between two exponential moving averages
         WHY: Identifies trend changes and momentum strength
@@ -248,8 +242,7 @@ class MomentumIndicators:
         )
 
     def calculate_stochastic(self, data: MomentumDataInput) -> StochasticOutput:
-        """
-        Calculate Stochastic Oscillator.
+        """Calculate Stochastic Oscillator.
 
         WHAT: Compares closing price to price range over time
         WHY: Identifies overbought/oversold and potential reversals
@@ -292,11 +285,14 @@ class MomentumIndicators:
             )
 
         # Create DataFrame with all price data
-        df = pd.DataFrame({
-            'high': data.high,
-            'low': data.low,
-            'close': data.close,
-        }, index=data.dates)
+        df = pd.DataFrame(
+            {
+                "high": data.high,
+                "low": data.low,
+                "close": data.close,
+            },
+            index=data.dates,
+        )
 
         # Need enough data for calculation
         if len(df) < self.config.stoch_k_period:
@@ -306,13 +302,11 @@ class MomentumIndicators:
             )
 
         # Calculate rolling high and low
-        rolling_high = df['high'].rolling(window=self.config.stoch_k_period).max()
-        rolling_low = df['low'].rolling(window=self.config.stoch_k_period).min()
+        rolling_high = df["high"].rolling(window=self.config.stoch_k_period).max()
+        rolling_low = df["low"].rolling(window=self.config.stoch_k_period).min()
 
         # Calculate %K
-        k_values = 100 * (
-            (df['close'] - rolling_low) / (rolling_high - rolling_low)
-        )
+        k_values = 100 * ((df["close"] - rolling_low) / (rolling_high - rolling_low))
 
         # Calculate %D (SMA of %K)
         d_values = k_values.rolling(window=self.config.stoch_d_period).mean()
@@ -340,8 +334,7 @@ class MomentumIndicators:
         )
 
     def calculate_williams_r(self, data: MomentumDataInput) -> WilliamsROutput:
-        """
-        Calculate Williams %R.
+        """Calculate Williams %R.
 
         WHAT: Momentum indicator with inverted scale (-100 to 0)
         WHY: Shows overbought/oversold similar to Stochastic
@@ -383,11 +376,14 @@ class MomentumIndicators:
             )
 
         # Create DataFrame
-        df = pd.DataFrame({
-            'high': data.high,
-            'low': data.low,
-            'close': data.close,
-        }, index=data.dates)
+        df = pd.DataFrame(
+            {
+                "high": data.high,
+                "low": data.low,
+                "close": data.close,
+            },
+            index=data.dates,
+        )
 
         # Need enough data
         if len(df) < self.config.williams_period:
@@ -397,12 +393,12 @@ class MomentumIndicators:
             )
 
         # Calculate rolling high and low
-        rolling_high = df['high'].rolling(window=self.config.williams_period).max()
-        rolling_low = df['low'].rolling(window=self.config.williams_period).min()
+        rolling_high = df["high"].rolling(window=self.config.williams_period).max()
+        rolling_low = df["low"].rolling(window=self.config.williams_period).min()
 
         # Calculate Williams %R
         williams_r = -100 * (
-            (rolling_high - df['close']) / (rolling_high - rolling_low)
+            (rolling_high - df["close"]) / (rolling_high - rolling_low)
         )
 
         # Get current value
@@ -425,8 +421,7 @@ class MomentumIndicators:
         )
 
     def calculate_roc(self, data: MomentumDataInput) -> ROCOutput:
-        """
-        Calculate Rate of Change.
+        """Calculate Rate of Change.
 
         WHAT: Measures percentage change over a period
         WHY: Shows velocity and direction of price changes
@@ -494,8 +489,7 @@ class MomentumIndicators:
         )
 
     def calculate_all(self, data: MomentumDataInput) -> AllMomentumOutput:
-        """
-        Calculate all momentum indicators at once.
+        """Calculate all momentum indicators at once.
 
         WHAT: Comprehensive momentum analysis
         WHY: Convenient for comparing multiple signals
@@ -549,10 +543,9 @@ def calculate_momentum(
     close: list[float],
     high: list[float] | None = None,
     low: list[float] | None = None,
-    **config_kwargs
+    **config_kwargs,
 ) -> AllMomentumOutput:
-    """
-    Convenience function for calculating all momentum indicators.
+    """Convenience function for calculating all momentum indicators.
 
     EDUCATIONAL NOTE:
     This wrapper handles Pydantic model creation for you.

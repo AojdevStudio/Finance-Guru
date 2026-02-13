@@ -176,12 +176,10 @@ def should_skip_greeks(iv: float) -> bool:
     Returns:
         True if Greeks should be skipped
     """
-    if math.isnan(iv) or iv <= 0.0:
-        return True
-    return False
+    return bool(math.isnan(iv) or iv <= 0.0)
 
 
-def scan_chain(
+def scan_chain(  # noqa: C901
     ticker: str,
     option_type: str,
     otm_min: float,
@@ -241,8 +239,7 @@ def scan_chain(
         all_expirations, days_min, days_max, today
     )
     print(
-        f"Expirations in {days_min}-{days_max} day range: "
-        f"{len(matching_expirations)}",
+        f"Expirations in {days_min}-{days_max} day range: {len(matching_expirations)}",
         file=sys.stderr,
     )
 
@@ -279,10 +276,7 @@ def scan_chain(
             chain = t.option_chain(exp_str)
 
             # Select calls or puts
-            if option_type == "put":
-                df = chain.puts
-            else:
-                df = chain.calls
+            df = chain.puts if option_type == "put" else chain.calls
 
             if df.empty:
                 print(f"  No {option_type}s found for {exp_str}", file=sys.stderr)
@@ -311,11 +305,19 @@ def scan_chain(
                 raw_vol = row.get("volume", 0)
                 raw_oi = row.get("openInterest", 0)
                 try:
-                    volume = int(raw_vol) if raw_vol is not None and not math.isnan(float(raw_vol)) else 0
+                    volume = (
+                        int(raw_vol)
+                        if raw_vol is not None and not math.isnan(float(raw_vol))
+                        else 0
+                    )
                 except (ValueError, TypeError):
                     volume = 0
                 try:
-                    open_interest = int(raw_oi) if raw_oi is not None and not math.isnan(float(raw_oi)) else 0
+                    open_interest = (
+                        int(raw_oi)
+                        if raw_oi is not None and not math.isnan(float(raw_oi))
+                        else 0
+                    )
                 except (ValueError, TypeError):
                     open_interest = 0
 
@@ -428,10 +430,7 @@ def format_output_human(result: OptionsChainOutput) -> str:
     """
     output = []
     output.append("=" * 120)
-    output.append(
-        f"OPTIONS CHAIN SCAN: {result.ticker} "
-        f"{result.option_type.upper()}S"
-    )
+    output.append(f"OPTIONS CHAIN SCAN: {result.ticker} {result.option_type.upper()}S")
     output.append(f"Spot Price: ${result.spot_price:.2f}")
     output.append(f"Scan Date: {result.scan_date}")
     output.append(
@@ -455,13 +454,10 @@ def format_output_human(result: OptionsChainOutput) -> str:
         )
         output.append("")
         output.append(
-            f"Available expirations: "
-            f"{', '.join(result.expirations_available[:10])}"
+            f"Available expirations: {', '.join(result.expirations_available[:10])}"
         )
         if len(result.expirations_available) > 10:
-            output.append(
-                f"  ... and {len(result.expirations_available) - 10} more"
-            )
+            output.append(f"  ... and {len(result.expirations_available) - 10} more")
     else:
         # Table header
         header = (
@@ -498,9 +494,7 @@ def format_output_human(result: OptionsChainOutput) -> str:
 
         output.append("")
         output.append(f"Total contracts found: {result.total_found}")
-        output.append(
-            f"Expirations scanned: {', '.join(result.expirations_scanned)}"
-        )
+        output.append(f"Expirations scanned: {', '.join(result.expirations_scanned)}")
 
     output.append("")
     output.append("=" * 120)
@@ -526,7 +520,7 @@ def format_output_json(result: OptionsChainOutput) -> str:
     return result.model_dump_json(indent=2)
 
 
-def main() -> int:
+def main() -> int:  # noqa: C901
     """
     Main CLI entry point.
 
@@ -552,14 +546,12 @@ Examples:
 
   # Save to file
   %(prog)s QQQ --type put --output json --save-to analysis/qqq-puts.json
-        """
+        """,
     )
 
     # Required arguments
     parser.add_argument(
-        "ticker",
-        type=str,
-        help="Stock ticker symbol (e.g., QQQ, SPY, TSLA)"
+        "ticker", type=str, help="Stock ticker symbol (e.g., QQQ, SPY, TSLA)"
     )
 
     # Option type
@@ -569,7 +561,7 @@ Examples:
         choices=["call", "put"],
         default="put",
         dest="option_type",
-        help="Option type to scan (default: put)"
+        help="Option type to scan (default: put)",
     )
 
     # OTM filters
@@ -577,14 +569,14 @@ Examples:
         "--otm-min",
         type=float,
         default=10.0,
-        help="Minimum OTM percentage (default: 10.0)"
+        help="Minimum OTM percentage (default: 10.0)",
     )
 
     parser.add_argument(
         "--otm-max",
         type=float,
         default=20.0,
-        help="Maximum OTM percentage (default: 20.0)"
+        help="Maximum OTM percentage (default: 20.0)",
     )
 
     # Days to expiry filters
@@ -592,14 +584,14 @@ Examples:
         "--days-min",
         type=int,
         default=30,
-        help="Minimum days to expiration (default: 30)"
+        help="Minimum days to expiration (default: 30)",
     )
 
     parser.add_argument(
         "--days-max",
         type=int,
         default=90,
-        help="Maximum days to expiration (default: 90)"
+        help="Maximum days to expiration (default: 90)",
     )
 
     # Budget sizing
@@ -607,21 +599,21 @@ Examples:
         "--budget",
         type=float,
         default=None,
-        help="Budget for position sizing (optional)"
+        help="Budget for position sizing (optional)",
     )
 
     parser.add_argument(
         "--contracts",
         type=int,
         default=1,
-        help="Target number of contracts (default: 1)"
+        help="Target number of contracts (default: 1)",
     )
 
     # List expiries mode
     parser.add_argument(
         "--list-expiries",
         action="store_true",
-        help="Just list available expiration dates and exit"
+        help="Just list available expiration dates and exit",
     )
 
     # Output parameters
@@ -630,14 +622,11 @@ Examples:
         type=str,
         choices=["human", "json"],
         default="human",
-        help="Output format (default: human)"
+        help="Output format (default: human)",
     )
 
     parser.add_argument(
-        "--save-to",
-        type=str,
-        default=None,
-        help="Save output to file (optional)"
+        "--save-to", type=str, default=None, help="Save output to file (optional)"
     )
 
     # Parse arguments
@@ -683,10 +672,7 @@ Examples:
 
             print(f"\nTotal: {len(expirations)} expiration dates")
             print("")
-            print(
-                "DISCLAIMER: For educational purposes only. "
-                "Not investment advice."
-            )
+            print("DISCLAIMER: For educational purposes only. Not investment advice.")
             return 0
 
         # Validate numeric parameter bounds
@@ -780,6 +766,7 @@ Examples:
     except Exception as e:
         print(f"ERROR: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         return 1
 

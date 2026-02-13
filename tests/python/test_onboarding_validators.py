@@ -20,7 +20,6 @@ from src.utils.onboarding_validators import (
     validate_positive_integer,
 )
 
-
 # ---------------------------------------------------------------------------
 # validate_currency
 # ---------------------------------------------------------------------------
@@ -44,13 +43,13 @@ class TestValidateCurrency:
     def test_shorthand_k(self):
         assert validate_currency("25k") == 25000.0
 
-    def test_shorthand_K_uppercase(self):
+    def test_shorthand_k_uppercase(self):
         assert validate_currency("$25K") == 25000.0
 
     def test_shorthand_m(self):
         assert validate_currency("1.5m") == 1500000.0
 
-    def test_shorthand_M_uppercase(self):
+    def test_shorthand_m_uppercase(self):
         assert validate_currency("$1.5M") == 1500000.0
 
     def test_invalid_abc(self):

@@ -93,9 +93,9 @@ def fetch_price_data(ticker: str, days: int) -> PriceSeriesInput:
             raise ValueError(f"No data found for ticker {ticker}")
 
         # Extract prices, dates, volumes
-        prices = hist['Close'].tolist()
+        prices = hist["Close"].tolist()
         dates = [d.date() for d in hist.index]
-        volumes = hist['Volume'].tolist()
+        volumes = hist["Volume"].tolist()
 
         # Ensure minimum data points
         if len(prices) < 10:
@@ -119,7 +119,7 @@ def fetch_price_data(ticker: str, days: int) -> PriceSeriesInput:
         sys.exit(1)
 
 
-def format_output_human(results: ValidationOutput) -> str:
+def format_output_human(results: ValidationOutput) -> str:  # noqa: C901
     """
     Format validation results in human-readable format.
 
@@ -283,14 +283,12 @@ Examples:
 
   # Save validation report
   %(prog)s TSLA --days 90 --save-to docs/validation-report.json
-        """
+        """,
     )
 
     # Required arguments
     parser.add_argument(
-        "ticker",
-        type=str,
-        help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
+        "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
     )
 
     # Data parameters
@@ -298,7 +296,7 @@ Examples:
         "--days",
         type=int,
         default=90,
-        help="Number of days of historical data (default: 90)"
+        help="Number of days of historical data (default: 90)",
     )
 
     # Validation parameters
@@ -307,49 +305,49 @@ Examples:
         type=str,
         choices=["z_score", "iqr", "modified_z"],
         default="z_score",
-        help="Outlier detection method (default: z_score)"
+        help="Outlier detection method (default: z_score)",
     )
 
     parser.add_argument(
         "--outlier-threshold",
         type=float,
         default=3.0,
-        help="Outlier detection threshold (default: 3.0)"
+        help="Outlier detection threshold (default: 3.0)",
     )
 
     parser.add_argument(
         "--missing-threshold",
         type=float,
         default=0.05,
-        help="Maximum acceptable missing data ratio (default: 0.05 = 5%%)"
+        help="Maximum acceptable missing data ratio (default: 0.05 = 5%%)",
     )
 
     parser.add_argument(
         "--max-gap",
         type=int,
         default=10,
-        help="Maximum acceptable gap between dates in days (default: 10)"
+        help="Maximum acceptable gap between dates in days (default: 10)",
     )
 
     parser.add_argument(
         "--check-splits",
         action="store_true",
         default=True,
-        help="Check for potential stock splits (default: enabled)"
+        help="Check for potential stock splits (default: enabled)",
     )
 
     parser.add_argument(
         "--no-check-splits",
         action="store_false",
         dest="check_splits",
-        help="Disable stock split checking"
+        help="Disable stock split checking",
     )
 
     parser.add_argument(
         "--split-threshold",
         type=float,
         default=0.25,
-        help="Price change threshold for split detection (default: 0.25 = 25%%)"
+        help="Price change threshold for split detection (default: 0.25 = 25%%)",
     )
 
     # Output parameters
@@ -358,14 +356,11 @@ Examples:
         type=str,
         choices=["human", "json"],
         default="human",
-        help="Output format (default: human)"
+        help="Output format (default: human)",
     )
 
     parser.add_argument(
-        "--save-to",
-        type=str,
-        default=None,
-        help="Save output to file (optional)"
+        "--save-to", type=str, default=None, help="Save output to file (optional)"
     )
 
     # Parse arguments
@@ -381,15 +376,23 @@ Examples:
         sys.exit(1)
 
     if not (0.0 <= args.missing_threshold <= 0.50):
-        print("ERROR: --missing-threshold must be between 0.0 and 0.50", file=sys.stderr)
+        print(
+            "ERROR: --missing-threshold must be between 0.0 and 0.50", file=sys.stderr
+        )
         sys.exit(1)
 
     try:
         # Step 1: Fetch price data
-        print(f"📥 Fetching {args.days} days of data for {args.ticker}...", file=sys.stderr)
+        print(
+            f"📥 Fetching {args.days} days of data for {args.ticker}...",
+            file=sys.stderr,
+        )
         price_series = fetch_price_data(args.ticker, args.days)
         print(f"✅ Fetched {len(price_series.prices)} data points", file=sys.stderr)
-        print(f"📅 Date range: {price_series.dates[0]} to {price_series.dates[-1]}", file=sys.stderr)
+        print(
+            f"📅 Date range: {price_series.dates[0]} to {price_series.dates[-1]}",
+            file=sys.stderr,
+        )
 
         # Step 2: Create configuration
         config = ValidationConfig(
@@ -437,6 +440,7 @@ Examples:
     except Exception as e:
         print(f"❌ ERROR: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 
