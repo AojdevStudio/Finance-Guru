@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 4 complete -- Onboarding Polish & Hook Refactoring
+**Current focus:** Phase 5 in progress -- Agent Readiness Hardening
 
 ## Current Position
 
-Phase: 4 of 12 (Onboarding Polish & Hook Refactoring)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-12 -- Completed 04-02-PLAN.md
+Phase: 5 of 12 (Agent Readiness Hardening)
+Plan: 2 of 5 in current phase
+Status: In progress
+Last activity: 2026-02-13 -- Completed 05-02-PLAN.md
 
-Progress: [██████░░░░░░░░░░░░░░] 21%
+Progress: [██████░░░░░░░░░░░░░░] 24%
 
 ## Performance Metrics
 
@@ -31,10 +31,11 @@ Progress: [██████░░░░░░░░░░░░░░] 21%
 | 02-setup-automation | 2/2 | 17 min | 9 min |
 | 03-onboarding-wizard | 2/2 | 16 min | 8 min |
 | 04-onboarding-polish-hook-refactoring | 2/2 | 12 min | 6 min |
+| 05-agent-readiness-hardening | 2/5 | 4 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (6 min), 03-02 (10 min), 04-01 (7 min), 04-02 (5 min)
-- Trend: Consistent ~7 min/plan
+- Last 5 plans: 03-02 (10 min), 04-01 (7 min), 04-02 (5 min), 05-01 (~2 min), 05-02 (2 min)
+- Trend: Consistent ~5 min/plan
 
 *Updated after each plan completion*
 
@@ -69,6 +70,9 @@ Recent decisions affecting current work:
 - [04-01]: 500ms performance threshold with warmup run for Bun transpile cache priming
 - [04-02]: Atomic write pattern (tempfile+rename) for crash-safe progress persistence
 - [04-02]: WizardInterruptHandler as backup; primary interrupt detection is questionary returning None on Ctrl+C
+- [05-02]: Coverage threshold starts at 0 (--cov-fail-under=0); TODO for plan 05-05 to raise to 80
+- [05-02]: CI uses astral-sh/setup-uv@v6 and concurrency group with cancel-in-progress
+- [05-02]: YAML form format (not markdown) for GitHub issue templates
 
 ### Pending Todos
 
@@ -88,7 +92,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12
-Stopped at: Phase 4 complete — verified (6/6 must-haves passed)
+Last session: 2026-02-13
+Stopped at: Completed 05-02-PLAN.md (GitHub templates + CI)
 Resume file: None
-Next action: /gsd:discuss-phase 5 (Agent Readiness Hardening)
+Next action: Execute 05-03-PLAN.md
