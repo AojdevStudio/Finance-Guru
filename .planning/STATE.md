@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 ## Current Position
 
 Phase: 5 of 12 (Agent Readiness Hardening)
-Plan: 3 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-13 -- Completed 05-03-PLAN.md
+Last activity: 2026-02-13 -- Completed 05-04-PLAN.md
 
-Progress: [████████░░░░░░░░░░░░] 30%
+Progress: [█████████░░░░░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: ~8 min
-- Total execution time: ~1.22 hours
+- Total plans completed: 9
+- Average duration: ~9 min
+- Total execution time: ~1.46 hours
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [████████░░░░░░░░░░░░] 30%
 | 02-setup-automation | 2/2 | 17 min | 9 min |
 | 03-onboarding-wizard | 2/2 | 16 min | 8 min |
 | 04-onboarding-polish-hook-refactoring | 2/2 | 12 min | 6 min |
-| 05-agent-readiness-hardening | 3/5 | 33 min | 11 min |
+| 05-agent-readiness-hardening | 4/5 | 47 min | 12 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (5 min), 05-02 (2 min), 05-01 (17 min), 05-03 (12 min)
-- Trend: ~9 min/plan
+- Last 5 plans: 05-02 (2 min), 05-01 (17 min), 05-03 (12 min), 05-04 (14 min)
+- Trend: ~11 min/plan
 
 *Updated after each plan completion*
 
@@ -79,6 +79,9 @@ Recent decisions affecting current work:
 - [05-03]: mypy standard mode (not --strict) to avoid requiring full annotations on 23k-line codebase
 - [05-03]: Per-module relaxed mypy overrides for 20+ existing financial modules; tightening deferred
 - [05-03]: pre-commit install uses default migration mode, preserving bd hooks as .legacy
+- [05-04]: All tests use synthetic data (numpy random walks) -- zero real API calls
+- [05-04]: Known-answer tests where formulas are verifiable (SMA, WMA, beta of self=1.0)
+- [05-04]: CLI wrapper files excluded from coverage targets (I/O-only thin wrappers)
 
 ### Pending Todos
 
@@ -99,6 +102,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 05-03-PLAN.md (pre-commit hooks)
+Stopped at: Completed 05-04-PLAN.md (core test coverage)
 Resume file: None
-Next action: Execute 05-04-PLAN.md (test infrastructure)
+Next action: Execute 05-05-PLAN.md (coverage threshold enforcement)
