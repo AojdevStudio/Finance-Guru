@@ -4,6 +4,7 @@
   "parallelization": true,
   "commit_docs": true,
   "model_profile": "quality",
+  "branching_strategy": "phase",
   "workflow": {
     "research": true,
     "plan_check": true,
