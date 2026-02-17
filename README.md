@@ -63,7 +63,7 @@ Quick start:
 ./scripts/guru init
 ```
 
-Docs: `docs/guru.md`
+Docs: [docs/guru.md](docs/guru.md)
 
 **Eight specialists activate:**
 

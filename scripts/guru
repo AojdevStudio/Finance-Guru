@@ -98,9 +98,10 @@ EOF
 
 write_lead_prompt() {
   mkdir -p .overstory/agent-defs
-  # Keep Overstory's default lead behavior but add Finance Guru context + persona spawning instructions.
-  # This gets appended as system prompt (base agent-defs/lead.md), and task overlays carry the WHAT.
-  # We do NOT replace lead.md here; we add a small “finance guru addendum” spec used at spawn time.
+  # TODO: Create a "finance guru addendum" spec under .overstory/agent-defs/lead.md
+  # that appends Finance Guru shared context (config.yaml, system-context.md) and
+  # persona spawning instructions to Overstory's default lead behavior.
+  # This will be used at lead spawn time to inject Finance Guru context into the lead agent.
   :
 }
 
@@ -152,15 +153,7 @@ logging:
 EOF
 
   # Patch root to absolute path (Overstory expects it)
-  # Using python for portability/clarity.
-  python3 - <<PY
-import pathlib, re
-p = pathlib.Path('.overstory/config.yaml')
-text = p.read_text()
-root = str(pathlib.Path('.').resolve())
-text = re.sub(r'\nproject:\n(  name: .*\n  root: )""', f"\nproject:\n  name: finance-guru\n  root: \"{root}\"", text)
-p.write_text(text)
-PY
+  sed -i '' "s|^  root: \"\"$|  root: \"${ROOT_DIR}\"|" .overstory/config.yaml
 }
 
 setup_overstory() {
@@ -220,6 +213,12 @@ SPEC
 
 start_coordinator() {
   setup_overstory
+  local session_name="overstory-finance-guru-coordinator"
+  if tmux has-session -t "$session_name" 2>/dev/null; then
+    echo "Coordinator session already running. Attaching..."
+    tmux attach -t "$session_name"
+    return
+  fi
   overstory coordinator start --watchdog
 }
 
@@ -274,7 +273,7 @@ stop_cmd() {
   esac
 }
 
-cmd="${1:-}" || true
+cmd="${1:-}"
 case "$cmd" in
   -h|--help|help|"") usage ;;
   setup) setup_overstory ;;
