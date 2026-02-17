@@ -101,6 +101,7 @@ scripts/google-sheets/portfolio-optimizer/
 scripts/*
 !scripts/onboarding/
 !scripts/qa/
+!scripts/guru
 # Private PII data files (real values for git-filter-repo — tracked templates available instead)
 scripts/qa/pii-replacements.txt
 scripts/qa/author-mailmap.txt

@@ -53,6 +53,18 @@ Finance Guru™ is my private AI-powered family office. It's not software you in
 /finance-orchestrator
 ```
 
+## New: tmux team mode (`guru`)
+
+If you want Finance Guru as a persistent **tmux-based persona team** (Cassandra + specialists), use the new `guru` wrapper (built on Overstory).
+
+Quick start:
+```bash
+./scripts/guru setup
+./scripts/guru init
+```
+
+Docs: `docs/guru.md`
+
 **Eight specialists activate:**
 
 | Agent | Expertise | What They Do |
