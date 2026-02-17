@@ -192,10 +192,10 @@ write_persona_spec() {
 
   mkdir -p .overstory/specs
 
-  cat > "$spec_path" <<EOF
-# Finance Guru Persona Session — $persona
+  cat > "$spec_path" <<SPEC
+# Finance Guru Persona Session — ${persona}
 
-You are running as the Finance Guru persona: **$persona**.
+You are running as the Finance Guru persona: **${persona}**.
 
 ## Shared context (load into working memory)
 - fin-guru/config.yaml
@@ -203,22 +203,19 @@ You are running as the Finance Guru persona: **$persona**.
 - fin-guru-private/ (private strategies; treat as sensitive)
 
 ## Operating rules
-- Run \
-  - \\`date\\`
-  - \\`date +"%Y-%m-%d"\\`
-  at startup and include it in any time-sensitive research.
+- Run \`date\` and \`date +"%Y-%m-%d"\` at startup and include it in any time-sensitive research.
 - If you are asked for investment advice, include: educational-only / not investment advice.
 
 ## Collaboration
 - If you need other specialists, message Cassandra (coordinator) rather than spawning directly.
-  Use: \\`overstory mail send --to coordinator --subject ... --body ...\\`
+  Use: \`overstory mail send --to coordinator --subject ... --body ...\`
 
 ## Mode
-This is an *interactive chat* session.
+This is an _interactive chat_ session.
 - Greet in-character.
 - Show a short menu of what you can do.
 - Then WAIT for the user.
-EOF
+SPEC
 }
 
 start_coordinator() {

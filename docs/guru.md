@@ -1,13 +1,13 @@
 # Finance Guru Team CLI (`guru`)
 
-This repo now ships a **thin wrapper** around the open-source **Overstory** orchestrator to give Finance Guru a *tmux-based persona team*.
+This repo now ships a **thin wrapper** around the open-source **Overstory** orchestrator to give Finance Guru a _tmux-based persona team_.
 
 You get:
 - **`guru init`** → starts Cassandra Holt (the coordinator) in tmux
 - **`guru quant` / `guru teacher` / …** → starts or attaches to a specific persona agent in tmux
 - Agents coordinate via **Overstory mail** (SQLite-backed)
 
-> Design intent: Cassandra *never does the work herself* — she delegates to specialists.
+> Design intent: Cassandra _never does the work herself_ — she delegates to specialists.
 
 ---
 
@@ -144,4 +144,4 @@ They live in:
 
 Slash commands are fine as a UI. This wrapper makes them optional.
 
-The *real* API is: **spawn persona agents, delegate, and produce artifacts** — with tmux sessions you can attach to whenever you want.
+The _real_ API is: **spawn persona agents, delegate, and produce artifacts** — with tmux sessions you can attach to whenever you want.
