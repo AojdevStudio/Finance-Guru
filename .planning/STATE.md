@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 7 complete -- Total Return Calculator shipped. Ready for Phase 8.
+**Current focus:** Phase 8 in progress -- Rolling Tracker / Hedge Sizer. Plan 02 (HedgeSizer calculator) complete.
 
 ## Current Position
 
-Phase: 7 of 12 (Total Return Calculator)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-17 -- Completed 07-02-PLAN.md
+Phase: 8 of 12 (Rolling Tracker / Hedge Sizer)
+Plan: 2 of 6 in current phase
+Status: In progress
+Last activity: 2026-02-18 -- Completed 08-02-PLAN.md
 
-Progress: [██████████░░░░░░░░░░] 48%
+Progress: [██████████░░░░░░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: ~9 min
-- Total execution time: ~2.17 hours
+- Total plans completed: 18
+- Average duration: ~8 min
+- Total execution time: ~2.27 hours
 
 **By Phase:**
 
@@ -35,9 +35,11 @@ Progress: [██████████░░░░░░░░░░] 48%
 | 06-config-loader-shared-hedging-models | 3/3 | 17 min | 6 min |
 | 07-total-return-calculator | 2/2 | 14 min | 7 min |
 
+| 08-rolling-tracker-hedge-sizer | 1/6 | 6 min | 6 min |
+
 **Recent Trend:**
-- Last 5 plans: 06-01 (8 min), 06-03 (4 min), 07-01 (6 min), 07-02 (8 min)
-- Trend: ~7 min/plan
+- Last 5 plans: 06-03 (4 min), 07-01 (6 min), 07-02 (8 min), 08-02 (6 min)
+- Trend: ~6 min/plan
 
 *Updated after each plan completion*
 
@@ -102,6 +104,10 @@ Recent decisions affecting current work:
 - [07-02]: Verdict triggers on sign-flip only (price < 0 AND total > 0), not any positive spread
 - [07-02]: League table only shown for multi-ticker comparison (2+ tickers)
 - [07-02]: JSON output uses envelope format {total_return_analysis: [...], disclaimer: ...}
+- [08-02]: Portfolio value cascade: CLI flag > Fidelity CSV > ValueError (no config fallback)
+- [08-02]: Over-budget warning shows full recommendation, does NOT scale down contracts
+- [08-02]: allocate_contracts remainder goes to highest-weight underlying first
+- [08-02]: validate_budget uses median premium from scan_chain for cost estimation
 
 ### Pending Todos
 
@@ -110,7 +116,7 @@ None yet.
 ### Blockers/Concerns
 
 - [Phase 1]: RESOLVED -- PII audit found 1,645 matches across 157 commits. Plans created to address all.
-- [Phase 8]: options_chain scanner (scan_chain) has stderr side effects -- pragmatic vs clean extraction TBD (was Phase 7, renumbered)
+- [Phase 8]: RESOLVED -- scan_chain stderr suppressed via contextlib.redirect_stderr in hedge_sizer.py validate_budget
 - [Phase 10]: Cytoscape.js WebGL vs Canvas decision deferred to research (was Phase 9, renumbered)
 
 ## Quick Tasks
@@ -121,7 +127,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Completed 07-02-PLAN.md (Phase 7 complete)
+Last session: 2026-02-18
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
-Next action: Begin Phase 8 (Rolling Tracker / Hedge Sizer)
+Next action: Continue Phase 8 (plans 01, 03-06 remaining)
