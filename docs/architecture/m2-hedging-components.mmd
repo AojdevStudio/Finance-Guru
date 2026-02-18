@@ -1,0 +1,97 @@
+%%{ init: { 'theme': 'base' } }%%
+%% M2 Hedging Milestone - Component Architecture
+%% Shows all layers: Config, Models, Calculators, CLIs, External Data
+
+flowchart TD
+
+    subgraph Config["Configuration Layer"]
+        UP["user-profile.yaml<br/>(private data)"]
+        CL["config_loader.py"]
+        HC["HedgeConfig"]
+        UP --> CL
+        CL -->|"loads hedging section"| HC
+    end
+
+    subgraph Models["Pydantic Models (Layer 1)"]
+        HI["hedging_inputs.py<br/>HedgePosition, PortfolioHedge"]
+        TRI["total_return_inputs.py<br/>DividendRecord, TickerReturn"]
+        HCI["hedge_comparison_inputs.py<br/>ScenarioInput, SQQQResult,<br/>PutResult, ComparisonOutput"]
+        OI["options_inputs.py<br/>BlackScholesInput, GreeksOutput"]
+    end
+
+    subgraph Calculators["Calculator Classes (Layer 2)"]
+        TRC["TotalReturnCalculator<br/>(Phase 7)"]
+        RT["RollingTracker<br/>(Phase 8)"]
+        HS["HedgeSizer<br/>(Phase 8)"]
+        HCC["HedgeComparisonCalculator<br/>(Phase 9)"]
+        OC["OptionsCalculator<br/>(shared)"]
+    end
+
+    subgraph CLI["CLI Interfaces (Layer 3)"]
+        TRCLI["total_return_cli.py<br/>(Phase 7)"]
+        RTCLI["rolling_tracker_cli.py<br/>(Phase 8)"]
+        HSCLI["hedge_sizer_cli.py<br/>(Phase 8)"]
+        HCCLI["hedge_comparison_cli.py<br/>(Phase 9)"]
+    end
+
+    subgraph External["External Data"]
+        YF["yfinance<br/>Market Prices"]
+        VIX["VIX-SPX Regression<br/>Table (built-in)"]
+    end
+
+    subgraph Output["Output Formats"]
+        TEXT["Human-readable<br/>Text Tables"]
+        JSON["JSON Output<br/>(Pydantic .model_dump_json)"]
+    end
+
+    subgraph Private["Private Data (gitignored)"]
+        POS["positions.yaml"]
+        ROLL["roll-history.yaml"]
+        BUDGET["budget-tracker.yaml"]
+        DIVSCHED["dividend-schedules.yaml"]
+    end
+
+    %% Config to Calculators
+    HC -->|"hedge config"| RT
+    HC -->|"hedge config"| HS
+
+    %% Models to Calculators
+    TRI -->|"DividendRecord"| TRC
+    HI -->|"HedgePosition"| RT
+    HI -->|"HedgePosition"| HS
+    HCI -->|"ScenarioInput"| HCC
+    OI -->|"BlackScholesInput"| OC
+
+    %% Calculator dependencies
+    OC -->|"put pricing"| HCC
+    OC -->|"Greeks"| HS
+
+    %% External to Calculators
+    YF -->|"daily prices"| TRC
+    YF -->|"option chains"| HS
+    VIX -->|"IV expansion"| HCC
+
+    %% CLIs to Calculators
+    TRCLI -->|"invokes"| TRC
+    RTCLI -->|"invokes"| RT
+    HSCLI -->|"invokes"| HS
+    HCCLI -->|"invokes"| HCC
+
+    %% CLIs to Output
+    TRCLI --> TEXT
+    TRCLI --> JSON
+    RTCLI --> TEXT
+    RTCLI --> JSON
+    HSCLI --> TEXT
+    HSCLI --> JSON
+    HCCLI --> TEXT
+    HCCLI --> JSON
+
+    %% Private data to Calculators
+    POS -->|"current positions"| RT
+    ROLL -->|"roll history"| RT
+    BUDGET -->|"budget limits"| HS
+    DIVSCHED -->|"ex-dates"| TRC
+
+    %% HCC outputs ComparisonOutput
+    HCC -->|"ComparisonOutput"| HCI
