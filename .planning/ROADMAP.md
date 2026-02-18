@@ -36,10 +36,7 @@ Phase 1 rewrites git history (`git filter-repo`), so it must land directly on `m
 - [x] **Phase 3: Onboarding Wizard** - Interactive CLI that collects financial profile and generates config files
 - [x] **Phase 4: Onboarding Polish & Hook Refactoring** - Save/resume, regression testing, and Bun hook ports
 - [x] **Phase 5: Agent Readiness Hardening** - Linter, pre-commit hooks, issue/PR templates, and test coverage thresholds
-- [x] **Phase 6: Config Loader & Shared Hedging Models** - Foundation layer all four hedging CLIs depend on
-- [x] **Phase 7: Total Return Calculator** - Price + dividend return CLI with DRIP modeling
-- [x] **Phase 8: Rolling Tracker & Hedge Sizer** - Options position management and contract sizing CLIs
-- [x] **Phase 9: SQQQ vs Puts Comparison** - Hedge strategy comparison with daily-compounded decay modeling
+- [x] **Phases 6-9: Hedging & Portfolio Protection** — _Shipped 2026-02-18. See [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)_
 - [ ] **Phase 10: Template Engine & Dividend Topic Port** - Build pipeline that converts JSON + template into standalone HTML explorers
 - [ ] **Phase 11: Self-Assessment, Persistence & Additional Topics** - Core interaction loop with localStorage and two new topics
 - [ ] **Phase 12: Maya Integration, Mobile Polish & CLI Launcher** - Tie explorer back into Finance Guru ecosystem
@@ -230,109 +227,16 @@ Plans:
 
 ---
 
-### Phase 6: Config Loader & Shared Hedging Models
+<details>
+<summary>Phases 6-9: Hedging & Portfolio Protection (SHIPPED 2026-02-18) — 4 phases, 13 plans, 222 tests</summary>
 
-**Goal**: All four hedging CLI tools have a shared foundation of validated Pydantic models and config access
-**Depends on**: Phase 3 (user-profile.yaml schema must be stable)
-**Milestone**: M2 - Hedging & Portfolio Protection
-**Branch**: `feat/m2-hedging` (create branch + draft PR at phase start)
-**Requirements**: HEDG-01, HEDG-02, HEDG-03, HEDG-08, CFG-01, CFG-02, CFG-03
-**Cross-cutting**: XC-02, XC-03
+_Full details archived at [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)_
 
-**Success Criteria** (what must be TRUE):
-  1. `config_loader.py` reads user-profile.yaml and returns a validated HedgeConfig with hedging preferences (budget, roll window, underlying weights)
-  2. CLI flags override any value from the config file (e.g., `--budget 800` overrides the YAML budget of $500)
-  3. Running any hedging CLI without user-profile.yaml works using only CLI flags (graceful fallback, no crash)
-  4. fin-guru-private/hedging/ directory exists with positions.yaml, roll-history.yaml, and budget-tracker.yaml templates
-  5. All shared Pydantic models (HedgePosition, RollSuggestion, HedgeSizeRequest, TotalReturnInput, DividendRecord, TickerReturn) pass validation tests with known inputs
-
-**Plans**: 3 plans
-
-Plans:
-- [x] 06-01-PLAN.md -- Shared Pydantic models: hedging_inputs.py + total_return_inputs.py + __init__.py exports (HEDG-02, HEDG-03)
-- [x] 06-02-PLAN.md -- Config loader + private hedging data templates (CFG-01, CFG-02, CFG-03, HEDG-01, HEDG-08)
-- [x] 06-03-PLAN.md -- TDD tests for all models + config loader override chain
-
----
-
-### Phase 7: Total Return Calculator
-
-**Goal**: User can compare total returns (price + dividends) across tickers with DRIP modeling
-**Depends on**: Phase 6 (shared models and config loader)
-**Milestone**: M2 - Hedging & Portfolio Protection
-**Branch**: `feat/m2-hedging` (continues on existing branch)
-**Requirements**: HEDG-07, TR-01, TR-02, TR-03
-**Cross-cutting**: STD-01, STD-02, STD-03, STD-04, XC-03, XC-04, XC-05
-**HEDG-13 (incremental)**: Tests for total return components
-
-**Success Criteria** (what must be TRUE):
-  1. `uv run python src/analysis/total_return_cli.py SCHD --days 252` outputs three distinct numbers: price return, dividend return, and total return
-  2. `uv run python src/analysis/total_return_cli.py SCHD JEPI VYM --days 252` compares all three tickers side-by-side
-  3. DRIP mode shows growing share count over time as dividends are reinvested at ex-date close prices
-  4. When yfinance dividend data has gaps, the output includes a data quality warning (not silent wrong numbers)
-  5. `--output json` produces structured JSON and `--help` shows complete usage examples
-
-**Plans**: 2 plans
-
-Plans:
-- [ ] 07-01-PLAN.md -- TDD: TotalReturnCalculator class with DRIP modeling, data quality validation, dividend schedule config (Layer 2 + tests)
-- [ ] 07-02-PLAN.md -- Total return CLI with verdict display, league table, DRIP side-by-side, Finnhub, CSV auto-read, CLI tests (Layer 3)
-
----
-
-### Phase 8: Rolling Tracker & Hedge Sizer
-
-**Goal**: User can monitor options positions, get roll alerts, and size new hedge contracts against their portfolio
-**Depends on**: Phase 6 (shared models and config loader)
-**Milestone**: M2 - Hedging & Portfolio Protection
-**Branch**: `feat/m2-hedging` (continues on existing branch)
-**Requirements**: HEDG-04, HEDG-05, RT-01, RT-02, RT-03, HS-01, HS-02, HS-03, BS-01, HEDG-09, HEDG-10
-**Cross-cutting**: STD-01, STD-02, STD-03, STD-04, XC-03, XC-04, XC-05
-**HEDG-13 (incremental)**: Tests for tracker and sizer components
-
-**Success Criteria** (what must be TRUE):
-  1. `uv run python src/analysis/rolling_tracker_cli.py status` displays current hedge positions with P&L, DTE, and current value from positions.yaml
-  2. `uv run python src/analysis/rolling_tracker_cli.py suggest-roll` identifies positions within the DTE roll window (default 7 days) and scans the options chain for replacement candidates
-  3. `uv run python src/analysis/hedge_sizer_cli.py --portfolio 200000 --underlyings QQQ,SPY` outputs contract counts (1 per $50k) with budget utilization percentage
-  4. Knowledge base files (hedging-strategies.md, options-insurance-framework.md) exist and Strategy Advisor, Teaching Specialist, and Quant Analyst agent definitions reference them
-  5. Black-Scholes limitation on American-style options is documented with intrinsic value floor applied to put pricing
-
-**Plans**: 6 plans
-
-Plans:
-- [x] 08-01-PLAN.md -- RollingTracker calculator: scan_chain_quiet wrapper, American put pricing, position status, roll suggestions, log-roll, history (Layer 2)
-- [x] 08-02-PLAN.md -- HedgeSizer calculator: contract sizing formula, multi-underlying allocation, budget validation (Layer 2)
-- [x] 08-03-PLAN.md -- Rolling tracker CLI with argparse subcommands: status, suggest-roll, log-roll, history (Layer 3)
-- [x] 08-04-PLAN.md -- Hedge sizer CLI with flat argparse: --portfolio, --underlyings, budget validation (Layer 3)
-- [x] 08-05-PLAN.md -- Knowledge base files (hedging-strategies.md, options-insurance-framework.md) and agent definition updates
-- [x] 08-06-PLAN.md -- Known-answer tests for both calculators and CLIs (TDD)
-
----
-
-### Phase 9: SQQQ vs Puts Comparison
-
-**Goal**: User can compare SQQQ hedging vs protective puts with accurate decay modeling and breakeven analysis
-**Depends on**: Phase 6 (shared models); benefits from Phase 8 (options infrastructure) but not strictly required
-**Milestone**: M2 - Hedging & Portfolio Protection
-**Branch**: `feat/m2-hedging` (final phase — merge PR to main on completion)
-**Requirements**: HEDG-06, HC-01, HC-02, HC-03, HC-04, HC-05, HEDG-11, HEDG-12
-**Cross-cutting**: STD-01, STD-02, STD-03, STD-04, XC-03, XC-04, XC-05
-**HEDG-13 (incremental)**: Tests for comparison components
-**Research flag**: YES -- daily compounding validation, VIX-SPX regression parameters
-
-**Success Criteria** (what must be TRUE):
-  1. `uv run python src/analysis/hedge_comparison_cli.py --scenarios -5,-10,-20,-40` outputs SQQQ vs puts payoff for each market drop scenario
-  2. SQQQ simulation uses day-by-day compounding with volatility drag (NOT simple -3x multiplication) and results are validated against historical SQQQ data
-  3. Breakeven analysis shows at what percentage drop each hedge strategy becomes profitable
-  4. IV expansion estimate uses VIX-SPX regression to model put repricing during crashes
-  5. All 4 hedging CLI tools pass integration test: `uv run python src/analysis/<tool>_cli.py --help` works for total_return, rolling_tracker, hedge_sizer, and hedge_comparison
-  6. Architecture diagram (.mmd) shows all new M2 components and their data flow
-
-**Plans**: 2 plans
-
-Plans:
-- [ ] 09-01-PLAN.md -- Pydantic models (ScenarioInput, SQQQResult, PutResult, ComparisonRow, ComparisonOutput) and HedgeComparisonCalculator with SQQQ day-by-day simulation, IV expansion, and breakeven analysis (HC-01, HC-02, HC-03, HC-04, HC-05, HEDG-06)
-- [ ] 09-02-PLAN.md -- CLI interface with --scenarios/--output json, known-answer test suite (15 tests), M2 architecture diagram, and integration verification (STD-01, STD-02, STD-03, STD-04, HEDG-11, HEDG-12, HEDG-13)
+- Phase 6: Config Loader & Shared Hedging Models (3 plans)
+- Phase 7: Total Return Calculator (2 plans)
+- Phase 8: Rolling Tracker & Hedge Sizer (6 plans)
+- Phase 9: SQQQ vs Puts Comparison (2 plans)
+</details>
 
 ---
 
@@ -440,40 +344,9 @@ Plans:
 | ONBD-16 | 4 | Testing |
 | _(readiness report)_ | 5 | Agent Readiness |
 
-**Milestone 2: Hedging & Portfolio Protection (29 requirements)**
+**Milestone 2: Hedging & Portfolio Protection (29 requirements — ALL COMPLETE)**
 
-| Requirement | Phase | Category |
-|-------------|-------|----------|
-| HEDG-01 | 6 | Config |
-| HEDG-02 | 6 | Models |
-| HEDG-03 | 6 | Models |
-| HEDG-08 | 6 | Data |
-| CFG-01 | 6 | Config |
-| CFG-02 | 6 | Config |
-| CFG-03 | 6 | Config |
-| HEDG-07 | 7 | CLI |
-| TR-01 | 7 | CLI |
-| TR-02 | 7 | CLI |
-| TR-03 | 7 | CLI |
-| HEDG-04 | 8 | CLI |
-| HEDG-05 | 8 | CLI |
-| RT-01 | 8 | CLI |
-| RT-02 | 8 | CLI |
-| RT-03 | 8 | CLI |
-| HS-01 | 8 | CLI |
-| HS-02 | 8 | CLI |
-| HS-03 | 8 | CLI |
-| BS-01 | 8 | CLI |
-| HEDG-09 | 8 | Knowledge |
-| HEDG-10 | 8 | Agents |
-| HEDG-06 | 9 | CLI |
-| HC-01 | 9 | CLI |
-| HC-02 | 9 | CLI |
-| HC-03 | 9 | CLI |
-| HC-04 | 9 | CLI |
-| HC-05 | 9 | CLI |
-| HEDG-11 | 9 | Docs |
-| HEDG-12 | 9 | Integration |
+_See [milestones/v2.0-REQUIREMENTS.md](milestones/v2.0-REQUIREMENTS.md) for full coverage map._
 
 **Milestone 3: Interactive Knowledge Explorer (15 requirements)**
 
@@ -526,10 +399,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 3. Onboarding Wizard | M1 | 2/2 | Complete | 2026-02-05 |
 | 4. Polish & Hooks | M1 | 2/2 | Complete | 2026-02-12 |
 | 5. Agent Readiness | M1 | 5/5 | Complete | 2026-02-13 |
-| 6. Config & Models | M2 | 3/3 | Complete | 2026-02-17 |
-| 7. Total Return | M2 | 2/2 | Complete | 2026-02-17 |
-| 8. Tracker & Sizer | M2 | 6/6 | Complete | 2026-02-17 |
-| 9. SQQQ vs Puts | M2 | 2/2 | Complete | 2026-02-18 |
+| 6-9. Hedging & Protection | M2 | 13/13 | **SHIPPED** | 2026-02-18 |
 | 10. Template Engine | M3 | 0/3 | Planned | - |
 | 11. Assessment & Topics | M3 | 0/3 | Planned | - |
 | 12. Maya Integration | M3 | 0/3 | Planned | - |
