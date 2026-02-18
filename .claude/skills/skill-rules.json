@@ -206,6 +206,38 @@
                     "scripts/reports/generate_*_report.py"
                 ]
             }
+        },
+        "TransactionSyncing": {
+            "type": "domain",
+            "enforcement": "suggest",
+            "priority": "high",
+            "description": "Import Fidelity transaction history CSV into Google Sheets with smart categorization. Handles dividends, purchases, sales, and fee transactions.",
+            "promptTriggers": {
+                "keywords": [
+                    "sync transactions",
+                    "import transactions",
+                    "transaction history",
+                    "fidelity transactions",
+                    "transaction import",
+                    "update transactions",
+                    "transaction sync",
+                    "trade history",
+                    "purchase history",
+                    "dividend history"
+                ],
+                "intentPatterns": [
+                    "(sync|import|update|load).*?(transactions|transaction history)",
+                    "(fidelity|brokerage).*?(transactions|trade history)",
+                    "(import|sync).*?(purchases|sales|dividends).*?(history|csv)",
+                    "(update|refresh).*?(transaction|trade).*?(log|history|sheet)"
+                ]
+            },
+            "fileTriggers": {
+                "pathPatterns": [
+                    "notebooks/updates/History_for_Account_*.csv",
+                    "notebooks/updates/*transaction*.csv"
+                ]
+            }
         }
     },
     "notes": {

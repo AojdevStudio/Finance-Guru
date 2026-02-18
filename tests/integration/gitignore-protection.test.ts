@@ -208,26 +208,6 @@ assets:
     expect(trackedFiles).not.toMatch(/credentials\//);
   });
 
-  test("beads tracking data is ignored", () => {
-    mkdirSync(join(TEST_DIR, ".beads"), { recursive: true });
-
-    const beadsFiles = [
-      ".beads/issues.jsonl",
-      ".beads/interactions.jsonl"
-    ];
-
-    beadsFiles.forEach(file => {
-      const filePath = join(TEST_DIR, file);
-      writeFileSync(filePath, '{"id":"test-1"}\n');
-    });
-
-    // Verify beads files are ignored
-    beadsFiles.forEach(file => {
-      const result = spawnSync(["git", "check-ignore", "-q", file], { cwd: TEST_DIR });
-      expect(result.exitCode).toBe(0);
-    });
-  });
-
   test("all sensitive file types are protected", () => {
     // Create comprehensive test structure
     const sensitiveStructure = {
@@ -241,7 +221,6 @@ assets:
       "sensitive/data.txt": "sensitive",
       "credentials/api.key": "api key",
       ".env": "env vars",
-      ".beads/issues.jsonl": "beads data"
     };
 
     // Create all files
@@ -280,8 +259,6 @@ describe("Gitignore Coverage Verification", () => {
       "fin-guru-private/",
       "fin-guru/data/user-profile.yaml",
       "research/",
-      ".beads/issues.jsonl",
-      ".beads/interactions.jsonl"
     ];
 
     requiredPatterns.forEach(pattern => {

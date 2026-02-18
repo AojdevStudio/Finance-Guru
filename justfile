@@ -28,3 +28,45 @@ load-explorer:
 # Load a specific diagram by keyword (e.g., just load hedging)
 load keyword:
   {{cc}} --append-system-prompt "$(cat {{diagrams}}/*{{keyword}}*.mmd 2>/dev/null)"
+
+# --- Agent Personas ---
+
+# Launch Claude Code as Finance Orchestrator (Cassandra Holt)
+orchestrator:
+  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-finance-orchestrator.md)"
+
+# Launch Claude Code as Quant Analyst
+quant:
+  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-quant-analyst.md)"
+
+# Launch Claude Code as Strategy Advisor
+strategy:
+  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-strategy-advisor.md)"
+
+# Launch Claude Code as Market Researcher
+market:
+  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-market-researcher.md)"
+
+# Launch Claude Code as Compliance Officer
+compliance:
+  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-compliance-officer.md)"
+
+# Launch Claude Code as Margin Specialist
+margin:
+  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-margin-specialist.md)"
+
+# Launch Claude Code as Dividend Specialist
+dividend:
+  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-dividend-specialist.md)"
+
+# Launch Claude Code as Teaching Specialist
+teaching:
+  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-teaching-specialist.md)"
+
+# Launch Claude Code as Builder
+builder:
+  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-builder.md)"
+
+# Launch Claude Code as QA Advisor
+qa:
+  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-qa-advisor.md)"

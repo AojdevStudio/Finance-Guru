@@ -101,7 +101,6 @@ scripts/google-sheets/portfolio-optimizer/
 scripts/*
 !scripts/onboarding/
 !scripts/qa/
-!scripts/guru
 # Private PII data files (real values for git-filter-repo — tracked templates available instead)
 scripts/qa/pii-replacements.txt
 scripts/qa/author-mailmap.txt
@@ -114,3 +113,19 @@ fin-guru/data/
 
 # Private docs (buy tickets, analysis, strategies)
 # Note: fin-guru-private/ is already ignored above
+
+# GSD workflow infrastructure (local tooling)
+.claude/agents/gsd-*
+.claude/commands/gsd/
+.claude/get-shit-done/
+.claude/hooks/gsd-*
+
+# Planning state (local project management)
+.planning/
+Plans/
+
+# Beads task tracker (local)
+.beads/
+
+# Overstory (local)
+.overstory/

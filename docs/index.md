@@ -26,6 +26,7 @@ User walkthroughs and how-to guides.
 |----------|-------------|
 | [Broker CSV Export Guide](guides/broker-csv-export-guide.md) | How to export CSVs from Fidelity, Schwab, Vanguard, etc. |
 | [Required CSV Uploads](guides/required-csv-uploads.md) | Complete guide to broker CSV formats and upload workflow |
+| [Just Commands Reference](guides/just-commands.md) | Justfile recipes for agent personas and context loading |
 
 ## Reference
 
@@ -65,6 +66,7 @@ Additional resources and data files.
 | [README](../README.md) | Project overview, quick start, architecture |
 | [CONTRIBUTING](CONTRIBUTING.md) | How to contribute |
 | [Finance Guru Module](../fin-guru/README.md) | Module configuration and agents |
+| [Justfile Recipes](guides/just-commands.md) | Agent persona launchers and context loading |
 
 ## Architecture Overview
 
@@ -128,6 +130,11 @@ Finance Guru uses specialized agents:
 | Compliance Officer | Risk, regulations |
 | Margin Specialist | Leverage strategies |
 | Dividend Specialist | Income optimization |
+| Tax Optimizer | Tax efficiency |
+| Teaching Specialist | Financial education |
+| Builder | Document generation |
+| QA Advisor | Quality assurance |
+| Onboarding Specialist | User setup |
 
 ## Directory Structure
 
@@ -158,7 +165,8 @@ family-office/
 ├── fin-guru-private/    # Private docs (gitignored, created by setup.sh)
 │   └── fin-guru/        # Your strategies, tickets, analysis
 ├── src/
-│   ├── analysis/        # Risk, correlation, ITC
+│   ├── analysis/        # Risk, correlation, ITC, hedging CLIs
+│   ├── config/          # Config loader (YAML-default chain)
 │   ├── strategies/      # Optimizer, backtester
 │   └── utils/           # Momentum, volatility
 └── notebooks/
@@ -176,4 +184,4 @@ family-office/
 
 - **Finance Guru**: v2.0.0
 - **BMAD-CORE**: v6.0.0
-- **Last Updated**: 2026-02-05
+- **Last Updated**: 2026-02-18

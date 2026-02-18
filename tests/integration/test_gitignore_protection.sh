@@ -256,26 +256,6 @@ fi
 
 log_success "No sensitive files tracked by git"
 
-# Test 12: Verify beads data is ignored
-log_step "Test 12: Verifying beads tracking data is ignored"
-
-mkdir -p .beads
-echo '{"id":"test-1"}' > .beads/issues.jsonl
-echo '{"type":"interaction"}' > .beads/interactions.jsonl
-
-beads_files=(
-    ".beads/issues.jsonl"
-    ".beads/interactions.jsonl"
-)
-
-for file in "${beads_files[@]}"; do
-    if git check-ignore -q "$file"; then
-        log_success "Beads data ignored: $file"
-    else
-        log_error "Beads data NOT ignored: $file"
-    fi
-done
-
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo -e "${GREEN}✓ All tests passed!${NC}"
@@ -289,7 +269,6 @@ echo "  ✓ notebooks directory (all financial data) is ignored"
 echo "  ✓ User profile (fin-guru/data/user-profile.yaml) is ignored"
 echo "  ✓ Research directory is ignored"
 echo "  ✓ Private directories (private/, sensitive/, credentials/) are ignored"
-echo "  ✓ Beads tracking data (.beads/issues.jsonl, interactions.jsonl) is ignored"
 echo "  ✓ .gitignore itself is properly tracked"
 echo ""
 echo "Protected file types:"

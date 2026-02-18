@@ -21,7 +21,6 @@ _OWNER_LAST = "Iron" + "di"
 ALLOWED_FILES = {
     "LICENSE",  # Copyright holder
     ".git/",  # Git history
-    ".beads/specs/",  # Migration specs documenting the transition
     "specs/",  # Spec docs describing migration process
     "fin-guru/distribution-plan.md",  # Distribution planning doc
     "fin-guru/tasks/",  # Task files with examples

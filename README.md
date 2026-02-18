@@ -16,8 +16,8 @@
 <p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.12+-blue.svg" alt="Python 3.12+"></a>
   <a href="https://claude.ai/claude-code"><img src="https://img.shields.io/badge/Claude%20Code-Powered-blueviolet" alt="Claude Code"></a>
-  <a href="#11-production-ready-analysis-tools"><img src="https://img.shields.io/badge/analysis%20tools-11-green.svg" alt="Tools"></a>
-  <a href="#what-i-built"><img src="https://img.shields.io/badge/AI%20agents-8-orange.svg" alt="Agents"></a>
+  <a href="#13-production-ready-analysis-tools"><img src="https://img.shields.io/badge/analysis%20tools-13-green.svg" alt="Tools"></a>
+  <a href="#what-i-built"><img src="https://img.shields.io/badge/AI%20agents-13-orange.svg" alt="Agents"></a>
   <a href="#license"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
 </p>
 
@@ -52,18 +52,6 @@ Finance Guru™ is my private AI-powered family office. It's not software you in
 ```bash
 /finance-orchestrator
 ```
-
-## New: tmux team mode (`guru`)
-
-If you want Finance Guru as a persistent **tmux-based persona team** (Cassandra + specialists), use the new `guru` wrapper (built on Overstory).
-
-Quick start:
-```bash
-./scripts/guru setup
-./scripts/guru init
-```
-
-Docs: `docs/guru.md`
 
 **Eight specialists activate:**
 
@@ -104,7 +92,7 @@ uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 90
 
 ## The Technical Foundation
 
-### 11 Production-Ready Analysis Tools
+### 13 Production-Ready Analysis Tools
 
 Every tool follows the same bulletproof pattern:
 
@@ -120,6 +108,7 @@ Pydantic Models → Calculator Classes → CLI Interfaces
 | **Technical** | Momentum, Moving Averages, Volatility | RSI, MACD, Golden Cross, Bollinger Bands, ATR |
 | **Portfolio** | Correlation, Optimizer, Backtester | Diversification score, Max Sharpe, Risk Parity |
 | **Options** | Options Pricer | Black-Scholes, Greeks, Implied Volatility |
+| **Hedging** | Total Return, Rolling Tracker, Hedge Sizer, Hedge Comparison | DRIP modeling, put roll alerts, contract sizing, SQQQ vs puts analysis |
 
 ### External Risk Intelligence
 
@@ -128,9 +117,30 @@ Pydantic Models → Calculator Classes → CLI Interfaces
 - Risk bands help agents validate entry/exit timing
 - Complements internal quant metrics with external perspective
 
+### Hedging & Portfolio Protection Toolkit
+
+Four CLI tools for managing downside protection, built from real advisory sessions:
+
+```bash
+# Compare total returns across tickers (price + dividends + DRIP)
+uv run python src/analysis/total_return_cli.py JEPI JEPQ QQQI --days 180
+
+# Check put option positions and get roll suggestions
+uv run python src/analysis/rolling_tracker_cli.py status
+uv run python src/analysis/rolling_tracker_cli.py suggest-roll --dte-threshold 7
+
+# Size hedge contracts based on portfolio value and monthly budget
+uv run python src/analysis/hedge_sizer_cli.py --portfolio-value 200000 --budget 500
+
+# Compare SQQQ inverse ETF vs protective puts for a market drop scenario
+uv run python src/analysis/hedge_comparison_cli.py --drop-pct 20 --days 30
+```
+
+All hedging tools share 13 Pydantic models and read defaults from `user-profile.yaml` via the config loader.
+
 ## Quick Start
 
-**For complete installation instructions, see [docs/SETUP.md](docs/SETUP.md)**
+**For complete installation instructions, see [docs/setup/SETUP.md](docs/setup/SETUP.md)**
 
 ### Prerequisites
 ```bash
@@ -167,7 +177,7 @@ The setup script will:
 - Load Finance Guru skills (9 skills linked to ~/.claude/skills/)
 - Run interactive onboarding wizard
 
-**Need help?** See the [complete setup guide](docs/SETUP.md) for troubleshooting and configuration details.
+**Need help?** See the [complete setup guide](docs/setup/SETUP.md) for troubleshooting and configuration details.
 
 ### What Gets Installed
 
@@ -293,16 +303,18 @@ git check-ignore .env  # Should output ".env" (confirmed ignored)
 
 ```
 family-office/
-├── src/                      # Analysis engine (11 tools)
-│   ├── analysis/             # Risk, correlation, options, ITC Risk
+├── src/                      # Analysis engine (13 tools)
+│   ├── analysis/             # Risk, correlation, options, hedging CLIs
 │   ├── strategies/           # Backtester, optimizer
 │   ├── utils/                # Momentum, volatility, validators
-│   └── models/               # Pydantic type definitions
+│   ├── models/               # Pydantic type definitions
+│   └── config/               # Config loader (CLI-override-YAML-default chain)
 ├── fin-guru/                 # Agent system
-│   ├── agents/               # 8 specialist definitions
+│   ├── agents/               # 13 specialist definitions
 │   ├── tasks/                # Workflow configurations
 │   └── data/                 # Knowledge base & templates
-└── tests/                    # Test suite
+├── tests/                    # 365+ pytest tests
+└── justfile                  # Command launchpad (just --list)
 ```
 
 ## Why This Approach Works
@@ -365,7 +377,7 @@ Finance Guru is designed for **token efficiency**. Even with extensive startup c
 
 4. **Structured Context**: YAML configs and markdown docs compress well and are easy for Claude to parse.
 
-See [docs/hooks.md](docs/hooks.md) for details on the hooks system.
+See [docs/reference/hooks.md](docs/reference/hooks.md) for details on the hooks system.
 
 ## Requirements
 
@@ -417,12 +429,13 @@ ITC_API_KEY=your_key_here        # For ITC risk scores
 | Document | Description |
 |----------|-------------|
 | [docs/index.md](docs/index.md) | Documentation hub |
-| [docs/SETUP.md](docs/SETUP.md) | **Complete setup guide** (start here) |
-| [docs/api-keys.md](docs/api-keys.md) | **API key acquisition guide** |
-| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | **Comprehensive troubleshooting** |
-| [docs/api.md](docs/api.md) | CLI tools reference |
-| [docs/hooks.md](docs/hooks.md) | Hooks system documentation |
-| [docs/contributing.md](docs/contributing.md) | Contribution guidelines |
+| [docs/setup/SETUP.md](docs/setup/SETUP.md) | **Complete setup guide** (start here) |
+| [docs/setup/api-keys.md](docs/setup/api-keys.md) | **API key acquisition guide** |
+| [docs/setup/TROUBLESHOOTING.md](docs/setup/TROUBLESHOOTING.md) | **Comprehensive troubleshooting** |
+| [docs/reference/api.md](docs/reference/api.md) | CLI tools reference |
+| [docs/reference/hooks.md](docs/reference/hooks.md) | Hooks system documentation |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Contribution guidelines |
+| [docs/guides/just-commands.md](docs/guides/just-commands.md) | Just command recipes reference |
 | [fin-guru/README.md](fin-guru/README.md) | Finance Guru module documentation |
 
 **Note:** After running `setup.sh`, your personal strategies and analysis will be in `fin-guru-private/` (gitignored).
