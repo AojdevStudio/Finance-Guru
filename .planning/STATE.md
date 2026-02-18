@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 6 in progress -- Config Loader and Shared Hedging Models
+**Current focus:** Phase 6 complete -- Config Loader and Shared Hedging Models
 
 ## Current Position
 
 Phase: 6 of 12 (Config Loader and Shared Hedging Models)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-17 -- Completed 06-01-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-17 -- Completed 06-03-PLAN.md
 
-Progress: [████████░░░░░░░░░░░░] 39%
+Progress: [████████░░░░░░░░░░░░] 42%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: ~9 min
-- Total execution time: ~1.87 hours
+- Total execution time: ~1.93 hours
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [████████░░░░░░░░░░░░] 39%
 | 03-onboarding-wizard | 2/2 | 16 min | 8 min |
 | 04-onboarding-polish-hook-refactoring | 2/2 | 12 min | 6 min |
 | 05-agent-readiness-hardening | 5/5 | 59 min | 12 min |
-| 06-config-loader-shared-hedging-models | 2/3 | 13 min | 7 min |
+| 06-config-loader-shared-hedging-models | 3/3 | 17 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-04 (14 min), 05-05 (12 min), 06-02 (5 min), 06-01 (8 min)
-- Trend: ~10 min/plan
+- Last 5 plans: 05-05 (12 min), 06-02 (5 min), 06-01 (8 min), 06-03 (4 min)
+- Trend: ~7 min/plan
 
 *Updated after each plan completion*
 
@@ -90,6 +90,8 @@ Recent decisions affecting current work:
 - [06-01]: HedgePosition uses model_validator to conditionally require strike/expiry for puts only
 - [06-01]: TickerReturn warns (not rejects) when total_return != price_return + dividend_return
 - [06-01]: DividendRecord.shares_at_ex is float (not int) to support fractional DRIP shares
+- [06-03]: underlying_weights validator auto-uppercases keys rather than rejecting lowercase; tests confirm normalization
+- [06-03]: TickerReturn consistency check uses warnings.warn (not rejection); tests verify both warning and no-warning paths
 
 ### Pending Todos
 
@@ -110,6 +112,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 06-01-PLAN.md (shared hedging and total return models)
+Stopped at: Completed 06-03-PLAN.md (Phase 6 complete)
 Resume file: None
-Next action: Execute 06-03-PLAN.md (remaining Phase 06 plan)
+Next action: Begin Phase 7 (Total Return Calculator)
