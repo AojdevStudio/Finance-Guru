@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 7 in progress -- Total Return Calculator
+**Current focus:** Phase 7 complete -- Total Return Calculator shipped. Ready for Phase 8.
 
 ## Current Position
 
 Phase: 7 of 12 (Total Return Calculator)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-17 -- Completed 07-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-17 -- Completed 07-02-PLAN.md
 
-Progress: [█████████░░░░░░░░░░░] 45%
+Progress: [██████████░░░░░░░░░░] 48%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: ~9 min
-- Total execution time: ~2.03 hours
+- Total execution time: ~2.17 hours
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [█████████░░░░░░░░░░░] 45%
 | 04-onboarding-polish-hook-refactoring | 2/2 | 12 min | 6 min |
 | 05-agent-readiness-hardening | 5/5 | 59 min | 12 min |
 | 06-config-loader-shared-hedging-models | 3/3 | 17 min | 6 min |
-| 07-total-return-calculator | 1/2 | 6 min | 6 min |
+| 07-total-return-calculator | 2/2 | 14 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-02 (5 min), 06-01 (8 min), 06-03 (4 min), 07-01 (6 min)
-- Trend: ~6 min/plan
+- Last 5 plans: 06-01 (8 min), 06-03 (4 min), 07-01 (6 min), 07-02 (8 min)
+- Trend: ~7 min/plan
 
 *Updated after each plan completion*
 
@@ -97,6 +97,11 @@ Recent decisions affecting current work:
 - [07-01]: ex_date_prices passed as dict[date, float] for DRIP reinvestment pricing
 - [07-01]: dividend-schedules.yaml lives in gitignored fin-guru-private/ (private per-user config)
 - [07-01]: Annualized return uses calendar days (365), not trading days (252)
+- [07-02]: build_parser() extracted for testability (separate from main())
+- [07-02]: Portfolio CSV reader uses glob sorted order (filename-based) for deterministic latest CSV selection
+- [07-02]: Verdict triggers on sign-flip only (price < 0 AND total > 0), not any positive spread
+- [07-02]: League table only shown for multi-ticker comparison (2+ tickers)
+- [07-02]: JSON output uses envelope format {total_return_analysis: [...], disclaimer: ...}
 
 ### Pending Todos
 
@@ -117,6 +122,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 07-01-PLAN.md (Plan 1 of 2 in Phase 7)
+Stopped at: Completed 07-02-PLAN.md (Phase 7 complete)
 Resume file: None
-Next action: Execute 07-02-PLAN.md (CLI wrapper for total return calculator)
+Next action: Begin Phase 8 (Rolling Tracker / Hedge Sizer)
