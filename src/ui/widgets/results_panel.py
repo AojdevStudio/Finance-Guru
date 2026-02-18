@@ -1,5 +1,4 @@
-"""
-Results Panel Widget for Finance Guru™ TUI
+"""Results Panel Widget for Finance Guru™ TUI.
 
 WHAT: Displays analysis results from all tools in scrollable panel
 WHY: Provides readable, formatted output for quick decision-making
@@ -9,17 +8,17 @@ Author: Finance Guru™ Development Team
 Created: 2025-11-17
 """
 
-from textual.containers import VerticalScroll
-from textual.widgets import Static
+from datetime import datetime
+
 from rich.table import Table
 from rich.text import Text
-from datetime import datetime
+from textual.containers import VerticalScroll
+from textual.widgets import Static
 
 
 class ResultsPanel(VerticalScroll):
-    """
-    Display analysis results.
-    
+    """Display analysis results.
+
     Shows formatted output from momentum, volatility, risk, and MA tools.
     Handles partial failures gracefully.
     """
@@ -27,11 +26,11 @@ class ResultsPanel(VerticalScroll):
     def __init__(self, *args, **kwargs):
         """Initialize results panel with welcome message."""
         super().__init__(*args, **kwargs)
-    
+
     def on_mount(self) -> None:
         """Show welcome message on mount."""
         self.show_welcome()
-    
+
     def show_welcome(self) -> None:
         """Display welcome message with instructions."""
         welcome = Text.assemble(
@@ -42,27 +41,57 @@ class ResultsPanel(VerticalScroll):
             ("━" * 80, "dim"),
             "\n\n",
             ("🚀 Quick Start Guide:\n\n", "bold yellow"),
-            ("  1️⃣  ", "bold"), ("Enter a ticker symbol in the input field above (e.g., TSLA, AAPL, PLTR)\n", ""),
-            ("  2️⃣  ", "bold"), ("Select which analysis tools to run (all 4 are checked by default)\n", ""),
-            ("  3️⃣  ", "bold"), ("Click the ", ""), ("▶ Run Analysis", "bold green"), (" button or press ", ""), ("Enter\n", ""),
-            ("  4️⃣  ", "bold"), ("Review the results below - scroll with ", ""), ("↑/↓ arrows", "bold cyan"), (" or ", ""), ("mouse wheel\n", "bold cyan"),
+            ("  1️⃣  ", "bold"),
+            (
+                "Enter a ticker symbol in the input field above (e.g., TSLA, AAPL, PLTR)\n",
+                "",
+            ),
+            ("  2️⃣  ", "bold"),
+            ("Select which analysis tools to run (all 4 are checked by default)\n", ""),
+            ("  3️⃣  ", "bold"),
+            ("Click the ", ""),
+            ("▶ Run Analysis", "bold green"),
+            (" button or press ", ""),
+            ("Enter\n", ""),
+            ("  4️⃣  ", "bold"),
+            ("Review the results below - scroll with ", ""),
+            ("↑/↓ arrows", "bold cyan"),
+            (" or ", ""),
+            ("mouse wheel\n", "bold cyan"),
             "\n",
             ("📊 Available Analysis Tools:\n\n", "bold yellow"),
-            ("  📈 Momentum     ", "cyan"), ("→  RSI, MACD, Stochastic - timing entry/exit points\n", "dim"),
-            ("  📊 Volatility   ", "cyan"), ("→  ATR, Bollinger Bands - position sizing & risk\n", "dim"),
-            ("  ⚠️  Risk Metrics ", "cyan"), ("→  Sharpe, VaR, Max Drawdown - portfolio risk\n", "dim"),
-            ("  📉 Moving Avg   ", "cyan"), ("→  Trend analysis, Golden/Death Cross signals\n", "dim"),
+            ("  📈 Momentum     ", "cyan"),
+            ("→  RSI, MACD, Stochastic - timing entry/exit points\n", "dim"),
+            ("  📊 Volatility   ", "cyan"),
+            ("→  ATR, Bollinger Bands - position sizing & risk\n", "dim"),
+            ("  ⚠️  Risk Metrics ", "cyan"),
+            ("→  Sharpe, VaR, Max Drawdown - portfolio risk\n", "dim"),
+            ("  📉 Moving Avg   ", "cyan"),
+            ("→  Trend analysis, Golden/Death Cross signals\n", "dim"),
             "\n",
             ("⚡ Pro Tips:\n\n", "bold yellow"),
             ("  • Uncheck tools you don't need for faster analysis\n", "dim"),
             ("  • All data is real-time (90-day lookback period)\n", "dim"),
-            ("  • Results include visual signals: ", "dim"), ("🟢 Bullish", "green"), (" | ", "dim"), ("🔴 Bearish", "red"), (" | ", "dim"), ("🟡 Neutral\n", "yellow"),
+            ("  • Results include visual signals: ", "dim"),
+            ("🟢 Bullish", "green"),
+            (" | ", "dim"),
+            ("🔴 Bearish", "red"),
+            (" | ", "dim"),
+            ("🟡 Neutral\n", "yellow"),
             "\n",
             ("⌨️  Keyboard Shortcuts:\n\n", "bold yellow"),
-            ("  ", ""), ("Tab", "bold cyan"), ("      → Navigate between fields\n", "dim"),
-            ("  ", ""), ("Space", "bold cyan"), ("    → Toggle checkboxes\n", "dim"),
-            ("  ", ""), ("Enter", "bold cyan"), ("    → Run analysis\n", "dim"),
-            ("  ", ""), ("Q", "bold cyan"), ("        → Quit dashboard\n", "dim"),
+            ("  ", ""),
+            ("Tab", "bold cyan"),
+            ("      → Navigate between fields\n", "dim"),
+            ("  ", ""),
+            ("Space", "bold cyan"),
+            ("    → Toggle checkboxes\n", "dim"),
+            ("  ", ""),
+            ("Enter", "bold cyan"),
+            ("    → Run analysis\n", "dim"),
+            ("  ", ""),
+            ("Q", "bold cyan"),
+            ("        → Quit dashboard\n", "dim"),
             "\n",
             ("━" * 80, "dim"),
             "\n",
@@ -80,10 +109,9 @@ class ResultsPanel(VerticalScroll):
         self.remove_children()
         self.mount(Static(f"❌ Error: {message}", classes="error"))
 
-    def display_results(self, ticker: str, results: dict) -> None:
-        """
-        Display analysis results from all tools.
-        
+    def display_results(self, ticker: str, results: dict) -> None:  # noqa: C901
+        """Display analysis results from all tools.
+
         Args:
             ticker: Ticker symbol that was analyzed
             results: Dictionary of tool results (envelopes with ok/data/error)
@@ -101,7 +129,7 @@ class ResultsPanel(VerticalScroll):
             (f" (Updated: {timestamp})", "dim"),
             "\n",
             ("━" * 80, "dim"),
-            "\n"
+            "\n",
         )
         self.mount(Static(header_text, classes="result-header"))
 
@@ -109,7 +137,7 @@ class ResultsPanel(VerticalScroll):
             self.mount(
                 Static(
                     "No results to display. Check your tool selection and try again.",
-                    classes="error"
+                    classes="error",
                 )
             )
             return
@@ -155,30 +183,49 @@ class ResultsPanel(VerticalScroll):
 
     def _render_momentum(self, data: dict) -> None:
         """Render momentum indicators table."""
-        table = Table(title="📈 Momentum Indicators", show_header=False, box=None, padding=(0, 2))
+        table = Table(
+            title="📈 Momentum Indicators", show_header=False, box=None, padding=(0, 2)
+        )
         table.add_column("Metric", style="cyan bold", width=20)
         table.add_column("Value", style="yellow")
 
         if "rsi" in data:
             rsi = data["rsi"]
-            signal_emoji = "🟢" if rsi.get("rsi_signal") == "bullish" else "🔴" if rsi.get("rsi_signal") == "bearish" else "🟡"
+            signal_emoji = (
+                "🟢"
+                if rsi.get("rsi_signal") == "bullish"
+                else "🔴"
+                if rsi.get("rsi_signal") == "bearish"
+                else "🟡"
+            )
             table.add_row(
                 "RSI",
-                f"{rsi.get('current_rsi', 0):.2f} {signal_emoji} ({rsi.get('rsi_signal', 'unknown')})"
+                f"{rsi.get('current_rsi', 0):.2f} {signal_emoji} ({rsi.get('rsi_signal', 'unknown')})",
             )
         if "macd" in data:
             macd = data["macd"]
-            signal_emoji = "🟢" if macd.get("signal") == "bullish" else "🔴" if macd.get("signal") == "bearish" else "🟡"
+            signal_emoji = (
+                "🟢"
+                if macd.get("signal") == "bullish"
+                else "🔴"
+                if macd.get("signal") == "bearish"
+                else "🟡"
+            )
             table.add_row(
-                "MACD",
-                f"{signal_emoji} {macd.get('signal', 'unknown').capitalize()}"
+                "MACD", f"{signal_emoji} {macd.get('signal', 'unknown').capitalize()}"
             )
         if "stochastic" in data:
             stoch = data["stochastic"]
-            signal_emoji = "🟢" if stoch.get("signal") == "bullish" else "🔴" if stoch.get("signal") == "bearish" else "🟡"
+            signal_emoji = (
+                "🟢"
+                if stoch.get("signal") == "bullish"
+                else "🔴"
+                if stoch.get("signal") == "bearish"
+                else "🟡"
+            )
             table.add_row(
                 "Stochastic",
-                f"K: {stoch.get('k_value', 0):.2f}, D: {stoch.get('d_value', 0):.2f} {signal_emoji}"
+                f"K: {stoch.get('k_value', 0):.2f}, D: {stoch.get('d_value', 0):.2f} {signal_emoji}",
             )
 
         self.mount(Static(table))
@@ -186,15 +233,16 @@ class ResultsPanel(VerticalScroll):
 
     def _render_volatility(self, data: dict) -> None:
         """Render volatility metrics table."""
-        table = Table(title="📊 Volatility Metrics", show_header=False, box=None, padding=(0, 2))
+        table = Table(
+            title="📊 Volatility Metrics", show_header=False, box=None, padding=(0, 2)
+        )
         table.add_column("Metric", style="cyan bold", width=20)
         table.add_column("Value", style="yellow")
 
         if "atr" in data:
             atr = data["atr"]
             table.add_row(
-                "ATR",
-                f"${atr.get('atr', 0):.2f} ({atr.get('atr_percent', 0):.2f}%)"
+                "ATR", f"${atr.get('atr', 0):.2f} ({atr.get('atr_percent', 0):.2f}%)"
             )
         if "volatility_regime" in data:
             regime = data.get("volatility_regime", "unknown").upper()
@@ -202,22 +250,21 @@ class ResultsPanel(VerticalScroll):
                 "LOW": "🟢",
                 "NORMAL": "🟡",
                 "HIGH": "🟠",
-                "EXTREME": "🔴"
+                "EXTREME": "🔴",
             }.get(regime, "⚪")
             table.add_row("Regime", f"{regime_emoji} {regime}")
         if "bollinger_bands" in data:
             bb = data["bollinger_bands"]
-            table.add_row(
-                "Bollinger %B",
-                f"{bb.get('percent_b', 0):.2f}"
-            )
+            table.add_row("Bollinger %B", f"{bb.get('percent_b', 0):.2f}")
 
         self.mount(Static(table))
         self.mount(Static(""))  # Spacer
 
     def _render_risk(self, data: dict) -> None:
         """Render risk metrics table."""
-        table = Table(title="⚠️ Risk Metrics", show_header=False, box=None, padding=(0, 2))
+        table = Table(
+            title="⚠️ Risk Metrics", show_header=False, box=None, padding=(0, 2)
+        )
         table.add_column("Metric", style="cyan bold", width=20)
         table.add_column("Value", style="yellow")
 
@@ -241,27 +288,30 @@ class ResultsPanel(VerticalScroll):
 
     def _render_ma(self, data: dict) -> None:
         """Render moving average analysis table."""
-        table = Table(title="📉 Trend Analysis", show_header=False, box=None, padding=(0, 2))
+        table = Table(
+            title="📉 Trend Analysis", show_header=False, box=None, padding=(0, 2)
+        )
         table.add_column("Metric", style="cyan bold", width=20)
         table.add_column("Value", style="yellow")
 
         if "primary_ma" in data:
             ma = data["primary_ma"]
             price_vs_ma = ma.get("price_vs_ma", "unknown")
-            emoji = "🟢" if price_vs_ma == "ABOVE" else "🔴" if price_vs_ma == "BELOW" else "🟡"
-            table.add_row(
-                "Price vs MA",
-                f"{emoji} {price_vs_ma}"
+            emoji = (
+                "🟢"
+                if price_vs_ma == "ABOVE"
+                else "🔴"
+                if price_vs_ma == "BELOW"
+                else "🟡"
             )
+            table.add_row("Price vs MA", f"{emoji} {price_vs_ma}")
         if "crossover_analysis" in data and data["crossover_analysis"]:
             crossover = data["crossover_analysis"]
             signal = crossover.get("current_signal", "NEUTRAL")
-            signal_emoji = "🟢" if signal == "BULLISH" else "🔴" if signal == "BEARISH" else "🟡"
-            table.add_row(
-                "Crossover Signal",
-                f"{signal_emoji} {signal}"
+            signal_emoji = (
+                "🟢" if signal == "BULLISH" else "🔴" if signal == "BEARISH" else "🟡"
             )
+            table.add_row("Crossover Signal", f"{signal_emoji} {signal}")
 
         self.mount(Static(table))
         self.mount(Static(""))  # Spacer
-

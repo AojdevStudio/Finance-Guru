@@ -439,7 +439,9 @@ class TestITCRiskCalculatorAPI:
         calc = ITCRiskCalculator(api_key="test_key")
 
         with pytest.raises(requests.RequestException, match="rate limit exceeded"):
-            calc.get_risk_score("TSLA", "tradfi", enrich_with_price=False, retry_count=2)
+            calc.get_risk_score(
+                "TSLA", "tradfi", enrich_with_price=False, retry_count=2
+            )
 
 
 # Integration tests (require actual API key)
@@ -568,8 +570,9 @@ class TestITCRiskCLI:
 
     def test_cli_format_output_json_single(self):
         """CLI should format single result as JSON object."""
-        from src.analysis.itc_risk_cli import format_output_json
         import json
+
+        from src.analysis.itc_risk_cli import format_output_json
 
         response = ITCRiskResponse(
             symbol="TSLA",
@@ -588,8 +591,9 @@ class TestITCRiskCLI:
 
     def test_cli_format_output_json_multiple(self):
         """CLI should format multiple results as JSON array."""
-        from src.analysis.itc_risk_cli import format_output_json
         import json
+
+        from src.analysis.itc_risk_cli import format_output_json
 
         responses = [
             ITCRiskResponse(

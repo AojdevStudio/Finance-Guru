@@ -48,7 +48,6 @@ Created: 2026-01-09
 import argparse
 import sys
 from pathlib import Path
-from typing import List, Optional
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent
@@ -59,7 +58,7 @@ from src.analysis.itc_risk import ITCRiskCalculator
 from src.models.itc_risk_inputs import ITCRiskResponse
 
 
-def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> str:
+def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> str:  # noqa: C901
     """
     Format a single result in human-readable format.
 
@@ -132,8 +131,10 @@ def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> st
         if full_table:
             output.append("📈 FULL RISK BAND TABLE")
             output.append("-" * 70)
-            output.append(f"  {'PRICE':>12}  {'RISK':>8}  {'LEVEL':>12}  {'MARKER':<10}")
-            output.append(f"  {'-'*12}  {'-'*8}  {'-'*12}  {'-'*10}")
+            output.append(
+                f"  {'PRICE':>12}  {'RISK':>8}  {'LEVEL':>12}  {'MARKER':<10}"
+            )
+            output.append(f"  {'-' * 12}  {'-' * 8}  {'-' * 12}  {'-' * 10}")
 
             for band in result.risk_bands:
                 # Determine risk level label
@@ -146,9 +147,10 @@ def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> st
 
                 # Mark current price location
                 marker = ""
-                if result.current_price:
-                    if abs(band.price - result.current_price) / result.current_price < 0.02:
-                        marker = "← CURRENT"
+                if result.current_price and (
+                    abs(band.price - result.current_price) / result.current_price < 0.02
+                ):
+                    marker = "← CURRENT"
 
                 output.append(
                     f"  ${band.price:>11,.2f}  {band.risk_score:>8.3f}  {level:>12}  {marker:<10}"
@@ -156,8 +158,10 @@ def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> st
         else:
             output.append("📈 NEAREST RISK BANDS (use --full-table for complete list)")
             output.append("-" * 70)
-            output.append(f"  {'PRICE':>12}  {'RISK':>8}  {'LEVEL':>12}  {'MARKER':<10}")
-            output.append(f"  {'-'*12}  {'-'*8}  {'-'*12}  {'-'*10}")
+            output.append(
+                f"  {'PRICE':>12}  {'RISK':>8}  {'LEVEL':>12}  {'MARKER':<10}"
+            )
+            output.append(f"  {'-' * 12}  {'-' * 8}  {'-' * 12}  {'-' * 10}")
 
             nearest = result.get_nearest_bands(7)
             # Sort by price for display
@@ -172,9 +176,10 @@ def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> st
                     level = "HIGH"
 
                 marker = ""
-                if result.current_price:
-                    if abs(band.price - result.current_price) / result.current_price < 0.02:
-                        marker = "← CURRENT"
+                if result.current_price and (
+                    abs(band.price - result.current_price) / result.current_price < 0.02
+                ):
+                    marker = "← CURRENT"
 
                 output.append(
                     f"  ${band.price:>11,.2f}  {band.risk_score:>8.3f}  {level:>12}  {marker:<10}"
@@ -185,13 +190,15 @@ def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> st
     # Footer
     output.append("=" * 70)
     output.append(f"📡 Source: {result.source}")
-    output.append("⚠️  DISCLAIMER: For educational purposes only. Not investment advice.")
+    output.append(
+        "⚠️  DISCLAIMER: For educational purposes only. Not investment advice."
+    )
     output.append("=" * 70)
 
     return "\n".join(output)
 
 
-def format_output_json(results: List[ITCRiskResponse]) -> str:
+def format_output_json(results: list[ITCRiskResponse]) -> str:
     """
     Format results as JSON.
 
@@ -242,7 +249,7 @@ def list_supported_tickers(universe: str) -> None:
     # Display in columns
     cols = 6
     for i in range(0, len(tickers), cols):
-        row = tickers[i:i + cols]
+        row = tickers[i : i + cols]
         print("  " + "  ".join(f"{t:<8}" for t in row))
 
     print("")
@@ -251,7 +258,7 @@ def list_supported_tickers(universe: str) -> None:
     print("=" * 70)
 
 
-def main():
+def main():  # noqa: C901
     """
     Main CLI entry point.
 
@@ -287,7 +294,7 @@ Examples:
 
 Note: Requires ITC_API_KEY environment variable.
 For unsupported tickers, use risk_metrics_cli.py instead.
-        """
+        """,
     )
 
     # Positional arguments - tickers (optional if using --list-supported)
@@ -295,7 +302,7 @@ For unsupported tickers, use risk_metrics_cli.py instead.
         "tickers",
         nargs="*",
         type=str,
-        help="Ticker symbol(s) to analyze (e.g., TSLA BTC AAPL)"
+        help="Ticker symbol(s) to analyze (e.g., TSLA BTC AAPL)",
     )
 
     # Universe selection
@@ -305,7 +312,7 @@ For unsupported tickers, use risk_metrics_cli.py instead.
         type=str,
         choices=["crypto", "tradfi"],
         default="tradfi",
-        help="Asset universe: 'crypto' or 'tradfi' (default: tradfi)"
+        help="Asset universe: 'crypto' or 'tradfi' (default: tradfi)",
     )
 
     # Output format
@@ -315,14 +322,14 @@ For unsupported tickers, use risk_metrics_cli.py instead.
         type=str,
         choices=["human", "json"],
         default="human",
-        help="Output format (default: human)"
+        help="Output format (default: human)",
     )
 
     # Full table flag
     parser.add_argument(
         "--full-table",
         action="store_true",
-        help="Show complete risk band table (default: show nearest bands only)"
+        help="Show complete risk band table (default: show nearest bands only)",
     )
 
     # List supported tickers
@@ -331,14 +338,14 @@ For unsupported tickers, use risk_metrics_cli.py instead.
         type=str,
         choices=["crypto", "tradfi"],
         metavar="UNIVERSE",
-        help="List supported tickers for a universe and exit"
+        help="List supported tickers for a universe and exit",
     )
 
     # Skip price enrichment
     parser.add_argument(
         "--no-price",
         action="store_true",
-        help="Skip current price enrichment from yfinance (faster, but no price context)"
+        help="Skip current price enrichment from yfinance (faster, but no price context)",
     )
 
     # Parse arguments
@@ -353,24 +360,29 @@ For unsupported tickers, use risk_metrics_cli.py instead.
     if not args.tickers:
         print("❌ ERROR: No tickers provided.", file=sys.stderr)
         print("", file=sys.stderr)
-        print("Usage: itc_risk_cli.py TICKER [TICKER ...] --universe <crypto|tradfi>", file=sys.stderr)
+        print(
+            "Usage: itc_risk_cli.py TICKER [TICKER ...] --universe <crypto|tradfi>",
+            file=sys.stderr,
+        )
         print("", file=sys.stderr)
         print("Examples:", file=sys.stderr)
         print("  itc_risk_cli.py TSLA --universe tradfi", file=sys.stderr)
         print("  itc_risk_cli.py BTC ETH --universe crypto", file=sys.stderr)
         print("", file=sys.stderr)
-        print("Use --list-supported <universe> to see available tickers.", file=sys.stderr)
+        print(
+            "Use --list-supported <universe> to see available tickers.", file=sys.stderr
+        )
         sys.exit(1)
 
     try:
         # Initialize calculator
-        print(f"🔑 Initializing ITC Risk Calculator...", file=sys.stderr)
+        print("🔑 Initializing ITC Risk Calculator...", file=sys.stderr)
         calculator = ITCRiskCalculator()
-        print(f"✅ API key loaded", file=sys.stderr)
+        print("✅ API key loaded", file=sys.stderr)
 
         # Process each ticker
-        results: List[ITCRiskResponse] = []
-        errors: List[str] = []
+        results: list[ITCRiskResponse] = []
+        errors: list[str] = []
 
         for ticker in args.tickers:
             ticker_upper = ticker.upper().strip()
@@ -394,7 +406,10 @@ For unsupported tickers, use risk_metrics_cli.py instead.
                     enrich_with_price=not args.no_price,
                 )
                 results.append(result)
-                print(f"✅ {ticker_upper}: Risk score = {result.current_risk_score:.3f}", file=sys.stderr)
+                print(
+                    f"✅ {ticker_upper}: Risk score = {result.current_risk_score:.3f}",
+                    file=sys.stderr,
+                )
 
             except ValueError as e:
                 errors.append(f"❌ {ticker_upper}: {e}")
@@ -436,6 +451,7 @@ For unsupported tickers, use risk_metrics_cli.py instead.
     except Exception as e:
         print(f"❌ ERROR: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 

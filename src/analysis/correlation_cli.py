@@ -38,11 +38,11 @@ sys.path.insert(0, str(project_root))
 
 import yfinance as yf
 
+from src.analysis.correlation import calculate_correlation
 from src.models.correlation_inputs import (
     CorrelationConfig,
     PortfolioPriceData,
 )
-from src.analysis.correlation import calculate_correlation
 
 
 def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioPriceData:
@@ -71,11 +71,7 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioPriceData:
     # Download all tickers at once for alignment
     print(f"Fetching {days} days of data for {len(tickers)} assets...", file=sys.stderr)
     data = yf.download(
-        tickers,
-        start=start_date,
-        end=end_date,
-        progress=False,
-        group_by='ticker'
+        tickers, start=start_date, end=end_date, progress=False, group_by="ticker"
     )
 
     if data.empty:
@@ -87,17 +83,17 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioPriceData:
     if len(tickers) == 1:
         # Single ticker - yfinance returns different structure
         ticker = tickers[0]
-        if 'Close' not in data.columns:
+        if "Close" not in data.columns:
             raise ValueError(f"No close price data for {ticker}")
-        prices_dict[ticker] = data['Close'].dropna().tolist()
-        dates = data['Close'].dropna().index.tolist()
+        prices_dict[ticker] = data["Close"].dropna().tolist()
+        dates = data["Close"].dropna().index.tolist()
     else:
         # Multiple tickers
         for ticker in tickers:
             if ticker not in data:
                 raise ValueError(f"No data found for {ticker}")
 
-            closes = data[ticker]['Close'].dropna()
+            closes = data[ticker]["Close"].dropna()
             if len(closes) < 30:
                 raise ValueError(
                     f"Insufficient data for {ticker}. Need at least 30 days, got {len(closes)}"
@@ -107,9 +103,9 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioPriceData:
 
         # Get common dates (intersection across all tickers)
         # This ensures synchronized data
-        common_index = data[tickers[0]]['Close'].dropna().index
+        common_index = data[tickers[0]]["Close"].dropna().index
         for ticker in tickers[1:]:
-            ticker_index = data[ticker]['Close'].dropna().index
+            ticker_index = data[ticker]["Close"].dropna().index
             common_index = common_index.intersection(ticker_index)
 
         if len(common_index) < 30:
@@ -120,7 +116,7 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioPriceData:
         # Truncate to common dates
         dates = common_index[-days:].tolist()
         for ticker in tickers:
-            prices_dict[ticker] = data[ticker]['Close'].loc[dates].tolist()
+            prices_dict[ticker] = data[ticker]["Close"].loc[dates].tolist()
 
     # Take only requested number of days
     if len(tickers) == 1:
@@ -139,7 +135,7 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioPriceData:
     )
 
 
-def format_human_output(result) -> str:
+def format_human_output(result) -> str:  # noqa: C901
     """
     Format correlation analysis for human-readable display.
 
@@ -157,11 +153,11 @@ def format_human_output(result) -> str:
         Formatted string output
     """
     lines = []
-    lines.append(f"\n{'='*60}")
+    lines.append(f"\n{'=' * 60}")
     lines.append("CORRELATION ANALYSIS")
     lines.append(f"Date: {result.calculation_date}")
     lines.append(f"Assets: {', '.join(result.tickers)}")
-    lines.append(f"{'='*60}\n")
+    lines.append(f"{'=' * 60}\n")
 
     # Diversification Score (most important summary)
     score = result.diversification_score
@@ -270,7 +266,9 @@ def format_human_output(result) -> str:
             lines.append(f"\n{rolling.ticker_1} / {rolling.ticker_2}:")
             lines.append(f"  Current: {rolling.current_correlation:+.3f}")
             lines.append(f"  Average: {rolling.average_correlation:+.3f}")
-            lines.append(f"  Range: {corr_min:+.3f} to {corr_max:+.3f} (width: {range_width:.3f})")
+            lines.append(
+                f"  Range: {corr_min:+.3f} to {corr_max:+.3f} (width: {range_width:.3f})"
+            )
 
             if range_width > 0.5:
                 lines.append("  ⚠️  High variability - correlation is unstable")
@@ -281,7 +279,7 @@ def format_human_output(result) -> str:
 
         lines.append("")
 
-    lines.append(f"{'='*60}\n")
+    lines.append(f"{'=' * 60}\n")
 
     return "\n".join(lines)
 
@@ -328,61 +326,64 @@ Agent Use Cases:
 
     # Required arguments
     parser.add_argument(
-        'tickers',
+        "tickers",
         type=str,
-        nargs='+',
-        help='Stock ticker symbols (minimum 2 required, e.g., TSLA PLTR NVDA)'
+        nargs="+",
+        help="Stock ticker symbols (minimum 2 required, e.g., TSLA PLTR NVDA)",
     )
 
     parser.add_argument(
-        '--days',
+        "--days",
         type=int,
         default=90,
-        help='Number of days of historical data (default: 90)'
+        help="Number of days of historical data (default: 90)",
     )
 
     # Correlation configuration
     parser.add_argument(
-        '--method',
-        choices=['pearson', 'spearman'],
-        default='pearson',
-        help='Correlation method (default: pearson)'
+        "--method",
+        choices=["pearson", "spearman"],
+        default="pearson",
+        help="Correlation method (default: pearson)",
     )
 
     parser.add_argument(
-        '--rolling',
+        "--rolling",
         type=int,
         default=None,
-        help='Rolling window for time-varying correlation (e.g., 60 for 60-day rolling)'
+        help="Rolling window for time-varying correlation (e.g., 60 for 60-day rolling)",
     )
 
     parser.add_argument(
-        '--min-periods',
+        "--min-periods",
         type=int,
         default=30,
-        help='Minimum periods for rolling correlation (default: 30)'
+        help="Minimum periods for rolling correlation (default: 30)",
     )
 
     # Output format
     parser.add_argument(
-        '--output',
-        choices=['human', 'json'],
-        default='human',
-        help='Output format (default: human)'
+        "--output",
+        choices=["human", "json"],
+        default="human",
+        help="Output format (default: human)",
     )
 
     args = parser.parse_args()
 
     # Validate minimum tickers
     if len(args.tickers) < 2:
-        print("Error: At least 2 tickers required for correlation analysis", file=sys.stderr)
+        print(
+            "Error: At least 2 tickers required for correlation analysis",
+            file=sys.stderr,
+        )
         return 1
 
     try:
         # Fetch portfolio data
         print(
             f"Fetching synchronized data for {len(args.tickers)} assets...",
-            file=sys.stderr
+            file=sys.stderr,
         )
         data = fetch_portfolio_data(args.tickers, args.days)
 
@@ -398,7 +399,7 @@ Agent Use Cases:
         result = calculate_correlation(data, config)
 
         # Output results
-        if args.output == 'json':
+        if args.output == "json":
             print(format_json_output(result))
         else:
             print(format_human_output(result))
@@ -411,9 +412,10 @@ Agent Use Cases:
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

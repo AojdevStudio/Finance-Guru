@@ -45,14 +45,16 @@ sys.path.insert(0, str(project_root))
 
 from src.models.screener_inputs import (
     PatternType,
+    PortfolioScreeningOutput,
     ScreeningCriteria,
     ScreeningResult,
-    PortfolioScreeningOutput,
 )
 from src.utils.screener import TechnicalScreener
 
 
-def fetch_ticker_data(ticker: str, days: int) -> tuple[list[float], list[date], list[float]]:
+def fetch_ticker_data(
+    ticker: str, days: int
+) -> tuple[list[float], list[date], list[float]]:
     """Fetch price and volume data for a ticker."""
     try:
         import yfinance as yf
@@ -68,12 +70,15 @@ def fetch_ticker_data(ticker: str, days: int) -> tuple[list[float], list[date], 
         if hist.empty:
             raise ValueError(f"No data found for {ticker}")
 
-        prices = hist['Close'].tolist()
+        prices = hist["Close"].tolist()
         dates = [d.date() for d in hist.index]
-        volumes = hist['Volume'].tolist()
+        volumes = hist["Volume"].tolist()
 
         if len(prices) < 200:
-            print(f"⚠️  Warning: {ticker} only has {len(prices)} days (need 200 for MA200)", file=sys.stderr)
+            print(
+                f"⚠️  Warning: {ticker} only has {len(prices)} days (need 200 for MA200)",
+                file=sys.stderr,
+            )
 
         return (prices, dates, volumes)
 
@@ -102,7 +107,13 @@ def format_single_result(result: ScreeningResult) -> str:
     output.append("")
 
     # Recommendation
-    rec_emoji = {"strong_buy": "🚀", "buy": "👍", "hold": "⏸️", "sell": "👎", "strong_sell": "🔻"}
+    rec_emoji = {
+        "strong_buy": "🚀",
+        "buy": "👍",
+        "hold": "⏸️",
+        "sell": "👎",
+        "strong_sell": "🔻",
+    }
     emoji = rec_emoji.get(result.recommendation, "")
     output.append(f"📊 RECOMMENDATION: {emoji} {result.recommendation.upper()}")
     output.append(f"   Confidence: {result.confidence:.0%}")
@@ -131,7 +142,9 @@ def format_single_result(result: ScreeningResult) -> str:
         for i, signal in enumerate(result.signals, 1):
             strength_emoji = {"strong": "🔴", "moderate": "🟠", "weak": "🟡"}
             emoji = strength_emoji.get(signal.strength, "")
-            output.append(f"  {i}. {emoji} {signal.signal_type.value.upper()} ({signal.strength})")
+            output.append(
+                f"  {i}. {emoji} {signal.signal_type.value.upper()} ({signal.strength})"
+            )
             output.append(f"     {signal.description}")
             output.append(f"     Detected: {signal.date_detected}")
             if signal.value is not None:
@@ -164,7 +177,9 @@ def format_portfolio_results(results: PortfolioScreeningOutput) -> str:
     output.append("-" * 70)
     output.append(f"  Total Screened:           {results.total_tickers_screened:>10}")
     output.append(f"  Matching Criteria:        {results.tickers_matching:>10}")
-    output.append(f"  Match Rate:               {results.tickers_matching/max(results.total_tickers_screened,1):>9.0%}")
+    output.append(
+        f"  Match Rate:               {results.tickers_matching / max(results.total_tickers_screened, 1):>9.0%}"
+    )
     output.append("")
     output.append(f"  {results.summary}")
     output.append("")
@@ -175,10 +190,14 @@ def format_portfolio_results(results: PortfolioScreeningOutput) -> str:
         output.append("-" * 70)
         for i, ticker in enumerate(results.top_picks, 1):
             # Find the result for this ticker
-            ticker_result = next((r for r in results.results if r.ticker == ticker), None)
+            ticker_result = next(
+                (r for r in results.results if r.ticker == ticker), None
+            )
             if ticker_result:
                 signal_count = len(ticker_result.signals)
-                output.append(f"  {i}. {ticker:<6} - Score: {ticker_result.score:>5.1f} ({signal_count} signals) - {ticker_result.recommendation.upper()}")
+                output.append(
+                    f"  {i}. {ticker:<6} - Score: {ticker_result.score:>5.1f} ({signal_count} signals) - {ticker_result.recommendation.upper()}"
+                )
         output.append("")
 
     # Detailed Results
@@ -188,26 +207,38 @@ def format_portfolio_results(results: PortfolioScreeningOutput) -> str:
 
     # Show ALL results, not just matches (for educational value)
     for result in results.results:
-        rec_emoji = {"strong_buy": "🚀", "buy": "👍", "hold": "⏸️", "sell": "👎", "strong_sell": "🔻"}
+        rec_emoji = {
+            "strong_buy": "🚀",
+            "buy": "👍",
+            "hold": "⏸️",
+            "sell": "👎",
+            "strong_sell": "🔻",
+        }
         emoji = rec_emoji.get(result.recommendation, "")
 
         # Show ticker with match status
         match_status = "✅ MATCH" if result.matches_criteria else "❌ NO MATCH"
         rank_str = f"#{result.rank}" if result.rank else "N/A"
-        output.append(f"{match_status} | Rank {rank_str}: {result.ticker} - Score {result.score:.1f} {emoji}")
+        output.append(
+            f"{match_status} | Rank {rank_str}: {result.ticker} - Score {result.score:.1f} {emoji}"
+        )
 
         # Format RSI properly (avoid None formatting errors)
-        rsi_str = f"{result.current_rsi:.1f}" if result.current_rsi is not None else "N/A"
+        rsi_str = (
+            f"{result.current_rsi:.1f}" if result.current_rsi is not None else "N/A"
+        )
         output.append(f"  Price: ${result.current_price:.2f} | RSI: {rsi_str}")
 
         # Show signals (or lack thereof)
         if result.signals:
-            signals_str = ', '.join(s.signal_type.value for s in result.signals)
+            signals_str = ", ".join(s.signal_type.value for s in result.signals)
             output.append(f"  Signals: {signals_str}")
         else:
             output.append("  Signals: None detected")
 
-        output.append(f"  Recommendation: {result.recommendation.upper()} (confidence: {result.confidence:.0%})")
+        output.append(
+            f"  Recommendation: {result.recommendation.upper()} (confidence: {result.confidence:.0%})"
+        )
         output.append("")
 
     output.append("=" * 70)
@@ -237,15 +268,12 @@ Examples:
 
   # JSON output
   %(prog)s TSLA PLTR NVDA --days 252 --output json
-        """
+        """,
     )
 
     # Tickers to screen
     parser.add_argument(
-        "tickers",
-        nargs="+",
-        type=str,
-        help="One or more ticker symbols to screen"
+        "tickers", nargs="+", type=str, help="One or more ticker symbols to screen"
     )
 
     # Data parameters
@@ -253,7 +281,7 @@ Examples:
         "--days",
         type=int,
         default=252,
-        help="Number of days of historical data (default: 252)"
+        help="Number of days of historical data (default: 252)",
     )
 
     # Pattern selection
@@ -262,7 +290,7 @@ Examples:
         nargs="+",
         choices=[p.value for p in PatternType],
         default=None,  # None means "all patterns" - more useful default
-        help="Technical patterns to screen for (default: all patterns)"
+        help="Technical patterns to screen for (default: all patterns)",
     )
 
     # RSI parameters
@@ -270,29 +298,23 @@ Examples:
         "--rsi-oversold",
         type=float,
         default=30.0,
-        help="RSI oversold threshold (default: 30)"
+        help="RSI oversold threshold (default: 30)",
     )
 
     parser.add_argument(
         "--rsi-overbought",
         type=float,
         default=70.0,
-        help="RSI overbought threshold (default: 70)"
+        help="RSI overbought threshold (default: 70)",
     )
 
     # MA parameters
     parser.add_argument(
-        "--ma-fast",
-        type=int,
-        default=50,
-        help="Fast MA period (default: 50)"
+        "--ma-fast", type=int, default=50, help="Fast MA period (default: 50)"
     )
 
     parser.add_argument(
-        "--ma-slow",
-        type=int,
-        default=200,
-        help="Slow MA period (default: 200)"
+        "--ma-slow", type=int, default=200, help="Slow MA period (default: 200)"
     )
 
     # Volume parameters
@@ -300,7 +322,7 @@ Examples:
         "--volume-multiplier",
         type=float,
         default=1.5,
-        help="Volume multiplier for breakouts (default: 1.5)"
+        help="Volume multiplier for breakouts (default: 1.5)",
     )
 
     # Output parameters
@@ -309,14 +331,11 @@ Examples:
         type=str,
         choices=["human", "json"],
         default="human",
-        help="Output format (default: human)"
+        help="Output format (default: human)",
     )
 
     parser.add_argument(
-        "--save-to",
-        type=str,
-        default=None,
-        help="Save output to file (optional)"
+        "--save-to", type=str, default=None, help="Save output to file (optional)"
     )
 
     args = parser.parse_args()
@@ -328,7 +347,11 @@ Examples:
     try:
         # Create screening criteria
         # If no patterns specified, use all patterns (most useful default)
-        patterns_to_use = [PatternType(p) for p in args.patterns] if args.patterns else list(PatternType)
+        patterns_to_use = (
+            [PatternType(p) for p in args.patterns]
+            if args.patterns
+            else list(PatternType)
+        )
 
         criteria = ScreeningCriteria(
             patterns=patterns_to_use,
@@ -345,7 +368,9 @@ Examples:
         if len(args.tickers) == 1:
             # Single ticker mode
             ticker = args.tickers[0].upper()
-            print(f"📥 Fetching {args.days} days of data for {ticker}...", file=sys.stderr)
+            print(
+                f"📥 Fetching {args.days} days of data for {ticker}...", file=sys.stderr
+            )
 
             prices, dates, volumes = fetch_ticker_data(ticker, args.days)
             print(f"✅ Fetched {len(prices)} data points", file=sys.stderr)
@@ -360,7 +385,9 @@ Examples:
 
         else:
             # Portfolio mode
-            print(f"📥 Fetching data for {len(args.tickers)} tickers...", file=sys.stderr)
+            print(
+                f"📥 Fetching data for {len(args.tickers)} tickers...", file=sys.stderr
+            )
 
             tickers_data = {}
             for ticker in args.tickers:
@@ -400,6 +427,7 @@ Examples:
     except Exception as e:
         print(f"❌ ERROR: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 

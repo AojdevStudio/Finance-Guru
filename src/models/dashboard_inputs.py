@@ -1,5 +1,4 @@
-"""
-Dashboard Pydantic Models for Finance Guru™ TUI
+"""Dashboard Pydantic Models for Finance Guru™ TUI.
 
 WHAT: Data models for TUI dashboard portfolio display and analysis
 WHY: Type-safe portfolio snapshots and holdings for real-time dashboard updates
@@ -16,12 +15,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, computed_field
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 
 class HoldingInput(BaseModel):
-    """
-    Individual portfolio holding from Fidelity CSV.
+    """Individual portfolio holding from Fidelity CSV.
 
     WHAT: Single stock/ETF/fund position in portfolio
     WHY: Represents one row from Fidelity CSV with layer classification
@@ -54,38 +52,24 @@ class HoldingInput(BaseModel):
         max_length=10,
     )
 
-    quantity: float = Field(
-        ...,
-        ge=0.0,
-        description="Number of shares/units held"
-    )
+    quantity: float = Field(..., ge=0.0, description="Number of shares/units held")
 
-    current_value: float = Field(
-        ...,
-        ge=0.0,
-        description="Current market value in USD"
-    )
+    current_value: float = Field(..., ge=0.0, description="Current market value in USD")
 
     day_change: float = Field(
-        ...,
-        description="Today's gain/loss in USD (can be negative)"
+        ..., description="Today's gain/loss in USD (can be negative)"
     )
 
-    day_change_pct: float = Field(
-        ...,
-        description="Today's gain/loss as percentage"
-    )
+    day_change_pct: float = Field(..., description="Today's gain/loss as percentage")
 
     layer: Literal["layer1", "layer2", "layer3", "unknown"] = Field(
-        ...,
-        description="Portfolio layer classification"
+        ..., description="Portfolio layer classification"
     )
 
     @field_validator("symbol")
     @classmethod
     def symbol_must_be_uppercase(cls, v: str) -> str:
-        """
-        Ensure ticker symbol is uppercase and valid format.
+        """Ensure ticker symbol is uppercase and valid format.
 
         WHY: Standard convention for ticker symbols. Prevents matching
         errors when comparing tickers across different data sources.
@@ -117,7 +101,7 @@ class HoldingInput(BaseModel):
                     "current_value": 64583.53,
                     "day_change": 935.45,
                     "day_change_pct": 1.46,
-                    "layer": "layer1"
+                    "layer": "layer1",
                 },
                 {
                     "symbol": "JEPI",
@@ -125,16 +109,15 @@ class HoldingInput(BaseModel):
                     "current_value": 4142.64,
                     "day_change": -4.03,
                     "day_change_pct": -0.10,
-                    "layer": "layer2"
-                }
+                    "layer": "layer2",
+                },
             ]
         }
     }
 
 
 class PortfolioSnapshotInput(BaseModel):
-    """
-    Complete portfolio snapshot from Fidelity CSV.
+    """Complete portfolio snapshot from Fidelity CSV.
 
     WHAT: Aggregated portfolio data with all holdings and totals
     WHY: Provides dashboard header data and layer breakdown
@@ -164,38 +147,24 @@ class PortfolioSnapshotInput(BaseModel):
         )
     """
 
-    total_value: float = Field(
-        ...,
-        ge=0.0,
-        description="Total portfolio value in USD"
-    )
+    total_value: float = Field(..., ge=0.0, description="Total portfolio value in USD")
 
     day_change: float = Field(
-        ...,
-        description="Total day change in USD (can be negative)"
+        ..., description="Total day change in USD (can be negative)"
     )
 
-    day_change_pct: float = Field(
-        ...,
-        description="Total day change as percentage"
-    )
+    day_change_pct: float = Field(..., description="Total day change as percentage")
 
     holdings: list[HoldingInput] = Field(
-        ...,
-        min_length=1,
-        description="List of all portfolio holdings"
+        ..., min_length=1, description="List of all portfolio holdings"
     )
 
-    timestamp: datetime = Field(
-        ...,
-        description="When this snapshot was created"
-    )
+    timestamp: datetime = Field(..., description="When this snapshot was created")
 
     @field_validator("holdings")
     @classmethod
     def holdings_must_not_be_empty(cls, v: list[HoldingInput]) -> list[HoldingInput]:
-        """
-        Ensure at least one holding exists.
+        """Ensure at least one holding exists.
 
         WHY: Empty portfolio doesn't make sense for dashboard display.
         If portfolio is truly empty, we should show a different view.
@@ -218,8 +187,7 @@ class PortfolioSnapshotInput(BaseModel):
     @field_validator("timestamp")
     @classmethod
     def timestamp_must_be_reasonable(cls, v: datetime) -> datetime:
-        """
-        Ensure timestamp is not in the future.
+        """Ensure timestamp is not in the future.
 
         WHY: Future timestamps indicate system clock issues or data errors.
         A snapshot from "tomorrow" doesn't make sense.
@@ -277,37 +245,38 @@ class PortfolioSnapshotInput(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "total_value": 222214.99,
-                "day_change": -4091.32,
-                "day_change_pct": -1.80,
-                "holdings": [
-                    {
-                        "symbol": "PLTR",
-                        "quantity": 369.746,
-                        "current_value": 64583.53,
-                        "day_change": 935.45,
-                        "day_change_pct": 1.46,
-                        "layer": "layer1"
-                    },
-                    {
-                        "symbol": "JEPI",
-                        "quantity": 72.942,
-                        "current_value": 4142.64,
-                        "day_change": -4.03,
-                        "day_change_pct": -0.10,
-                        "layer": "layer2"
-                    }
-                ],
-                "timestamp": "2025-11-17T15:33:00"
-            }]
+            "examples": [
+                {
+                    "total_value": 222214.99,
+                    "day_change": -4091.32,
+                    "day_change_pct": -1.80,
+                    "holdings": [
+                        {
+                            "symbol": "PLTR",
+                            "quantity": 369.746,
+                            "current_value": 64583.53,
+                            "day_change": 935.45,
+                            "day_change_pct": 1.46,
+                            "layer": "layer1",
+                        },
+                        {
+                            "symbol": "JEPI",
+                            "quantity": 72.942,
+                            "current_value": 4142.64,
+                            "day_change": -4.03,
+                            "day_change_pct": -0.10,
+                            "layer": "layer2",
+                        },
+                    ],
+                    "timestamp": "2025-11-17T15:33:00",
+                }
+            ]
         }
     }
 
 
 class AnalysisResultsInput(BaseModel):
-    """
-    Combined analysis results for dashboard display.
+    """Combined analysis results for dashboard display.
 
     WHAT: Aggregated output from all 4 analysis tools
     WHY: Single model for ResultsPanel to display multi-tool analysis
@@ -345,36 +314,24 @@ class AnalysisResultsInput(BaseModel):
         pattern=r"^[A-Z\-\.]+$",  # Uppercase letters, hyphens, and dots (e.g., BRK-B, BRK.B)
     )
 
-    timeframe: int = Field(
-        ...,
-        ge=30,
-        le=1000,
-        description="Number of days analyzed"
-    )
+    timeframe: int = Field(..., ge=30, le=1000, description="Number of days analyzed")
 
-    timestamp: datetime = Field(
-        ...,
-        description="When analysis was run"
-    )
+    timestamp: datetime = Field(..., description="When analysis was run")
 
     momentum: dict | None = Field(
-        default=None,
-        description="Momentum indicators output (RSI, MACD, etc.)"
+        default=None, description="Momentum indicators output (RSI, MACD, etc.)"
     )
 
     volatility: dict | None = Field(
-        default=None,
-        description="Volatility metrics output (ATR, Bollinger, etc.)"
+        default=None, description="Volatility metrics output (ATR, Bollinger, etc.)"
     )
 
     risk: dict | None = Field(
-        default=None,
-        description="Risk metrics output (VaR, Sharpe, etc.)"
+        default=None, description="Risk metrics output (VaR, Sharpe, etc.)"
     )
 
     moving_averages: dict | None = Field(
-        default=None,
-        description="Moving average output (SMA, EMA, crossovers)"
+        default=None, description="Moving average output (SMA, EMA, crossovers)"
     )
 
     @field_validator("ticker")
@@ -409,26 +366,23 @@ class AnalysisResultsInput(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "ticker": "TSLA",
-                "timeframe": 90,
-                "timestamp": "2025-11-17T15:35:00",
-                "momentum": {
-                    "rsi": {"current_rsi": 42.65, "rsi_signal": "neutral"},
-                    "macd": {"signal": "bullish"}
-                },
-                "volatility": {
-                    "atr": {"atr": 18.36, "atr_percent": 5.36},
-                    "volatility_regime": "high"
-                },
-                "risk": {
-                    "sharpe_ratio": 1.25,
-                    "var_95": -4.2
-                },
-                "moving_averages": {
-                    "primary_ma": {"price_vs_ma": "above"}
+            "examples": [
+                {
+                    "ticker": "TSLA",
+                    "timeframe": 90,
+                    "timestamp": "2025-11-17T15:35:00",
+                    "momentum": {
+                        "rsi": {"current_rsi": 42.65, "rsi_signal": "neutral"},
+                        "macd": {"signal": "bullish"},
+                    },
+                    "volatility": {
+                        "atr": {"atr": 18.36, "atr_percent": 5.36},
+                        "volatility_regime": "high",
+                    },
+                    "risk": {"sharpe_ratio": 1.25, "var_95": -4.2},
+                    "moving_averages": {"primary_ma": {"price_vs_ma": "above"}},
                 }
-            }]
+            ]
         }
     }
 

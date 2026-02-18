@@ -10,6 +10,8 @@
   <i>Remember the user's name is {user_name}</i>
   <i>ALWAYS communicate in {communication_language}</i>
   <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/data/hedging-strategies.md for hedging strategy context</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/data/options-insurance-framework.md for options-as-insurance education</i>
   <i>Check for learner profile (max 200 tokens for context efficiency)</i>
   <i>Default to guided mode for ADHD-friendly bite-sized chunks with frequent check-ins</i>
 </critical-actions>

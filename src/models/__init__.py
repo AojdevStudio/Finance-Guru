@@ -1,7 +1,6 @@
-"""
-Financial models and portfolio optimization.
+"""Financial models and portfolio optimization.
 
-This package contains all Pydantic models for Finance Guru™.
+This package contains all Pydantic models for Finance Guru.
 Models provide type-safe data structures with automatic validation.
 
 Available Models:
@@ -13,82 +12,94 @@ Available Models:
     - moving_avg_inputs: Moving average models (MovingAverageDataInput, MovingAverageOutput, etc.)
     - portfolio_inputs: Portfolio optimization models (PortfolioDataInput, OptimizationOutput, etc.)
     - itc_risk_inputs: ITC Risk API models (ITCRiskRequest, RiskBand, ITCRiskResponse)
+    - hedging_inputs: Hedging position models (HedgePosition, RollSuggestion, HedgeSizeRequest)
+    - total_return_inputs: Total return models (TotalReturnInput, DividendRecord, TickerReturn)
+    - hedge_comparison_inputs: Hedge comparison models (ScenarioInput, ComparisonOutput, etc.)
 """
 
+from src.models.backtest_inputs import (
+    BacktestConfig,
+    BacktestPerformanceMetrics,
+    BacktestResults,
+    TradeExecution,
+    TradeSignal,
+)
+from src.models.correlation_inputs import (
+    CorrelationConfig,
+    CorrelationMatrixOutput,
+    CovarianceMatrixOutput,
+    PortfolioCorrelationOutput,
+    PortfolioPriceData,
+    RollingCorrelationOutput,
+)
+from src.models.hedge_comparison_inputs import (
+    ComparisonOutput,
+    ComparisonRow,
+    PutResult,
+    ScenarioInput,
+    SQQQResult,
+)
+from src.models.hedging_inputs import (
+    HedgePosition,
+    HedgeSizeRequest,
+    RollSuggestion,
+)
+from src.models.itc_risk_inputs import (
+    ITCRiskRequest,
+    ITCRiskResponse,
+    RiskBand,
+)
+from src.models.momentum_inputs import (
+    AllMomentumOutput,
+    MACDOutput,
+    MomentumConfig,
+    MomentumDataInput,
+    ROCOutput,
+    RSIOutput,
+    StochasticOutput,
+    WilliamsROutput,
+)
+from src.models.moving_avg_inputs import (
+    CrossoverOutput,
+    MovingAverageAnalysis,
+    MovingAverageConfig,
+    MovingAverageDataInput,
+    MovingAverageOutput,
+)
+from src.models.options_inputs import (
+    BlackScholesInput,
+    GreeksOutput,
+    ImpliedVolInput,
+    ImpliedVolOutput,
+    OptionContractData,
+    OptionInput,
+    OptionsChainOutput,
+    PutCallParityInput,
+)
+from src.models.portfolio_inputs import (
+    EfficientFrontierOutput,
+    OptimizationConfig,
+    OptimizationOutput,
+    PortfolioDataInput,
+)
 from src.models.risk_inputs import (
     PriceDataInput,
     RiskCalculationConfig,
     RiskMetricsOutput,
 )
-
-from src.models.momentum_inputs import (
-    MomentumDataInput,
-    MomentumConfig,
-    RSIOutput,
-    MACDOutput,
-    StochasticOutput,
-    WilliamsROutput,
-    ROCOutput,
-    AllMomentumOutput,
+from src.models.total_return_inputs import (
+    DividendRecord,
+    TickerReturn,
+    TotalReturnInput,
 )
-
 from src.models.volatility_inputs import (
-    VolatilityDataInput,
-    VolatilityConfig,
-    BollingerBandsOutput,
     ATROutput,
+    BollingerBandsOutput,
     HistoricalVolatilityOutput,
     KeltnerChannelsOutput,
+    VolatilityConfig,
+    VolatilityDataInput,
     VolatilityMetricsOutput,
-)
-
-from src.models.correlation_inputs import (
-    PortfolioPriceData,
-    CorrelationConfig,
-    CorrelationMatrixOutput,
-    CovarianceMatrixOutput,
-    RollingCorrelationOutput,
-    PortfolioCorrelationOutput,
-)
-
-from src.models.backtest_inputs import (
-    BacktestConfig,
-    TradeSignal,
-    TradeExecution,
-    BacktestPerformanceMetrics,
-    BacktestResults,
-)
-
-from src.models.moving_avg_inputs import (
-    MovingAverageDataInput,
-    MovingAverageConfig,
-    MovingAverageOutput,
-    CrossoverOutput,
-    MovingAverageAnalysis,
-)
-
-from src.models.portfolio_inputs import (
-    PortfolioDataInput,
-    OptimizationConfig,
-    OptimizationOutput,
-    EfficientFrontierOutput,
-)
-
-from src.models.itc_risk_inputs import (
-    ITCRiskRequest,
-    RiskBand,
-    ITCRiskResponse,
-)
-
-from src.models.options_inputs import (
-    OptionInput,
-    BlackScholesInput,
-    GreeksOutput,
-    ImpliedVolInput,
-    ImpliedVolOutput,
-    PutCallParityInput,
-    OptionContractData,
-    OptionsChainOutput,
 )
 
 __all__ = [
@@ -150,4 +161,18 @@ __all__ = [
     "PutCallParityInput",
     "OptionContractData",
     "OptionsChainOutput",
+    # Hedging models
+    "HedgePosition",
+    "RollSuggestion",
+    "HedgeSizeRequest",
+    # Total return models
+    "TotalReturnInput",
+    "DividendRecord",
+    "TickerReturn",
+    # Hedge comparison models
+    "ScenarioInput",
+    "SQQQResult",
+    "PutResult",
+    "ComparisonRow",
+    "ComparisonOutput",
 ]

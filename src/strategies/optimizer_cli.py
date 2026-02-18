@@ -91,11 +91,7 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioDataInput:
 
     # Download all tickers at once for alignment
     data = yf.download(
-        tickers,
-        start=start_date,
-        end=end_date,
-        progress=False,
-        group_by='ticker'
+        tickers, start=start_date, end=end_date, progress=False, group_by="ticker"
     )
 
     if data.empty:
@@ -107,17 +103,17 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioDataInput:
     if len(tickers) == 1:
         # Single ticker - yfinance returns different structure
         ticker = tickers[0]
-        if 'Close' not in data.columns:
+        if "Close" not in data.columns:
             raise ValueError(f"No close price data for {ticker}")
-        prices_dict[ticker] = data['Close'].dropna().tolist()
-        dates = data['Close'].dropna().index.tolist()
+        prices_dict[ticker] = data["Close"].dropna().tolist()
+        dates = data["Close"].dropna().index.tolist()
     else:
         # Multiple tickers
         for ticker in tickers:
             if ticker not in data:
                 raise ValueError(f"No data found for {ticker}")
 
-            closes = data[ticker]['Close'].dropna()
+            closes = data[ticker]["Close"].dropna()
             min_required = min(days, 30)  # At least 30 days, or requested days if less
             if len(closes) < min_required:
                 raise ValueError(
@@ -127,9 +123,9 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioDataInput:
             prices_dict[ticker] = closes.tolist()
 
         # Get common dates (intersection across all tickers)
-        common_index = data[tickers[0]]['Close'].dropna().index
+        common_index = data[tickers[0]]["Close"].dropna().index
         for ticker in tickers[1:]:
-            ticker_index = data[ticker]['Close'].dropna().index
+            ticker_index = data[ticker]["Close"].dropna().index
             common_index = common_index.intersection(ticker_index)
 
         min_required = min(days, 30)
@@ -141,7 +137,7 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioDataInput:
         # Truncate to common dates
         dates = common_index[-days:].tolist()
         for ticker in tickers:
-            prices_dict[ticker] = data[ticker]['Close'].loc[dates].tolist()
+            prices_dict[ticker] = data[ticker]["Close"].loc[dates].tolist()
 
     # Take only requested number of days
     if len(tickers) == 1:
@@ -155,7 +151,7 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioDataInput:
 
     print(
         f"Data fetched: {len(tickers)} assets, {len(dates)} days ({dates[0]} to {dates[-1]})",
-        file=sys.stderr
+        file=sys.stderr,
     )
 
     return PortfolioDataInput(
@@ -184,12 +180,12 @@ def format_human_output(result, capital: float = 500000.0) -> str:
         Formatted string output
     """
     lines = []
-    lines.append(f"\n{'='*70}")
+    lines.append(f"\n{'=' * 70}")
     lines.append("PORTFOLIO OPTIMIZATION RESULTS")
     lines.append(f"Method: {result.method.upper().replace('_', ' ')}")
     lines.append(f"Assets: {', '.join(result.tickers)}")
     lines.append(f"Capital: ${capital:,.0f}")
-    lines.append(f"{'='*70}\n")
+    lines.append(f"{'=' * 70}\n")
 
     # Portfolio metrics
     lines.append("PORTFOLIO METRICS")
@@ -234,19 +230,17 @@ def format_human_output(result, capital: float = 500000.0) -> str:
 
     # Sort by weight (largest first)
     sorted_assets = sorted(
-        result.optimal_weights.items(),
-        key=lambda x: x[1],
-        reverse=True
+        result.optimal_weights.items(), key=lambda x: x[1], reverse=True
     )
 
     for ticker, weight in sorted_assets:
         dollar_amount = capital * weight
-        lines.append(
-            f"{ticker:<10} {weight:>9.2%} ${dollar_amount:>17,.0f}"
-        )
+        lines.append(f"{ticker:<10} {weight:>9.2%} ${dollar_amount:>17,.0f}")
 
     lines.append("-" * 70)
-    lines.append(f"{'TOTAL':<10} {sum(result.optimal_weights.values()):>9.2%} ${capital:>17,.0f}")
+    lines.append(
+        f"{'TOTAL':<10} {sum(result.optimal_weights.values()):>9.2%} ${capital:>17,.0f}"
+    )
     lines.append("")
 
     # Action plan
@@ -279,7 +273,9 @@ def format_human_output(result, capital: float = 500000.0) -> str:
         lines.append("  - Aggressive growth orientation")
         lines.append("  - May be concentrated (fewer holdings)")
         lines.append("  - Sensitive to return estimates")
-        lines.append("Best for: Growth-oriented investors comfortable with concentration")
+        lines.append(
+            "Best for: Growth-oriented investors comfortable with concentration"
+        )
 
     elif result.method == "risk_parity":
         lines.append("Risk Parity equalizes risk contribution across assets.")
@@ -314,7 +310,7 @@ def format_human_output(result, capital: float = 500000.0) -> str:
         lines.append("Best for: Investors with strong conviction on certain assets")
 
     lines.append("")
-    lines.append(f"{'='*70}\n")
+    lines.append(f"{'=' * 70}\n")
 
     return "\n".join(lines)
 
@@ -369,88 +365,102 @@ Agent Use Cases:
 
     # Required arguments
     parser.add_argument(
-        'tickers',
+        "tickers",
         type=str,
-        nargs='+',
-        help='Stock ticker symbols (minimum 2 required, e.g., TSLA PLTR NVDA SPY)'
+        nargs="+",
+        help="Stock ticker symbols (minimum 2 required, e.g., TSLA PLTR NVDA SPY)",
     )
 
     parser.add_argument(
-        '--days',
+        "--days",
         type=int,
         default=252,
-        help='Number of days of historical data (default: 252 = 1 year, minimum: 252)'
+        help="Number of days of historical data (default: 252 = 1 year, minimum: 252)",
     )
 
     # Optimization configuration
     parser.add_argument(
-        '--method',
-        choices=['mean_variance', 'risk_parity', 'min_variance', 'max_sharpe', 'black_litterman'],
-        default='max_sharpe',
-        help='Optimization method (default: max_sharpe)'
+        "--method",
+        choices=[
+            "mean_variance",
+            "risk_parity",
+            "min_variance",
+            "max_sharpe",
+            "black_litterman",
+        ],
+        default="max_sharpe",
+        help="Optimization method (default: max_sharpe)",
     )
 
     parser.add_argument(
-        '--risk-free-rate',
+        "--risk-free-rate",
         type=float,
         default=0.045,
-        help='Annual risk-free rate for Sharpe calculation (default: 0.045 = 4.5%%)'
+        help="Annual risk-free rate for Sharpe calculation (default: 0.045 = 4.5%%)",
     )
 
     parser.add_argument(
-        '--target-return',
+        "--target-return",
         type=float,
         default=None,
-        help='Target annual return for mean-variance (e.g., 0.12 = 12%%)'
+        help="Target annual return for mean-variance (e.g., 0.12 = 12%%)",
     )
 
     parser.add_argument(
-        '--max-position',
+        "--max-position",
         type=float,
         default=1.0,
-        help='Maximum position size per asset (default: 1.0 = 100%%, e.g., 0.30 = 30%% max)'
+        help="Maximum position size per asset (default: 1.0 = 100%%, e.g., 0.30 = 30%% max)",
     )
 
     parser.add_argument(
-        '--view',
+        "--view",
         type=str,
-        action='append',
-        help='Black-Litterman view in format TICKER:RETURN (e.g., TSLA:0.15 for 15%% expected)'
+        action="append",
+        help="Black-Litterman view in format TICKER:RETURN (e.g., TSLA:0.15 for 15%% expected)",
     )
 
     parser.add_argument(
-        '--capital',
+        "--capital",
         type=float,
         default=500000.0,
-        help='Portfolio capital for dollar allocation (default: 500000 = $500k)'
+        help="Portfolio capital for dollar allocation (default: 500000 = $500k)",
     )
 
     # Output format
     parser.add_argument(
-        '--output',
-        choices=['human', 'json'],
-        default='human',
-        help='Output format (default: human)'
+        "--output",
+        choices=["human", "json"],
+        default="human",
+        help="Output format (default: human)",
     )
 
     args = parser.parse_args()
 
     # Validate minimum tickers
     if len(args.tickers) < 2:
-        print("Error: At least 2 tickers required for portfolio optimization", file=sys.stderr)
+        print(
+            "Error: At least 2 tickers required for portfolio optimization",
+            file=sys.stderr,
+        )
         return 1
 
     # Validate days
     if args.days < 252:
         print(
             f"Warning: {args.days} days is less than recommended minimum (252 days = 1 year)",
-            file=sys.stderr
+            file=sys.stderr,
         )
-        print("Optimization quality may be poor with insufficient data.", file=sys.stderr)
+        print(
+            "Optimization quality may be poor with insufficient data.", file=sys.stderr
+        )
 
     try:
         # Fetch portfolio data
-        print(f"Starting optimization: method={args.method}, assets={len(args.tickers)}", file=sys.stderr)
+        print(
+            f"Starting optimization: method={args.method}, assets={len(args.tickers)}",
+            file=sys.stderr,
+        )
         data = fetch_portfolio_data(args.tickers, args.days)
 
         # Parse views for Black-Litterman
@@ -459,12 +469,12 @@ Agent Use Cases:
             views = {}
             for view_str in args.view:
                 try:
-                    ticker, return_str = view_str.split(':')
+                    ticker, return_str = view_str.split(":")
                     views[ticker.upper()] = float(return_str)
                 except ValueError:
                     print(
                         f"Error: Invalid view format '{view_str}'. Use TICKER:RETURN (e.g., TSLA:0.15)",
-                        file=sys.stderr
+                        file=sys.stderr,
                     )
                     return 1
 
@@ -481,10 +491,12 @@ Agent Use Cases:
         # Optimize portfolio
         print("Running optimization...", file=sys.stderr)
         result = optimize_portfolio(data, config)
-        print(f"Optimization complete: Sharpe={result.sharpe_ratio:.2f}", file=sys.stderr)
+        print(
+            f"Optimization complete: Sharpe={result.sharpe_ratio:.2f}", file=sys.stderr
+        )
 
         # Output results
-        if args.output == 'json':
+        if args.output == "json":
             print(format_json_output(result))
         else:
             print(format_human_output(result, capital=args.capital))
@@ -497,9 +509,10 @@ Agent Use Cases:
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

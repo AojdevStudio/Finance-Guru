@@ -1,6 +1,5 @@
-"""
-Progress Save/Resume System
-Manages onboarding state persistence
+"""Progress Save/Resume System
+Manages onboarding state persistence.
 
 This module provides functionality to save and resume onboarding progress,
 allowing users to complete the Finance Guru setup in multiple sessions.
@@ -9,10 +8,9 @@ allowing users to complete the Finance Guru setup in multiple sessions.
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
-
 
 SectionName = Literal[
     "liquid_assets",
@@ -21,7 +19,7 @@ SectionName = Literal[
     "debt",
     "preferences",
     "mcp_config",
-    "env_setup"
+    "env_setup",
 ]
 
 ALL_SECTIONS: list[SectionName] = [
@@ -31,7 +29,7 @@ ALL_SECTIONS: list[SectionName] = [
     "debt",
     "preferences",
     "mcp_config",
-    "env_setup"
+    "env_setup",
 ]
 
 
@@ -42,7 +40,7 @@ class OnboardingState(BaseModel):
     started_at: str
     last_updated: str
     completed_sections: list[SectionName] = Field(default_factory=list)
-    current_section: Optional[SectionName] = None
+    current_section: SectionName | None = None
     data: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -50,8 +48,7 @@ STATE_FILE = ".onboarding-state.json"
 
 
 def get_state_path() -> Path:
-    """
-    Gets the path to the state file.
+    """Gets the path to the state file.
 
     Returns:
         Path: Absolute path to state file
@@ -60,8 +57,7 @@ def get_state_path() -> Path:
 
 
 def has_existing_state() -> bool:
-    """
-    Checks if a saved state exists.
+    """Checks if a saved state exists.
 
     Returns:
         bool: True if state file exists
@@ -69,9 +65,8 @@ def has_existing_state() -> bool:
     return get_state_path().exists()
 
 
-def load_state() -> Optional[OnboardingState]:
-    """
-    Loads the onboarding state from disk.
+def load_state() -> OnboardingState | None:
+    """Loads the onboarding state from disk.
 
     Returns:
         OnboardingState or None: Loaded state or None if doesn't exist
@@ -82,7 +77,7 @@ def load_state() -> Optional[OnboardingState]:
         return None
 
     try:
-        content = state_path.read_text(encoding='utf-8')
+        content = state_path.read_text(encoding="utf-8")
         data = json.loads(content)
         return OnboardingState(**data)
     except Exception as error:
@@ -91,8 +86,7 @@ def load_state() -> Optional[OnboardingState]:
 
 
 def save_state(state: OnboardingState) -> None:
-    """
-    Saves the onboarding state to disk.
+    """Saves the onboarding state to disk.
 
     Args:
         state: OnboardingState to save
@@ -105,15 +99,14 @@ def save_state(state: OnboardingState) -> None:
     try:
         state.last_updated = datetime.now().isoformat()
         content = state.model_dump_json(indent=2)
-        state_path.write_text(content, encoding='utf-8')
+        state_path.write_text(content, encoding="utf-8")
     except Exception as error:
         print(f"Failed to save onboarding state: {error}")
         raise
 
 
 def create_new_state() -> OnboardingState:
-    """
-    Creates a new onboarding state.
+    """Creates a new onboarding state.
 
     Returns:
         OnboardingState: New state initialized with current timestamp
@@ -126,17 +119,16 @@ def create_new_state() -> OnboardingState:
         last_updated=now,
         completed_sections=[],
         current_section=None,
-        data={}
+        data={},
     )
 
 
 def mark_section_complete(
     state: OnboardingState,
     completed_section: SectionName,
-    next_section: Optional[SectionName]
+    next_section: SectionName | None,
 ) -> OnboardingState:
-    """
-    Marks a section as completed and updates the current section.
+    """Marks a section as completed and updates the current section.
 
     Args:
         state: Current state
@@ -157,12 +149,9 @@ def mark_section_complete(
 
 
 def save_section_data(
-    state: OnboardingState,
-    section: SectionName,
-    data: dict[str, Any]
+    state: OnboardingState, section: SectionName, data: dict[str, Any]
 ) -> OnboardingState:
-    """
-    Saves section data to state.
+    """Saves section data to state.
 
     Args:
         state: Current state
@@ -177,11 +166,9 @@ def save_section_data(
 
 
 def get_section_data(
-    state: OnboardingState,
-    section: SectionName
-) -> Optional[dict[str, Any]]:
-    """
-    Gets data for a specific section.
+    state: OnboardingState, section: SectionName
+) -> dict[str, Any] | None:
+    """Gets data for a specific section.
 
     Args:
         state: Current state
@@ -194,8 +181,7 @@ def get_section_data(
 
 
 def clear_state() -> None:
-    """
-    Deletes the onboarding state file.
+    """Deletes the onboarding state file.
 
     Raises:
         Exception: If delete operation fails
@@ -210,9 +196,8 @@ def clear_state() -> None:
             raise
 
 
-def get_next_section(state: OnboardingState) -> Optional[SectionName]:
-    """
-    Gets the next section to work on based on current progress.
+def get_next_section(state: OnboardingState) -> SectionName | None:
+    """Gets the next section to work on based on current progress.
 
     Args:
         state: Current state
@@ -229,8 +214,7 @@ def get_next_section(state: OnboardingState) -> Optional[SectionName]:
 
 
 def is_complete(state: OnboardingState) -> bool:
-    """
-    Checks if onboarding is complete.
+    """Checks if onboarding is complete.
 
     Args:
         state: Current state
@@ -242,8 +226,7 @@ def is_complete(state: OnboardingState) -> bool:
 
 
 def get_time_since_last_update(state: OnboardingState) -> str:
-    """
-    Formats time since state was last updated.
+    """Formats time since state was last updated.
 
     Args:
         state: Current state

@@ -1,1 +1,1 @@
-"""Report generation and visualization"""
+"""Report generation and visualization."""

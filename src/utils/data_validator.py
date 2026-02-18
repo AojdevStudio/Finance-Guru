@@ -1,5 +1,4 @@
-"""
-Data Quality Validator for Finance Guru™
+"""Data Quality Validator for Finance Guru™.
 
 This module implements comprehensive data validation using statistical methods.
 All calculations follow industry-standard data quality practices.
@@ -45,8 +44,7 @@ from src.models.validation_inputs import (
 
 
 class DataValidator:
-    """
-    Comprehensive data quality validator.
+    """Comprehensive data quality validator.
 
     WHAT: Validates financial data quality using statistical methods
     WHY: Ensures data is reliable before analysis
@@ -74,8 +72,7 @@ class DataValidator:
     """
 
     def __init__(self, config: ValidationConfig):
-        """
-        Initialize validator with configuration.
+        """Initialize validator with configuration.
 
         Args:
             config: Validated configuration (Pydantic model ensures correctness)
@@ -87,8 +84,7 @@ class DataValidator:
         self.config = config
 
     def validate(self, price_series: PriceSeriesInput) -> ValidationOutput:
-        """
-        Perform comprehensive data validation.
+        """Perform comprehensive data validation.
 
         Args:
             price_series: Historical price data (validated by Pydantic)
@@ -106,12 +102,14 @@ class DataValidator:
         6. Generate recommendations
         """
         # Convert to pandas for easier analysis
-        df = pd.DataFrame({
-            'date': price_series.dates,
-            'price': price_series.prices,
-        })
+        df = pd.DataFrame(
+            {
+                "date": price_series.dates,
+                "price": price_series.prices,
+            }
+        )
         if price_series.volumes:
-            df['volume'] = price_series.volumes
+            df["volume"] = price_series.volumes
 
         # Initialize results tracking
         anomalies: list[DataAnomaly] = []
@@ -155,13 +153,9 @@ class DataValidator:
         )
 
     def _check_missing_data(
-        self,
-        df: pd.DataFrame,
-        anomalies: list[DataAnomaly],
-        warnings_list: list[str]
+        self, df: pd.DataFrame, anomalies: list[DataAnomaly], warnings_list: list[str]
     ) -> int:
-        """
-        Check for missing data points.
+        """Check for missing data points.
 
         WHAT: Identifies gaps in price data
         WHY: Missing data can bias analysis results
@@ -175,8 +169,8 @@ class DataValidator:
         - Network errors during data fetch
         - Corporate actions (trading halts)
         """
-        missing_prices = df['price'].isna().sum()
-        missing_dates = df['date'].isna().sum()
+        missing_prices = df["price"].isna().sum()
+        missing_dates = df["date"].isna().sum()
         total_missing = int(missing_prices + missing_dates)
 
         if total_missing > 0:
@@ -188,30 +182,30 @@ class DataValidator:
             elif missing_ratio > self.config.missing_data_threshold / 2:
                 severity = "high"
 
-            anomalies.append(DataAnomaly(
-                anomaly_type="missing",
-                severity=severity,  # type: ignore
-                description=f"Found {total_missing} missing data points ({missing_ratio:.1%})",
-                value=total_missing,
-                recommendation=(
-                    "Fill gaps using forward-fill or interpolation"
-                    if severity in ["low", "medium"]
-                    else "Data has too many gaps - consider using alternative source"
+            anomalies.append(
+                DataAnomaly(
+                    anomaly_type="missing",
+                    severity=severity,  # type: ignore
+                    description=f"Found {total_missing} missing data points ({missing_ratio:.1%})",
+                    value=total_missing,
+                    recommendation=(
+                        "Fill gaps using forward-fill or interpolation"
+                        if severity in ["low", "medium"]
+                        else "Data has too many gaps - consider using alternative source"
+                    ),
                 )
-            ))
+            )
 
-            warnings_list.append(f"Missing data: {total_missing} points ({missing_ratio:.1%})")
+            warnings_list.append(
+                f"Missing data: {total_missing} points ({missing_ratio:.1%})"
+            )
 
         return total_missing
 
     def _check_outliers(
-        self,
-        df: pd.DataFrame,
-        anomalies: list[DataAnomaly],
-        warnings_list: list[str]
+        self, df: pd.DataFrame, anomalies: list[DataAnomaly], warnings_list: list[str]
     ) -> int:
-        """
-        Detect outliers in price data.
+        """Detect outliers in price data.
 
         WHAT: Identifies unusually large price movements
         WHY: Outliers might be errors or real volatility events
@@ -240,7 +234,7 @@ class DataValidator:
            - Good when data has many anomalies
         """
         # Calculate daily returns for outlier detection
-        returns = df['price'].pct_change().dropna()
+        returns = df["price"].pct_change().dropna()
 
         outliers = []
         outlier_indices = []
@@ -290,18 +284,20 @@ class DataValidator:
                 severity = "medium"
 
             # Add anomalies for each outlier
-            for idx, return_val in zip(outlier_indices, outliers):
-                date_str = str(df.loc[idx, 'date']) if idx < len(df) else "unknown"
-                anomalies.append(DataAnomaly(
-                    anomaly_type="outlier",
-                    severity=severity,  # type: ignore
-                    description=f"Price return of {return_val:.2%} exceeds threshold",
-                    location=date_str,
-                    value=float(return_val),
-                    recommendation=(
-                        "Verify this is a real market movement, not a data error"
+            for idx, return_val in zip(outlier_indices, outliers, strict=True):
+                date_str = str(df.loc[idx, "date"]) if idx < len(df) else "unknown"
+                anomalies.append(
+                    DataAnomaly(
+                        anomaly_type="outlier",
+                        severity=severity,  # type: ignore
+                        description=f"Price return of {return_val:.2%} exceeds threshold",
+                        location=date_str,
+                        value=float(return_val),
+                        recommendation=(
+                            "Verify this is a real market movement, not a data error"
+                        ),
                     )
-                ))
+                )
 
             warnings_list.append(
                 f"Found {outlier_count} outliers ({outlier_ratio:.1%} of data) "
@@ -311,13 +307,9 @@ class DataValidator:
         return outlier_count
 
     def _check_date_gaps(
-        self,
-        df: pd.DataFrame,
-        anomalies: list[DataAnomaly],
-        warnings_list: list[str]
+        self, df: pd.DataFrame, anomalies: list[DataAnomaly], warnings_list: list[str]
     ) -> int:
-        """
-        Check for suspicious gaps in dates.
+        """Check for suspicious gaps in dates.
 
         WHAT: Identifies unusually large gaps between consecutive dates
         WHY: Large gaps might indicate missing data or trading halts
@@ -340,7 +332,7 @@ class DataValidator:
         - Risk metrics underestimate true volatility
         """
         # Calculate gaps between consecutive dates
-        date_series = pd.Series(df['date'])
+        date_series = pd.Series(df["date"])
         date_diffs = date_series.diff().dt.days.dropna()
 
         # Find gaps exceeding threshold
@@ -350,8 +342,8 @@ class DataValidator:
         if gap_count > 0:
             for idx, gap_days in suspicious_gaps.items():
                 if idx > 0 and idx < len(df):
-                    start_date = df.loc[idx - 1, 'date']
-                    end_date = df.loc[idx, 'date']
+                    start_date = df.loc[idx - 1, "date"]
+                    end_date = df.loc[idx, "date"]
 
                     severity = "low"
                     if gap_days > 30:
@@ -361,30 +353,28 @@ class DataValidator:
                     elif gap_days > self.config.max_gap_days:
                         severity = "medium"
 
-                    anomalies.append(DataAnomaly(
-                        anomaly_type="gap",
-                        severity=severity,  # type: ignore
-                        description=f"Gap of {gap_days} days in data",
-                        location=f"{start_date} to {end_date}",
-                        value=float(gap_days),
-                        recommendation=(
-                            f"Investigate {gap_days}-day gap. "
-                            "Check for trading halts, data provider issues, or market closures."
+                    anomalies.append(
+                        DataAnomaly(
+                            anomaly_type="gap",
+                            severity=severity,  # type: ignore
+                            description=f"Gap of {gap_days} days in data",
+                            location=f"{start_date} to {end_date}",
+                            value=float(gap_days),
+                            recommendation=(
+                                f"Investigate {gap_days}-day gap. "
+                                "Check for trading halts, data provider issues, or market closures."
+                            ),
                         )
-                    ))
+                    )
 
             warnings_list.append(f"Found {gap_count} suspicious date gaps")
 
         return gap_count
 
     def _check_splits(
-        self,
-        df: pd.DataFrame,
-        anomalies: list[DataAnomaly],
-        warnings_list: list[str]
+        self, df: pd.DataFrame, anomalies: list[DataAnomaly], warnings_list: list[str]
     ) -> int:
-        """
-        Check for potential stock splits or data errors.
+        """Check for potential stock splits or data errors.
 
         WHAT: Identifies sudden large price changes
         WHY: Stock splits require price adjustment for accurate analysis
@@ -412,7 +402,7 @@ class DataValidator:
             return 0
 
         # Calculate daily returns
-        returns = df['price'].pct_change().dropna()
+        returns = df["price"].pct_change().dropna()
 
         # Look for returns exceeding split threshold (e.g., 25% = 0.25)
         potential_splits = returns[np.abs(returns) > self.config.split_threshold]
@@ -421,9 +411,9 @@ class DataValidator:
         if split_count > 0:
             for idx, return_val in potential_splits.items():
                 if idx < len(df):
-                    split_date = df.loc[idx, 'date']
-                    price_before = df.loc[idx - 1, 'price'] if idx > 0 else None
-                    price_after = df.loc[idx, 'price']
+                    split_date = df.loc[idx, "date"]
+                    df.loc[idx - 1, "price"] if idx > 0 else None
+                    df.loc[idx, "price"]
 
                     # Estimate split ratio
                     split_ratio = "unknown"
@@ -434,19 +424,21 @@ class DataValidator:
                     elif return_val > 1.0:
                         split_ratio = "1:2 (reverse)"
 
-                    anomalies.append(DataAnomaly(
-                        anomaly_type="split",
-                        severity="high",
-                        description=(
-                            f"Potential stock split detected: {return_val:.1%} price change"
-                        ),
-                        location=str(split_date),
-                        value=float(return_val),
-                        recommendation=(
-                            f"Verify stock split (estimated {split_ratio} ratio) and ensure "
-                            "historical prices are split-adjusted. Check company announcements."
+                    anomalies.append(
+                        DataAnomaly(
+                            anomaly_type="split",
+                            severity="high",
+                            description=(
+                                f"Potential stock split detected: {return_val:.1%} price change"
+                            ),
+                            location=str(split_date),
+                            value=float(return_val),
+                            recommendation=(
+                                f"Verify stock split (estimated {split_ratio} ratio) and ensure "
+                                "historical prices are split-adjusted. Check company announcements."
+                            ),
                         )
-                    ))
+                    )
 
             warnings_list.append(
                 f"Found {split_count} potential stock splits or large price gaps"
@@ -454,9 +446,10 @@ class DataValidator:
 
         return split_count
 
-    def _calculate_completeness_score(self, df: pd.DataFrame, missing_count: int) -> float:
-        """
-        Calculate data completeness score.
+    def _calculate_completeness_score(
+        self, df: pd.DataFrame, missing_count: int
+    ) -> float:
+        """Calculate data completeness score.
 
         FORMULA: completeness = (total_points - missing_points) / total_points
 
@@ -472,9 +465,10 @@ class DataValidator:
         completeness = (len(df) - missing_count) / len(df)
         return float(max(0.0, min(1.0, completeness)))
 
-    def _calculate_consistency_score(self, df: pd.DataFrame, outlier_count: int) -> float:
-        """
-        Calculate data consistency score.
+    def _calculate_consistency_score(
+        self, df: pd.DataFrame, outlier_count: int
+    ) -> float:
+        """Calculate data consistency score.
 
         FORMULA: consistency = (total_points - outlier_points) / total_points
 
@@ -495,13 +489,9 @@ class DataValidator:
         return float(max(0.0, min(1.0, consistency)))
 
     def _determine_validity(
-        self,
-        completeness: float,
-        consistency: float,
-        anomalies: list[DataAnomaly]
+        self, completeness: float, consistency: float, anomalies: list[DataAnomaly]
     ) -> bool:
-        """
-        Determine if data is valid for analysis.
+        """Determine if data is valid for analysis.
 
         CRITERIA:
         1. Completeness >= 95% (at most 5% missing)
@@ -518,11 +508,7 @@ class DataValidator:
         has_critical = any(a.severity == "critical" for a in anomalies)
 
         # Data is valid if it passes all checks
-        is_valid = (
-            completeness >= 0.95 and
-            consistency >= 0.90 and
-            not has_critical
-        )
+        is_valid = completeness >= 0.95 and consistency >= 0.90 and not has_critical
 
         return is_valid
 
@@ -532,10 +518,9 @@ class DataValidator:
         completeness: float,
         consistency: float,
         anomalies: list[DataAnomaly],
-        recommendations: list[str]
+        recommendations: list[str],
     ) -> None:
-        """
-        Generate actionable recommendations based on validation results.
+        """Generate actionable recommendations based on validation results.
 
         EDUCATIONAL NOTE:
         Recommendations follow this priority:
@@ -584,10 +569,9 @@ def validate_price_data(
     prices: list[float],
     dates: list[str],
     volumes: list[float] | None = None,
-    **config_kwargs
+    **config_kwargs,
 ) -> ValidationOutput:
-    """
-    Convenience function for validating price data.
+    """Convenience function for validating price data.
 
     Args:
         ticker: Stock ticker symbol

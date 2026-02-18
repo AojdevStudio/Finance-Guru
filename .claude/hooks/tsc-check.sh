@@ -19,7 +19,7 @@ TOOL_INPUT=$(echo "$HOOK_INPUT" | jq -r '.tool_input // {}')
 get_repo_for_file() {
     local file_path="$1"
     local relative_path="${file_path#$CLAUDE_PROJECT_DIR/}"
-    
+
     if [[ "$relative_path" =~ ^([^/]+)/ ]]; then
         local repo="${BASH_REMATCH[1]}"
         case "$repo" in
@@ -37,7 +37,7 @@ get_repo_for_file() {
 get_tsc_command() {
     local repo_path="$1"
     cd "$repo_path" 2>/dev/null || return 1
-    
+
     if [ -f "tsconfig.app.json" ]; then
         echo "npx tsc --project tsconfig.app.json --noEmit"
     elif [ -f "tsconfig.build.json" ]; then
@@ -64,9 +64,9 @@ run_tsc_check() {
     local repo="$1"
     local repo_path="$CLAUDE_PROJECT_DIR/$repo"
     local cache_file="$CACHE_DIR/$repo-tsc-cmd.cache"
-    
+
     cd "$repo_path" 2>/dev/null || return 1
-    
+
     # Get or cache the TSC command for this repo
     local tsc_cmd
     if [ -f "$cache_file" ] && [ -z "$FORCE_DETECT" ]; then
@@ -75,7 +75,7 @@ run_tsc_check() {
         tsc_cmd=$(get_tsc_command "$repo_path")
         echo "$tsc_cmd" > "$cache_file"
     fi
-    
+
     eval "$tsc_cmd" 2>&1
 }
 
@@ -88,7 +88,7 @@ case "$TOOL_NAME" in
         else
             FILE_PATHS=$(echo "$TOOL_INPUT" | jq -r '.file_path // empty')
         fi
-        
+
         # Collect repos that need checking (only for TS/JS files)
         REPOS_TO_CHECK=$(echo "$FILE_PATHS" | grep -E '\.(ts|tsx|js|jsx)$' | while read -r file_path; do
             if [ -n "$file_path" ]; then
@@ -96,25 +96,25 @@ case "$TOOL_NAME" in
                 [ -n "$repo" ] && echo "$repo"
             fi
         done | sort -u | tr '\n' ' ')
-        
+
         # Trim whitespace
         REPOS_TO_CHECK=$(echo "$REPOS_TO_CHECK" | xargs)
-        
+
         if [ -n "$REPOS_TO_CHECK" ]; then
             ERROR_COUNT=0
             ERROR_OUTPUT=""
             FAILED_REPOS=""
-            
+
             # Output to stderr for visibility
             echo "⚡ TypeScript check on: $REPOS_TO_CHECK" >&2
-            
+
             for repo in $REPOS_TO_CHECK; do
                 echo -n "  Checking $repo... " >&2
-                
+
                 # Run the check and capture output
                 CHECK_OUTPUT=$(run_tsc_check "$repo" 2>&1)
                 CHECK_EXIT_CODE=$?
-                
+
                 # Check for TypeScript errors in output
                 if [ $CHECK_EXIT_CODE -ne 0 ] || echo "$CHECK_OUTPUT" | grep -q "error TS"; then
                     echo "❌ Errors found" >&2
@@ -128,20 +128,20 @@ $CHECK_OUTPUT"
                     echo "✅ OK" >&2
                 fi
             done
-            
+
             # If errors were found, show them and save for agent
             if [ $ERROR_COUNT -gt 0 ]; then
                 # Save error information for the agent
                 echo "$ERROR_OUTPUT" > "$CACHE_DIR/last-errors.txt"
                 echo "$FAILED_REPOS" > "$CACHE_DIR/affected-repos.txt"
-                
+
                 # Save the TSC commands used for each repo
                 echo "# TSC Commands by Repo" > "$CACHE_DIR/tsc-commands.txt"
                 for repo in $FAILED_REPOS; do
                     cmd=$(cat "$CACHE_DIR/$repo-tsc-cmd.cache" 2>/dev/null || echo "npx tsc --noEmit")
                     echo "$repo: $cmd" >> "$CACHE_DIR/tsc-commands.txt"
                 done
-                
+
                 # Output to stderr for visibility
                 {
                     echo ""
@@ -159,7 +159,7 @@ $CHECK_OUTPUT"
                         echo "... and $(($(echo "$ERROR_OUTPUT" | grep -c "error TS") - 10)) more errors"
                     fi
                 } >&2
-                
+
                 # Exit with code 1 to make stderr visible
                 exit 1
             fi

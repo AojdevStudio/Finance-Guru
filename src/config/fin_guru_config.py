@@ -1,5 +1,4 @@
-"""
-Finance Guru™ Configuration Module
+"""Finance Guru™ Configuration Module.
 
 WHAT: Central configuration management for Finance Guru TUI
 WHY: Abstraction layer for paths and settings, no hard-coded values
@@ -9,39 +8,35 @@ Author: Finance Guru™ Development Team
 Created: 2025-11-17
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
+
 import yaml
 
 
 class FinGuruConfig:
-    """
-    Central configuration for Finance Guru TUI Dashboard.
-    
+    """Central configuration for Finance Guru TUI Dashboard.
+
     Provides paths, settings, and layer mappings with safe fallbacks.
     """
-    
-    PROJECT_ROOT = Path(__file__).parent.parent
+
+    PROJECT_ROOT = Path(__file__).parent.parent.parent
     PORTFOLIO_DIR = Path(
-        os.getenv(
-            "FIN_GURU_PORTFOLIO_DIR",
-            PROJECT_ROOT / "notebooks" / "updates"
-        )
+        os.getenv("FIN_GURU_PORTFOLIO_DIR", PROJECT_ROOT / "notebooks" / "updates")
     )
     CONFIG_DIR = Path.home() / ".config" / "finance-guru"
     LAYERS_FILE = CONFIG_DIR / "layers.yaml"
 
     @classmethod
     def load_layers(cls) -> dict[str, list[str]]:
-        """
-        Load layer configuration with safe fallback to defaults.
-        
+        """Load layer configuration with safe fallback to defaults.
+
         Reads from ~/.config/finance-guru/layers.yaml if it exists,
         otherwise uses hard-coded defaults from user profile.
-        
+
         Returns:
             Dictionary mapping layer names to lists of ticker symbols
-            
+
         EDUCATIONAL NOTE:
         Layer classification determines portfolio strategy:
         - Layer 1: Growth stocks (PLTR, TSLA, NVDA) - HOLD 100%, never touch
@@ -51,8 +46,22 @@ class FinGuruConfig:
         default_layers = {
             "layer1": ["PLTR", "TSLA", "NVDA", "AAPL", "GOOGL", "COIN", "MSTR", "SOFI"],
             "layer2": [
-                "JEPI", "JEPQ", "QQQI", "SPYI", "QQQY", "YMAX", "MSTY", "AMZY",
-                "CLM", "CRF", "BDJ", "ETY", "ETV", "ECAT", "UTG", "BST"
+                "JEPI",
+                "JEPQ",
+                "QQQI",
+                "SPYI",
+                "QQQY",
+                "YMAX",
+                "MSTY",
+                "AMZY",
+                "CLM",
+                "CRF",
+                "BDJ",
+                "ETY",
+                "ETV",
+                "ECAT",
+                "UTG",
+                "BST",
             ],
             "layer3": ["SQQQ"],
         }
@@ -78,5 +87,3 @@ class FinGuruConfig:
             normalized[layer] = [str(sym).upper() for sym in symbols]
 
         return normalized or default_layers
-
-

@@ -58,20 +58,22 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.models.momentum_inputs import (
-    MomentumDataInput,
-    MomentumConfig,
     AllMomentumOutput,
-    RSIOutput,
     MACDOutput,
+    MomentumConfig,
+    MomentumDataInput,
+    ROCOutput,
+    RSIOutput,
     StochasticOutput,
     WilliamsROutput,
-    ROCOutput,
 )
-from src.utils.momentum import MomentumIndicators
 from src.utils.market_data import get_prices  # Finnhub integration
+from src.utils.momentum import MomentumIndicators
 
 
-def fetch_momentum_data(ticker: str, days: int, realtime: bool = False) -> MomentumDataInput:
+def fetch_momentum_data(
+    ticker: str, days: int, realtime: bool = False
+) -> MomentumDataInput:
     """
     Fetch historical OHLC data for momentum calculations.
 
@@ -103,9 +105,9 @@ def fetch_momentum_data(ticker: str, days: int, realtime: bool = False) -> Momen
 
         # Extract OHLC data
         dates_list = [d.date() for d in hist.index]
-        close_list = hist['Close'].tolist()
-        high_list = hist['High'].tolist()
-        low_list = hist['Low'].tolist()
+        close_list = hist["Close"].tolist()
+        high_list = hist["High"].tolist()
+        low_list = hist["Low"].tolist()
 
         # FINNHUB INTEGRATION: Append real-time intraday price if requested
         if realtime:
@@ -120,10 +122,16 @@ def fetch_momentum_data(ticker: str, days: int, realtime: bool = False) -> Momen
                     dates_list.append(date.today())
                     close_list.append(current_price)
                     high_list.append(current_price)  # Conservative: use current as high
-                    low_list.append(current_price)   # Conservative: use current as low
-                    print(f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)", file=sys.stderr)
+                    low_list.append(current_price)  # Conservative: use current as low
+                    print(
+                        f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)",
+                        file=sys.stderr,
+                    )
             except Exception as e:
-                print(f"⚠️  Real-time price unavailable, using EOD data only: {e}", file=sys.stderr)
+                print(
+                    f"⚠️  Real-time price unavailable, using EOD data only: {e}",
+                    file=sys.stderr,
+                )
 
         # Ensure minimum data points
         if len(dates_list) < 14:
@@ -167,25 +175,33 @@ def format_rsi_output(rsi: RSIOutput) -> str:
 
     # Interpretation
     if rsi.rsi_signal == "overbought":
-        output.append("  🔴 OVERBOUGHT: RSI above 70 suggests potential selling pressure")
+        output.append(
+            "  🔴 OVERBOUGHT: RSI above 70 suggests potential selling pressure"
+        )
     elif rsi.rsi_signal == "oversold":
-        output.append("  🟢 OVERSOLD: RSI below 30 suggests potential buying opportunity")
+        output.append(
+            "  🟢 OVERSOLD: RSI below 30 suggests potential buying opportunity"
+        )
     else:
         output.append("  ⚪ NEUTRAL: RSI between 30-70, no extreme condition")
 
     output.append("")
     output.append("=" * 70)
-    output.append("⚠️  DISCLAIMER: For educational purposes only. Not investment advice.")
+    output.append(
+        "⚠️  DISCLAIMER: For educational purposes only. Not investment advice."
+    )
     output.append("=" * 70)
     return "\n".join(output)
 
 
-def format_all_output(results: AllMomentumOutput) -> str:
+def format_all_output(results: AllMomentumOutput) -> str:  # noqa: C901
     """Format all momentum indicators for human reading."""
     output = []
     output.append("=" * 70)
     output.append(f"📊 MOMENTUM ANALYSIS: {results.ticker}")
-    output.append(f"📅 Data Through: {results.calculation_date} (most recent market close)")
+    output.append(
+        f"📅 Data Through: {results.calculation_date} (most recent market close)"
+    )
     output.append("=" * 70)
     output.append("")
 
@@ -250,7 +266,9 @@ def format_all_output(results: AllMomentumOutput) -> str:
     if results.roc.signal == "bullish":
         output.append(f"  💡 Bullish: Positive momentum ({results.roc.roc:.2f}% gain)")
     elif results.roc.signal == "bearish":
-        output.append(f"  💡 Bearish: Negative momentum ({abs(results.roc.roc):.2f}% loss)")
+        output.append(
+            f"  💡 Bearish: Negative momentum ({abs(results.roc.roc):.2f}% loss)"
+        )
     else:
         output.append("  💡 Neutral: No significant change")
     output.append("")
@@ -301,14 +319,21 @@ def format_all_output(results: AllMomentumOutput) -> str:
 
     output.append("")
     output.append("=" * 70)
-    output.append("⚠️  DISCLAIMER: For educational purposes only. Not investment advice.")
+    output.append(
+        "⚠️  DISCLAIMER: For educational purposes only. Not investment advice."
+    )
     output.append("=" * 70)
 
     return "\n".join(output)
 
 
 def format_json_output(
-    results: AllMomentumOutput | RSIOutput | MACDOutput | StochasticOutput | WilliamsROutput | ROCOutput
+    results: AllMomentumOutput
+    | RSIOutput
+    | MACDOutput
+    | StochasticOutput
+    | WilliamsROutput
+    | ROCOutput,
 ) -> str:
     """Format results as JSON."""
     return results.model_dump_json(indent=2)
@@ -335,14 +360,12 @@ Examples:
 
   # Save to file
   %(prog)s TSLA --days 90 --output json --save-to analysis/momentum.json
-        """
+        """,
     )
 
     # Required arguments
     parser.add_argument(
-        "ticker",
-        type=str,
-        help="Stock ticker symbol (e.g., TSLA, AAPL)"
+        "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL)"
     )
 
     # Data parameters
@@ -350,13 +373,13 @@ Examples:
         "--days",
         type=int,
         default=90,
-        help="Number of days of historical data (default: 90, minimum: 30)"
+        help="Number of days of historical data (default: 90, minimum: 30)",
     )
 
     parser.add_argument(
         "--realtime",
         action="store_true",
-        help="Append current intraday price from Finnhub for real-time momentum analysis"
+        help="Append current intraday price from Finnhub for real-time momentum analysis",
     )
 
     parser.add_argument(
@@ -364,64 +387,43 @@ Examples:
         type=str,
         choices=["all", "rsi", "macd", "stochastic", "williams", "roc"],
         default="all",
-        help="Calculate specific indicator or all (default: all)"
+        help="Calculate specific indicator or all (default: all)",
     )
 
     # Configuration parameters
     parser.add_argument(
-        "--rsi-period",
-        type=int,
-        default=14,
-        help="RSI period (default: 14)"
+        "--rsi-period", type=int, default=14, help="RSI period (default: 14)"
     )
 
     parser.add_argument(
-        "--macd-fast",
-        type=int,
-        default=12,
-        help="MACD fast period (default: 12)"
+        "--macd-fast", type=int, default=12, help="MACD fast period (default: 12)"
     )
 
     parser.add_argument(
-        "--macd-slow",
-        type=int,
-        default=26,
-        help="MACD slow period (default: 26)"
+        "--macd-slow", type=int, default=26, help="MACD slow period (default: 26)"
     )
 
     parser.add_argument(
-        "--macd-signal",
-        type=int,
-        default=9,
-        help="MACD signal period (default: 9)"
+        "--macd-signal", type=int, default=9, help="MACD signal period (default: 9)"
     )
 
     parser.add_argument(
-        "--stoch-k",
-        type=int,
-        default=14,
-        help="Stochastic %K period (default: 14)"
+        "--stoch-k", type=int, default=14, help="Stochastic %K period (default: 14)"
     )
 
     parser.add_argument(
-        "--stoch-d",
-        type=int,
-        default=3,
-        help="Stochastic %D period (default: 3)"
+        "--stoch-d", type=int, default=3, help="Stochastic %D period (default: 3)"
     )
 
     parser.add_argument(
         "--williams-period",
         type=int,
         default=14,
-        help="Williams %R period (default: 14)"
+        help="Williams %R period (default: 14)",
     )
 
     parser.add_argument(
-        "--roc-period",
-        type=int,
-        default=12,
-        help="ROC period (default: 12)"
+        "--roc-period", type=int, default=12, help="ROC period (default: 12)"
     )
 
     # Output parameters
@@ -430,14 +432,11 @@ Examples:
         type=str,
         choices=["human", "json"],
         default="human",
-        help="Output format (default: human)"
+        help="Output format (default: human)",
     )
 
     parser.add_argument(
-        "--save-to",
-        type=str,
-        default=None,
-        help="Save output to file (optional)"
+        "--save-to", type=str, default=None, help="Save output to file (optional)"
     )
 
     # Parse arguments
@@ -450,9 +449,18 @@ Examples:
 
     try:
         # Step 1: Fetch data
-        data_source = "real-time (Finnhub + yfinance)" if args.realtime else "end-of-day (yfinance)"
-        print(f"📥 Fetching {args.days} days of data for {args.ticker} ({data_source})...", file=sys.stderr)
-        momentum_data = fetch_momentum_data(args.ticker, args.days, realtime=args.realtime)
+        data_source = (
+            "real-time (Finnhub + yfinance)"
+            if args.realtime
+            else "end-of-day (yfinance)"
+        )
+        print(
+            f"📥 Fetching {args.days} days of data for {args.ticker} ({data_source})...",
+            file=sys.stderr,
+        )
+        momentum_data = fetch_momentum_data(
+            args.ticker, args.days, realtime=args.realtime
+        )
         print(f"✅ Fetched {len(momentum_data.dates)} data points", file=sys.stderr)
         print(f"📅 Latest data: {momentum_data.dates[-1]}", file=sys.stderr)
 
@@ -515,6 +523,7 @@ Examples:
     except Exception as e:
         print(f"❌ ERROR: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 

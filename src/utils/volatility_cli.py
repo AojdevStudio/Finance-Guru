@@ -50,11 +50,13 @@ from src.models.volatility_inputs import (
     VolatilityConfig,
     VolatilityDataInput,
 )
-from src.utils.volatility import calculate_volatility
 from src.utils.market_data import get_prices  # Finnhub integration
+from src.utils.volatility import calculate_volatility
 
 
-def fetch_price_data(ticker: str, days: int, realtime: bool = False) -> VolatilityDataInput:
+def fetch_price_data(
+    ticker: str, days: int, realtime: bool = False
+) -> VolatilityDataInput:
     """
     Fetch OHLC price data from yfinance, optionally with real-time Finnhub data.
 
@@ -96,9 +98,9 @@ def fetch_price_data(ticker: str, days: int, realtime: bool = False) -> Volatili
 
     # Extract OHLC data
     dates_list = [d.date() for d in hist.index]
-    high_list = hist['High'].tolist()
-    low_list = hist['Low'].tolist()
-    close_list = hist['Close'].tolist()
+    high_list = hist["High"].tolist()
+    low_list = hist["Low"].tolist()
+    close_list = hist["Close"].tolist()
 
     # FINNHUB INTEGRATION: Append real-time intraday price if requested
     if realtime:
@@ -111,13 +113,20 @@ def fetch_price_data(ticker: str, days: int, realtime: bool = False) -> Volatili
                 # Append today's date and current price to the data
                 # For volatility, we use current price for all OHLC values (conservative)
                 from datetime import date
+
                 dates_list.append(date.today())
                 high_list.append(current_price)
                 low_list.append(current_price)
                 close_list.append(current_price)
-                print(f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)", file=sys.stderr)
+                print(
+                    f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)",
+                    file=sys.stderr,
+                )
         except Exception as e:
-            print(f"⚠️  Real-time price unavailable, using EOD data only: {e}", file=sys.stderr)
+            print(
+                f"⚠️  Real-time price unavailable, using EOD data only: {e}",
+                file=sys.stderr,
+            )
 
     # Convert to VolatilityDataInput
     return VolatilityDataInput(
@@ -147,29 +156,24 @@ def format_human_output(result) -> str:
         Formatted string output
     """
     lines = []
-    lines.append(f"\n{'='*60}")
+    lines.append(f"\n{'=' * 60}")
     lines.append(f"VOLATILITY ANALYSIS: {result.ticker}")
     lines.append(f"Date: {result.calculation_date}")
     lines.append(f"Current Price: ${result.current_price:.2f}")
-    lines.append(f"{'='*60}\n")
+    lines.append(f"{'=' * 60}\n")
 
     # Volatility Regime (most important summary)
-    regime_emoji = {
-        'low': '🟢',
-        'normal': '🔵',
-        'high': '🟡',
-        'extreme': '🔴'
-    }
-    emoji = regime_emoji.get(result.volatility_regime, '⚪')
+    regime_emoji = {"low": "🟢", "normal": "🔵", "high": "🟡", "extreme": "🔴"}
+    emoji = regime_emoji.get(result.volatility_regime, "⚪")
     lines.append(f"VOLATILITY REGIME: {emoji} {result.volatility_regime.upper()}")
     lines.append("")
 
     # Position sizing guidance based on regime
     position_guidance = {
-        'low': 'Can use larger positions (10-20% of portfolio)',
-        'normal': 'Standard position sizing (5-10% of portfolio)',
-        'high': 'Reduce position sizes (2-5% of portfolio)',
-        'extreme': 'Maximum caution (1-2% or stay in cash)'
+        "low": "Can use larger positions (10-20% of portfolio)",
+        "normal": "Standard position sizing (5-10% of portfolio)",
+        "high": "Reduce position sizes (2-5% of portfolio)",
+        "extreme": "Maximum caution (1-2% or stay in cash)",
     }
     lines.append(f"💡 Position Sizing: {position_guidance[result.volatility_regime]}")
     lines.append("")
@@ -231,7 +235,7 @@ def format_human_output(result) -> str:
     elif result.current_price > bb.upper_band:
         lines.append("  ⚠️  Price outside Bollinger but inside Keltner - Strong move")
 
-    lines.append(f"\n{'='*60}\n")
+    lines.append(f"\n{'=' * 60}\n")
 
     return "\n".join(lines)
 
@@ -280,84 +284,83 @@ Agent Use Cases:
 
     # Required arguments
     parser.add_argument(
-        'ticker',
-        type=str,
-        help='Stock ticker symbol (e.g., TSLA, AAPL, SPY)'
+        "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
     )
 
     parser.add_argument(
-        '--days',
+        "--days",
         type=int,
         default=90,
-        help='Number of days of historical data (default: 90)'
+        help="Number of days of historical data (default: 90)",
     )
 
     parser.add_argument(
-        '--realtime',
-        action='store_true',
-        help='Append current intraday price from Finnhub for real-time volatility analysis'
+        "--realtime",
+        action="store_true",
+        help="Append current intraday price from Finnhub for real-time volatility analysis",
     )
 
     # Bollinger Bands configuration
     parser.add_argument(
-        '--bb-period',
-        type=int,
-        default=20,
-        help='Bollinger Bands period (default: 20)'
+        "--bb-period", type=int, default=20, help="Bollinger Bands period (default: 20)"
     )
 
     parser.add_argument(
-        '--bb-std',
+        "--bb-std",
         type=float,
         default=2.0,
-        help='Bollinger Bands standard deviation multiplier (default: 2.0)'
+        help="Bollinger Bands standard deviation multiplier (default: 2.0)",
     )
 
     # ATR configuration
     parser.add_argument(
-        '--atr-period',
-        type=int,
-        default=14,
-        help='ATR period (default: 14)'
+        "--atr-period", type=int, default=14, help="ATR period (default: 14)"
     )
 
     # Historical volatility configuration
     parser.add_argument(
-        '--hvol-period',
+        "--hvol-period",
         type=int,
         default=20,
-        help='Historical volatility lookback period (default: 20)'
+        help="Historical volatility lookback period (default: 20)",
     )
 
     # Keltner Channels configuration
     parser.add_argument(
-        '--kc-period',
+        "--kc-period",
         type=int,
         default=20,
-        help='Keltner Channels EMA period (default: 20)'
+        help="Keltner Channels EMA period (default: 20)",
     )
 
     parser.add_argument(
-        '--kc-atr-mult',
+        "--kc-atr-mult",
         type=float,
         default=2.0,
-        help='Keltner Channels ATR multiplier (default: 2.0)'
+        help="Keltner Channels ATR multiplier (default: 2.0)",
     )
 
     # Output format
     parser.add_argument(
-        '--output',
-        choices=['human', 'json'],
-        default='human',
-        help='Output format (default: human)'
+        "--output",
+        choices=["human", "json"],
+        default="human",
+        help="Output format (default: human)",
     )
 
     args = parser.parse_args()
 
     try:
         # Fetch price data
-        data_source = "real-time (Finnhub + yfinance)" if args.realtime else "end-of-day (yfinance)"
-        print(f"Fetching {args.days} days of price data for {args.ticker} ({data_source})...", file=sys.stderr)
+        data_source = (
+            "real-time (Finnhub + yfinance)"
+            if args.realtime
+            else "end-of-day (yfinance)"
+        )
+        print(
+            f"Fetching {args.days} days of price data for {args.ticker} ({data_source})...",
+            file=sys.stderr,
+        )
         data = fetch_price_data(args.ticker, args.days, realtime=args.realtime)
 
         # Create configuration
@@ -375,7 +378,7 @@ Agent Use Cases:
         result = calculate_volatility(data, config)
 
         # Output results
-        if args.output == 'json':
+        if args.output == "json":
             print(format_json_output(result))
         else:
             print(format_human_output(result))
@@ -388,9 +391,10 @@ Agent Use Cases:
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

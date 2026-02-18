@@ -926,9 +926,9 @@ Recommendations:
 2. [Recommendation]
 
 Certification Statement:
-This analysis has been reviewed and [APPROVED/CONDITIONALLY APPROVED/REJECTED] 
-for compliance with Finance Guru professional standards and applicable regulatory 
-requirements. The analysis meets institutional quality standards for financial 
+This analysis has been reviewed and [APPROVED/CONDITIONALLY APPROVED/REJECTED]
+for compliance with Finance Guru professional standards and applicable regulatory
+requirements. The analysis meets institutional quality standards for financial
 analysis and strategic recommendation development.
 
 Authorized Signature: [Digital Signature]

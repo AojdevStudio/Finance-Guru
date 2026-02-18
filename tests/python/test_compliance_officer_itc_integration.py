@@ -19,7 +19,6 @@ Created: 2026-01-09
 Bead: family-office-578
 """
 
-import os
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -38,26 +37,43 @@ class TestAgentPromptConfiguration:
     def agent_prompt_path(self) -> Path:
         """Path to the Compliance Officer agent prompt."""
         project_root = Path(__file__).parent.parent.parent
-        return project_root / ".claude" / "commands" / "fin-guru" / "agents" / "compliance-officer.md"
+        return (
+            project_root
+            / ".claude"
+            / "commands"
+            / "fin-guru"
+            / "agents"
+            / "compliance-officer.md"
+        )
 
     def test_agent_prompt_exists(self, agent_prompt_path: Path):
         """The Compliance Officer agent prompt file must exist."""
-        assert agent_prompt_path.exists(), f"Agent prompt not found at {agent_prompt_path}"
+        assert agent_prompt_path.exists(), (
+            f"Agent prompt not found at {agent_prompt_path}"
+        )
 
     def test_agent_prompt_contains_itc_risk_integration(self, agent_prompt_path: Path):
         """Agent prompt must contain ITC risk integration section."""
         content = agent_prompt_path.read_text()
 
         # Check for ITC risk monitoring in critical-actions
-        assert "ITC RISK MONITORING" in content, "Missing ITC RISK MONITORING in critical-actions"
+        assert "ITC RISK MONITORING" in content, (
+            "Missing ITC RISK MONITORING in critical-actions"
+        )
         assert "itc_risk_cli.py" in content, "Missing itc_risk_cli.py reference"
 
-    def test_agent_prompt_contains_itc_integration_section(self, agent_prompt_path: Path):
+    def test_agent_prompt_contains_itc_integration_section(
+        self, agent_prompt_path: Path
+    ):
         """Agent prompt must contain <itc-risk-integration> section."""
         content = agent_prompt_path.read_text()
 
-        assert "<itc-risk-integration>" in content, "Missing <itc-risk-integration> section"
-        assert "</itc-risk-integration>" in content, "Unclosed itc-risk-integration section"
+        assert "<itc-risk-integration>" in content, (
+            "Missing <itc-risk-integration> section"
+        )
+        assert "</itc-risk-integration>" in content, (
+            "Unclosed itc-risk-integration section"
+        )
 
     def test_agent_prompt_contains_supported_tickers(self, agent_prompt_path: Path):
         """Agent prompt must list supported tickers for tradfi and crypto."""
@@ -76,15 +92,21 @@ class TestAgentPromptConfiguration:
         """Agent prompt must define risk thresholds (0.3, 0.7)."""
         content = agent_prompt_path.read_text()
 
-        assert "0.0-0.3" in content or "0-0.3" in content, "Missing LOW risk threshold (0.3)"
+        assert "0.0-0.3" in content or "0-0.3" in content, (
+            "Missing LOW risk threshold (0.3)"
+        )
         assert "0.3-0.7" in content, "Missing MEDIUM risk threshold (0.3-0.7)"
-        assert "0.7-1.0" in content or "0.7" in content, "Missing HIGH risk threshold (0.7)"
+        assert "0.7-1.0" in content or "0.7" in content, (
+            "Missing HIGH risk threshold (0.7)"
+        )
 
     def test_agent_prompt_contains_validation_workflow(self, agent_prompt_path: Path):
         """Agent prompt must contain ITC Risk Validation Workflow."""
         content = agent_prompt_path.read_text()
 
-        assert "<itc-risk-validation-workflow>" in content, "Missing validation workflow section"
+        assert "<itc-risk-validation-workflow>" in content, (
+            "Missing validation workflow section"
+        )
         assert "execution-steps" in content, "Missing execution steps in workflow"
         assert "decision-rules" in content, "Missing decision rules in workflow"
 
@@ -92,9 +114,15 @@ class TestAgentPromptConfiguration:
         """Agent prompt must contain divergence analysis guidance."""
         content = agent_prompt_path.read_text()
 
-        assert "<itc-internal-divergence-guidance>" in content, "Missing divergence guidance section"
-        assert "ITC HIGH, Internal LOW" in content or "DIV-1" in content, "Missing high ITC/low internal scenario"
-        assert "ITC LOW, Internal HIGH" in content or "DIV-2" in content, "Missing low ITC/high internal scenario"
+        assert "<itc-internal-divergence-guidance>" in content, (
+            "Missing divergence guidance section"
+        )
+        assert "ITC HIGH, Internal LOW" in content or "DIV-1" in content, (
+            "Missing high ITC/low internal scenario"
+        )
+        assert "ITC LOW, Internal HIGH" in content or "DIV-2" in content, (
+            "Missing low ITC/high internal scenario"
+        )
 
     def test_agent_prompt_contains_menu_commands(self, agent_prompt_path: Path):
         """Agent prompt must include *itc-validate and *itc-check menu items."""
@@ -401,8 +429,9 @@ class TestCLIOutputFormats:
 
     def test_json_output_parseable(self):
         """JSON output should be parseable for programmatic use."""
-        from src.analysis.itc_risk_cli import format_output_json
         import json
+
+        from src.analysis.itc_risk_cli import format_output_json
 
         response = ITCRiskResponse(
             symbol="TSLA",
@@ -459,8 +488,9 @@ class TestEndToEndIntegration:
 
         unsupported = ["NVDA", "PLTR", "GOOGL", "MSFT", "AMZN", "META"]
         for ticker in unsupported:
-            assert not calc.is_ticker_supported(ticker, "tradfi"), \
+            assert not calc.is_ticker_supported(ticker, "tradfi"), (
                 f"{ticker} should be unsupported"
+            )
 
     def test_crypto_universe_supported(self):
         """Verify crypto universe has expected tickers."""
@@ -475,24 +505,30 @@ class TestEndToEndIntegration:
         """Verify risk interpretation at exact boundaries."""
         # At 0.3 boundary
         low = ITCRiskResponse(
-            symbol="TEST", universe="tradfi",
-            current_risk_score=0.29, risk_bands=[],
+            symbol="TEST",
+            universe="tradfi",
+            current_risk_score=0.29,
+            risk_bands=[],
             timestamp=datetime.now(),
         )
         assert "LOW" in low.get_risk_interpretation()
 
         # At 0.3 (medium starts)
         medium_start = ITCRiskResponse(
-            symbol="TEST", universe="tradfi",
-            current_risk_score=0.3, risk_bands=[],
+            symbol="TEST",
+            universe="tradfi",
+            current_risk_score=0.3,
+            risk_bands=[],
             timestamp=datetime.now(),
         )
         assert "MEDIUM" in medium_start.get_risk_interpretation()
 
         # At 0.7 boundary
         high_start = ITCRiskResponse(
-            symbol="TEST", universe="tradfi",
-            current_risk_score=0.7, risk_bands=[],
+            symbol="TEST",
+            universe="tradfi",
+            current_risk_score=0.7,
+            risk_bands=[],
             timestamp=datetime.now(),
         )
         assert "HIGH" in high_start.get_risk_interpretation()

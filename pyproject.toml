@@ -25,22 +25,151 @@ dependencies = [
     "urllib3>=2.6.3",
     "xlsxwriter>=3.2.9",
     "yfinance>=0.2.66",
+    "questionary>=2.1.1",
 ]
 
 [dependency-groups]
 dev = [
-    "black>=24.10.0",
+    "ruff>=0.12.0",
     "mypy>=1.13.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --cov=src --cov-report=term-missing --cov-fail-under=80"
 pythonpath = ["."]
 markers = [
     "integration: marks tests as integration tests (require real API keys)",
 ]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+exclude = [".venv", "build", "dist", "node_modules", ".claude/hooks", ".eggs", "__pypackages__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "W", "B", "SIM", "C90", "N", "D"]
+fixable = ["I", "F401", "UP", "W", "D", "SIM", "F541", "F841", "E"]
+unfixable = ["B"]
+ignore = ["E501", "E402", "D107", "D205", "D100", "B028"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D", "S101", "B011"]
+"*_cli.py" = ["D"]
+"__init__.py" = ["F401", "D104"]
+"scripts/**/*.py" = ["D"]
+".agents/**/*.py" = ["D"]
+".claude/**/*.py" = ["D"]
+"src/analysis/**/*.py" = ["N803", "N806"]
+"src/strategies/**/*.py" = ["N803", "N806"]
+"src/utils/**/*.py" = ["N803", "N806"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+omit = [
+    "src/*/*_cli.py",
+    "src/*_cli.py",
+    "src/ui/*",
+    "src/cli/*",
+    "src/data/*",
+    "src/reports/*",
+    "src/utils/screener.py",
+    "src/models/screener_inputs.py",
+    "src/models/dashboard_inputs.py",
+]
+
+[tool.coverage.report]
+precision = 1
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+ignore_missing_imports = false
+
+[[tool.mypy.overrides]]
+module = [
+    "yfinance.*",
+    "streamlit.*",
+    "textual.*",
+    "sklearn.*",
+    "scipy.*",
+    "matplotlib.*",
+    "plotly.*",
+    "reportlab.*",
+    "openpyxl.*",
+    "xlsxwriter.*",
+    "questionary.*",
+    "numpy.*",
+    "pytest.*",
+    "dotenv.*",
+    "rich.*",
+    "rich.text",
+    "rich.table",
+]
+ignore_missing_imports = true
+
+# Relaxed checks for existing financial analysis codebase.
+# These modules use dynamic Literal types and pandas patterns
+# that produce false positives with strict mypy. Tightening
+# is deferred to a dedicated type-safety hardening plan.
+[[tool.mypy.overrides]]
+module = [
+    "src.utils.screener",
+    "src.utils.screener_cli",
+    "src.utils.momentum_cli",
+    "src.utils.moving_averages",
+    "src.utils.moving_averages_cli",
+    "src.utils.input_validation",
+    "src.utils.input_validation_cli",
+    "src.utils.data_validator",
+    "src.utils.volatility",
+    "src.utils.yaml_generator_cli",
+    "src.analysis.factors_cli",
+    "src.analysis.correlation",
+    "src.analysis.options_chain_cli",
+    "src.strategies.backtester",
+    "src.strategies.backtester_cli",
+    "src.strategies.optimizer",
+    "src.ui.services.portfolio_loader",
+    "src.models.dashboard_inputs",
+    "src.analysis.options",
+    "src.analysis.itc_risk",
+    "src.cli.onboarding_wizard",
+    "src.models.yaml_generation_inputs",
+    "src.models.itc_risk_inputs",
+    "src.utils.market_data",
+    "src.ui.widgets.results_panel",
+    "src.ui.widgets.portfolio_header",
+]
+warn_unused_ignores = false
+disable_error_code = ["arg-type", "assignment", "no-any-return", "operator", "var-annotated", "call-arg", "index", "return-value", "attr-defined", "union-attr", "type-var", "prop-decorator", "import-not-found"]

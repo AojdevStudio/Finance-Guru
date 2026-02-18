@@ -1,5 +1,4 @@
-"""
-Volatility metrics calculator for Finance Guru.
+"""Volatility metrics calculator for Finance Guru.
 
 WHAT: Calculates 5 essential volatility indicators for position sizing and risk management
 WHY: Provides type-safe volatility analysis for Compliance Officer, Margin Specialist, and agents
@@ -30,10 +29,9 @@ from src.models.volatility_inputs import (
 
 
 class VolatilityCalculator:
-    """
-    WHAT: Calculates comprehensive volatility metrics for Finance Guru agents
+    """WHAT: Calculates comprehensive volatility metrics for Finance Guru agents
     WHY: Provides validated, type-safe volatility analysis for position sizing and risk management
-    HOW: Uses Pydantic models for inputs/outputs, pandas/numpy for calculations
+    HOW: Uses Pydantic models for inputs/outputs, pandas/numpy for calculations.
 
     EDUCATIONAL NOTE:
     This calculator implements industry-standard volatility indicators used by professional traders:
@@ -47,8 +45,7 @@ class VolatilityCalculator:
     """
 
     def __init__(self, config: VolatilityConfig):
-        """
-        Initialize calculator with configuration.
+        """Initialize calculator with configuration.
 
         Args:
             config: VolatilityConfig with all indicator settings
@@ -59,8 +56,7 @@ class VolatilityCalculator:
         self,
         data: VolatilityDataInput,
     ) -> VolatilityMetricsOutput:
-        """
-        Calculate all volatility metrics for the given price data.
+        """Calculate all volatility metrics for the given price data.
 
         EXPLANATION:
         This is the main entry point. It orchestrates all volatility calculations
@@ -74,18 +70,20 @@ class VolatilityCalculator:
             VolatilityMetricsOutput with all indicators and volatility regime
         """
         # Convert to DataFrame for calculations
-        df = pd.DataFrame({
-            'date': data.dates,
-            'high': data.high,
-            'low': data.low,
-            'close': data.close,
-        })
-        df = df.set_index('date')
+        df = pd.DataFrame(
+            {
+                "date": data.dates,
+                "high": data.high,
+                "low": data.low,
+                "close": data.close,
+            }
+        )
+        df = df.set_index("date")
 
         # Calculate all indicators
-        bb = self._calculate_bollinger_bands(df['close'])
+        bb = self._calculate_bollinger_bands(df["close"])
         atr = self._calculate_atr(df)
-        hvol = self._calculate_historical_volatility(df['close'])
+        hvol = self._calculate_historical_volatility(df["close"])
         kc = self._calculate_keltner_channels(df)
 
         # Determine volatility regime
@@ -103,8 +101,7 @@ class VolatilityCalculator:
         )
 
     def _calculate_bollinger_bands(self, closes: pd.Series) -> BollingerBandsOutput:
-        """
-        Calculate Bollinger Bands indicator.
+        """Calculate Bollinger Bands indicator.
 
         FORMULA:
         - Middle Band = SMA(close, period)
@@ -163,8 +160,7 @@ class VolatilityCalculator:
         )
 
     def _calculate_atr(self, df: pd.DataFrame) -> ATROutput:
-        """
-        Calculate Average True Range (ATR).
+        """Calculate Average True Range (ATR).
 
         FORMULA:
         True Range = max of:
@@ -197,9 +193,9 @@ class VolatilityCalculator:
         period = self.config.atr_period
 
         # Calculate True Range components
-        high_low = df['high'] - df['low']
-        high_close = abs(df['high'] - df['close'].shift(1))
-        low_close = abs(df['low'] - df['close'].shift(1))
+        high_low = df["high"] - df["low"]
+        high_close = abs(df["high"] - df["close"].shift(1))
+        low_close = abs(df["low"] - df["close"].shift(1))
 
         # True Range is the maximum of the three
         true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
@@ -209,7 +205,7 @@ class VolatilityCalculator:
 
         # Get latest values
         atr_val = float(atr.iloc[-1])
-        current_price = float(df['close'].iloc[-1])
+        current_price = float(df["close"].iloc[-1])
 
         # Calculate ATR as percentage of current price
         atr_percent = (atr_val / current_price * 100) if current_price > 0 else 0.0
@@ -223,8 +219,7 @@ class VolatilityCalculator:
         self,
         closes: pd.Series,
     ) -> HistoricalVolatilityOutput:
-        """
-        Calculate historical volatility (standard deviation of returns).
+        """Calculate historical volatility (standard deviation of returns).
 
         FORMULA:
         - Daily Returns = log(close_t / close_t-1)
@@ -274,8 +269,7 @@ class VolatilityCalculator:
         )
 
     def _calculate_keltner_channels(self, df: pd.DataFrame) -> KeltnerChannelsOutput:
-        """
-        Calculate Keltner Channels indicator.
+        """Calculate Keltner Channels indicator.
 
         FORMULA:
         - Middle Line = EMA(close, period)
@@ -304,7 +298,7 @@ class VolatilityCalculator:
         atr_multiplier = self.config.kc_atr_multiplier
 
         # Calculate middle line (EMA of close)
-        middle = df['close'].ewm(span=period, adjust=False).mean()
+        middle = df["close"].ewm(span=period, adjust=False).mean()
 
         # Calculate ATR for channel width
         atr_result = self._calculate_atr(df)
@@ -326,8 +320,7 @@ class VolatilityCalculator:
         hvol: HistoricalVolatilityOutput,
         atr: ATROutput,
     ) -> str:
-        """
-        Assess overall volatility regime based on multiple indicators.
+        """Assess overall volatility regime based on multiple indicators.
 
         LOGIC:
         - Low: Annual vol < 25% AND ATR% < 2.5%
@@ -379,8 +372,7 @@ def calculate_volatility(
     data: VolatilityDataInput,
     config: VolatilityConfig | None = None,
 ) -> VolatilityMetricsOutput:
-    """
-    Convenience function to calculate volatility metrics with default or custom config.
+    """Convenience function to calculate volatility metrics with default or custom config.
 
     EDUCATIONAL NOTE:
     This function provides a simple interface for agents to calculate volatility

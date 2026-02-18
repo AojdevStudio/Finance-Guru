@@ -138,7 +138,7 @@ function main() {
   // Read stdin (session info)
   let inputData = '';
   process.stdin.setEncoding('utf-8');
-  
+
   // Handle both piped and direct execution
   if (process.stdin.isTTY) {
     // Direct execution (testing) - use dummy input
@@ -149,7 +149,7 @@ function main() {
     process.stdin.on('data', chunk => {
       inputData += chunk;
     });
-    
+
     process.stdin.on('end', () => {
       processHook(inputData);
     });
@@ -160,20 +160,20 @@ function processHook(inputData: string) {
   try {
     const input: HookInput = JSON.parse(inputData);
     const projectRoot = getProjectRoot();
-    
+
     // File paths (all project-specific)
     const skillPath = join(projectRoot, '.claude/skills/fin-core/SKILL.md');
-    const configPath = join(projectRoot, 'fin-guru/config.yaml');
-    const profilePath = join(projectRoot, 'fin-guru/data/user-profile.yaml');
-    const systemContextPath = join(projectRoot, 'fin-guru/data/system-context.md');
+    const configPath = join(projectRoot, 'fin-guru-private/fin-guru/config.yaml');
+    const profilePath = join(projectRoot, 'fin-guru-private/fin-guru/data/user-profile.yaml');
+    const systemContextPath = join(projectRoot, 'fin-guru-private/fin-guru/data/system-context.md');
     const updatesDir = join(projectRoot, 'notebooks/updates');
-    
+
     // Load core files
     const skillContent = loadFile(skillPath);
     const configContent = loadFile(configPath);
     const profileContent = loadFile(profilePath);
     const systemContext = loadFile(systemContextPath);
-    
+
     // Load latest portfolio updates
     const latestBalances = getLatestFile(updatesDir, /^Balances_for_Account_[^/]+\.csv$/);
     const latestPositions = getLatestPositionsFile(updatesDir);
@@ -189,7 +189,7 @@ function processHook(inputData: string) {
 
     // Generate alert if needed
     const updateAlert = generateUpdateAlert(missingBalances, missingPositions, outdatedBalances, outdatedPositions);
-    
+
     // Build system reminder output
     const output = `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -245,10 +245,10 @@ ${updateAlert}
 
     // Output to stdout (Claude Code will inject this as system-reminder)
     console.log(output);
-    
+
     // Exit successfully
     process.exit(0);
-    
+
   } catch (err) {
     console.error(`Finance Guru core config loader failed: ${err}`);
     process.exit(1);

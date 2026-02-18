@@ -1,5 +1,4 @@
-"""
-ITC Risk Models Pydantic Models for Finance Guru™
+"""ITC Risk Models Pydantic Models for Finance Guru™.
 
 This module defines type-safe data structures for ITC (Into The Cryptoverse)
 Risk API integration.
@@ -25,14 +24,13 @@ Created: 2026-01-09
 """
 
 from datetime import datetime
-from typing import Literal, Optional, List
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
 
 class ITCRiskRequest(BaseModel):
-    """
-    Request model for ITC Risk API calls.
+    """Request model for ITC Risk API calls.
 
     WHAT: Encapsulates parameters needed to query ITC Risk API
     WHY: Ensures request parameters are validated before making API calls
@@ -74,8 +72,7 @@ class ITCRiskRequest(BaseModel):
     @field_validator("symbol")
     @classmethod
     def normalize_symbol(cls, v: str) -> str:
-        """
-        Normalize symbol to uppercase.
+        """Normalize symbol to uppercase.
 
         EDUCATIONAL NOTE:
         ITC API expects uppercase symbols. We normalize to avoid
@@ -86,24 +83,15 @@ class ITCRiskRequest(BaseModel):
     model_config = {
         "json_schema_extra": {
             "examples": [
-                {
-                    "symbol": "TSLA",
-                    "universe": "tradfi",
-                    "api_key": "your_itc_api_key"
-                },
-                {
-                    "symbol": "BTC",
-                    "universe": "crypto",
-                    "api_key": "your_itc_api_key"
-                }
+                {"symbol": "TSLA", "universe": "tradfi", "api_key": "your_itc_api_key"},
+                {"symbol": "BTC", "universe": "crypto", "api_key": "your_itc_api_key"},
             ]
         }
     }
 
 
 class RiskBand(BaseModel):
-    """
-    Individual price band with associated risk score.
+    """Individual price band with associated risk score.
 
     WHAT: Maps a price level to its corresponding risk score
     WHY: ITC provides a table of price → risk mappings to understand
@@ -141,16 +129,14 @@ class RiskBand(BaseModel):
     @field_validator("price")
     @classmethod
     def validate_price_positive(cls, v: float) -> float:
-        """
-        Ensure price is a positive value.
+        """Ensure price is a positive value.
 
         WHY: Prices cannot be zero or negative. A zero price would
         indicate a delisted asset or data error.
         """
         if v <= 0:
             raise ValueError(
-                f"Price must be positive (got {v}). "
-                "Check your data source for errors."
+                f"Price must be positive (got {v}). Check your data source for errors."
             )
         return v
 
@@ -166,8 +152,7 @@ class RiskBand(BaseModel):
 
 
 class ITCRiskResponse(BaseModel):
-    """
-    Response from ITC API with comprehensive risk data.
+    """Response from ITC API with comprehensive risk data.
 
     WHAT: Complete risk analysis result including current risk and price bands
     WHY: Provides structured, validated output for agents to consume
@@ -205,17 +190,11 @@ class ITCRiskResponse(BaseModel):
         high_risk = response.get_high_risk_threshold()
     """
 
-    symbol: str = Field(
-        ...,
-        description="Asset symbol (uppercase)"
-    )
+    symbol: str = Field(..., description="Asset symbol (uppercase)")
 
-    universe: str = Field(
-        ...,
-        description="Asset universe ('crypto' or 'tradfi')"
-    )
+    universe: str = Field(..., description="Asset universe ('crypto' or 'tradfi')")
 
-    current_price: Optional[float] = Field(
+    current_price: float | None = Field(
         default=None,
         description=(
             "Current market price from yfinance (for tradfi assets). "
@@ -237,19 +216,15 @@ class ITCRiskResponse(BaseModel):
         ),
     )
 
-    risk_bands: List[RiskBand] = Field(
+    risk_bands: list[RiskBand] = Field(
         default_factory=list,
-        description="List of price levels with associated risk scores"
+        description="List of price levels with associated risk scores",
     )
 
-    timestamp: datetime = Field(
-        ...,
-        description="Timestamp when data was fetched"
-    )
+    timestamp: datetime = Field(..., description="Timestamp when data was fetched")
 
     source: str = Field(
-        default="Into The Cryptoverse API",
-        description="Data source identifier"
+        default="Into The Cryptoverse API", description="Data source identifier"
     )
 
     @field_validator("symbol")
@@ -258,9 +233,8 @@ class ITCRiskResponse(BaseModel):
         """Ensure symbol is uppercase."""
         return v.upper()
 
-    def get_nearest_bands(self, n: int = 5) -> List[RiskBand]:
-        """
-        Get n nearest bands around current price.
+    def get_nearest_bands(self, n: int = 5) -> list[RiskBand]:
+        """Get n nearest bands around current price.
 
         This helps answer: "What does risk look like around the current price?"
         Useful for understanding immediate up/down risk changes.
@@ -287,14 +261,12 @@ class ITCRiskResponse(BaseModel):
 
         # Sort by distance from current price
         sorted_bands = sorted(
-            self.risk_bands,
-            key=lambda b: abs(b.price - self.current_price)
+            self.risk_bands, key=lambda b: abs(b.price - self.current_price)
         )
         return sorted_bands[:n]
 
-    def get_high_risk_threshold(self) -> Optional[RiskBand]:
-        """
-        Find price where risk exceeds 0.7 (high risk zone).
+    def get_high_risk_threshold(self) -> RiskBand | None:
+        """Find price where risk exceeds 0.7 (high risk zone).
 
         This answers: "At what price does this become HIGH RISK?"
         Critical for setting alerts and understanding upside limits.
@@ -316,10 +288,7 @@ class ITCRiskResponse(BaseModel):
                 distance = (high_risk.price / response.current_price - 1) * 100
                 print(f"High risk zone is {distance:.1f}% away")
         """
-        high_risk_bands = [
-            band for band in self.risk_bands
-            if band.risk_score >= 0.7
-        ]
+        high_risk_bands = [band for band in self.risk_bands if band.risk_score >= 0.7]
 
         if not high_risk_bands:
             return None
@@ -328,8 +297,7 @@ class ITCRiskResponse(BaseModel):
         return min(high_risk_bands, key=lambda b: b.price)
 
     def get_risk_interpretation(self) -> str:
-        """
-        Get human-readable interpretation of current risk level.
+        """Get human-readable interpretation of current risk level.
 
         Returns:
             String description of risk level with guidance.
@@ -342,7 +310,9 @@ class ITCRiskResponse(BaseModel):
         if score < 0.3:
             return "LOW RISK - Favorable entry zone, lower probability of significant decline"
         elif score < 0.7:
-            return "MEDIUM RISK - Neutral zone, use additional signals for decision making"
+            return (
+                "MEDIUM RISK - Neutral zone, use additional signals for decision making"
+            )
         else:
             return "HIGH RISK - Elevated risk of decline, consider waiting for pullback"
 
@@ -360,7 +330,7 @@ class ITCRiskResponse(BaseModel):
                         {"price": 1526.19, "risk_score": 0.991},
                     ],
                     "timestamp": "2026-01-09T12:00:00",
-                    "source": "Into The Cryptoverse API"
+                    "source": "Into The Cryptoverse API",
                 }
             ]
         }

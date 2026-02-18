@@ -14,11 +14,10 @@ Test Categories:
 5. Edge Cases - Handle unusual but valid scenarios
 """
 
-import json
-import pytest
 from datetime import date
 from pathlib import Path
-from typing import Any
+
+import pytest
 
 from src.models.yaml_generation_inputs import (
     AllocationStrategy,
@@ -169,28 +168,36 @@ class TestPydanticModelValidation:
 class TestTemplateProcessing:
     """Test template variable substitution."""
 
-    def test_simple_variable_substitution(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_simple_variable_substitution(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """Simple variables should be replaced correctly."""
         template = "User: {{user_name}}"
         prepared_data = yaml_generator._prepare_user_data(valid_user_data)
         result = yaml_generator._process_template(template, prepared_data)
         assert "User: TestUser" in result
 
-    def test_conditional_block_when_true(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_conditional_block_when_true(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """Conditional blocks should include content when condition is true."""
         template = "{{#if has_mortgage}}Has mortgage{{/if}}"
         prepared_data = yaml_generator._prepare_user_data(valid_user_data)
         result = yaml_generator._process_template(template, prepared_data)
         assert "Has mortgage" in result
 
-    def test_conditional_block_when_false(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_conditional_block_when_false(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """Conditional blocks should exclude content when condition is false."""
         template = "{{#if has_student_loans}}Has student loans{{/if}}"
         prepared_data = yaml_generator._prepare_user_data(valid_user_data)
         result = yaml_generator._process_template(template, prepared_data)
         assert "Has student loans" not in result
 
-    def test_possessive_name_generation(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_possessive_name_generation(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """Possessive form should be generated correctly."""
         prepared_data = yaml_generator._prepare_user_data(valid_user_data)
         assert prepared_data["possessive_name"] == "TestUser's"
@@ -200,7 +207,9 @@ class TestTemplateProcessing:
         prepared_data = yaml_generator._prepare_user_data(valid_user_data)
         assert prepared_data["possessive_name"] == "James'"
 
-    def test_currency_formatting(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_currency_formatting(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """Currency values should be formatted with commas."""
         prepared_data = yaml_generator._prepare_user_data(valid_user_data)
         assert prepared_data["portfolio_value_formatted"] == "$100,000.00"
@@ -210,7 +219,9 @@ class TestTemplateProcessing:
 class TestConfigGeneration:
     """Test generation of each config file type."""
 
-    def test_generate_user_profile(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_generate_user_profile(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """User profile YAML should be generated with correct data."""
         result = yaml_generator.generate_user_profile(valid_user_data)
 
@@ -220,7 +231,9 @@ class TestConfigGeneration:
         assert "100000" in result  # portfolio value
         assert "aggressive" in result.lower()
 
-    def test_generate_config(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_generate_config(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """Config YAML should be generated with user customization."""
         result = yaml_generator.generate_config(valid_user_data)
 
@@ -228,26 +241,34 @@ class TestConfigGeneration:
         assert "TestUser" in result
         assert "English" in result
 
-    def test_generate_system_context(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_generate_system_context(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """System context markdown should be personalized."""
         result = yaml_generator.generate_system_context(valid_user_data)
 
         assert "TestUser" in result
         assert "markdown" in result.lower() or "#" in result  # Markdown formatting
 
-    def test_generate_claude_md(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_generate_claude_md(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """CLAUDE.md should be generated."""
         result = yaml_generator.generate_claude_md(valid_user_data)
 
         assert "TestUser" in result or "CLAUDE" in result
 
-    def test_generate_env(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_generate_env(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """Environment file should contain API keys."""
         result = yaml_generator.generate_env(valid_user_data)
 
         assert "test-key-123" in result  # Alpha Vantage key
 
-    def test_generate_mcp_json(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_generate_mcp_json(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """MCP JSON config should be generated."""
         result = yaml_generator.generate_mcp_json(valid_user_data)
 
@@ -259,7 +280,9 @@ class TestConfigGeneration:
 class TestFullGeneration:
     """Test complete config generation workflow."""
 
-    def test_generate_all_configs(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_generate_all_configs(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """Generate all configs should produce complete output."""
         output = yaml_generator.generate_all_configs(valid_user_data)
 
@@ -277,9 +300,16 @@ class TestFullGeneration:
         assert len(output.mcp_json) > 0
 
         # Verify user name appears in at least one output
-        assert "TestUser" in output.user_profile_yaml or "TestUser" in output.config_yaml
+        assert (
+            "TestUser" in output.user_profile_yaml or "TestUser" in output.config_yaml
+        )
 
-    def test_write_config_files(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput, tmp_path: Path):
+    def test_write_config_files(
+        self,
+        yaml_generator: YAMLGenerator,
+        valid_user_data: UserDataInput,
+        tmp_path: Path,
+    ):
         """Writing config files should create all expected files."""
         output = yaml_generator.generate_all_configs(valid_user_data)
         write_config_files(output, str(tmp_path))
@@ -311,7 +341,9 @@ class TestEdgeCases:
         """Generator should handle minimal required data."""
         minimal_data = UserDataInput(
             identity=UserIdentityInput(user_name="MinimalUser"),
-            liquid_assets=LiquidAssetsInput(total=0.0, accounts_count=0, average_yield=0.0),
+            liquid_assets=LiquidAssetsInput(
+                total=0.0, accounts_count=0, average_yield=0.0
+            ),
             portfolio=InvestmentPortfolioInput(
                 total_value=0.0,
                 allocation_strategy=AllocationStrategy.PASSIVE,
@@ -342,7 +374,9 @@ class TestEdgeCases:
         """Generator should handle special characters in user name."""
         data = UserDataInput(
             identity=UserIdentityInput(user_name="O'Brien-Smith"),
-            liquid_assets=LiquidAssetsInput(total=0.0, accounts_count=0, average_yield=0.0),
+            liquid_assets=LiquidAssetsInput(
+                total=0.0, accounts_count=0, average_yield=0.0
+            ),
             portfolio=InvestmentPortfolioInput(
                 total_value=0.0,
                 allocation_strategy=AllocationStrategy.PASSIVE,
@@ -367,13 +401,18 @@ class TestEdgeCases:
         if template_dir.exists():
             generator = YAMLGenerator(str(template_dir))
             output = generator.generate_all_configs(data)
-            assert "O'Brien-Smith" in output.user_profile_yaml or "O'Brien-Smith" in output.config_yaml
+            assert (
+                "O'Brien-Smith" in output.user_profile_yaml
+                or "O'Brien-Smith" in output.config_yaml
+            )
 
 
 class TestDataConsistency:
     """Test data consistency across generated files."""
 
-    def test_user_name_consistent_across_files(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_user_name_consistent_across_files(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """User name should appear consistently in all generated files."""
         output = yaml_generator.generate_all_configs(valid_user_data)
 
@@ -381,14 +420,21 @@ class TestDataConsistency:
         user_name = valid_user_data.identity.user_name
         assert user_name in output.user_profile_yaml or user_name in output.config_yaml
 
-    def test_portfolio_value_consistent(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_portfolio_value_consistent(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """Portfolio value should be consistent across files."""
         output = yaml_generator.generate_all_configs(valid_user_data)
 
         # Portfolio value should appear in some form
-        assert "100000" in output.user_profile_yaml or "$100,000" in output.user_profile_yaml
+        assert (
+            "100000" in output.user_profile_yaml
+            or "$100,000" in output.user_profile_yaml
+        )
 
-    def test_generation_date_is_current(self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput):
+    def test_generation_date_is_current(
+        self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
+    ):
         """Generation date should be today's date."""
         output = yaml_generator.generate_all_configs(valid_user_data)
         assert output.generation_date == date.today()

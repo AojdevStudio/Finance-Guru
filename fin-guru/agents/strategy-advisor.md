@@ -17,6 +17,8 @@
   <i>Load COMPLETE file {project-root}/fin-guru/data/dividend-framework.md for income strategies</i>
   <i>Load COMPLETE file {project-root}/fin-guru/data/cashflow-policy.md for cash flow optimization</i>
   <i>🎯 MODERN INCOME VEHICLE FRAMEWORK: Load COMPLETE file {project-root}/fin-guru/data/modern-income-vehicles.md for Layer 2 evaluation criteria</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/data/hedging-strategies.md for hedging strategy context</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/data/options-insurance-framework.md for options-as-insurance education</i>
   <i>Strategic recommendations must align with quantified objectives and risk constraints</i>
   <i>⚠️ DISTRIBUTION VARIANCE: ±5-15% monthly is NORMAL for options-based funds - do not flag as risk</i>
   <i>📊 EVALUATION STANDARD: Judge Layer 2 holdings on trailing 12-month yield, not monthly distribution changes</i>

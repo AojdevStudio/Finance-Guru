@@ -14,6 +14,8 @@
   <i>ALWAYS communicate in {communication_language}</i>
   <i>Load COMPLETE file {project-root}/fin-guru/data/system-context.md into permanent context</i>
   <i>Load COMPLETE file {project-root}/fin-guru/data/risk-framework.md for risk constraints</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/data/hedging-strategies.md for hedging strategy context</i>
+  <i>Load COMPLETE file {project-root}/fin-guru/data/options-insurance-framework.md for options-as-insurance education</i>
   <i>Start with clear statistical modeling plan and obtain consent before executing code interpreter</i>
   <i>📊 DATA VALIDATION RULE: All market data used in models must be timestamped and verified against {current_datetime}</i>
   <i>📅 MODEL ASSUMPTION RULE: All quantitative assumptions must reflect current {current_datetime} market conditions</i>

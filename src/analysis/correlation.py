@@ -1,5 +1,4 @@
-"""
-Correlation and Covariance Engine for Finance Guru.
+"""Correlation and Covariance Engine for Finance Guru.
 
 WHAT: Calculates portfolio correlation and covariance for diversification analysis
 WHY: Essential for portfolio construction, risk management, and hedge identification
@@ -29,10 +28,9 @@ from src.models.correlation_inputs import (
 
 
 class CorrelationEngine:
-    """
-    WHAT: Calculates correlation and covariance for portfolio diversification analysis
+    """WHAT: Calculates correlation and covariance for portfolio diversification analysis
     WHY: Provides validated, type-safe correlation analysis for Finance Guru agents
-    HOW: Uses Pydantic models for inputs/outputs, pandas/numpy for calculations
+    HOW: Uses Pydantic models for inputs/outputs, pandas/numpy for calculations.
 
     EDUCATIONAL NOTE:
     This engine helps answer critical portfolio questions:
@@ -55,8 +53,7 @@ class CorrelationEngine:
     """
 
     def __init__(self, config: CorrelationConfig):
-        """
-        Initialize correlation engine with configuration.
+        """Initialize correlation engine with configuration.
 
         Args:
             config: CorrelationConfig with analysis settings
@@ -67,8 +64,7 @@ class CorrelationEngine:
         self,
         data: PortfolioPriceData,
     ) -> PortfolioCorrelationOutput:
-        """
-        Calculate comprehensive correlation analysis for portfolio.
+        """Calculate comprehensive correlation analysis for portfolio.
 
         EXPLANATION:
         This is the main entry point. It orchestrates all correlation calculations
@@ -94,7 +90,9 @@ class CorrelationEngine:
         cov_matrix = self._calculate_covariance_matrix(returns, data.tickers)
 
         # Calculate portfolio-level metrics
-        div_score = self._calculate_diversification_score(corr_matrix.correlation_matrix)
+        div_score = self._calculate_diversification_score(
+            corr_matrix.correlation_matrix
+        )
         concentration_warning = corr_matrix.average_correlation > 0.7
 
         # Calculate rolling correlations if requested
@@ -117,8 +115,7 @@ class CorrelationEngine:
         returns: pd.DataFrame,
         tickers: list[str],
     ) -> CorrelationMatrixOutput:
-        """
-        Calculate correlation matrix between all assets.
+        """Calculate correlation matrix between all assets.
 
         FORMULA:
         Pearson correlation between X and Y:
@@ -148,9 +145,9 @@ class CorrelationEngine:
         """
         # Calculate correlation matrix using pandas
         if self.config.method == "pearson":
-            corr_df = returns.corr(method='pearson')
+            corr_df = returns.corr(method="pearson")
         else:  # spearman
-            corr_df = returns.corr(method='spearman')
+            corr_df = returns.corr(method="spearman")
 
         # Convert to nested dict format
         corr_dict = {}
@@ -171,7 +168,7 @@ class CorrelationEngine:
 
         # Get calculation date (handle both datetime and date objects)
         calc_date = returns.index[-1]
-        if hasattr(calc_date, 'date'):
+        if hasattr(calc_date, "date"):
             calc_date = calc_date.date()
 
         return CorrelationMatrixOutput(
@@ -186,8 +183,7 @@ class CorrelationEngine:
         returns: pd.DataFrame,
         tickers: list[str],
     ) -> CovarianceMatrixOutput:
-        """
-        Calculate covariance matrix between all assets.
+        """Calculate covariance matrix between all assets.
 
         FORMULA:
         Covariance between X and Y:
@@ -236,7 +232,7 @@ class CorrelationEngine:
 
         # Get calculation date (handle both datetime and date objects)
         calc_date = returns.index[-1]
-        if hasattr(calc_date, 'date'):
+        if hasattr(calc_date, "date"):
             calc_date = calc_date.date()
 
         return CovarianceMatrixOutput(
@@ -249,8 +245,7 @@ class CorrelationEngine:
         self,
         correlation_matrix: dict[str, dict[str, float]],
     ) -> float:
-        """
-        Calculate portfolio diversification score.
+        """Calculate portfolio diversification score.
 
         FORMULA:
         Diversification Score = 1 - average_correlation
@@ -298,8 +293,7 @@ class CorrelationEngine:
         returns: pd.DataFrame,
         tickers: list[str],
     ) -> list[RollingCorrelationOutput]:
-        """
-        Calculate rolling (time-varying) correlations for all pairs.
+        """Calculate rolling (time-varying) correlations for all pairs.
 
         EDUCATIONAL NOTE:
         Correlations change over time! This is called "correlation regime shifts."
@@ -333,10 +327,14 @@ class CorrelationEngine:
             for j, ticker2 in enumerate(tickers):
                 if i < j:  # Only upper triangle (avoid duplicates)
                     # Calculate rolling correlation
-                    rolling_corr = returns[ticker1].rolling(
-                        window=self.config.rolling_window,
-                        min_periods=self.config.min_periods
-                    ).corr(returns[ticker2])
+                    rolling_corr = (
+                        returns[ticker1]
+                        .rolling(
+                            window=self.config.rolling_window,
+                            min_periods=self.config.min_periods,
+                        )
+                        .corr(returns[ticker2])
+                    )
 
                     # Drop NaN values from beginning
                     rolling_corr = rolling_corr.dropna()
@@ -344,23 +342,28 @@ class CorrelationEngine:
                     if len(rolling_corr) == 0:
                         continue
 
-                    # Extract values
-                    dates = [d.date() for d in rolling_corr.index]
+                    # Extract values (handle both datetime and date index types)
+                    dates = [
+                        d.date() if hasattr(d, "date") and callable(d.date) else d
+                        for d in rolling_corr.index
+                    ]
                     correlations = rolling_corr.tolist()
                     current_corr = float(correlations[-1])
                     avg_corr = float(np.mean(correlations))
                     corr_min = float(np.min(correlations))
                     corr_max = float(np.max(correlations))
 
-                    rolling_outputs.append(RollingCorrelationOutput(
-                        ticker_1=ticker1,
-                        ticker_2=ticker2,
-                        dates=dates,
-                        correlations=correlations,
-                        current_correlation=current_corr,
-                        average_correlation=avg_corr,
-                        correlation_range=(corr_min, corr_max),
-                    ))
+                    rolling_outputs.append(
+                        RollingCorrelationOutput(
+                            ticker_1=ticker1,
+                            ticker_2=ticker2,
+                            dates=dates,
+                            correlations=correlations,
+                            current_correlation=current_corr,
+                            average_correlation=avg_corr,
+                            correlation_range=(corr_min, corr_max),
+                        )
+                    )
 
         return rolling_outputs
 
@@ -370,8 +373,7 @@ def calculate_correlation(
     data: PortfolioPriceData,
     config: CorrelationConfig | None = None,
 ) -> PortfolioCorrelationOutput:
-    """
-    Convenience function to calculate correlation with default or custom config.
+    """Convenience function to calculate correlation with default or custom config.
 
     EDUCATIONAL NOTE:
     This function provides a simple interface for agents to calculate

@@ -45,20 +45,20 @@ count_tsc_errors() {
 while IFS= read -r repo; do
     # Get TSC command for this repo
     tsc_cmd=$(grep "^$repo:tsc:" "$cache_dir/commands.txt" 2>/dev/null | cut -d':' -f3-)
-    
+
     if [[ -z "$tsc_cmd" ]]; then
         continue
     fi
-    
+
     # Run TSC and capture output
     if ! output=$(eval "$tsc_cmd" 2>&1); then
         # TSC failed - we have errors
         has_errors=true
-        
+
         # Count errors
         error_count=$(count_tsc_errors "$output")
         total_errors=$((total_errors + error_count))
-        
+
         # Save error output
         echo "$output" > "$results_dir/$repo-errors.txt"
         echo "$repo:$error_count" >> "$results_dir/error-summary.txt"
@@ -79,10 +79,10 @@ if [[ "$has_errors" == "true" ]]; then
             echo "" >> "$cache_dir/last-errors.txt"
         fi
     done
-    
+
     # Copy TSC commands for the resolver
     cp "$cache_dir/commands.txt" "$cache_dir/tsc-commands.txt"
-    
+
     # Format message for Claude when using exit code 2
     if [[ $total_errors -ge 5 ]]; then
         echo "" >&2
@@ -99,7 +99,7 @@ if [[ "$has_errors" == "true" ]]; then
         echo "The error details have been cached for the resolver to use." >&2
         echo "" >&2
         echo "Run: Task(subagent_type='auto-error-resolver', description='Fix TypeScript errors', prompt='Fix the TypeScript compilation errors found in the cached error log')" >&2
-        
+
         # Exit with status 2 to send feedback to Claude
         exit 2
     else
@@ -108,18 +108,18 @@ if [[ "$has_errors" == "true" ]]; then
         echo "" >&2
         echo "Found $total_errors TypeScript error(s). Here are the details:" >&2
         echo "" >&2
-        
+
         # Show all errors for minor count
         cat "$cache_dir/last-errors.txt" | sed 's/^/  /' >&2
         echo "" >&2
         echo "Please fix these errors directly in the affected files." >&2
-        
+
         # Exit with status 2 to send feedback to Claude for any errors
         exit 2
     fi
 else
     # Clean up session cache on success
     rm -rf "$cache_dir"
-    
+
     exit 0
 fi

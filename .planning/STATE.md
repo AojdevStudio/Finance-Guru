@@ -2,26 +2,26 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-02)
+See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 2 complete -- Setup Automation & Dependency Checking
+**Current focus:** M2 shipped -- Hedging & Portfolio Protection complete. Ready for M3.
 
 ## Current Position
 
-Phase: 2 of 12 (Setup Automation & Dependency Checking)
-Plan: 2 of 2 in current phase (PHASE COMPLETE)
-Status: Phase complete
-Last activity: 2026-02-04 -- Completed 02-02-PLAN.md
+Phase: 9 of 12 complete (M2 shipped)
+Plan: All M2 plans complete (13/13)
+Status: Milestone v2.0 archived
+Last activity: 2026-02-18 -- M2 milestone completed and tagged v2.0
 
-Progress: [██░░░░░░░░░░░░░░░░░░] 6%
+Progress: [█████████████░░░░░░░] 68%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: ~11 min
-- Total execution time: ~0.55 hours
+- Total plans completed: 25
+- Average duration: ~7 min
+- Total execution time: ~2.93 hours
 
 **By Phase:**
 
@@ -29,10 +29,17 @@ Progress: [██░░░░░░░░░░░░░░░░░░] 6%
 |-------|-------|-------|----------|
 | 01-git-scrub | 1/3 | ~15 min | ~15 min |
 | 02-setup-automation | 2/2 | 17 min | 9 min |
+| 03-onboarding-wizard | 2/2 | 16 min | 8 min |
+| 04-onboarding-polish-hook-refactoring | 2/2 | 12 min | 6 min |
+| 05-agent-readiness-hardening | 5/5 | 59 min | 12 min |
+| 06-config-loader-shared-hedging-models | 3/3 | 17 min | 6 min |
+| 07-total-return-calculator | 2/2 | 14 min | 7 min |
+| 08-rolling-tracker-hedge-sizer | 6/6 | 33 min | 6 min |
+| 09-sqqq-vs-puts-comparison | 2/2 | 14 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~15 min), 02-01 (6 min), 02-02 (11 min)
-- Trend: Accelerating
+- Last 5 plans: 08-03 (4 min), 09-01 (7 min), 08-06 (4 min), 08-05 (9 min), 09-02 (7 min)
+- Trend: ~6 min/plan
 
 *Updated after each plan completion*
 
@@ -45,17 +52,10 @@ Recent decisions affecting current work:
 
 - [Roadmap]: M1 before M2 is non-negotiable -- hedging tools need user-profile.yaml with stable schema
 - [Roadmap]: Phase 1 (git scrub) is CRITICAL prerequisite before any public visibility
-- [Roadmap]: Phase 9 (SQQQ comparison) isolated due to highest-risk calculation (was Phase 8, renumbered)
 - [Roadmap]: Phases 1, 9, 10 flagged for /gsd:research-phase before planning (renumbered from 1, 8, 9)
-- [Roadmap]: Phase 5 (Agent Readiness Hardening) added at end of M1 based on agent-readiness-report (2026-02-02). L1→L2 quick wins: ruff linter, expanded pre-commit hooks, issue/PR templates, test coverage thresholds, CODEOWNERS.
-- [01-01]: PII replaced with template variables ({account_id}, {spreadsheet_id}, {user_name}, {employer_name}, {llc_name}) rather than generic placeholders
-- [01-01]: OS-level paths preserved, will be handled by git-filter-repo in Plan 02
-- [01-01]: Personal email addresses and domains in backend dev guidelines cleaned as additional PII
-- [02-01]: Used sort -V for version comparison (avoids Python 4.x false negative from arithmetic)
-- [02-01]: check-all-then-fail pattern with set -e + || guards for dependency checking
-- [02-02]: File-level idempotency only for setup.sh; field-level YAML merging deferred to Phase 3 onboarding wizard
-- [02-02]: verify_directory_structure runs on every execution path (first run and re-run) to catch missing subdirs
-- [02-02]: user-profile.yaml template at fin-guru/data/ (tracked in git as template, Phase 3 will populate)
+- [Roadmap]: Phase 5 (Agent Readiness Hardening) added at end of M1 based on agent-readiness-report (2026-02-02)
+- [M2-COMPLETE]: M2 shipped 2026-02-18 with 29/29 requirements, 222 tests, 4 tech debt items (none blocking)
+- [M2-COMPLETE]: Phase mapping correction: ROADMAP shows phases 5/6/7/8 but actual GSD dirs are 06/07/08/09
 
 ### Pending Todos
 
@@ -64,8 +64,8 @@ None yet.
 ### Blockers/Concerns
 
 - [Phase 1]: RESOLVED -- PII audit found 1,645 matches across 157 commits. Plans created to address all.
-- [Phase 8]: options_chain scanner (scan_chain) has stderr side effects -- pragmatic vs clean extraction TBD (was Phase 7, renumbered)
-- [Phase 10]: Cytoscape.js WebGL vs Canvas decision deferred to research (was Phase 9, renumbered)
+- [Phase 8]: RESOLVED -- scan_chain stderr suppressed via contextlib.redirect_stderr in hedge_sizer.py validate_budget
+- [Phase 10]: Cytoscape.js WebGL vs Canvas decision deferred to research
 
 ## Quick Tasks
 
@@ -75,7 +75,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T14:57:53Z
-Stopped at: Completed quick-001 (docs reorganization)
+Last session: 2026-02-18
+Stopped at: M2 milestone v2.0 completed and archived
 Resume file: None
-Next action: /gsd:plan-phase 3 (Onboarding Wizard -- depends on Phase 2 which is now complete)
+Next action: `/gsd:new-milestone` for M3 (Interactive Knowledge Explorer)

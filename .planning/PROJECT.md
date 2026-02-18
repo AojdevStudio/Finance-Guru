@@ -26,6 +26,14 @@ These capabilities exist and are working in the current codebase:
 - ✓ Private data separation (fin-guru-private/ gitignored) — established
 - ✓ Dividend strategy explorer prototype (playgrounds/dividend-strategy-explorer.html) — established
 - ✓ Codebase map at .planning/codebase/ — established
+- ✓ Config loader with CLI-override-YAML-default priority chain — M2 shipped
+- ✓ Total return calculator with DRIP reinvestment, dividend data quality validation, Finnhub integration — M2 shipped
+- ✓ Rolling tracker with American put pricing, position status, roll suggestions, auto-archival — M2 shipped
+- ✓ Hedge sizer with floor-based contract sizing, multi-underlying allocation, budget validation — M2 shipped
+- ✓ SQQQ vs puts comparison with day-by-day decay simulation, VIX-SPX IV expansion, breakeven analysis — M2 shipped
+- ✓ 13 shared Pydantic hedging models across 3 model files — M2 shipped
+- ✓ Knowledge base files (hedging-strategies.md, options-insurance-framework.md) with 4 agent integrations — M2 shipped
+- ✓ M2 architecture diagram (m2-hedging-components.mmd) — M2 shipped
 
 ### Active
 
@@ -49,21 +57,21 @@ These capabilities exist and are working in the current codebase:
 - [ ] **ONBD-16**: All existing 365+ tests still pass after changes (no regressions)
 - [ ] **ONBD-17**: Finance Guru agents work with generic user profile (uses {user_name}, not hardcoded)
 
-#### Milestone 2: Hedging & Portfolio Protection Integration
+#### Milestone 2: Hedging & Portfolio Protection Integration (SHIPPED 2026-02-18)
 
-- [ ] **HEDG-01**: HedgeConfig Pydantic model reads hedging preferences from user-profile.yaml via config_loader.py
-- [ ] **HEDG-02**: hedging_inputs.py shared models (HedgePosition, RollSuggestion, HedgeSizeRequest, HedgeComparisonInput, etc.)
-- [ ] **HEDG-03**: total_return_inputs.py models (TotalReturnInput, DividendRecord, TickerReturn)
-- [ ] **HEDG-04**: Rolling strategy tracker CLI (status, suggest-roll, log-roll, history subcommands)
-- [ ] **HEDG-05**: Portfolio-aware hedge sizer CLI (sizing formula, budget validation, multi-underlying support)
-- [ ] **HEDG-06**: SQQQ vs puts comparison CLI (scenario modeling, breakeven analysis, decay accounting)
-- [ ] **HEDG-07**: Total return calculator CLI (price + dividend returns, DRIP modeling, multi-ticker comparison)
-- [ ] **HEDG-08**: Private hedging data directory (fin-guru-private/hedging/ with positions.yaml, roll-history.yaml, budget-tracker.yaml)
-- [ ] **HEDG-09**: Knowledge base files (hedging-strategies.md, options-insurance-framework.md, dividend-total-return.md, borrow-vs-sell-tax.md)
-- [ ] **HEDG-10**: Agent definitions updated to reference new knowledge files (Strategy Advisor, Teaching Specialist, Quant Analyst)
-- [ ] **HEDG-11**: Architecture diagram (Mermaid .mmd) showing new components and data flow
-- [ ] **HEDG-12**: All 4 new CLI tools work with `uv run python src/analysis/<tool>_cli.py`
-- [ ] **HEDG-13**: Tests for all new components (rolling tracker, hedge sizer, hedge comparison, total return, config loader)
+- [x] **HEDG-01**: HedgeConfig Pydantic model reads hedging preferences from user-profile.yaml via config_loader.py
+- [x] **HEDG-02**: hedging_inputs.py shared models (HedgePosition, RollSuggestion, HedgeSizeRequest, HedgeComparisonInput, etc.)
+- [x] **HEDG-03**: total_return_inputs.py models (TotalReturnInput, DividendRecord, TickerReturn)
+- [x] **HEDG-04**: Rolling strategy tracker CLI (status, suggest-roll, log-roll, history subcommands)
+- [x] **HEDG-05**: Portfolio-aware hedge sizer CLI (sizing formula, budget validation, multi-underlying support)
+- [x] **HEDG-06**: SQQQ vs puts comparison CLI (scenario modeling, breakeven analysis, decay accounting)
+- [x] **HEDG-07**: Total return calculator CLI (price + dividend returns, DRIP modeling, multi-ticker comparison)
+- [x] **HEDG-08**: Private hedging data directory (fin-guru-private/hedging/ with positions.yaml, roll-history.yaml, budget-tracker.yaml)
+- [x] **HEDG-09**: Knowledge base files (hedging-strategies.md, options-insurance-framework.md)
+- [x] **HEDG-10**: Agent definitions updated to reference new knowledge files (Strategy Advisor, Teaching Specialist, Quant Analyst, Compliance Officer)
+- [x] **HEDG-11**: Architecture diagram (Mermaid .mmd) showing new components and data flow
+- [x] **HEDG-12**: All 4 new CLI tools work with `uv run python src/analysis/<tool>_cli.py`
+- [x] **HEDG-13**: Tests for all new components (222 tests across 7 test files)
 
 #### Milestone 3: Interactive Knowledge Explorer
 
@@ -147,4 +155,4 @@ These capabilities exist and are working in the current codebase:
 | Static HTML explorers (no backend) | Zero-dependency philosophy, ships anywhere | — Pending |
 
 ---
-*Last updated: 2026-02-02 after initialization*
+*Last updated: 2026-02-18 (M2 milestone completed and archived)*

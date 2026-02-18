@@ -1,0 +1,12 @@
+# Default owner for everything
+* @AojdevStudio
+
+# Core source code
+/src/ @AojdevStudio
+/tests/ @AojdevStudio
+
+# Infrastructure and config
+/setup.sh @AojdevStudio
+/pyproject.toml @AojdevStudio
+/.pre-commit-config.yaml @AojdevStudio
+/.github/ @AojdevStudio

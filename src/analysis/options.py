@@ -1,5 +1,4 @@
-"""
-Options Analytics Engine for Finance Guru™
+"""Options Analytics Engine for Finance Guru™.
 
 This module implements Black-Scholes option pricing and Greeks calculations.
 All calculations follow standard derivatives pricing formulas.
@@ -48,8 +47,7 @@ from src.models.options_inputs import (
 
 
 class OptionsCalculator:
-    """
-    Black-Scholes options pricing and Greeks calculator.
+    """Black-Scholes options pricing and Greeks calculator.
 
     WHAT: Calculates theoretical option prices and sensitivities
     WHY: Essential for options trading and risk management
@@ -76,8 +74,7 @@ class OptionsCalculator:
     """
 
     def price_option(self, params: BlackScholesInput) -> GreeksOutput:
-        """
-        Calculate option price and all Greeks.
+        """Calculate option price and all Greeks.
 
         Args:
             params: Validated Black-Scholes parameters
@@ -119,10 +116,7 @@ class OptionsCalculator:
         rho = self._calculate_rho(is_call, K, T, r, d2)
 
         # Calculate intrinsic and time value
-        if is_call:
-            intrinsic = max(S - K, 0.0)
-        else:
-            intrinsic = max(K - S, 0.0)
+        intrinsic = max(S - K, 0.0) if is_call else max(K - S, 0.0)
         time_value = price - intrinsic
 
         # Determine moneyness
@@ -161,8 +155,7 @@ class OptionsCalculator:
         )
 
     def calculate_implied_vol(self, params: ImpliedVolInput) -> ImpliedVolOutput:
-        """
-        Calculate implied volatility using Newton-Raphson method.
+        """Calculate implied volatility using Newton-Raphson method.
 
         WHAT: Reverse-engineer volatility from market price
         WHY: Implied vol shows market's expectation
@@ -185,7 +178,6 @@ class OptionsCalculator:
         target_price = params.market_price
         r = params.risk_free_rate
         q = params.dividend_yield
-        is_call = params.option_type == "call"
 
         # Initial guess: 30% vol
         vol = 0.30
@@ -257,8 +249,7 @@ class OptionsCalculator:
         )
 
     def check_put_call_parity(self, params: PutCallParityInput) -> dict:
-        """
-        Check put-call parity relationship.
+        """Check put-call parity relationship.
 
         FORMULA:
             C - P = S - K * e^(-rT)
@@ -267,7 +258,7 @@ class OptionsCalculator:
         Put-call parity is an arbitrage relationship. If violated,
         there's a risk-free profit opportunity.
 
-        RETURNS:
+        Returns:
             Dict with:
             - lhs: Left-hand side (Call - Put)
             - rhs: Right-hand side (Stock - PV(Strike))
@@ -302,7 +293,7 @@ class OptionsCalculator:
                 f"Put-call parity {'VIOLATED' if arbitrage_exists else 'holds'}: "
                 f"C-P = ${lhs:.2f}, S-PV(K) = ${rhs:.2f}, "
                 f"difference = ${difference:.2f}"
-            )
+            ),
         }
 
     # Private helper methods
@@ -310,22 +301,20 @@ class OptionsCalculator:
     def _calculate_d1_d2(
         self, S: float, K: float, T: float, sigma: float, r: float, q: float
     ) -> tuple[float, float]:
-        """
-        Calculate d1 and d2 for Black-Scholes.
+        """Calculate d1 and d2 for Black-Scholes.
 
         FORMULAS:
             d1 = [ln(S/K) + (r - q + σ²/2)T] / (σ√T)
             d2 = d1 - σ√T
         """
-        d1 = (log(S / K) + (r - q + 0.5 * sigma ** 2) * T) / (sigma * sqrt(T))
+        d1 = (log(S / K) + (r - q + 0.5 * sigma**2) * T) / (sigma * sqrt(T))
         d2 = d1 - sigma * sqrt(T)
         return d1, d2
 
     def _call_price(
         self, S: float, K: float, T: float, r: float, q: float, d1: float, d2: float
     ) -> float:
-        """
-        Calculate call option price.
+        """Calculate call option price.
 
         FORMULA:
             C = S * e^(-qT) * N(d1) - K * e^(-rT) * N(d2)
@@ -336,8 +325,7 @@ class OptionsCalculator:
     def _put_price(
         self, S: float, K: float, T: float, r: float, q: float, d1: float, d2: float
     ) -> float:
-        """
-        Calculate put option price.
+        """Calculate put option price.
 
         FORMULA:
             P = K * e^(-rT) * N(-d2) - S * e^(-qT) * N(-d1)
@@ -346,8 +334,7 @@ class OptionsCalculator:
         return max(put, 0.0)
 
     def _calculate_delta(self, is_call: bool, d1: float, T: float, q: float) -> float:
-        """
-        Calculate delta.
+        """Calculate delta.
 
         FORMULAS:
             Call: Δ = e^(-qT) * N(d1)
@@ -364,8 +351,7 @@ class OptionsCalculator:
     def _calculate_gamma(
         self, S: float, d1: float, T: float, sigma: float, q: float
     ) -> float:
-        """
-        Calculate gamma.
+        """Calculate gamma.
 
         FORMULA:
             Γ = e^(-qT) * n(d1) / (S * σ * √T)
@@ -391,10 +377,9 @@ class OptionsCalculator:
         q: float,
         sigma: float,
         d1: float,
-        d2: float
+        d2: float,
     ) -> float:
-        """
-        Calculate theta (time decay).
+        """Calculate theta (time decay).
 
         EDUCATIONAL NOTE:
         Theta is ALWAYS negative (options lose value over time).
@@ -419,8 +404,7 @@ class OptionsCalculator:
         return theta / 365
 
     def _calculate_vega(self, S: float, T: float, d1: float, q: float) -> float:
-        """
-        Calculate vega.
+        """Calculate vega.
 
         FORMULA:
             V = S * e^(-qT) * √T * n(d1)
@@ -436,9 +420,10 @@ class OptionsCalculator:
         # Divide by 100 to get per-1% change
         return vega / 100
 
-    def _calculate_rho(self, is_call: bool, K: float, T: float, r: float, d2: float) -> float:
-        """
-        Calculate rho.
+    def _calculate_rho(
+        self, is_call: bool, K: float, T: float, r: float, d2: float
+    ) -> float:
+        """Calculate rho.
 
         FORMULAS:
             Call: ρ = K * T * e^(-rT) * N(d2)
@@ -464,10 +449,9 @@ def price_option(
     volatility: float,
     option_type: str = "call",
     risk_free_rate: float = 0.045,
-    dividend_yield: float = 0.0
+    dividend_yield: float = 0.0,
 ) -> GreeksOutput:
-    """
-    Convenience function for option pricing.
+    """Convenience function for option pricing.
 
     Args:
         spot: Current stock price

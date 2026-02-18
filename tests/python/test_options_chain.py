@@ -11,11 +11,9 @@ from __future__ import annotations
 
 import json
 import math
-import subprocess
 import sys
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -340,10 +338,7 @@ class TestMidPriceEdgeCases:
         ask = 0.0
         last_price = 3.50
 
-        if bid == 0.0 and ask == 0.0:
-            mid = last_price
-        else:
-            mid = (bid + ask) / 2
+        mid = last_price if bid == 0.0 and ask == 0.0 else (bid + ask) / 2
 
         assert mid == 3.50
 

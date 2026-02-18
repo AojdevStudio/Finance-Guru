@@ -37,17 +37,13 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Optional
 
 from src.models.yaml_generation_inputs import (
-    AllocationStrategy,
     CashFlowInput,
     DebtProfileInput,
-    InvestmentPhilosophy,
     InvestmentPortfolioInput,
     LiquidAssetsInput,
     MCPConfigInput,
-    RiskTolerance,
     UserDataInput,
     UserIdentityInput,
     UserPreferencesInput,
@@ -73,7 +69,7 @@ def load_user_data_from_json(json_path: str) -> UserDataInput:
     if not json_file.exists():
         raise FileNotFoundError(f"User data file not found: {json_path}")
 
-    with open(json_file, "r", encoding="utf-8") as f:
+    with open(json_file, encoding="utf-8") as f:
         raw_data = json.load(f)
 
     # Parse nested structures
@@ -94,7 +90,9 @@ def load_user_data_from_json(json_path: str) -> UserDataInput:
         raise ValueError(f"Invalid user data: {e}") from e
 
 
-def print_generation_summary(output, output_dir: str, config_type: Optional[str] = None) -> None:
+def print_generation_summary(
+    output, output_dir: str, config_type: str | None = None
+) -> None:
     """
     Print summary of generated configuration files.
 
@@ -104,7 +102,7 @@ def print_generation_summary(output, output_dir: str, config_type: Optional[str]
         config_type: Specific config type if only one was generated
     """
     print(f"\n{'=' * 70}")
-    print(f"CONFIGURATION GENERATION COMPLETE")
+    print("CONFIGURATION GENERATION COMPLETE")
     print(f"{'=' * 70}")
     print(f"User: {output.user_name}")
     print(f"Generation Date: {output.generation_date}")
@@ -245,9 +243,15 @@ Examples:
             else:
                 # Write single file
                 file_map = {
-                    "user-profile": Path(args.output) / "fin-guru" / "data" / "user-profile.yaml",
+                    "user-profile": Path(args.output)
+                    / "fin-guru"
+                    / "data"
+                    / "user-profile.yaml",
                     "config": Path(args.output) / "fin-guru" / "config.yaml",
-                    "system-context": Path(args.output) / "fin-guru" / "data" / "system-context.md",
+                    "system-context": Path(args.output)
+                    / "fin-guru"
+                    / "data"
+                    / "system-context.md",
                     "claude-md": Path(args.output) / "CLAUDE.md",
                     "env": Path(args.output) / ".env",
                 }
@@ -258,6 +262,7 @@ Examples:
 
                 # Create minimal output object for summary
                 from datetime import date
+
                 from src.models.yaml_generation_inputs import YAMLGenerationOutput
 
                 output = YAMLGenerationOutput(

@@ -1,5 +1,4 @@
-"""
-Finance Guru™ TUI Dashboard Main Application
+"""Finance Guru™ TUI Dashboard Main Application.
 
 WHAT: Main Textual application for Finance Guru dashboard
 WHY: Provides single-screen interface for portfolio overview and ticker analysis
@@ -10,20 +9,20 @@ Created: 2025-11-17
 """
 
 from textual.app import App, ComposeResult
-from textual.containers import Vertical
-from textual.widgets import Header, Footer
 from textual.binding import Binding
-from src.ui.widgets.portfolio_header import PortfolioHeader
-from src.ui.widgets.ticker_input import TickerInput
-from src.ui.widgets.results_panel import ResultsPanel
-from src.ui.services.portfolio_loader import PortfolioLoader
+from textual.containers import Vertical
+from textual.widgets import Footer, Header
+
 from src.ui.services.analysis_runner import AnalysisRunner
+from src.ui.services.portfolio_loader import PortfolioLoader
+from src.ui.widgets.portfolio_header import PortfolioHeader
+from src.ui.widgets.results_panel import ResultsPanel
+from src.ui.widgets.ticker_input import TickerInput
 
 
 class FinanceGuruApp(App):
-    """
-    Finance Guru™ TUI Dashboard v0.1
-    
+    """Finance Guru™ TUI Dashboard v0.1.
+
     Single-screen dashboard with:
     - Portfolio header (from latest CSV)
     - Ticker input and tool selection
@@ -85,7 +84,7 @@ class FinanceGuruApp(App):
         margin-right: 4;
         width: auto;
     }
-    
+
     .label {
         width: auto;
         min-width: 10;
@@ -93,7 +92,7 @@ class FinanceGuruApp(App):
         text-style: bold;
         content-align: center middle;
     }
-    
+
     .separator {
         width: auto;
         min-width: 3;
@@ -175,7 +174,7 @@ class FinanceGuruApp(App):
                 # Show warning but allow ticker input to proceed
                 self.notify(
                     "Portfolio CSV not found - continuing with ticker input only",
-                    severity="warning"
+                    severity="warning",
                 )
         except Exception as e:
             self.notify(f"Failed to load portfolio: {e}", severity="error")
@@ -192,7 +191,9 @@ class FinanceGuruApp(App):
             portfolio = PortfolioLoader.load_latest()
             if portfolio:
                 self.query_one(PortfolioHeader).portfolio = portfolio
-                self.notify("✅ Portfolio refreshed successfully", severity="information")
+                self.notify(
+                    "✅ Portfolio refreshed successfully", severity="information"
+                )
             else:
                 self.notify("⚠️ No portfolio CSV found", severity="warning")
         except Exception as e:
@@ -205,12 +206,12 @@ class FinanceGuruApp(App):
 
         try:
             results = AnalysisRunner.run_analysis(
-                message.ticker,
-                message.timeframe,
-                message.tools
+                message.ticker, message.timeframe, message.tools
             )
             results_panel.display_results(message.ticker, results)
-            self.notify(f"✅ Analysis complete for {message.ticker}", severity="information")
+            self.notify(
+                f"✅ Analysis complete for {message.ticker}", severity="information"
+            )
         except Exception as e:
             results_panel.show_error(str(e))
             self.notify(f"❌ Analysis failed: {str(e)}", severity="error")
@@ -219,4 +220,3 @@ class FinanceGuruApp(App):
 if __name__ == "__main__":
     app = FinanceGuruApp()
     app.run()
-

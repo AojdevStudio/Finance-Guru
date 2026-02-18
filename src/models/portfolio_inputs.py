@@ -1,5 +1,4 @@
-"""
-Portfolio Optimization Pydantic Models for Finance Guru™
+"""Portfolio Optimization Pydantic Models for Finance Guru™.
 
 WHAT: Data models for portfolio optimization and asset allocation
 WHY: Type-safe portfolio construction and optimization for $500k capital deployment
@@ -20,8 +19,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class PortfolioDataInput(BaseModel):
-    """
-    Historical price data for portfolio optimization.
+    """Historical price data for portfolio optimization.
 
     WHAT: Multi-asset price history for optimization calculations
     WHY: Enables calculation of expected returns, volatilities, and correlations
@@ -44,30 +42,28 @@ class PortfolioDataInput(BaseModel):
     tickers: list[str] = Field(
         ...,
         min_length=2,
-        description="Asset ticker symbols (minimum 2 for portfolio optimization)"
+        description="Asset ticker symbols (minimum 2 for portfolio optimization)",
     )
 
     dates: list[date] = Field(
         ...,
         min_length=30,
-        description="Trading dates (minimum 30 days, 252 recommended for reliable estimates)"
+        description="Trading dates (minimum 30 days, 252 recommended for reliable estimates)",
     )
 
     prices: dict[str, list[float]] = Field(
-        ...,
-        description="Price history for each ticker {ticker: [prices]}"
+        ..., description="Price history for each ticker {ticker: [prices]}"
     )
 
     expected_returns: dict[str, float] | None = Field(
         default=None,
-        description="Optional expected annual returns per asset (if None, estimated from history)"
+        description="Optional expected annual returns per asset (if None, estimated from history)",
     )
 
-    @field_validator('tickers')
+    @field_validator("tickers")
     @classmethod
     def tickers_must_be_uppercase(cls, v: list[str]) -> list[str]:
-        """
-        Ensure ticker symbols are uppercase and valid format.
+        """Ensure ticker symbols are uppercase and valid format.
 
         EDUCATIONAL NOTE:
         Standard convention is uppercase ticker symbols (TSLA not tsla).
@@ -80,11 +76,12 @@ class PortfolioDataInput(BaseModel):
                 raise ValueError(f"Ticker '{ticker}' must contain only letters")
         return v
 
-    @field_validator('prices')
+    @field_validator("prices")
     @classmethod
-    def validate_prices_structure(cls, v: dict[str, list[float]], info) -> dict[str, list[float]]:
-        """
-        Validate that all price series have same length and positive values.
+    def validate_prices_structure(
+        cls, v: dict[str, list[float]], info
+    ) -> dict[str, list[float]]:
+        """Validate that all price series have same length and positive values.
 
         EDUCATIONAL NOTE:
         Portfolio optimization requires synchronized data. If TSLA has 300 days
@@ -92,41 +89,44 @@ class PortfolioDataInput(BaseModel):
         All assets must have the exact same observation period.
         """
         if not v:
-            raise ValueError('Prices dictionary cannot be empty')
+            raise ValueError("Prices dictionary cannot be empty")
 
         # Check all prices are positive
         for ticker, price_list in v.items():
             if any(p <= 0 for p in price_list):
-                raise ValueError(f'All prices for {ticker} must be positive')
+                raise ValueError(f"All prices for {ticker} must be positive")
 
         # Check all series have same length
         lengths = [len(price_list) for price_list in v.values()]
         if len(set(lengths)) > 1:
             raise ValueError(
-                f'All price series must have same length. Found: {dict(zip(v.keys(), lengths))}'
+                f"All price series must have same length. Found: {dict(zip(v.keys(), lengths, strict=False))}"
             )
 
         # Check minimum length (30 days minimum, 252 recommended)
         if lengths[0] < 30:
             raise ValueError(
-                f'Price series must have at least 30 days. Found: {lengths[0]} days. '
-                f'Note: 252 days (1 year) recommended for reliable optimization.'
+                f"Price series must have at least 30 days. Found: {lengths[0]} days. "
+                f"Note: 252 days (1 year) recommended for reliable optimization."
             )
 
         # Check tickers match
-        tickers_in_data = info.data.get('tickers', [])
+        tickers_in_data = info.data.get("tickers", [])
         if tickers_in_data:
             for ticker in tickers_in_data:
                 if ticker not in v:
-                    raise ValueError(f'Ticker {ticker} listed but no price data provided')
+                    raise ValueError(
+                        f"Ticker {ticker} listed but no price data provided"
+                    )
 
         return v
 
-    @field_validator('expected_returns')
+    @field_validator("expected_returns")
     @classmethod
-    def validate_expected_returns(cls, v: dict[str, float] | None, info) -> dict[str, float] | None:
-        """
-        Validate expected returns if provided.
+    def validate_expected_returns(
+        cls, v: dict[str, float] | None, info
+    ) -> dict[str, float] | None:
+        """Validate expected returns if provided.
 
         EDUCATIONAL NOTE:
         Expected returns are ANNUAL returns (e.g., 0.15 = 15% per year).
@@ -150,39 +150,40 @@ class PortfolioDataInput(BaseModel):
                 )
 
         # Check tickers match
-        tickers_in_data = info.data.get('tickers', [])
+        tickers_in_data = info.data.get("tickers", [])
         if tickers_in_data:
             for ticker in tickers_in_data:
                 if ticker not in v:
                     raise ValueError(
-                        f'Expected return provided but missing ticker {ticker}'
+                        f"Expected return provided but missing ticker {ticker}"
                     )
 
         return v
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "tickers": ["TSLA", "SPY", "BND"],
-                "dates": ["2024-10-13"] * 252,  # Simplified for example
-                "prices": {
-                    "TSLA": [250.0] * 252,
-                    "SPY": [450.0] * 252,
-                    "BND": [72.0] * 252
-                },
-                "expected_returns": {
-                    "TSLA": 0.20,  # 20% expected annual return
-                    "SPY": 0.10,   # 10% expected annual return
-                    "BND": 0.04    # 4% expected annual return
+            "examples": [
+                {
+                    "tickers": ["TSLA", "SPY", "BND"],
+                    "dates": ["2024-10-13"] * 252,  # Simplified for example
+                    "prices": {
+                        "TSLA": [250.0] * 252,
+                        "SPY": [450.0] * 252,
+                        "BND": [72.0] * 252,
+                    },
+                    "expected_returns": {
+                        "TSLA": 0.20,  # 20% expected annual return
+                        "SPY": 0.10,  # 10% expected annual return
+                        "BND": 0.04,  # 4% expected annual return
+                    },
                 }
-            }]
+            ]
         }
     }
 
 
 class OptimizationConfig(BaseModel):
-    """
-    Configuration for portfolio optimization.
+    """Configuration for portfolio optimization.
 
     WHAT: Settings that control the optimization process
     WHY: Different optimization methods suit different investment goals
@@ -216,50 +217,42 @@ class OptimizationConfig(BaseModel):
     """
 
     method: Literal[
-        "mean_variance",
-        "risk_parity",
-        "min_variance",
-        "max_sharpe",
-        "black_litterman"
-    ] = Field(
-        default="max_sharpe",
-        description="Optimization method to use"
-    )
+        "mean_variance", "risk_parity", "min_variance", "max_sharpe", "black_litterman"
+    ] = Field(default="max_sharpe", description="Optimization method to use")
 
     risk_free_rate: float = Field(
         default=0.045,
         ge=0.0,
         le=0.20,
-        description="Annual risk-free rate for Sharpe calculation (0.045 = 4.5%)"
+        description="Annual risk-free rate for Sharpe calculation (0.045 = 4.5%)",
     )
 
     target_return: float | None = Field(
         default=None,
         ge=0.0,
         le=1.0,
-        description="Target annual return for mean-variance optimization (None = unconstrained)"
+        description="Target annual return for mean-variance optimization (None = unconstrained)",
     )
 
     allow_short: bool = Field(
         default=False,
-        description="Allow short positions (False = long-only, appropriate for most retail investors)"
+        description="Allow short positions (False = long-only, appropriate for most retail investors)",
     )
 
     position_limits: tuple[float, float] = Field(
         default=(0.0, 1.0),
-        description="Min and max position size per asset (0.0, 1.0) = 0-100%"
+        description="Min and max position size per asset (0.0, 1.0) = 0-100%",
     )
 
     views: dict[str, float] | None = Field(
         default=None,
-        description="Investor views on expected returns for Black-Litterman (ticker: annual_return)"
+        description="Investor views on expected returns for Black-Litterman (ticker: annual_return)",
     )
 
-    @field_validator('position_limits')
+    @field_validator("position_limits")
     @classmethod
     def validate_position_limits(cls, v: tuple[float, float]) -> tuple[float, float]:
-        """
-        Validate position limit constraints.
+        """Validate position limit constraints.
 
         EDUCATIONAL NOTE:
         Position limits prevent over-concentration. For a $500k portfolio:
@@ -296,10 +289,9 @@ class OptimizationConfig(BaseModel):
 
         return v
 
-    @model_validator(mode='after')
-    def validate_method_specific_requirements(self) -> "OptimizationConfig":
-        """
-        Validate that required parameters are present for each method.
+    @model_validator(mode="after")
+    def validate_method_specific_requirements(self) -> OptimizationConfig:
+        """Validate that required parameters are present for each method.
 
         EDUCATIONAL NOTE:
         Different optimization methods need different inputs:
@@ -322,33 +314,29 @@ class OptimizationConfig(BaseModel):
                     "method": "max_sharpe",
                     "risk_free_rate": 0.045,
                     "allow_short": False,
-                    "position_limits": [0.0, 0.30]
+                    "position_limits": [0.0, 0.30],
                 },
                 {
                     "method": "mean_variance",
                     "risk_free_rate": 0.045,
                     "target_return": 0.12,
                     "allow_short": False,
-                    "position_limits": [0.0, 1.0]
+                    "position_limits": [0.0, 1.0],
                 },
                 {
                     "method": "black_litterman",
                     "risk_free_rate": 0.045,
                     "allow_short": False,
                     "position_limits": [0.0, 1.0],
-                    "views": {
-                        "TSLA": 0.15,
-                        "PLTR": 0.20
-                    }
-                }
+                    "views": {"TSLA": 0.15, "PLTR": 0.20},
+                },
             ]
         }
     }
 
 
 class OptimizationOutput(BaseModel):
-    """
-    Results from portfolio optimization.
+    """Results from portfolio optimization.
 
     WHAT: Optimal portfolio weights and expected metrics
     WHY: Provides actionable allocation for capital deployment
@@ -374,37 +362,31 @@ class OptimizationOutput(BaseModel):
     method: str = Field(..., description="Optimization method used")
 
     optimal_weights: dict[str, float] = Field(
-        ...,
-        description="Optimal allocation per asset (must sum to 1.0)"
+        ..., description="Optimal allocation per asset (must sum to 1.0)"
     )
 
-    expected_return: float = Field(
-        ...,
-        description="Expected annual portfolio return"
-    )
+    expected_return: float = Field(..., description="Expected annual portfolio return")
 
     expected_volatility: float = Field(
         ...,
         ge=0.0,
-        description="Expected annual portfolio volatility (standard deviation)"
+        description="Expected annual portfolio volatility (standard deviation)",
     )
 
     sharpe_ratio: float = Field(
-        ...,
-        description="Expected Sharpe ratio (return per unit of risk)"
+        ..., description="Expected Sharpe ratio (return per unit of risk)"
     )
 
     diversification_ratio: float = Field(
         ...,
         ge=1.0,
-        description="Diversification ratio (portfolio_risk / weighted_avg_risk)"
+        description="Diversification ratio (portfolio_risk / weighted_avg_risk)",
     )
 
-    @field_validator('optimal_weights')
+    @field_validator("optimal_weights")
     @classmethod
     def weights_must_sum_to_one(cls, v: dict[str, float]) -> dict[str, float]:
-        """
-        Ensure weights sum to 1.0 (fully invested).
+        """Ensure weights sum to 1.0 (fully invested).
 
         EDUCATIONAL NOTE:
         Weights must sum to 1.0 (100%) for a fully invested portfolio.
@@ -417,11 +399,10 @@ class OptimizationOutput(BaseModel):
             )
         return v
 
-    @field_validator('diversification_ratio')
+    @field_validator("diversification_ratio")
     @classmethod
     def diversification_ratio_must_be_valid(cls, v: float) -> float:
-        """
-        Validate diversification ratio is >= 1.0.
+        """Validate diversification ratio is >= 1.0.
 
         EDUCATIONAL NOTE:
         Diversification ratio measures the benefit of diversification.
@@ -440,27 +421,28 @@ class OptimizationOutput(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "tickers": ["TSLA", "PLTR", "NVDA", "SPY"],
-                "method": "max_sharpe",
-                "optimal_weights": {
-                    "TSLA": 0.25,
-                    "PLTR": 0.30,
-                    "NVDA": 0.20,
-                    "SPY": 0.25
-                },
-                "expected_return": 0.18,
-                "expected_volatility": 0.24,
-                "sharpe_ratio": 1.52,
-                "diversification_ratio": 1.45
-            }]
+            "examples": [
+                {
+                    "tickers": ["TSLA", "PLTR", "NVDA", "SPY"],
+                    "method": "max_sharpe",
+                    "optimal_weights": {
+                        "TSLA": 0.25,
+                        "PLTR": 0.30,
+                        "NVDA": 0.20,
+                        "SPY": 0.25,
+                    },
+                    "expected_return": 0.18,
+                    "expected_volatility": 0.24,
+                    "sharpe_ratio": 1.52,
+                    "diversification_ratio": 1.45,
+                }
+            ]
         }
     }
 
 
 class EfficientFrontierOutput(BaseModel):
-    """
-    Efficient frontier data for visualization.
+    """Efficient frontier data for visualization.
 
     WHAT: Collection of optimal portfolios across risk levels
     WHY: Shows risk-return tradeoff, helps choose risk tolerance
@@ -484,31 +466,26 @@ class EfficientFrontierOutput(BaseModel):
     returns: list[float] = Field(
         ...,
         min_length=10,
-        description="Expected annual returns for frontier portfolios"
+        description="Expected annual returns for frontier portfolios",
     )
 
     volatilities: list[float] = Field(
         ...,
         min_length=10,
-        description="Expected annual volatilities for frontier portfolios"
+        description="Expected annual volatilities for frontier portfolios",
     )
 
     sharpe_ratios: list[float] = Field(
-        ...,
-        min_length=10,
-        description="Sharpe ratios for frontier portfolios"
+        ..., min_length=10, description="Sharpe ratios for frontier portfolios"
     )
 
     optimal_portfolio_index: int = Field(
-        ...,
-        ge=0,
-        description="Index of maximum Sharpe ratio portfolio in the frontier"
+        ..., ge=0, description="Index of maximum Sharpe ratio portfolio in the frontier"
     )
 
-    @model_validator(mode='after')
-    def validate_frontier_consistency(self) -> "EfficientFrontierOutput":
-        """
-        Ensure all frontier arrays have same length.
+    @model_validator(mode="after")
+    def validate_frontier_consistency(self) -> EfficientFrontierOutput:
+        """Ensure all frontier arrays have same length.
 
         EDUCATIONAL NOTE:
         Each point on the frontier has (return, volatility, sharpe_ratio).
@@ -534,12 +511,47 @@ class EfficientFrontierOutput(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "returns": [0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26],
-                "volatilities": [0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30],
-                "sharpe_ratios": [0.29, 0.39, 0.47, 0.53, 0.58, 0.61, 0.63, 0.63, 0.62, 0.60],
-                "optimal_portfolio_index": 6
-            }]
+            "examples": [
+                {
+                    "returns": [
+                        0.08,
+                        0.10,
+                        0.12,
+                        0.14,
+                        0.16,
+                        0.18,
+                        0.20,
+                        0.22,
+                        0.24,
+                        0.26,
+                    ],
+                    "volatilities": [
+                        0.12,
+                        0.14,
+                        0.16,
+                        0.18,
+                        0.20,
+                        0.22,
+                        0.24,
+                        0.26,
+                        0.28,
+                        0.30,
+                    ],
+                    "sharpe_ratios": [
+                        0.29,
+                        0.39,
+                        0.47,
+                        0.53,
+                        0.58,
+                        0.61,
+                        0.63,
+                        0.63,
+                        0.62,
+                        0.60,
+                    ],
+                    "optimal_portfolio_index": 6,
+                }
+            ]
         }
     }
 

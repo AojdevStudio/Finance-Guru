@@ -1,5 +1,4 @@
-"""
-Moving Average Calculator for Finance Guru™
+"""Moving Average Calculator for Finance Guru™.
 
 This module implements comprehensive moving average calculations using validated
 Pydantic models. All calculations follow industry-standard technical analysis formulas.
@@ -33,23 +32,23 @@ Author: Finance Guru™ Development Team
 Created: 2025-10-13
 """
 
+from datetime import date
+from typing import Literal
+
 import numpy as np
 import pandas as pd
-from typing import Literal
-from datetime import date
 
 from src.models.moving_avg_inputs import (
-    MovingAverageDataInput,
-    MovingAverageConfig,
-    MovingAverageOutput,
     CrossoverOutput,
     MovingAverageAnalysis,
+    MovingAverageConfig,
+    MovingAverageDataInput,
+    MovingAverageOutput,
 )
 
 
 class MovingAverageCalculator:
-    """
-    Comprehensive moving average calculator.
+    """Comprehensive moving average calculator.
 
     WHAT: Calculates all major moving average types for Finance Guru agents
     WHY: Provides validated, type-safe trend analysis for trading decisions
@@ -75,8 +74,7 @@ class MovingAverageCalculator:
     """
 
     def __init__(self, config: MovingAverageConfig):
-        """
-        Initialize calculator with configuration.
+        """Initialize calculator with configuration.
 
         Args:
             config: Validated configuration (Pydantic model ensures correctness)
@@ -89,8 +87,7 @@ class MovingAverageCalculator:
         self.config = config
 
     def calculate_sma(self, prices: pd.Series, period: int) -> pd.Series:
-        """
-        Calculate Simple Moving Average.
+        """Calculate Simple Moving Average.
 
         WHAT: Average of last N prices
         WHY: Smooths price data, identifies trend direction
@@ -126,8 +123,7 @@ class MovingAverageCalculator:
         return prices.rolling(window=period).mean()
 
     def calculate_ema(self, prices: pd.Series, period: int) -> pd.Series:
-        """
-        Calculate Exponential Moving Average.
+        """Calculate Exponential Moving Average.
 
         WHAT: Weighted average giving more importance to recent prices
         WHY: More responsive to recent price changes than SMA
@@ -172,8 +168,7 @@ class MovingAverageCalculator:
         return prices.ewm(span=period, adjust=False).mean()
 
     def calculate_wma(self, prices: pd.Series, period: int) -> pd.Series:
-        """
-        Calculate Weighted Moving Average.
+        """Calculate Weighted Moving Average.
 
         WHAT: Average with linearly increasing weights
         WHY: Balances responsiveness and smoothness
@@ -228,8 +223,7 @@ class MovingAverageCalculator:
         return prices.rolling(window=period).apply(weighted_mean, raw=True)
 
     def calculate_hma(self, prices: pd.Series, period: int) -> pd.Series:
-        """
-        Calculate Hull Moving Average.
+        """Calculate Hull Moving Average.
 
         WHAT: Advanced MA with minimal lag and maximum smoothness
         WHY: Eliminates lag while maintaining smoothness
@@ -296,8 +290,7 @@ class MovingAverageCalculator:
         return hma
 
     def calculate_ma(self, data: MovingAverageDataInput) -> MovingAverageOutput:
-        """
-        Calculate primary moving average.
+        """Calculate primary moving average.
 
         WHAT: Calculate specified MA type for given data
         WHY: Provides trend analysis and support/resistance levels
@@ -366,8 +359,7 @@ class MovingAverageCalculator:
         slow_ma: pd.Series,
         dates: list,
     ) -> tuple[str, date | None, int | None]:
-        """
-        Detect MA crossover and determine signal.
+        """Detect MA crossover and determine signal.
 
         WHAT: Identifies when fast MA crosses slow MA
         WHY: Crossovers are powerful trading signals
@@ -399,12 +391,12 @@ class MovingAverageCalculator:
         for i in range(len(fast_ma) - 1, 0, -1):
             if pd.isna(fast_ma.iloc[i]) or pd.isna(slow_ma.iloc[i]):
                 continue
-            if pd.isna(fast_ma.iloc[i-1]) or pd.isna(slow_ma.iloc[i-1]):
+            if pd.isna(fast_ma.iloc[i - 1]) or pd.isna(slow_ma.iloc[i - 1]):
                 continue
 
             # Check if relationship changed (crossover)
             current_relationship = fast_ma.iloc[i] > slow_ma.iloc[i]
-            previous_relationship = fast_ma.iloc[i-1] > slow_ma.iloc[i-1]
+            previous_relationship = fast_ma.iloc[i - 1] > slow_ma.iloc[i - 1]
 
             if current_relationship != previous_relationship:
                 # Found most recent crossover
@@ -423,11 +415,9 @@ class MovingAverageCalculator:
         return signal, last_crossover_date, days_since
 
     def calculate_with_crossover(
-        self,
-        data: MovingAverageDataInput
+        self, data: MovingAverageDataInput
     ) -> MovingAverageAnalysis:
-        """
-        Calculate MAs with crossover analysis.
+        """Calculate MAs with crossover analysis.
 
         WHAT: Calculate two MAs and analyze their crossover
         WHY: Crossovers provide actionable trading signals
@@ -472,12 +462,18 @@ class MovingAverageCalculator:
 
         # Determine which is fast/slow
         if self.config.period < self.config.secondary_period:
-            fast_ma = pd.Series(primary_output.ma_values, index=data.dates[-len(primary_output.ma_values):])
+            fast_ma = pd.Series(
+                primary_output.ma_values,
+                index=data.dates[-len(primary_output.ma_values) :],
+            )
             slow_ma = secondary_ma
             fast_is_primary = True
         else:
             fast_ma = secondary_ma
-            slow_ma = pd.Series(primary_output.ma_values, index=data.dates[-len(primary_output.ma_values):])
+            slow_ma = pd.Series(
+                primary_output.ma_values,
+                index=data.dates[-len(primary_output.ma_values) :],
+            )
             fast_is_primary = False
 
         # Create secondary output
@@ -488,7 +484,9 @@ class MovingAverageCalculator:
             period=self.config.secondary_period,
             current_value=float(secondary_ma.iloc[-1]),
             current_price=float(prices.iloc[-1]),
-            price_vs_ma="ABOVE" if float(prices.iloc[-1]) > float(secondary_ma.iloc[-1]) else "BELOW",
+            price_vs_ma="ABOVE"
+            if float(prices.iloc[-1]) > float(secondary_ma.iloc[-1])
+            else "BELOW",
             ma_values=secondary_ma.dropna().tolist(),
         )
 
@@ -505,14 +503,26 @@ class MovingAverageCalculator:
 
         # Determine crossover type (Golden Cross/Death Cross only for 50/200 SMA)
         crossover_type: Literal["GOLDEN_CROSS", "DEATH_CROSS", "NONE"] = "NONE"
-        fast_period = self.config.period if fast_is_primary else self.config.secondary_period
-        slow_period = self.config.secondary_period if fast_is_primary else self.config.period
-        fast_type = self.config.ma_type if fast_is_primary else self.config.secondary_ma_type
-        slow_type = self.config.secondary_ma_type if fast_is_primary else self.config.ma_type
+        fast_period = (
+            self.config.period if fast_is_primary else self.config.secondary_period
+        )
+        slow_period = (
+            self.config.secondary_period if fast_is_primary else self.config.period
+        )
+        fast_type = (
+            self.config.ma_type if fast_is_primary else self.config.secondary_ma_type
+        )
+        slow_type = (
+            self.config.secondary_ma_type if fast_is_primary else self.config.ma_type
+        )
 
-        if (fast_period == 50 and slow_period == 200 and
-            fast_type == "SMA" and slow_type == "SMA" and
-            last_crossover_date is not None):
+        if (
+            fast_period == 50
+            and slow_period == 200
+            and fast_type == "SMA"
+            and slow_type == "SMA"
+            and last_crossover_date is not None
+        ):
             if signal == "BULLISH":
                 crossover_type = "GOLDEN_CROSS"
             elif signal == "BEARISH":
@@ -553,8 +563,7 @@ def calculate_moving_average(
     secondary_ma_type: str | None = None,
     secondary_period: int | None = None,
 ) -> MovingAverageAnalysis:
-    """
-    Convenience function for calculating moving averages.
+    """Convenience function for calculating moving averages.
 
     EDUCATIONAL NOTE:
     This wrapper handles Pydantic model creation for you.

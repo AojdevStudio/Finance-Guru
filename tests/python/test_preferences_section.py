@@ -12,8 +12,8 @@ This validates:
 
 import json
 import subprocess
-import tempfile
 from pathlib import Path
+
 import pytest
 
 
@@ -39,27 +39,27 @@ class TestPreferencesSection:
                     "total": 14491,
                     "accounts_count": 10,
                     "average_yield": 0.04,
-                    "structure": []
+                    "structure": [],
                 },
                 "investments": {
                     "total_value": 243382.67,
                     "retirement_accounts": 308000,
                     "allocation": "aggressive_growth",
-                    "risk_profile": "aggressive"
+                    "risk_profile": "aggressive",
                 },
                 "cash_flow": {
                     "monthly_income": 25000,
                     "fixed_expenses": 4500,
                     "variable_expenses": 10000,
                     "current_savings": 5000,
-                    "investment_capacity": 10500
+                    "investment_capacity": 10500,
                 },
                 "debt": {
                     "mortgage_balance": 365139.76,
                     "mortgage_payment": 1712.68,
-                    "other_debt": []
-                }
-            }
+                    "other_debt": [],
+                },
+            },
         }
         state_file = temp_dir / ".onboarding-state.json"
         state_file.write_text(json.dumps(state, indent=2))
@@ -68,9 +68,14 @@ class TestPreferencesSection:
     def test_section_exports_run_function(self):
         """Test that preferences.ts exports runPreferencesSection"""
         result = subprocess.run(
-            ["bun", "run", "-e", "import { runPreferencesSection } from './scripts/onboarding/sections/preferences.ts'; console.log(typeof runPreferencesSection)"],
+            [
+                "bun",
+                "run",
+                "-e",
+                "import { runPreferencesSection } from './scripts/onboarding/sections/preferences.ts'; console.log(typeof runPreferencesSection)",
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
         assert result.returncode == 0
         assert "function" in result.stdout
@@ -110,7 +115,7 @@ class TestPreferencesSection:
             ["bun", "run", "scripts/onboarding/sections/preferences.ts", "--help"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
         )
         # Should not have TypeScript compilation errors
         assert "error TS" not in result.stderr
@@ -154,13 +159,17 @@ class TestPreferencesSection:
         """Test that validation functions are properly integrated"""
         # Test enum validation integration
         result = subprocess.run(
-            ["bun", "-e", """
+            [
+                "bun",
+                "-e",
+                """
             import { validateEnum } from './scripts/onboarding/modules/input-validator.ts';
             console.log(validateEnum('aggressive', ['conservative', 'moderate', 'aggressive'], 'risk tolerance'));
             console.log(validateEnum('moderate', ['conservative', 'moderate', 'aggressive'], 'risk tolerance'));
-            """],
+            """,
+            ],
             capture_output=True,
-            text=True
+            text=True,
         )
         assert result.returncode == 0
         assert "aggressive" in result.stdout
@@ -204,7 +213,11 @@ class TestPreferencesSection:
 
         # Should have logic for optional input
         assert "optional" in content.lower()
-        assert "skip" in content.lower() or "enter" in content.lower() or "press enter" in content.lower()
+        assert (
+            "skip" in content.lower()
+            or "enter" in content.lower()
+            or "press enter" in content.lower()
+        )
 
     def test_focus_areas_multi_select(self):
         """Test that focus_areas supports multi-select (comma-separated)"""
@@ -221,7 +234,10 @@ class TestPreferencesSection:
         content = section_file.read_text()
 
         # Should list available focus areas
-        assert "dividend_portfolio_construction" in content or "dividend" in content.lower()
+        assert (
+            "dividend_portfolio_construction" in content
+            or "dividend" in content.lower()
+        )
         assert "margin_strategies" in content or "margin" in content.lower()
         assert "tax_efficiency" in content or "tax" in content.lower()
 
@@ -258,7 +274,9 @@ class TestPreferencesSection:
         # Should use validateEnum for risk_tolerance, investment_philosophy, time_horizon
         # At least 3 calls expected
         validate_count = content.count("validateEnum")
-        assert validate_count >= 3, f"Expected at least 3 validateEnum calls, found {validate_count}"
+        assert validate_count >= 3, (
+            f"Expected at least 3 validateEnum calls, found {validate_count}"
+        )
 
     def test_focus_areas_validation(self):
         """Test that invalid focus areas are filtered out"""

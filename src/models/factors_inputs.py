@@ -1,5 +1,4 @@
-"""
-Factor Analysis Pydantic Models for Finance Guru™
+"""Factor Analysis Pydantic Models for Finance Guru™.
 
 This module defines type-safe data structures for factor analysis.
 All models use Pydantic for automatic validation and type checking.
@@ -33,8 +32,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class FactorDataInput(BaseModel):
-    """
-    Input data for factor analysis.
+    """Input data for factor analysis.
 
     WHAT: Time-series of asset returns and factor returns
     WHY: Need aligned return data for regression analysis
@@ -96,14 +94,15 @@ class FactorDataInput(BaseModel):
         default=0.045,
         ge=0.0,
         le=0.20,
-        description="Annual risk-free rate (default: 4.5%)"
+        description="Annual risk-free rate (default: 4.5%)",
     )
 
-    @field_validator("asset_returns", "market_returns", "smb_returns", "hml_returns", "mom_returns")
+    @field_validator(
+        "asset_returns", "market_returns", "smb_returns", "hml_returns", "mom_returns"
+    )
     @classmethod
     def validate_returns_reasonable(cls, v: list[float] | None) -> list[float] | None:
-        """
-        Ensure returns are within reasonable bounds.
+        """Ensure returns are within reasonable bounds.
 
         EDUCATIONAL NOTE:
         Daily returns outside -50% to +100% are extremely rare and
@@ -144,8 +143,7 @@ class FactorDataInput(BaseModel):
 
 
 class FactorExposureOutput(BaseModel):
-    """
-    Factor exposure (beta) estimates from regression.
+    """Factor exposure (beta) estimates from regression.
 
     WHAT: Sensitivity of asset to each risk factor
     WHY: Shows which factors drive your returns
@@ -166,29 +164,25 @@ class FactorExposureOutput(BaseModel):
 
     # Factor Betas (Exposures)
     market_beta: float = Field(
-        ...,
-        description="Market factor beta (typically 0.5 to 2.0 for stocks)"
+        ..., description="Market factor beta (typically 0.5 to 2.0 for stocks)"
     )
 
     size_beta: float | None = Field(
-        default=None,
-        description="SMB factor beta (positive = small-cap tilt)"
+        default=None, description="SMB factor beta (positive = small-cap tilt)"
     )
 
     value_beta: float | None = Field(
         default=None,
-        description="HML factor beta (positive = value tilt, negative = growth tilt)"
+        description="HML factor beta (positive = value tilt, negative = growth tilt)",
     )
 
     momentum_beta: float | None = Field(
-        default=None,
-        description="Momentum factor beta (positive = momentum tilt)"
+        default=None, description="Momentum factor beta (positive = momentum tilt)"
     )
 
     # Alpha (Excess Return)
     alpha: float = Field(
-        ...,
-        description="Alpha (excess return not explained by factors, annualized)"
+        ..., description="Alpha (excess return not explained by factors, annualized)"
     )
 
     # Model Quality
@@ -196,19 +190,15 @@ class FactorExposureOutput(BaseModel):
         ...,
         ge=0.0,
         le=1.0,
-        description="R-squared (proportion of variance explained by model)"
+        description="R-squared (proportion of variance explained by model)",
     )
 
     # Standard Errors (for statistical significance)
     alpha_tstat: float = Field(
-        ...,
-        description="T-statistic for alpha (> 2.0 suggests significance)"
+        ..., description="T-statistic for alpha (> 2.0 suggests significance)"
     )
 
-    market_beta_tstat: float = Field(
-        ...,
-        description="T-statistic for market beta"
-    )
+    market_beta_tstat: float = Field(..., description="T-statistic for market beta")
 
     model_config = {
         "json_schema_extra": {
@@ -223,7 +213,7 @@ class FactorExposureOutput(BaseModel):
                     "alpha": 0.12,
                     "r_squared": 0.68,
                     "alpha_tstat": 2.45,
-                    "market_beta_tstat": 18.5
+                    "market_beta_tstat": 18.5,
                 }
             ]
         }
@@ -231,8 +221,7 @@ class FactorExposureOutput(BaseModel):
 
 
 class AttributionOutput(BaseModel):
-    """
-    Return attribution by factor.
+    """Return attribution by factor.
 
     WHAT: Decomposition of total return into factor contributions
     WHY: Answers "Where did my returns come from?"
@@ -258,55 +247,38 @@ class AttributionOutput(BaseModel):
     analysis_date: date = Field(..., description="Date of analysis")
 
     # Total Performance
-    total_return: float = Field(
-        ...,
-        description="Total annualized return"
-    )
+    total_return: float = Field(..., description="Total annualized return")
 
     # Factor Contributions (additive)
     market_attribution: float = Field(
-        ...,
-        description="Return attributed to market factor"
+        ..., description="Return attributed to market factor"
     )
 
     size_attribution: float | None = Field(
-        default=None,
-        description="Return attributed to size factor"
+        default=None, description="Return attributed to size factor"
     )
 
     value_attribution: float | None = Field(
-        default=None,
-        description="Return attributed to value factor"
+        default=None, description="Return attributed to value factor"
     )
 
     momentum_attribution: float | None = Field(
-        default=None,
-        description="Return attributed to momentum factor"
+        default=None, description="Return attributed to momentum factor"
     )
 
     alpha_attribution: float = Field(
-        ...,
-        description="Return attributed to alpha (skill/luck)"
+        ..., description="Return attributed to alpha (skill/luck)"
     )
 
-    residual: float = Field(
-        ...,
-        description="Unexplained return (model error)"
-    )
+    residual: float = Field(..., description="Unexplained return (model error)")
 
     # Factor Importance (as % of total)
     market_importance: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Market contribution as % of total return"
+        ..., ge=0.0, le=1.0, description="Market contribution as % of total return"
     )
 
     alpha_importance: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Alpha contribution as % of total return"
+        ..., ge=0.0, le=1.0, description="Alpha contribution as % of total return"
     )
 
     model_config = {
@@ -323,7 +295,7 @@ class AttributionOutput(BaseModel):
                     "alpha_attribution": 0.03,
                     "residual": -0.01,
                     "market_importance": 0.53,
-                    "alpha_importance": 0.20
+                    "alpha_importance": 0.20,
                 }
             ]
         }
@@ -331,31 +303,23 @@ class AttributionOutput(BaseModel):
 
 
 class FactorAnalysisOutput(BaseModel):
-    """
-    Complete factor analysis results.
+    """Complete factor analysis results.
 
     WHAT: Combined exposure and attribution analysis
     WHY: Provides complete picture of factor dynamics
     """
 
-    exposure: FactorExposureOutput = Field(
-        ...,
-        description="Factor exposures (betas)"
-    )
+    exposure: FactorExposureOutput = Field(..., description="Factor exposures (betas)")
 
     attribution: AttributionOutput = Field(
-        ...,
-        description="Return attribution by factor"
+        ..., description="Return attribution by factor"
     )
 
-    summary: str = Field(
-        ...,
-        description="Human-readable summary of findings"
-    )
+    summary: str = Field(..., description="Human-readable summary of findings")
 
     recommendations: list[str] = Field(
         default_factory=list,
-        description="Actionable recommendations based on factor analysis"
+        description="Actionable recommendations based on factor analysis",
     )
 
 

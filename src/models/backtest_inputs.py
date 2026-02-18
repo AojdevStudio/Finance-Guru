@@ -1,5 +1,4 @@
-"""
-Pydantic models for backtesting framework.
+"""Pydantic models for backtesting framework.
 
 WHAT: Data models for strategy backtesting and validation
 WHY: Type-safe historical strategy testing for Finance Guru agents
@@ -17,9 +16,8 @@ from pydantic import BaseModel, Field
 
 
 class BacktestConfig(BaseModel):
-    """
-    WHAT: Configuration for backtest execution
-    WHY: Standardizes backtest parameters across all Finance Guru agents
+    """WHAT: Configuration for backtest execution
+    WHY: Standardizes backtest parameters across all Finance Guru agents.
 
     EDUCATIONAL NOTE:
     These settings make backtests realistic by accounting for real-world costs:
@@ -33,41 +31,38 @@ class BacktestConfig(BaseModel):
     """
 
     initial_capital: float = Field(
-        default=100000.0,
-        gt=0.0,
-        description="Starting capital for backtest"
+        default=100000.0, gt=0.0, description="Starting capital for backtest"
     )
 
     commission_per_trade: float = Field(
         default=0.0,
         ge=0.0,
-        description="Commission per trade (e.g., 0.0 for commission-free brokers)"
+        description="Commission per trade (e.g., 0.0 for commission-free brokers)",
     )
 
     slippage_pct: float = Field(
         default=0.001,
         ge=0.0,
         le=0.05,
-        description="Slippage as percentage (0.001 = 0.1%)"
+        description="Slippage as percentage (0.001 = 0.1%)",
     )
 
     position_size_pct: float = Field(
         default=1.0,
         gt=0.0,
         le=1.0,
-        description="Position size as % of capital (1.0 = 100%, all-in)"
+        description="Position size as % of capital (1.0 = 100%, all-in)",
     )
 
     allow_fractional_shares: bool = Field(
         default=True,
-        description="Allow fractional share purchases (True for most modern brokers)"
+        description="Allow fractional share purchases (True for most modern brokers)",
     )
 
 
 class TradeSignal(BaseModel):
-    """
-    WHAT: A single buy or sell signal from a strategy
-    WHY: Defines when and what to trade during backtest
+    """WHAT: A single buy or sell signal from a strategy
+    WHY: Defines when and what to trade during backtest.
 
     EDUCATIONAL NOTE:
     A trading strategy generates "signals" - instructions to buy or sell.
@@ -87,31 +82,31 @@ class TradeSignal(BaseModel):
         default=None,
         ge=0.0,
         le=1.0,
-        description="Optional signal strength (0-1, for position sizing)"
+        description="Optional signal strength (0-1, for position sizing)",
     )
     reason: str | None = Field(
-        default=None,
-        description="Optional reason for signal (for analysis)"
+        default=None, description="Optional reason for signal (for analysis)"
     )
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "date": "2025-10-13",
-                "ticker": "TSLA",
-                "action": "BUY",
-                "price": 250.00,
-                "signal_strength": 0.85,
-                "reason": "RSI oversold below 30"
-            }]
+            "examples": [
+                {
+                    "date": "2025-10-13",
+                    "ticker": "TSLA",
+                    "action": "BUY",
+                    "price": 250.00,
+                    "signal_strength": 0.85,
+                    "reason": "RSI oversold below 30",
+                }
+            ]
         }
     }
 
 
 class TradeExecution(BaseModel):
-    """
-    WHAT: A completed trade with actual execution details
-    WHY: Records what actually happened (vs what was planned)
+    """WHAT: A completed trade with actual execution details
+    WHY: Records what actually happened (vs what was planned).
 
     EDUCATIONAL NOTE:
     The difference between SIGNAL and EXECUTION is critical:
@@ -124,48 +119,59 @@ class TradeExecution(BaseModel):
     """
 
     entry_date: date = Field(..., description="Trade entry date")
-    exit_date: date | None = Field(default=None, description="Trade exit date (None if still open)")
+    exit_date: date | None = Field(
+        default=None, description="Trade exit date (None if still open)"
+    )
     ticker: str = Field(..., description="Asset ticker")
 
     # Entry details
-    entry_price: float = Field(..., gt=0.0, description="Actual entry price (after slippage)")
+    entry_price: float = Field(
+        ..., gt=0.0, description="Actual entry price (after slippage)"
+    )
     shares: float = Field(..., gt=0.0, description="Number of shares traded")
     entry_commission: float = Field(..., ge=0.0, description="Commission paid on entry")
 
     # Exit details (if closed)
-    exit_price: float | None = Field(default=None, description="Actual exit price (after slippage)")
-    exit_commission: float | None = Field(default=None, description="Commission paid on exit")
+    exit_price: float | None = Field(
+        default=None, description="Actual exit price (after slippage)"
+    )
+    exit_commission: float | None = Field(
+        default=None, description="Commission paid on exit"
+    )
 
     # Trade performance
     pnl: float | None = Field(default=None, description="Profit/Loss in dollars")
     pnl_pct: float | None = Field(default=None, description="Profit/Loss as percentage")
 
     # Metadata
-    signal_reason: str | None = Field(default=None, description="Original signal reason")
+    signal_reason: str | None = Field(
+        default=None, description="Original signal reason"
+    )
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "entry_date": "2025-10-10",
-                "exit_date": "2025-10-13",
-                "ticker": "TSLA",
-                "entry_price": 250.50,
-                "shares": 10.0,
-                "entry_commission": 5.00,
-                "exit_price": 260.00,
-                "exit_commission": 5.00,
-                "pnl": 85.00,
-                "pnl_pct": 3.39,
-                "signal_reason": "RSI oversold"
-            }]
+            "examples": [
+                {
+                    "entry_date": "2025-10-10",
+                    "exit_date": "2025-10-13",
+                    "ticker": "TSLA",
+                    "entry_price": 250.50,
+                    "shares": 10.0,
+                    "entry_commission": 5.00,
+                    "exit_price": 260.00,
+                    "exit_commission": 5.00,
+                    "pnl": 85.00,
+                    "pnl_pct": 3.39,
+                    "signal_reason": "RSI oversold",
+                }
+            ]
         }
     }
 
 
 class BacktestPerformanceMetrics(BaseModel):
-    """
-    WHAT: Performance statistics for the backtest
-    WHY: Comprehensive evaluation of strategy quality
+    """WHAT: Performance statistics for the backtest
+    WHY: Comprehensive evaluation of strategy quality.
 
     EDUCATIONAL NOTE:
     These metrics answer key questions about your strategy:
@@ -190,7 +196,9 @@ class BacktestPerformanceMetrics(BaseModel):
     total_return_pct: float = Field(..., description="Total return as percentage")
 
     # Risk metrics
-    sharpe_ratio: float | None = Field(default=None, description="Sharpe ratio (risk-adjusted return)")
+    sharpe_ratio: float | None = Field(
+        default=None, description="Sharpe ratio (risk-adjusted return)"
+    )
     max_drawdown: float = Field(..., description="Maximum peak-to-trough decline")
     max_drawdown_pct: float = Field(..., description="Max drawdown as percentage")
 
@@ -198,14 +206,19 @@ class BacktestPerformanceMetrics(BaseModel):
     total_trades: int = Field(..., ge=0, description="Total number of trades executed")
     winning_trades: int = Field(..., ge=0, description="Number of profitable trades")
     losing_trades: int = Field(..., ge=0, description="Number of losing trades")
-    win_rate: float = Field(..., ge=0.0, le=1.0, description="Win rate (winning trades / total trades)")
+    win_rate: float = Field(
+        ..., ge=0.0, le=1.0, description="Win rate (winning trades / total trades)"
+    )
 
     # Profit metrics
-    avg_win: float | None = Field(default=None, description="Average profit on winning trades")
-    avg_loss: float | None = Field(default=None, description="Average loss on losing trades")
+    avg_win: float | None = Field(
+        default=None, description="Average profit on winning trades"
+    )
+    avg_loss: float | None = Field(
+        default=None, description="Average loss on losing trades"
+    )
     profit_factor: float | None = Field(
-        default=None,
-        description="Profit factor (gross profits / gross losses)"
+        default=None, description="Profit factor (gross profits / gross losses)"
     )
 
     # Cost analysis
@@ -214,32 +227,33 @@ class BacktestPerformanceMetrics(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "initial_capital": 100000.0,
-                "final_capital": 125000.0,
-                "total_return": 25000.0,
-                "total_return_pct": 25.0,
-                "sharpe_ratio": 1.45,
-                "max_drawdown": 8500.0,
-                "max_drawdown_pct": 8.5,
-                "total_trades": 50,
-                "winning_trades": 32,
-                "losing_trades": 18,
-                "win_rate": 0.64,
-                "avg_win": 1250.00,
-                "avg_loss": -450.00,
-                "profit_factor": 2.78,
-                "total_commissions": 250.00,
-                "total_slippage": 180.00
-            }]
+            "examples": [
+                {
+                    "initial_capital": 100000.0,
+                    "final_capital": 125000.0,
+                    "total_return": 25000.0,
+                    "total_return_pct": 25.0,
+                    "sharpe_ratio": 1.45,
+                    "max_drawdown": 8500.0,
+                    "max_drawdown_pct": 8.5,
+                    "total_trades": 50,
+                    "winning_trades": 32,
+                    "losing_trades": 18,
+                    "win_rate": 0.64,
+                    "avg_win": 1250.00,
+                    "avg_loss": -450.00,
+                    "profit_factor": 2.78,
+                    "total_commissions": 250.00,
+                    "total_slippage": 180.00,
+                }
+            ]
         }
     }
 
 
 class BacktestResults(BaseModel):
-    """
-    WHAT: Complete backtest results with all trades and metrics
-    WHY: Comprehensive strategy validation for Finance Guru agents
+    """WHAT: Complete backtest results with all trades and metrics
+    WHY: Comprehensive strategy validation for Finance Guru agents.
 
     AGENT USE CASES:
     - Strategy Advisor: Validate investment hypotheses before deployment
@@ -257,7 +271,9 @@ class BacktestResults(BaseModel):
     config: BacktestConfig = Field(..., description="Backtest configuration")
 
     # Performance metrics
-    performance: BacktestPerformanceMetrics = Field(..., description="Performance statistics")
+    performance: BacktestPerformanceMetrics = Field(
+        ..., description="Performance statistics"
+    )
 
     # Trade history
     trades: list[TradeExecution] = Field(..., description="All executed trades")
@@ -268,25 +284,26 @@ class BacktestResults(BaseModel):
 
     # Verdict
     recommendation: Literal["DEPLOY", "OPTIMIZE", "REJECT"] = Field(
-        ...,
-        description="Backtest verdict based on performance"
+        ..., description="Backtest verdict based on performance"
     )
     reasoning: str = Field(..., description="Reasoning for recommendation")
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "ticker": "TSLA",
-                "start_date": "2024-10-13",
-                "end_date": "2025-10-13",
-                "strategy_name": "RSI Mean Reversion",
-                "config": {},
-                "performance": {},
-                "trades": [],
-                "equity_dates": ["2024-10-13", "2025-10-13"],
-                "equity_values": [100000.0, 125000.0],
-                "recommendation": "DEPLOY",
-                "reasoning": "Strong Sharpe ratio (1.45), acceptable max drawdown (8.5%), high win rate (64%)"
-            }]
+            "examples": [
+                {
+                    "ticker": "TSLA",
+                    "start_date": "2024-10-13",
+                    "end_date": "2025-10-13",
+                    "strategy_name": "RSI Mean Reversion",
+                    "config": {},
+                    "performance": {},
+                    "trades": [],
+                    "equity_dates": ["2024-10-13", "2025-10-13"],
+                    "equity_values": [100000.0, 125000.0],
+                    "recommendation": "DEPLOY",
+                    "reasoning": "Strong Sharpe ratio (1.45), acceptable max drawdown (8.5%), high win rate (64%)",
+                }
+            ]
         }
     }

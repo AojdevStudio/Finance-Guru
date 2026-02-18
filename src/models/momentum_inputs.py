@@ -1,5 +1,4 @@
-"""
-Momentum Indicators Pydantic Models for Finance Guru™
+"""Momentum Indicators Pydantic Models for Finance Guru™.
 
 This module defines type-safe data structures for momentum indicator calculations.
 All models use Pydantic for automatic validation and type checking.
@@ -30,8 +29,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class MomentumDataInput(BaseModel):
-    """
-    Price data for momentum indicator calculations.
+    """Price data for momentum indicator calculations.
 
     WHAT: Container for OHLCV (Open, High, Low, Close, Volume) data
     WHY: Momentum indicators need price history to calculate trends
@@ -91,8 +89,7 @@ class MomentumDataInput(BaseModel):
     @field_validator("close", "high", "low", "volume")
     @classmethod
     def prices_must_be_positive(cls, v: list[float] | None) -> list[float] | None:
-        """
-        Ensure all prices are positive.
+        """Ensure all prices are positive.
 
         WHY: Negative prices indicate data errors.
         Zero prices indicate delisted securities or missing data.
@@ -110,8 +107,7 @@ class MomentumDataInput(BaseModel):
     @field_validator("dates")
     @classmethod
     def dates_must_be_sorted(cls, v: list[date]) -> list[date]:
-        """
-        Ensure dates are chronologically ordered.
+        """Ensure dates are chronologically ordered.
 
         WHY: Momentum calculations assume sequential time-series data.
         Out-of-order dates produce incorrect indicator values.
@@ -125,8 +121,7 @@ class MomentumDataInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_data_alignment(self) -> "MomentumDataInput":
-        """
-        Ensure all price arrays have the same length as dates.
+        """Ensure all price arrays have the same length as dates.
 
         WHY: Each date needs corresponding price data.
         Misalignment causes index errors in calculations.
@@ -159,17 +154,16 @@ class MomentumDataInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_high_low_relationship(self) -> "MomentumDataInput":
-        """
-        Ensure High >= Low for each day.
+        """Ensure High >= Low for each day.
 
         WHY: High price cannot be lower than Low price.
         This is a fundamental market data constraint.
         """
         if self.high is not None and self.low is not None:
-            for i, (h, l) in enumerate(zip(self.high, self.low)):
-                if h < l:
+            for i, (h, low_val) in enumerate(zip(self.high, self.low, strict=True)):
+                if h < low_val:
                     raise ValueError(
-                        f"High price ({h}) is less than Low price ({l}) at index {i} "
+                        f"High price ({h}) is less than Low price ({low_val}) at index {i} "
                         f"(date: {self.dates[i]}). This is invalid market data."
                     )
         return self
@@ -183,7 +177,7 @@ class MomentumDataInput(BaseModel):
                     "close": [250.0, 252.5, 248.0],
                     "high": [252.0, 254.0, 250.0],
                     "low": [248.0, 251.0, 246.0],
-                    "volume": [1000000, 1200000, 900000]
+                    "volume": [1000000, 1200000, 900000],
                 }
             ]
         }
@@ -191,8 +185,7 @@ class MomentumDataInput(BaseModel):
 
 
 class MomentumConfig(BaseModel):
-    """
-    Configuration for momentum indicator calculations.
+    """Configuration for momentum indicator calculations.
 
     WHAT: Standard parameters for momentum indicators
     WHY: Ensures consistent calculations across agents
@@ -266,8 +259,7 @@ class MomentumConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_macd_periods(self) -> "MomentumConfig":
-        """
-        Ensure MACD fast < slow for proper convergence/divergence.
+        """Ensure MACD fast < slow for proper convergence/divergence.
 
         WHY: MACD measures the difference between fast and slow EMAs.
         If fast >= slow, the indicator doesn't work properly.
@@ -290,7 +282,7 @@ class MomentumConfig(BaseModel):
                     "stoch_k_period": 14,
                     "stoch_d_period": 3,
                     "williams_period": 14,
-                    "roc_period": 12
+                    "roc_period": 12,
                 }
             ]
         }
@@ -298,8 +290,7 @@ class MomentumConfig(BaseModel):
 
 
 class RSIOutput(BaseModel):
-    """
-    Relative Strength Index output.
+    """Relative Strength Index output.
 
     WHAT: Measures momentum on 0-100 scale
     WHY: Identifies overbought/oversold conditions
@@ -320,14 +311,10 @@ class RSIOutput(BaseModel):
     ticker: str
     calculation_date: date
     current_rsi: float = Field(
-        ...,
-        ge=0.0,
-        le=100.0,
-        description="Current RSI value (0-100 scale)"
+        ..., ge=0.0, le=100.0, description="Current RSI value (0-100 scale)"
     )
     rsi_signal: Literal["overbought", "oversold", "neutral"] = Field(
-        ...,
-        description="Signal interpretation based on traditional 70/30 levels"
+        ..., description="Signal interpretation based on traditional 70/30 levels"
     )
     period: int = Field(..., description="Period used for calculation")
 
@@ -341,20 +328,21 @@ class RSIOutput(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "ticker": "TSLA",
-                "calculation_date": "2025-10-13",
-                "current_rsi": 68.5,
-                "rsi_signal": "neutral",
-                "period": 14
-            }]
+            "examples": [
+                {
+                    "ticker": "TSLA",
+                    "calculation_date": "2025-10-13",
+                    "current_rsi": 68.5,
+                    "rsi_signal": "neutral",
+                    "period": 14,
+                }
+            ]
         }
     }
 
 
 class MACDOutput(BaseModel):
-    """
-    MACD (Moving Average Convergence Divergence) output.
+    """MACD (Moving Average Convergence Divergence) output.
 
     WHAT: Trend-following momentum indicator
     WHY: Shows relationship between two moving averages
@@ -382,8 +370,7 @@ class MACDOutput(BaseModel):
     signal_line: float = Field(..., description="Signal line (EMA of MACD)")
     histogram: float = Field(..., description="MACD - Signal (momentum strength)")
     signal: Literal["bullish", "bearish"] = Field(
-        ...,
-        description="Signal based on MACD vs Signal line relationship"
+        ..., description="Signal based on MACD vs Signal line relationship"
     )
     fast_period: int
     slow_period: int
@@ -391,24 +378,25 @@ class MACDOutput(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "ticker": "TSLA",
-                "calculation_date": "2025-10-13",
-                "macd_line": 2.35,
-                "signal_line": 1.80,
-                "histogram": 0.55,
-                "signal": "bullish",
-                "fast_period": 12,
-                "slow_period": 26,
-                "signal_period": 9
-            }]
+            "examples": [
+                {
+                    "ticker": "TSLA",
+                    "calculation_date": "2025-10-13",
+                    "macd_line": 2.35,
+                    "signal_line": 1.80,
+                    "histogram": 0.55,
+                    "signal": "bullish",
+                    "fast_period": 12,
+                    "slow_period": 26,
+                    "signal_period": 9,
+                }
+            ]
         }
     }
 
 
 class StochasticOutput(BaseModel):
-    """
-    Stochastic Oscillator output.
+    """Stochastic Oscillator output.
 
     WHAT: Compares closing price to price range over time
     WHY: Identifies momentum and potential reversals
@@ -431,42 +419,36 @@ class StochasticOutput(BaseModel):
     ticker: str
     calculation_date: date
     k_value: float = Field(
-        ...,
-        ge=0.0,
-        le=100.0,
-        description="%K value (fast stochastic)"
+        ..., ge=0.0, le=100.0, description="%K value (fast stochastic)"
     )
     d_value: float = Field(
-        ...,
-        ge=0.0,
-        le=100.0,
-        description="%D value (slow stochastic)"
+        ..., ge=0.0, le=100.0, description="%D value (slow stochastic)"
     )
     signal: Literal["overbought", "oversold", "neutral"] = Field(
-        ...,
-        description="Signal based on 80/20 levels"
+        ..., description="Signal based on 80/20 levels"
     )
     k_period: int
     d_period: int
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "ticker": "TSLA",
-                "calculation_date": "2025-10-13",
-                "k_value": 72.5,
-                "d_value": 68.3,
-                "signal": "neutral",
-                "k_period": 14,
-                "d_period": 3
-            }]
+            "examples": [
+                {
+                    "ticker": "TSLA",
+                    "calculation_date": "2025-10-13",
+                    "k_value": 72.5,
+                    "d_value": 68.3,
+                    "signal": "neutral",
+                    "k_period": 14,
+                    "d_period": 3,
+                }
+            ]
         }
     }
 
 
 class WilliamsROutput(BaseModel):
-    """
-    Williams %R output.
+    """Williams %R output.
 
     WHAT: Momentum indicator measuring overbought/oversold
     WHY: Similar to Stochastic but with inverted scale
@@ -487,33 +469,30 @@ class WilliamsROutput(BaseModel):
     ticker: str
     calculation_date: date
     williams_r: float = Field(
-        ...,
-        ge=-100.0,
-        le=0.0,
-        description="Williams %R value (-100 to 0 scale)"
+        ..., ge=-100.0, le=0.0, description="Williams %R value (-100 to 0 scale)"
     )
     signal: Literal["overbought", "oversold", "neutral"] = Field(
-        ...,
-        description="Signal based on -20/-80 levels"
+        ..., description="Signal based on -20/-80 levels"
     )
     period: int
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "ticker": "TSLA",
-                "calculation_date": "2025-10-13",
-                "williams_r": -35.2,
-                "signal": "neutral",
-                "period": 14
-            }]
+            "examples": [
+                {
+                    "ticker": "TSLA",
+                    "calculation_date": "2025-10-13",
+                    "williams_r": -35.2,
+                    "signal": "neutral",
+                    "period": 14,
+                }
+            ]
         }
     }
 
 
 class ROCOutput(BaseModel):
-    """
-    Rate of Change output.
+    """Rate of Change output.
 
     WHAT: Measures percentage change over a period
     WHY: Shows velocity of price changes (momentum strength)
@@ -542,27 +521,27 @@ class ROCOutput(BaseModel):
     calculation_date: date
     roc: float = Field(..., description="Rate of Change percentage")
     signal: Literal["bullish", "bearish", "neutral"] = Field(
-        ...,
-        description="Signal based on positive/negative ROC"
+        ..., description="Signal based on positive/negative ROC"
     )
     period: int
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "ticker": "TSLA",
-                "calculation_date": "2025-10-13",
-                "roc": 8.5,
-                "signal": "bullish",
-                "period": 12
-            }]
+            "examples": [
+                {
+                    "ticker": "TSLA",
+                    "calculation_date": "2025-10-13",
+                    "roc": 8.5,
+                    "signal": "bullish",
+                    "period": 12,
+                }
+            ]
         }
     }
 
 
 class AllMomentumOutput(BaseModel):
-    """
-    Combined output for all momentum indicators.
+    """Combined output for all momentum indicators.
 
     WHAT: All momentum indicators in one validated structure
     WHY: Convenient for comprehensive momentum analysis
@@ -582,51 +561,53 @@ class AllMomentumOutput(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "ticker": "TSLA",
-                "calculation_date": "2025-10-13",
-                "rsi": {
+            "examples": [
+                {
                     "ticker": "TSLA",
                     "calculation_date": "2025-10-13",
-                    "current_rsi": 68.5,
-                    "rsi_signal": "neutral",
-                    "period": 14
-                },
-                "macd": {
-                    "ticker": "TSLA",
-                    "calculation_date": "2025-10-13",
-                    "macd_line": 2.35,
-                    "signal_line": 1.80,
-                    "histogram": 0.55,
-                    "signal": "bullish",
-                    "fast_period": 12,
-                    "slow_period": 26,
-                    "signal_period": 9
-                },
-                "stochastic": {
-                    "ticker": "TSLA",
-                    "calculation_date": "2025-10-13",
-                    "k_value": 72.5,
-                    "d_value": 68.3,
-                    "signal": "neutral",
-                    "k_period": 14,
-                    "d_period": 3
-                },
-                "williams_r": {
-                    "ticker": "TSLA",
-                    "calculation_date": "2025-10-13",
-                    "williams_r": -35.2,
-                    "signal": "neutral",
-                    "period": 14
-                },
-                "roc": {
-                    "ticker": "TSLA",
-                    "calculation_date": "2025-10-13",
-                    "roc": 8.5,
-                    "signal": "bullish",
-                    "period": 12
+                    "rsi": {
+                        "ticker": "TSLA",
+                        "calculation_date": "2025-10-13",
+                        "current_rsi": 68.5,
+                        "rsi_signal": "neutral",
+                        "period": 14,
+                    },
+                    "macd": {
+                        "ticker": "TSLA",
+                        "calculation_date": "2025-10-13",
+                        "macd_line": 2.35,
+                        "signal_line": 1.80,
+                        "histogram": 0.55,
+                        "signal": "bullish",
+                        "fast_period": 12,
+                        "slow_period": 26,
+                        "signal_period": 9,
+                    },
+                    "stochastic": {
+                        "ticker": "TSLA",
+                        "calculation_date": "2025-10-13",
+                        "k_value": 72.5,
+                        "d_value": 68.3,
+                        "signal": "neutral",
+                        "k_period": 14,
+                        "d_period": 3,
+                    },
+                    "williams_r": {
+                        "ticker": "TSLA",
+                        "calculation_date": "2025-10-13",
+                        "williams_r": -35.2,
+                        "signal": "neutral",
+                        "period": 14,
+                    },
+                    "roc": {
+                        "ticker": "TSLA",
+                        "calculation_date": "2025-10-13",
+                        "roc": 8.5,
+                        "signal": "bullish",
+                        "period": 12,
+                    },
                 }
-            }]
+            ]
         }
     }
 

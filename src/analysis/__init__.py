@@ -1,1 +1,1 @@
-"""Financial analysis modules"""
+"""Financial analysis modules."""

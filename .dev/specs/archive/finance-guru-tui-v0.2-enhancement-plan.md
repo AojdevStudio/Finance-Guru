@@ -1170,7 +1170,7 @@ async def test_parallel_execution_speed():
 - Log warnings but don't crash
 
 ### Challenge 4: Auto-Refresh Performance
-**Problem**: Refreshing 14 Layer 2 tickers every minute could be slow  
+**Problem**: Refreshing 14 Layer 2 tickers every minute could be slow
 **Solution**:
 - Only refresh visible screen
 - Use parallel execution for preset refreshes

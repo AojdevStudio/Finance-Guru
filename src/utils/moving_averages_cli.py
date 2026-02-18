@@ -60,15 +60,17 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.models.moving_avg_inputs import (
-    MovingAverageDataInput,
-    MovingAverageConfig,
     MovingAverageAnalysis,
+    MovingAverageConfig,
+    MovingAverageDataInput,
 )
-from src.utils.moving_averages import MovingAverageCalculator
 from src.utils.market_data import get_prices  # Finnhub integration
+from src.utils.moving_averages import MovingAverageCalculator
 
 
-def fetch_ma_data(ticker: str, days: int, realtime: bool = False) -> MovingAverageDataInput:
+def fetch_ma_data(
+    ticker: str, days: int, realtime: bool = False
+) -> MovingAverageDataInput:
     """
     Fetch historical price data for MA calculations, optionally with real-time Finnhub data.
 
@@ -100,7 +102,7 @@ def fetch_ma_data(ticker: str, days: int, realtime: bool = False) -> MovingAvera
 
         # Extract price data
         dates_list = [d.date() for d in hist.index]
-        prices_list = hist['Close'].tolist()
+        prices_list = hist["Close"].tolist()
 
         # FINNHUB INTEGRATION: Append real-time intraday price if requested
         if realtime:
@@ -113,9 +115,15 @@ def fetch_ma_data(ticker: str, days: int, realtime: bool = False) -> MovingAvera
                     # Append today's date and current price to the data
                     dates_list.append(date.today())
                     prices_list.append(current_price)
-                    print(f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)", file=sys.stderr)
+                    print(
+                        f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)",
+                        file=sys.stderr,
+                    )
             except Exception as e:
-                print(f"⚠️  Real-time price unavailable, using EOD data only: {e}", file=sys.stderr)
+                print(
+                    f"⚠️  Real-time price unavailable, using EOD data only: {e}",
+                    file=sys.stderr,
+                )
 
         # Ensure minimum data points
         if len(dates_list) < 50:
@@ -163,12 +171,16 @@ def format_single_ma_output(analysis: MovingAverageAnalysis) -> str:
 
     # Trend interpretation
     if ma.price_vs_ma == "ABOVE":
-        output.append(f"  🟢 BULLISH: Price is {pct_diff:.2f}% above {ma.ma_type}({ma.period})")
+        output.append(
+            f"  🟢 BULLISH: Price is {pct_diff:.2f}% above {ma.ma_type}({ma.period})"
+        )
         output.append("     → Uptrend confirmed")
         output.append("     → MA acting as support level")
         output.append("     → Consider long positions or hold")
     elif ma.price_vs_ma == "BELOW":
-        output.append(f"  🔴 BEARISH: Price is {abs(pct_diff):.2f}% below {ma.ma_type}({ma.period})")
+        output.append(
+            f"  🔴 BEARISH: Price is {abs(pct_diff):.2f}% below {ma.ma_type}({ma.period})"
+        )
         output.append("     → Downtrend confirmed")
         output.append("     → MA acting as resistance level")
         output.append("     → Consider short positions or exit longs")
@@ -210,13 +222,15 @@ def format_single_ma_output(analysis: MovingAverageAnalysis) -> str:
 
     output.append("")
     output.append("=" * 70)
-    output.append("⚠️  DISCLAIMER: For educational purposes only. Not investment advice.")
+    output.append(
+        "⚠️  DISCLAIMER: For educational purposes only. Not investment advice."
+    )
     output.append("=" * 70)
 
     return "\n".join(output)
 
 
-def format_crossover_output(analysis: MovingAverageAnalysis) -> str:
+def format_crossover_output(analysis: MovingAverageAnalysis) -> str:  # noqa: C901
     """Format crossover analysis for human reading."""
     if not analysis.crossover_analysis:
         return format_single_ma_output(analysis)
@@ -226,16 +240,24 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:
 
     output.append("=" * 70)
     output.append(f"📊 MA CROSSOVER ANALYSIS: {cross.ticker}")
-    output.append(f"📅 Data Through: {cross.calculation_date} (most recent market close)")
+    output.append(
+        f"📅 Data Through: {cross.calculation_date} (most recent market close)"
+    )
     output.append("=" * 70)
     output.append("")
 
     # Current values
     output.append("📈 CURRENT MOVING AVERAGES")
     output.append("-" * 70)
-    output.append(f"  Fast MA ({cross.fast_ma_type} {cross.fast_period}):    ${cross.fast_value:>12,.2f}")
-    output.append(f"  Slow MA ({cross.slow_ma_type} {cross.slow_period}):   ${cross.slow_value:>12,.2f}")
-    output.append(f"  Current Price:            ${analysis.primary_ma.current_price:>12,.2f}")
+    output.append(
+        f"  Fast MA ({cross.fast_ma_type} {cross.fast_period}):    ${cross.fast_value:>12,.2f}"
+    )
+    output.append(
+        f"  Slow MA ({cross.slow_ma_type} {cross.slow_period}):   ${cross.slow_value:>12,.2f}"
+    )
+    output.append(
+        f"  Current Price:            ${analysis.primary_ma.current_price:>12,.2f}"
+    )
     output.append("")
 
     # Crossover signal
@@ -244,10 +266,14 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:
 
     if cross.current_signal == "BULLISH":
         output.append("  Signal:                   🟢 BULLISH")
-        output.append(f"  Fast MA > Slow MA:        Fast is {((cross.fast_value / cross.slow_value - 1) * 100):.2f}% above slow")
+        output.append(
+            f"  Fast MA > Slow MA:        Fast is {((cross.fast_value / cross.slow_value - 1) * 100):.2f}% above slow"
+        )
     elif cross.current_signal == "BEARISH":
         output.append("  Signal:                   🔴 BEARISH")
-        output.append(f"  Fast MA < Slow MA:        Fast is {((1 - cross.fast_value / cross.slow_value) * 100):.2f}% below slow")
+        output.append(
+            f"  Fast MA < Slow MA:        Fast is {((1 - cross.fast_value / cross.slow_value) * 100):.2f}% below slow"
+        )
     else:
         output.append("  Signal:                   ⚪ NEUTRAL")
         output.append("  Fast MA ≈ Slow MA:        MAs converging")
@@ -293,13 +319,21 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:
         # Signal freshness
         output.append("")
         if cross.days_since_crossover <= 5:
-            output.append(f"  🔥 FRESH SIGNAL: Crossover just {cross.days_since_crossover} days ago - signal very recent!")
+            output.append(
+                f"  🔥 FRESH SIGNAL: Crossover just {cross.days_since_crossover} days ago - signal very recent!"
+            )
         elif cross.days_since_crossover <= 20:
-            output.append(f"  ✅ RECENT SIGNAL: Crossover {cross.days_since_crossover} days ago - signal still valid")
+            output.append(
+                f"  ✅ RECENT SIGNAL: Crossover {cross.days_since_crossover} days ago - signal still valid"
+            )
         elif cross.days_since_crossover <= 60:
-            output.append(f"  ⏳ AGING SIGNAL: Crossover {cross.days_since_crossover} days ago - trend maturing")
+            output.append(
+                f"  ⏳ AGING SIGNAL: Crossover {cross.days_since_crossover} days ago - trend maturing"
+            )
         else:
-            output.append(f"  ⚠️  OLD SIGNAL: Crossover {cross.days_since_crossover} days ago - watch for new crossover")
+            output.append(
+                f"  ⚠️  OLD SIGNAL: Crossover {cross.days_since_crossover} days ago - watch for new crossover"
+            )
 
     else:
         output.append("📅 CROSSOVER HISTORY")
@@ -309,7 +343,9 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:
         if cross.current_signal == "BULLISH":
             output.append("  → Sustained uptrend (fast MA consistently above slow MA)")
         elif cross.current_signal == "BEARISH":
-            output.append("  → Sustained downtrend (fast MA consistently below slow MA)")
+            output.append(
+                "  → Sustained downtrend (fast MA consistently below slow MA)"
+            )
 
     output.append("")
 
@@ -354,15 +390,21 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:
     # Risk warnings
     output.append("⚠️  RISK CONSIDERATIONS")
     output.append("-" * 70)
-    output.append("  • Crossovers are lagging indicators (confirm trends, don't predict)")
+    output.append(
+        "  • Crossovers are lagging indicators (confirm trends, don't predict)"
+    )
     output.append("  • False signals (whipsaws) can occur in choppy markets")
-    output.append("  • Use additional confirmation: volume, RSI, MACD, support/resistance")
+    output.append(
+        "  • Use additional confirmation: volume, RSI, MACD, support/resistance"
+    )
     output.append("  • Always use stop-losses to protect against reversal")
     output.append("  • Consider overall market context and fundamentals")
 
     output.append("")
     output.append("=" * 70)
-    output.append("⚠️  DISCLAIMER: For educational purposes only. Not investment advice.")
+    output.append(
+        "⚠️  DISCLAIMER: For educational purposes only. Not investment advice."
+    )
     output.append("=" * 70)
 
     return "\n".join(output)
@@ -397,14 +439,12 @@ Examples:
 
   # Save to file
   %(prog)s TSLA --days 252 --fast 50 --slow 200 --save-to analysis/tsla-golden-cross.json
-        """
+        """,
     )
 
     # Required arguments
     parser.add_argument(
-        "ticker",
-        type=str,
-        help="Stock ticker symbol (e.g., TSLA, AAPL)"
+        "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL)"
     )
 
     # Data parameters
@@ -412,13 +452,13 @@ Examples:
         "--days",
         type=int,
         default=200,
-        help="Number of days of historical data (default: 200, minimum: 50)"
+        help="Number of days of historical data (default: 200, minimum: 50)",
     )
 
     parser.add_argument(
         "--realtime",
         action="store_true",
-        help="Append current intraday price from Finnhub for real-time MA analysis"
+        help="Append current intraday price from Finnhub for real-time MA analysis",
     )
 
     # MA configuration
@@ -427,14 +467,14 @@ Examples:
         type=str,
         choices=["SMA", "EMA", "WMA", "HMA"],
         default="SMA",
-        help="Type of moving average (default: SMA)"
+        help="Type of moving average (default: SMA)",
     )
 
     parser.add_argument(
         "--period",
         type=int,
         default=None,
-        help="MA period in days (default: 50 for single MA, or use --fast/--slow)"
+        help="MA period in days (default: 50 for single MA, or use --fast/--slow)",
     )
 
     # Crossover configuration (convenience parameters)
@@ -442,14 +482,14 @@ Examples:
         "--fast",
         type=int,
         default=None,
-        help="Fast MA period for crossover (e.g., 50 for Golden Cross)"
+        help="Fast MA period for crossover (e.g., 50 for Golden Cross)",
     )
 
     parser.add_argument(
         "--slow",
         type=int,
         default=None,
-        help="Slow MA period for crossover (e.g., 200 for Golden Cross)"
+        help="Slow MA period for crossover (e.g., 200 for Golden Cross)",
     )
 
     # Advanced crossover configuration
@@ -458,14 +498,14 @@ Examples:
         type=str,
         choices=["SMA", "EMA", "WMA", "HMA"],
         default=None,
-        help="Type of secondary MA for crossover (default: same as --ma-type)"
+        help="Type of secondary MA for crossover (default: same as --ma-type)",
     )
 
     parser.add_argument(
         "--secondary-period",
         type=int,
         default=None,
-        help="Secondary MA period (alternative to --slow)"
+        help="Secondary MA period (alternative to --slow)",
     )
 
     # Output parameters
@@ -474,14 +514,11 @@ Examples:
         type=str,
         choices=["human", "json"],
         default="human",
-        help="Output format (default: human)"
+        help="Output format (default: human)",
     )
 
     parser.add_argument(
-        "--save-to",
-        type=str,
-        default=None,
-        help="Save output to file (optional)"
+        "--save-to", type=str, default=None, help="Save output to file (optional)"
     )
 
     # Parse arguments
@@ -521,8 +558,15 @@ Examples:
 
     try:
         # Step 1: Fetch data
-        data_source = "real-time (Finnhub + yfinance)" if args.realtime else "end-of-day (yfinance)"
-        print(f"📥 Fetching {args.days} days of data for {args.ticker} ({data_source})...", file=sys.stderr)
+        data_source = (
+            "real-time (Finnhub + yfinance)"
+            if args.realtime
+            else "end-of-day (yfinance)"
+        )
+        print(
+            f"📥 Fetching {args.days} days of data for {args.ticker} ({data_source})...",
+            file=sys.stderr,
+        )
         ma_data = fetch_ma_data(args.ticker, args.days, realtime=args.realtime)
         print(f"✅ Fetched {len(ma_data.dates)} data points", file=sys.stderr)
         print(f"📅 Latest data: {ma_data.dates[-1]}", file=sys.stderr)
@@ -537,9 +581,14 @@ Examples:
 
         # Step 3: Calculate MAs
         if secondary_period:
-            print(f"🧮 Calculating {args.ma_type}({primary_period}) and {secondary_ma_type}({secondary_period})...", file=sys.stderr)
+            print(
+                f"🧮 Calculating {args.ma_type}({primary_period}) and {secondary_ma_type}({secondary_period})...",
+                file=sys.stderr,
+            )
         else:
-            print(f"🧮 Calculating {args.ma_type}({primary_period})...", file=sys.stderr)
+            print(
+                f"🧮 Calculating {args.ma_type}({primary_period})...", file=sys.stderr
+            )
 
         calculator = MovingAverageCalculator(config)
 
@@ -583,6 +632,7 @@ Examples:
     except Exception as e:
         print(f"❌ ERROR: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 

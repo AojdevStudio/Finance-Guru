@@ -171,4 +171,3 @@ COORDINATION:
   - Builder prioritizes updates based on loading strategy
   - Compression happens before storage, not during loading
 ```
-

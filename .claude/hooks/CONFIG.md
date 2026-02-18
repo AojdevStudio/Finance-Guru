@@ -11,12 +11,22 @@ Create or update `.claude/settings.json` in your project root:
 ```json
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run $CLAUDE_PROJECT_DIR/.claude/hooks/load-fin-core-config.ts"
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/skill-activation-prompt.sh"
+            "command": "bun run $CLAUDE_PROJECT_DIR/.claude/hooks/skill-activation-prompt.ts"
           }
         ]
       }
@@ -27,7 +37,7 @@ Create or update `.claude/settings.json` in your project root:
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use-tracker.sh"
+            "command": "bun run $CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use-tracker.ts"
           }
         ]
       }
@@ -35,10 +45,6 @@ Create or update `.claude/settings.json` in your project root:
     "Stop": [
       {
         "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/stop-prettier-formatter.sh"
-          },
           {
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/stop-build-check-enhanced.sh"
@@ -63,7 +69,10 @@ npm install
 
 ### 3. Set Execute Permissions
 
+Most hooks are now Bun TypeScript files invoked via `bun run` and do not need execute permissions. Only Stop hooks still use `.sh` files:
+
 ```bash
+# Only needed for Stop hooks (stop-build-check-enhanced.sh, error-handling-reminder.sh)
 chmod +x .claude/hooks/*.sh
 ```
 
@@ -80,19 +89,16 @@ By default, hooks detect these directory patterns:
 
 #### Adding Custom Directory Patterns
 
-Edit `.claude/hooks/post-tool-use-tracker.sh`, function `detect_repo()`:
+Edit `.claude/hooks/post-tool-use-tracker.ts`, function `detectRepo()`:
 
-```bash
-case "$repo" in
-    # Add your custom directories here
-    my-custom-service)
-        echo "$repo"
-        ;;
-    admin-panel)
-        echo "$repo"
-        ;;
-    # ... existing patterns
-esac
+```typescript
+switch (firstDir) {
+    // Add your custom directories here
+    case 'my-custom-service':
+    case 'admin-panel':
+        return firstDir;
+    // ... existing patterns
+}
 ```
 
 ### Build Command Detection
@@ -104,14 +110,13 @@ The hooks auto-detect build commands based on:
 
 #### Customizing Build Commands
 
-Edit `.claude/hooks/post-tool-use-tracker.sh`, function `get_build_command()`:
+Edit `.claude/hooks/post-tool-use-tracker.ts`, function `getBuildCommand()`:
 
-```bash
-# Add custom build logic
-if [[ "$repo" == "my-service" ]]; then
-    echo "cd $repo_path && make build"
-    return
-fi
+```typescript
+// Add custom build logic at the top of getBuildCommand()
+if (repo === 'my-service') {
+    return `cd ${repoPath} && make build`;
+}
 ```
 
 ### TypeScript Configuration
@@ -122,13 +127,13 @@ Hooks automatically detect:
 
 #### Custom TypeScript Configs
 
-Edit `.claude/hooks/post-tool-use-tracker.sh`, function `get_tsc_command()`:
+Edit `.claude/hooks/post-tool-use-tracker.ts`, function `getTscCommand()`:
 
-```bash
-if [[ "$repo" == "my-service" ]]; then
-    echo "cd $repo_path && npx tsc --project tsconfig.build.json --noEmit"
-    return
-fi
+```typescript
+// Add custom tsconfig logic at the top of getTscCommand()
+if (repo === 'my-service') {
+    return `cd ${repoPath} && npx tsc --project tsconfig.build.json --noEmit`;
+}
 ```
 
 ### Prettier Configuration
@@ -232,7 +237,7 @@ You don't need all hooks. Choose what works for your project:
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/skill-activation-prompt.sh"
+            "command": "bun run $CLAUDE_PROJECT_DIR/.claude/hooks/skill-activation-prompt.ts"
           }
         ]
       }
@@ -252,7 +257,7 @@ You don't need all hooks. Choose what works for your project:
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use-tracker.sh"
+            "command": "bun run $CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use-tracker.ts"
           }
         ]
       }
@@ -282,7 +287,7 @@ You don't need all hooks. Choose what works for your project:
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use-tracker.sh"
+            "command": "bun run $CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use-tracker.ts"
           }
         ]
       }
@@ -338,11 +343,11 @@ The build-check hook automatically cleans up session cache on successful builds.
 
 **Solution:** Add skip conditions in the relevant hook:
 
-```bash
-# In post-tool-use-tracker.sh
-if [[ "$file_path" =~ /generated/ ]]; then
-    exit 0  # Skip generated files
-fi
+```typescript
+// In post-tool-use-tracker.ts, inside processHook()
+if (filePath.includes('/generated/')) {
+    process.exit(0); // Skip generated files
+}
 ```
 
 ### Performance Issues
@@ -406,31 +411,26 @@ You can create your own hooks for other events:
 
 For monorepos with multiple packages:
 
-```bash
-# In post-tool-use-tracker.sh, detect_repo()
-case "$repo" in
-    packages)
-        # Get the package name
-        local package=$(echo "$relative_path" | cut -d'/' -f2)
-        if [[ -n "$package" ]]; then
-            echo "packages/$package"
-        else
-            echo "$repo"
-        fi
-        ;;
-esac
+```typescript
+// In post-tool-use-tracker.ts, detectRepo() switch statement
+case 'packages': {
+    const parts = relativePath.split('/');
+    if (parts.length >= 2) {
+        return `packages/${parts[1]}`;
+    }
+    return firstDir;
+}
 ```
 
 ### Docker/Container Projects
 
 If your build commands need to run in containers:
 
-```bash
-# In post-tool-use-tracker.sh, get_build_command()
-if [[ "$repo" == "api" ]]; then
-    echo "docker-compose exec api npm run build"
-    return
-fi
+```typescript
+// In post-tool-use-tracker.ts, getBuildCommand()
+if (repo === 'api') {
+    return 'docker-compose exec api npm run build';
+}
 ```
 
 ## Best Practices

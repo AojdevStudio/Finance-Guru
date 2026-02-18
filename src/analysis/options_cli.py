@@ -32,8 +32,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.models.options_inputs import BlackScholesInput, ImpliedVolInput
 from src.analysis.options import OptionsCalculator
+from src.models.options_inputs import BlackScholesInput, ImpliedVolInput
 
 
 def main():
@@ -53,27 +53,55 @@ Examples:
 
   # JSON output
   %(prog)s --ticker TSLA --spot 265 --strike 250 --days 90 --volatility 0.45 --type call --output json
-        """
+        """,
     )
 
     # Required parameters
     parser.add_argument("--ticker", type=str, required=True, help="Underlying ticker")
     parser.add_argument("--spot", type=float, required=True, help="Current stock price")
-    parser.add_argument("--strike", type=float, required=True, help="Option strike price")
+    parser.add_argument(
+        "--strike", type=float, required=True, help="Option strike price"
+    )
     parser.add_argument("--days", type=int, required=True, help="Days to expiration")
-    parser.add_argument("--type", type=str, required=True, choices=["call", "put"], help="Option type")
+    parser.add_argument(
+        "--type", type=str, required=True, choices=["call", "put"], help="Option type"
+    )
 
     # Pricing vs Implied Vol
-    parser.add_argument("--volatility", type=float, default=None, help="Annual volatility (e.g., 0.45 = 45%%)")
-    parser.add_argument("--market-price", type=float, default=None, help="Market price for implied vol calculation")
-    parser.add_argument("--implied-vol", action="store_true", help="Calculate implied volatility")
+    parser.add_argument(
+        "--volatility",
+        type=float,
+        default=None,
+        help="Annual volatility (e.g., 0.45 = 45%%)",
+    )
+    parser.add_argument(
+        "--market-price",
+        type=float,
+        default=None,
+        help="Market price for implied vol calculation",
+    )
+    parser.add_argument(
+        "--implied-vol", action="store_true", help="Calculate implied volatility"
+    )
 
     # Optional parameters
-    parser.add_argument("--risk-free-rate", type=float, default=0.045, help="Annual risk-free rate (default: 4.5%%)")
-    parser.add_argument("--dividend-yield", type=float, default=0.0, help="Annual dividend yield (default: 0%%)")
+    parser.add_argument(
+        "--risk-free-rate",
+        type=float,
+        default=0.045,
+        help="Annual risk-free rate (default: 4.5%%)",
+    )
+    parser.add_argument(
+        "--dividend-yield",
+        type=float,
+        default=0.0,
+        help="Annual dividend yield (default: 0%%)",
+    )
 
     # Output
-    parser.add_argument("--output", choices=["human", "json"], default="human", help="Output format")
+    parser.add_argument(
+        "--output", choices=["human", "json"], default="human", help="Output format"
+    )
     parser.add_argument("--save-to", type=str, default=None, help="Save output to file")
 
     args = parser.parse_args()
@@ -81,7 +109,10 @@ Examples:
     # Validate inputs
     if args.implied_vol:
         if args.market_price is None:
-            print("ERROR: --market-price required for implied volatility calculation", file=sys.stderr)
+            print(
+                "ERROR: --market-price required for implied volatility calculation",
+                file=sys.stderr,
+            )
             sys.exit(1)
     else:
         if args.volatility is None:
@@ -108,7 +139,9 @@ Examples:
             iv_result = calculator.calculate_implied_vol(iv_input)
             iv_result.ticker = args.ticker
 
-            print(f"✅ Converged in {iv_result.iterations} iterations\n", file=sys.stderr)
+            print(
+                f"✅ Converged in {iv_result.iterations} iterations\n", file=sys.stderr
+            )
 
             if args.output == "json":
                 output_text = iv_result.model_dump_json(indent=2)
@@ -150,6 +183,7 @@ Examples:
     except Exception as e:
         print(f"❌ ERROR: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 
@@ -168,7 +202,9 @@ def format_greeks(greeks, args) -> str:
     output.append(f"  Type:                     {greeks.option_type.upper()}")
     output.append(f"  Strike:                   ${greeks.strike:>10.2f}")
     output.append(f"  Spot Price:               ${greeks.spot_price:>10.2f}")
-    output.append(f"  Time to Expiry:           {greeks.time_to_expiry * 365:>10.0f} days ({greeks.time_to_expiry:.3f} years)")
+    output.append(
+        f"  Time to Expiry:           {greeks.time_to_expiry * 365:>10.0f} days ({greeks.time_to_expiry:.3f} years)"
+    )
     output.append(f"  Volatility:               {greeks.volatility:>10.1%}")
     output.append(f"  Risk-free Rate:           {args.risk_free_rate:>10.1%}")
     output.append(f"  Moneyness:                {greeks.moneyness:>10}")
@@ -206,7 +242,9 @@ def format_greeks(greeks, args) -> str:
     output.append("-" * 70)
 
     if greeks.moneyness == "ITM":
-        output.append(f"  • Option is IN THE MONEY (intrinsic value: ${greeks.intrinsic_value:.2f})")
+        output.append(
+            f"  • Option is IN THE MONEY (intrinsic value: ${greeks.intrinsic_value:.2f})"
+        )
     elif greeks.moneyness == "ATM":
         output.append("  • Option is AT THE MONEY (near strike price)")
     else:
@@ -215,7 +253,9 @@ def format_greeks(greeks, args) -> str:
     if abs(greeks.delta) > 0.7:
         output.append(f"  • High delta ({greeks.delta:.2f}) - behaves like stock")
     elif abs(greeks.delta) < 0.3:
-        output.append(f"  • Low delta ({greeks.delta:.2f}) - low probability of expiring ITM")
+        output.append(
+            f"  • Low delta ({greeks.delta:.2f}) - low probability of expiring ITM"
+        )
     else:
         output.append(f"  • Moderate delta ({greeks.delta:.2f}) - balanced risk/reward")
 
@@ -253,13 +293,17 @@ def format_implied_vol(iv_result, args) -> str:
     output.append(f"  IMPLIED VOLATILITY:       {iv_result.implied_volatility:>10.1%}")
     output.append("")
     output.append(f"  Solver Iterations:        {iv_result.iterations:>10}")
-    output.append(f"  Converged:                {'Yes' if iv_result.converged else 'No':>10}")
+    output.append(
+        f"  Converged:                {'Yes' if iv_result.converged else 'No':>10}"
+    )
     output.append("")
 
     if iv_result.converged:
         output.append("  ✅ Solution converged successfully")
     else:
-        output.append("  ⚠️  WARNING: Solver did not converge - results may be unreliable")
+        output.append(
+            "  ⚠️  WARNING: Solver did not converge - results may be unreliable"
+        )
 
     output.append("")
 
@@ -267,13 +311,21 @@ def format_implied_vol(iv_result, args) -> str:
     output.append("💡 INTERPRETATION")
     output.append("-" * 70)
     if iv_result.implied_volatility > 0.60:
-        output.append(f"  • Very high IV ({iv_result.implied_volatility:.0%}) - market expects extreme volatility")
+        output.append(
+            f"  • Very high IV ({iv_result.implied_volatility:.0%}) - market expects extreme volatility"
+        )
     elif iv_result.implied_volatility > 0.40:
-        output.append(f"  • High IV ({iv_result.implied_volatility:.0%}) - elevated uncertainty")
+        output.append(
+            f"  • High IV ({iv_result.implied_volatility:.0%}) - elevated uncertainty"
+        )
     elif iv_result.implied_volatility > 0.20:
-        output.append(f"  • Moderate IV ({iv_result.implied_volatility:.0%}) - normal volatility")
+        output.append(
+            f"  • Moderate IV ({iv_result.implied_volatility:.0%}) - normal volatility"
+        )
     else:
-        output.append(f"  • Low IV ({iv_result.implied_volatility:.0%}) - market expects stability")
+        output.append(
+            f"  • Low IV ({iv_result.implied_volatility:.0%}) - market expects stability"
+        )
 
     output.append("")
     output.append("  💡 Compare implied volatility to historical volatility:")

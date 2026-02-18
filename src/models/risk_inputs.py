@@ -1,5 +1,4 @@
-"""
-Risk Analysis Pydantic Models for Finance Guru™
+"""Risk Analysis Pydantic Models for Finance Guru™.
 
 This module defines type-safe data structures for risk calculations.
 All models use Pydantic for automatic validation and type checking.
@@ -27,8 +26,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class PriceDataInput(BaseModel):
-    """
-    Historical price data for risk calculations.
+    """Historical price data for risk calculations.
 
     WHAT: Container for time-series price data
     WHY: Ensures price data is valid before risk calculations begin
@@ -69,8 +67,7 @@ class PriceDataInput(BaseModel):
     @field_validator("prices")
     @classmethod
     def prices_must_be_positive(cls, v: list[float]) -> list[float]:
-        """
-        Ensure all prices are positive numbers.
+        """Ensure all prices are positive numbers.
 
         WHY: Stock prices cannot be negative. Zero prices indicate
         delisted stocks or data errors. We reject both.
@@ -90,8 +87,7 @@ class PriceDataInput(BaseModel):
     @field_validator("dates")
     @classmethod
     def dates_must_be_sorted(cls, v: list[date]) -> list[date]:
-        """
-        Ensure dates are in chronological order.
+        """Ensure dates are in chronological order.
 
         WHY: Time-series calculations assume sequential data.
         Out-of-order dates produce incorrect returns and volatility.
@@ -109,8 +105,7 @@ class PriceDataInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_price_date_alignment(self) -> "PriceDataInput":
-        """
-        Ensure equal number of prices and dates.
+        """Ensure equal number of prices and dates.
 
         WHY: Each price needs a corresponding date.
         Misalignment causes index errors in calculations.
@@ -128,8 +123,7 @@ class PriceDataInput(BaseModel):
 
     @model_validator(mode="after")
     def check_for_duplicate_dates(self) -> "PriceDataInput":
-        """
-        Warn if duplicate dates are present.
+        """Warn if duplicate dates are present.
 
         WHY: Duplicate dates indicate data quality issues
         (e.g., accidentally loading the same file twice).
@@ -150,18 +144,69 @@ class PriceDataInput(BaseModel):
                 {
                     "ticker": "TSLA",
                     "prices": [
-                        250.0, 252.5, 248.0, 255.0, 253.5, 256.0, 254.5, 257.0, 259.5, 258.0,
-                        260.5, 262.0, 261.5, 263.0, 265.5, 264.0, 266.5, 268.0, 267.5, 269.0,
-                        271.5, 270.0, 272.5, 274.0, 273.5, 275.0, 277.5, 276.0, 278.5, 280.0
+                        250.0,
+                        252.5,
+                        248.0,
+                        255.0,
+                        253.5,
+                        256.0,
+                        254.5,
+                        257.0,
+                        259.5,
+                        258.0,
+                        260.5,
+                        262.0,
+                        261.5,
+                        263.0,
+                        265.5,
+                        264.0,
+                        266.5,
+                        268.0,
+                        267.5,
+                        269.0,
+                        271.5,
+                        270.0,
+                        272.5,
+                        274.0,
+                        273.5,
+                        275.0,
+                        277.5,
+                        276.0,
+                        278.5,
+                        280.0,
                     ],
                     "dates": [
-                        "2025-09-01", "2025-09-02", "2025-09-03", "2025-09-04", "2025-09-05",
-                        "2025-09-08", "2025-09-09", "2025-09-10", "2025-09-11", "2025-09-12",
-                        "2025-09-15", "2025-09-16", "2025-09-17", "2025-09-18", "2025-09-19",
-                        "2025-09-22", "2025-09-23", "2025-09-24", "2025-09-25", "2025-09-26",
-                        "2025-09-29", "2025-09-30", "2025-10-01", "2025-10-02", "2025-10-03",
-                        "2025-10-06", "2025-10-07", "2025-10-08", "2025-10-09", "2025-10-10"
-                    ]
+                        "2025-09-01",
+                        "2025-09-02",
+                        "2025-09-03",
+                        "2025-09-04",
+                        "2025-09-05",
+                        "2025-09-08",
+                        "2025-09-09",
+                        "2025-09-10",
+                        "2025-09-11",
+                        "2025-09-12",
+                        "2025-09-15",
+                        "2025-09-16",
+                        "2025-09-17",
+                        "2025-09-18",
+                        "2025-09-19",
+                        "2025-09-22",
+                        "2025-09-23",
+                        "2025-09-24",
+                        "2025-09-25",
+                        "2025-09-26",
+                        "2025-09-29",
+                        "2025-09-30",
+                        "2025-10-01",
+                        "2025-10-02",
+                        "2025-10-03",
+                        "2025-10-06",
+                        "2025-10-07",
+                        "2025-10-08",
+                        "2025-10-09",
+                        "2025-10-10",
+                    ],
                 }
             ]
         }
@@ -169,8 +214,7 @@ class PriceDataInput(BaseModel):
 
 
 class RiskCalculationConfig(BaseModel):
-    """
-    Configuration parameters for risk metric calculations.
+    """Configuration parameters for risk metric calculations.
 
     WHAT: Standardized settings for risk analysis
     WHY: Ensures consistent risk calculations across all agents
@@ -219,8 +263,7 @@ class RiskCalculationConfig(BaseModel):
     @field_validator("confidence_level")
     @classmethod
     def validate_confidence_makes_sense(cls, v: float) -> float:
-        """
-        Provide guidance on confidence level selection.
+        """Provide guidance on confidence level selection.
 
         EDUCATIONAL NOTE:
         Common confidence levels:
@@ -231,6 +274,7 @@ class RiskCalculationConfig(BaseModel):
         if v < 0.90:
             # This is a warning, not an error - we still allow it
             import warnings
+
             warnings.warn(
                 f"Confidence level {v:.1%} is below 90%. "
                 "Consider using at least 90% for meaningful risk assessment."
@@ -244,22 +288,21 @@ class RiskCalculationConfig(BaseModel):
                     "confidence_level": 0.95,
                     "var_method": "historical",
                     "rolling_window": 252,
-                    "risk_free_rate": 0.045
+                    "risk_free_rate": 0.045,
                 },
                 {
                     "confidence_level": 0.99,
                     "var_method": "parametric",
                     "rolling_window": 126,
-                    "risk_free_rate": 0.050
-                }
+                    "risk_free_rate": 0.050,
+                },
             ]
         }
     }
 
 
 class RiskMetricsOutput(BaseModel):
-    """
-    Comprehensive risk metrics output.
+    """Comprehensive risk metrics output.
 
     WHAT: All calculated risk metrics in a single validated structure
     WHY: Guarantees agents receive complete, properly-typed risk data
@@ -278,14 +321,11 @@ class RiskMetricsOutput(BaseModel):
     """
 
     # Identification
-    ticker: str = Field(
-        ...,
-        description="Stock ticker symbol"
-    )
+    ticker: str = Field(..., description="Stock ticker symbol")
 
     calculation_date: date = Field(
         ...,
-        description="Date of calculation (typically the latest date in the price series)"
+        description="Date of calculation (typically the latest date in the price series)",
     )
 
     # Value at Risk Metrics
@@ -294,7 +334,7 @@ class RiskMetricsOutput(BaseModel):
         description=(
             "95% Value at Risk (daily loss threshold). "
             "Example: -0.035 means '95% of days, losses won't exceed 3.5%'"
-        )
+        ),
     )
 
     cvar_95: float = Field(
@@ -302,7 +342,7 @@ class RiskMetricsOutput(BaseModel):
         description=(
             "95% Conditional VaR (expected loss beyond VaR). "
             "Example: -0.048 means 'when losses DO exceed VaR, average loss is 4.8%'"
-        )
+        ),
     )
 
     # Return-Based Risk Metrics
@@ -312,7 +352,7 @@ class RiskMetricsOutput(BaseModel):
             "Sharpe Ratio (excess return per unit of total risk). "
             "Rule of thumb: <1.0=poor, 1.0-2.0=good, >2.0=excellent. "
             "Example: 1.25 means you earn 1.25% excess return per 1% of volatility"
-        )
+        ),
     )
 
     sortino_ratio: float = Field(
@@ -321,7 +361,7 @@ class RiskMetricsOutput(BaseModel):
             "Sortino Ratio (excess return per unit of downside risk). "
             "Like Sharpe but only penalizes downside volatility. "
             "Generally higher than Sharpe for asymmetric return distributions."
-        )
+        ),
     )
 
     # Drawdown Metrics
@@ -331,7 +371,7 @@ class RiskMetricsOutput(BaseModel):
         description=(
             "Maximum peak-to-trough decline (always negative or zero). "
             "Example: -0.32 means 'worst decline was 32% from peak'"
-        )
+        ),
     )
 
     calmar_ratio: float = Field(
@@ -340,7 +380,7 @@ class RiskMetricsOutput(BaseModel):
             "Calmar Ratio (annual return / absolute max drawdown). "
             "Measures return per unit of worst-case loss. "
             "Higher is better. Example: 0.85 means 0.85% return per 1% max drawdown"
-        )
+        ),
     )
 
     # Volatility Metrics
@@ -350,7 +390,7 @@ class RiskMetricsOutput(BaseModel):
         description=(
             "Annualized volatility (standard deviation of returns). "
             "Example: 0.42 means 42% annual volatility (high for stocks, typical for crypto)"
-        )
+        ),
     )
 
     # Market Relationship Metrics (Optional)
@@ -360,7 +400,7 @@ class RiskMetricsOutput(BaseModel):
             "Beta vs benchmark (sensitivity to market movements). "
             "Example: 1.8 means stock moves 1.8x as much as the market. "
             "None if benchmark data not provided."
-        )
+        ),
     )
 
     alpha: float | None = Field(
@@ -369,14 +409,13 @@ class RiskMetricsOutput(BaseModel):
             "Alpha vs benchmark (excess return above what beta predicts). "
             "Example: 0.05 means 5% annualized outperformance vs benchmark. "
             "None if benchmark data not provided."
-        )
+        ),
     )
 
     @field_validator("var_95", "cvar_95")
     @classmethod
     def var_metrics_should_be_negative(cls, v: float, info) -> float:
-        """
-        Validate that VaR metrics are negative (representing losses).
+        """Validate that VaR metrics are negative (representing losses).
 
         EDUCATIONAL NOTE:
         VaR and CVaR represent LOSSES, so they should be negative.
@@ -386,6 +425,7 @@ class RiskMetricsOutput(BaseModel):
         """
         if v > 0:
             import warnings
+
             warnings.warn(
                 f"{info.field_name} is positive ({v:.4f}). "
                 "VaR metrics typically represent losses and should be negative. "
@@ -396,8 +436,7 @@ class RiskMetricsOutput(BaseModel):
     @field_validator("max_drawdown")
     @classmethod
     def drawdown_must_be_non_positive(cls, v: float) -> float:
-        """
-        Ensure max drawdown is negative or zero.
+        """Ensure max drawdown is negative or zero.
 
         EDUCATIONAL NOTE:
         Drawdown is peak-to-trough decline, so it's always ≤ 0.
@@ -412,8 +451,7 @@ class RiskMetricsOutput(BaseModel):
 
     @model_validator(mode="after")
     def validate_risk_metric_relationships(self) -> "RiskMetricsOutput":
-        """
-        Check logical relationships between risk metrics.
+        """Check logical relationships between risk metrics.
 
         EDUCATIONAL NOTE:
         Some metrics have mathematical relationships:
@@ -423,6 +461,7 @@ class RiskMetricsOutput(BaseModel):
         # CVaR should be more extreme (more negative) than VaR
         if self.cvar_95 > self.var_95:
             import warnings
+
             warnings.warn(
                 f"CVaR ({self.cvar_95:.4f}) is less extreme than VaR ({self.var_95:.4f}). "
                 "CVaR should represent worse losses than VaR. Check calculation logic."
@@ -444,7 +483,7 @@ class RiskMetricsOutput(BaseModel):
                     "calmar_ratio": 0.85,
                     "annual_volatility": 0.42,
                     "beta": 1.8,
-                    "alpha": 0.05
+                    "alpha": 0.05,
                 },
                 {
                     "ticker": "AAPL",
@@ -457,8 +496,8 @@ class RiskMetricsOutput(BaseModel):
                     "calmar_ratio": 1.35,
                     "annual_volatility": 0.28,
                     "beta": 1.2,
-                    "alpha": 0.03
-                }
+                    "alpha": 0.03,
+                },
             ]
         }
     }
