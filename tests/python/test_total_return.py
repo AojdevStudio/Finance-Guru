@@ -11,10 +11,18 @@ Test classes:
     5. TestAnnualizedReturn: calendar days validation
     6. TestDataQualityValidation: gap detection, force override, split artifacts, unknown ticker
     7. TestScheduleLoader: YAML loading, missing file fallback
+    8. TestCalculateAll: integration of all calculator methods
+    9. TestCLIArgParsing: CLI argument parsing (help, tickers, json, force)
+   10. TestPortfolioCSVReader: portfolio CSV loading and missing CSV handling
+   11. TestVerdictFormatting: sign-flip verdict, league table, disclaimer, JSON validity
+   12. TestFinnhubIntegration: graceful fallback on exception
 """
 
+import json
+import os
+import tempfile
 from datetime import date
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -23,6 +31,12 @@ from src.analysis.total_return import (
     TotalReturnCalculator,
     TotalReturnResult,
     load_dividend_schedules,
+)
+from src.analysis.total_return_cli import (
+    build_parser,
+    format_human_output,
+    format_json_output,
+    load_portfolio_shares,
 )
 from src.models.total_return_inputs import (
     DividendRecord,
@@ -651,3 +665,466 @@ class TestCalculateAll:
         assert result.dividend_return == pytest.approx(0.0)
         assert result.total_return == pytest.approx(0.25)
         assert result.drip_total_return == pytest.approx(0.25)
+
+
+# ---------------------------------------------------------------------------
+# CLI Test Helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_result(
+    ticker: str = "TEST",
+    price_return: float = 0.10,
+    dividend_return: float = 0.03,
+    total_return: float = 0.13,
+    drip_total_return: float | None = 0.135,
+    drip_final_shares: float | None = 1.03,
+    drip_share_growth: float | None = 1.03,
+    annualized_return: float | None = 0.27,
+    dividend_count: int = 3,
+    period_breakdown: list[dict] | None = None,
+    data_quality_warnings: list[str] | None = None,
+) -> TotalReturnResult:
+    """Build a TotalReturnResult with sensible defaults for CLI tests."""
+    return TotalReturnResult(
+        ticker=ticker,
+        start_date=date(2025, 1, 2),
+        end_date=date(2025, 7, 2),
+        price_return=price_return,
+        dividend_return=dividend_return,
+        total_return=total_return,
+        annualized_return=annualized_return,
+        drip_total_return=drip_total_return,
+        drip_final_shares=drip_final_shares,
+        drip_share_growth=drip_share_growth,
+        period_breakdown=period_breakdown
+        or [
+            {
+                "date": date(2025, 3, 15),
+                "dividend_per_share": 1.0,
+                "reinvest_price": 100.0,
+                "shares_acquired": 0.01,
+                "cumulative_shares": 1.01,
+            },
+        ],
+        dividend_count=dividend_count,
+        data_quality_warnings=data_quality_warnings or [],
+    )
+
+
+# ---------------------------------------------------------------------------
+# 9. TestCLIArgParsing
+# ---------------------------------------------------------------------------
+
+
+class TestCLIArgParsing:
+    """CLI argument parsing tests."""
+
+    def test_help_flag(self):
+        """--help exits with code 0 and shows usage."""
+        parser = build_parser()
+        with pytest.raises(SystemExit) as exc_info:
+            parser.parse_args(["--help"])
+        assert exc_info.value.code == 0
+
+    def test_single_ticker(self):
+        """Single ticker parsed correctly."""
+        parser = build_parser()
+        args = parser.parse_args(["SCHD"])
+        assert args.tickers == ["SCHD"]
+        assert args.days == 252  # Default
+
+    def test_multiple_tickers(self):
+        """Multiple tickers parsed correctly."""
+        parser = build_parser()
+        args = parser.parse_args(["SCHD", "JEPI", "VYM"])
+        assert args.tickers == ["SCHD", "JEPI", "VYM"]
+
+    def test_days_flag(self):
+        """--days sets custom period."""
+        parser = build_parser()
+        args = parser.parse_args(["SCHD", "--days", "90"])
+        assert args.days == 90
+
+    def test_json_output(self):
+        """--output json selects JSON format."""
+        parser = build_parser()
+        args = parser.parse_args(["SCHD", "--output", "json"])
+        assert args.output == "json"
+
+    def test_force_flag(self):
+        """--force enables override of data quality warnings."""
+        parser = build_parser()
+        args = parser.parse_args(["CLM", "--force"])
+        assert args.force is True
+
+    def test_force_default_false(self):
+        """force defaults to False."""
+        parser = build_parser()
+        args = parser.parse_args(["CLM"])
+        assert args.force is False
+
+    def test_save_to_flag(self):
+        """--save-to sets file path."""
+        parser = build_parser()
+        args = parser.parse_args(["SCHD", "--save-to", "output.txt"])
+        assert args.save_to == "output.txt"
+
+    def test_realtime_flag(self):
+        """--realtime enables Finnhub integration."""
+        parser = build_parser()
+        args = parser.parse_args(["SCHD", "--realtime"])
+        assert args.realtime is True
+
+    def test_no_tickers_exits(self):
+        """No tickers causes argparse error."""
+        parser = build_parser()
+        with pytest.raises(SystemExit) as exc_info:
+            parser.parse_args([])
+        assert exc_info.value.code != 0
+
+
+# ---------------------------------------------------------------------------
+# 10. TestPortfolioCSVReader
+# ---------------------------------------------------------------------------
+
+
+class TestPortfolioCSVReader:
+    """Portfolio CSV loading tests with temp files."""
+
+    def test_load_shares_from_csv(self):
+        """Reads ticker -> quantity from a temp CSV."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", prefix="Portfolio_Positions_", delete=False
+        ) as f:
+            f.write(
+                "Account Number,Account Name,Investment Type,Symbol,"
+                "Description,Quantity,Last Price\n"
+            )
+            f.write("Z123,Test,Stocks,SCHD,Test ETF,100.5,$25.00\n")
+            f.write("Z123,Test,Stocks,JEPI,Test ETF,200.0,$55.00\n")
+            csv_path = f.name
+
+        try:
+            # Use exact file path as glob pattern (matches the file itself)
+            shares = load_portfolio_shares(csv_glob=csv_path)
+            assert shares["SCHD"] == pytest.approx(100.5)
+            assert shares["JEPI"] == pytest.approx(200.0)
+        finally:
+            os.unlink(csv_path)
+
+    def test_missing_csv_returns_empty_dict(self):
+        """No matching CSV files returns empty dict."""
+        shares = load_portfolio_shares(csv_glob="/nonexistent/path/*.csv")
+        assert shares == {}
+
+    def test_latest_csv_selected(self):
+        """When multiple CSVs exist, the last in sorted order is used."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create two CSVs -- sorted order picks the last one
+            # Use names that sort deterministically: A before B
+            for name, qty in [
+                ("Portfolio_Positions_A.csv", "50.0"),
+                ("Portfolio_Positions_B.csv", "100.0"),
+            ]:
+                path = os.path.join(tmpdir, name)
+                with open(path, "w") as f:
+                    f.write("Symbol,Quantity\n")
+                    f.write(f"SCHD,{qty}\n")
+
+            pattern = os.path.join(tmpdir, "Portfolio_Positions_*.csv")
+            shares = load_portfolio_shares(csv_glob=pattern)
+            # The B CSV (sorted last) should be used -> 100.0
+            assert shares["SCHD"] == pytest.approx(100.0)
+
+    def test_invalid_quantity_skipped(self):
+        """Non-numeric quantity rows are skipped gracefully."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", prefix="Portfolio_Positions_", delete=False
+        ) as f:
+            f.write("Symbol,Quantity\n")
+            f.write("SCHD,100.0\n")
+            f.write("JEPI,N/A\n")  # Invalid quantity
+            f.write("VYM,50.0\n")
+            csv_path = f.name
+
+        try:
+            shares = load_portfolio_shares(csv_glob=csv_path)
+            assert "SCHD" in shares
+            assert "JEPI" not in shares  # Skipped due to invalid quantity
+            assert "VYM" in shares
+        finally:
+            os.unlink(csv_path)
+
+
+# ---------------------------------------------------------------------------
+# 11. TestVerdictFormatting
+# ---------------------------------------------------------------------------
+
+
+class TestVerdictFormatting:
+    """Verdict narrative, league table, disclaimer, and JSON validity tests."""
+
+    def test_sign_flip_verdict_displayed(self):
+        """Price negative + total positive triggers verdict narrative."""
+        result = _make_result(
+            ticker="CLM",
+            price_return=-0.0395,
+            dividend_return=0.082,
+            total_return=0.0425,
+        )
+        output = format_human_output([result], {})
+        assert "VERDICT" in output
+        assert "MISLEADING" in output
+        assert "CLM" in output
+
+    def test_no_verdict_when_both_positive(self):
+        """No verdict when both price and total return are positive."""
+        result = _make_result(
+            price_return=0.05,
+            dividend_return=0.03,
+            total_return=0.08,
+        )
+        output = format_human_output([result], {})
+        assert "VERDICT" not in output
+        assert "MISLEADING" not in output
+
+    def test_no_verdict_when_both_negative(self):
+        """No verdict when both price and total return are negative."""
+        result = _make_result(
+            price_return=-0.10,
+            dividend_return=0.03,
+            total_return=-0.07,
+        )
+        output = format_human_output([result], {})
+        assert "VERDICT" not in output
+
+    def test_league_table_ranking(self):
+        """Multiple tickers produce ranked league table."""
+        r1 = _make_result(ticker="JEPI", total_return=0.12)
+        r2 = _make_result(ticker="CLM", total_return=0.04)
+        r3 = _make_result(ticker="VYM", total_return=0.08)
+        output = format_human_output([r1, r2, r3], {})
+        assert "LEAGUE TABLE" in output
+        # Should show ranking numbers for all 3 tickers
+        assert "#1" in output
+        assert "#3" in output
+
+    def test_league_table_not_shown_single_ticker(self):
+        """League table only shown for multi-ticker comparison."""
+        result = _make_result(ticker="SCHD")
+        output = format_human_output([result], {})
+        assert "LEAGUE TABLE" not in output
+
+    def test_price_misleading_in_league_table(self):
+        """Sign-flip tickers marked 'Price misleading' in league table."""
+        r1 = _make_result(
+            ticker="CLM",
+            price_return=-0.04,
+            total_return=0.04,
+        )
+        r2 = _make_result(
+            ticker="VYM",
+            price_return=0.05,
+            total_return=0.08,
+        )
+        output = format_human_output([r1, r2], {})
+        assert "Price misleading" in output
+
+    def test_disclaimer_in_human_output(self):
+        """Educational disclaimer appears in all human output."""
+        result = _make_result()
+        output = format_human_output([result], {})
+        assert "DISCLAIMER" in output
+        assert "educational purposes only" in output.lower()
+        assert "not investment advice" in output.lower()
+
+    def test_disclaimer_in_json_output(self):
+        """Educational disclaimer appears in JSON output."""
+        result = _make_result()
+        output = format_json_output([result], {})
+        parsed = json.loads(output)
+        assert "disclaimer" in parsed
+        assert "educational" in parsed["disclaimer"].lower()
+
+    def test_json_output_valid(self):
+        """JSON output is valid JSON."""
+        result = _make_result()
+        output = format_json_output([result], {})
+        parsed = json.loads(output)
+        assert "total_return_analysis" in parsed
+        assert len(parsed["total_return_analysis"]) == 1
+
+    def test_json_verdict_present_on_sign_flip(self):
+        """JSON output includes verdict field on sign-flip."""
+        result = _make_result(
+            ticker="CLM",
+            price_return=-0.04,
+            total_return=0.04,
+        )
+        output = format_json_output([result], {})
+        parsed = json.loads(output)
+        entry = parsed["total_return_analysis"][0]
+        assert entry["verdict"] == "Price misleading"
+
+    def test_json_verdict_null_when_no_flip(self):
+        """JSON output has null verdict when no sign-flip."""
+        result = _make_result(
+            price_return=0.10,
+            total_return=0.13,
+        )
+        output = format_json_output([result], {})
+        parsed = json.loads(output)
+        entry = parsed["total_return_analysis"][0]
+        assert entry["verdict"] is None
+
+    def test_json_dollar_impact_with_shares(self):
+        """JSON includes dollar_impact when portfolio shares provided."""
+        result = _make_result(
+            ticker="SCHD",
+            period_breakdown=[
+                {
+                    "date": date(2025, 3, 15),
+                    "dividend_per_share": 0.65,
+                    "reinvest_price": 25.0,
+                    "shares_acquired": 0.026,
+                    "cumulative_shares": 1.026,
+                },
+            ],
+        )
+        portfolio = {"SCHD": 100.0}
+        output = format_json_output([result], portfolio)
+        parsed = json.loads(output)
+        entry = parsed["total_return_analysis"][0]
+        assert "dollar_impact" in entry
+        assert entry["dollar_impact"]["shares_held"] == 100.0
+        assert entry["dollar_impact"]["total_distributions"] == pytest.approx(65.0)
+
+    def test_drip_side_by_side_columns(self):
+        """Human output shows Non-DRIP and DRIP columns side-by-side."""
+        result = _make_result()
+        output = format_human_output([result], {})
+        assert "Non-DRIP" in output
+        assert "DRIP" in output
+
+    def test_period_breakdown_displayed(self):
+        """Period breakdown shows individual dividend events."""
+        result = _make_result(
+            period_breakdown=[
+                {
+                    "date": date(2025, 3, 15),
+                    "dividend_per_share": 0.65,
+                    "reinvest_price": 25.0,
+                    "shares_acquired": 0.026,
+                    "cumulative_shares": 1.026,
+                },
+                {
+                    "date": date(2025, 6, 15),
+                    "dividend_per_share": 0.70,
+                    "reinvest_price": 26.0,
+                    "shares_acquired": 0.027,
+                    "cumulative_shares": 1.053,
+                },
+            ],
+        )
+        output = format_human_output([result], {})
+        assert "Div/Share" in output
+        assert "Reinvest" in output
+        assert "Shares Acq" in output
+        assert "2025-03-15" in output
+        assert "2025-06-15" in output
+
+    def test_dollar_amounts_with_portfolio(self):
+        """Dollar amounts shown when portfolio shares available."""
+        result = _make_result(
+            ticker="SCHD",
+            period_breakdown=[
+                {
+                    "date": date(2025, 3, 15),
+                    "dividend_per_share": 2.0,
+                    "reinvest_price": 25.0,
+                    "shares_acquired": 0.08,
+                    "cumulative_shares": 1.08,
+                },
+            ],
+        )
+        portfolio = {"SCHD": 100.0}
+        output = format_human_output([result], portfolio)
+        assert "Dollar Impact" in output
+        assert "100.00 shares" in output
+        assert "Distributions received" in output
+
+
+# ---------------------------------------------------------------------------
+# 12. TestFinnhubIntegration
+# ---------------------------------------------------------------------------
+
+
+class TestFinnhubIntegration:
+    """Graceful fallback when Finnhub is unavailable."""
+
+    def test_finnhub_exception_fallback(self):
+        """fetch_ticker_data handles Finnhub exception gracefully."""
+        # We test that fetch_ticker_data doesn't crash when get_prices raises.
+        # We mock yfinance via the import inside fetch_ticker_data.
+        import pandas as pd
+
+        mock_hist = pd.DataFrame(
+            {
+                "Close": [100.0, 105.0, 110.0],
+                "Dividends": [0.0, 0.5, 0.0],
+            },
+            index=pd.to_datetime(["2025-01-02", "2025-03-15", "2025-07-01"]),
+        )
+
+        # Create a mock yfinance module
+        mock_yf = MagicMock()
+        mock_ticker = MagicMock()
+        mock_ticker.history.return_value = mock_hist
+        mock_yf.Ticker.return_value = mock_ticker
+
+        with (
+            patch.dict("sys.modules", {"yfinance": mock_yf}),
+            patch(
+                "src.utils.market_data.get_prices",
+                side_effect=Exception("Finnhub down"),
+            ),
+        ):
+            from src.analysis.total_return_cli import fetch_ticker_data
+
+            inp, prices, divs, ex_prices = fetch_ticker_data(
+                "TEST", days=252, realtime=True
+            )
+
+            # Should succeed despite Finnhub error
+            assert len(prices) == 3
+            assert len(divs) == 1
+            assert inp.ticker == "TEST"
+
+    def test_finnhub_not_called_without_realtime(self):
+        """get_prices is not called when realtime=False."""
+        import pandas as pd
+
+        mock_hist = pd.DataFrame(
+            {
+                "Close": [100.0, 110.0],
+                "Dividends": [0.0, 0.0],
+            },
+            index=pd.to_datetime(["2025-01-02", "2025-07-01"]),
+        )
+
+        # Create a mock yfinance module
+        mock_yf = MagicMock()
+        mock_ticker = MagicMock()
+        mock_ticker.history.return_value = mock_hist
+        mock_yf.Ticker.return_value = mock_ticker
+
+        with (
+            patch.dict("sys.modules", {"yfinance": mock_yf}),
+            patch("src.utils.market_data.get_prices") as mock_get_prices,
+        ):
+            from src.analysis.total_return_cli import fetch_ticker_data
+
+            fetch_ticker_data("TEST", days=252, realtime=False)
+
+            mock_get_prices.assert_not_called()
