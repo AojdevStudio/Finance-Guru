@@ -275,8 +275,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md -- TotalReturnCalculator class with DRIP modeling and dividend data quality validation (Layer 2)
-- [ ] 07-02-PLAN.md -- Total return CLI with multi-ticker comparison and known-answer test suite (Layer 3 + tests)
+- [ ] 07-01-PLAN.md -- TDD: TotalReturnCalculator class with DRIP modeling, data quality validation, dividend schedule config (Layer 2 + tests)
+- [ ] 07-02-PLAN.md -- Total return CLI with verdict display, league table, DRIP side-by-side, Finnhub, CSV auto-read, CLI tests (Layer 3)
 
 ---
 
