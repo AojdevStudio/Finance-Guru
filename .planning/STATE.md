@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 8 in progress -- Rolling Tracker / Hedge Sizer. Plan 02 (HedgeSizer calculator) complete.
+**Current focus:** Phase 8 in progress -- Rolling Tracker / Hedge Sizer. Plans 01 and 02 complete.
 
 ## Current Position
 
 Phase: 8 of 12 (Rolling Tracker / Hedge Sizer)
 Plan: 2 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-18 -- Completed 08-02-PLAN.md
+Last activity: 2026-02-18 -- Completed 08-01-PLAN.md
 
-Progress: [██████████░░░░░░░░░░] 50%
+Progress: [██████████░░░░░░░░░░] 53%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: ~8 min
-- Total execution time: ~2.27 hours
+- Total execution time: ~2.40 hours
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: [██████████░░░░░░░░░░] 50%
 | 06-config-loader-shared-hedging-models | 3/3 | 17 min | 6 min |
 | 07-total-return-calculator | 2/2 | 14 min | 7 min |
 
-| 08-rolling-tracker-hedge-sizer | 1/6 | 6 min | 6 min |
+| 08-rolling-tracker-hedge-sizer | 2/6 | 14 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-03 (4 min), 07-01 (6 min), 07-02 (8 min), 08-02 (6 min)
-- Trend: ~6 min/plan
+- Last 5 plans: 07-01 (6 min), 07-02 (8 min), 08-02 (6 min), 08-01 (8 min)
+- Trend: ~7 min/plan
 
 *Updated after each plan completion*
 
@@ -108,6 +108,8 @@ Recent decisions affecting current work:
 - [08-02]: Over-budget warning shows full recommendation, does NOT scale down contracts
 - [08-02]: allocate_contracts remainder goes to highest-weight underlying first
 - [08-02]: validate_budget uses median premium from scan_chain for cost estimation
+- [08-01]: Deep ITM puts cause GreeksOutput validation errors; price_american_put catches and returns intrinsic value
+- [08-01]: Extracted _dte_status and _rank_contract_score as module-level helpers for C901 compliance
 
 ### Pending Todos
 
@@ -128,6 +130,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 08-02-PLAN.md
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
-Next action: Continue Phase 8 (plans 01, 03-06 remaining)
+Next action: Continue Phase 8 (plans 03-06 remaining)
