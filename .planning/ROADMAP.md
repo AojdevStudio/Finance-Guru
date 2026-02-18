@@ -37,7 +37,7 @@ Phase 1 rewrites git history (`git filter-repo`), so it must land directly on `m
 - [x] **Phase 4: Onboarding Polish & Hook Refactoring** - Save/resume, regression testing, and Bun hook ports
 - [x] **Phase 5: Agent Readiness Hardening** - Linter, pre-commit hooks, issue/PR templates, and test coverage thresholds
 - [x] **Phase 6: Config Loader & Shared Hedging Models** - Foundation layer all four hedging CLIs depend on
-- [ ] **Phase 7: Total Return Calculator** - Price + dividend return CLI with DRIP modeling
+- [x] **Phase 7: Total Return Calculator** - Price + dividend return CLI with DRIP modeling
 - [ ] **Phase 8: Rolling Tracker & Hedge Sizer** - Options position management and contract sizing CLIs
 - [ ] **Phase 9: SQQQ vs Puts Comparison** - Hedge strategy comparison with daily-compounded decay modeling
 - [ ] **Phase 10: Template Engine & Dividend Topic Port** - Build pipeline that converts JSON + template into standalone HTML explorers
@@ -527,7 +527,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 4. Polish & Hooks | M1 | 2/2 | Complete | 2026-02-12 |
 | 5. Agent Readiness | M1 | 5/5 | Complete | 2026-02-13 |
 | 6. Config & Models | M2 | 3/3 | Complete | 2026-02-17 |
-| 7. Total Return | M2 | 0/2 | Planned | - |
+| 7. Total Return | M2 | 2/2 | Complete | 2026-02-17 |
 | 8. Tracker & Sizer | M2 | 0/6 | Planned | - |
 | 9. SQQQ vs Puts | M2 | 0/2 | Planned | - |
 | 10. Template Engine | M3 | 0/3 | Planned | - |
