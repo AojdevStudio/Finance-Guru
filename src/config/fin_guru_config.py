@@ -20,7 +20,7 @@ class FinGuruConfig:
     Provides paths, settings, and layer mappings with safe fallbacks.
     """
 
-    PROJECT_ROOT = Path(__file__).parent.parent
+    PROJECT_ROOT = Path(__file__).parent.parent.parent
     PORTFOLIO_DIR = Path(
         os.getenv("FIN_GURU_PORTFOLIO_DIR", PROJECT_ROOT / "notebooks" / "updates")
     )
