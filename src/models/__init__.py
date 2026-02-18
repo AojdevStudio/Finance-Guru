@@ -1,6 +1,6 @@
 """Financial models and portfolio optimization.
 
-This package contains all Pydantic models for Finance Guru™.
+This package contains all Pydantic models for Finance Guru.
 Models provide type-safe data structures with automatic validation.
 
 Available Models:
@@ -14,6 +14,7 @@ Available Models:
     - itc_risk_inputs: ITC Risk API models (ITCRiskRequest, RiskBand, ITCRiskResponse)
     - hedging_inputs: Hedging position models (HedgePosition, RollSuggestion, HedgeSizeRequest)
     - total_return_inputs: Total return models (TotalReturnInput, DividendRecord, TickerReturn)
+    - hedge_comparison_inputs: Hedge comparison models (ScenarioInput, ComparisonOutput, etc.)
 """
 
 from src.models.backtest_inputs import (
@@ -30,6 +31,13 @@ from src.models.correlation_inputs import (
     PortfolioCorrelationOutput,
     PortfolioPriceData,
     RollingCorrelationOutput,
+)
+from src.models.hedge_comparison_inputs import (
+    ComparisonOutput,
+    ComparisonRow,
+    PutResult,
+    ScenarioInput,
+    SQQQResult,
 )
 from src.models.hedging_inputs import (
     HedgePosition,
@@ -161,4 +169,10 @@ __all__ = [
     "TotalReturnInput",
     "DividendRecord",
     "TickerReturn",
+    # Hedge comparison models
+    "ScenarioInput",
+    "SQQQResult",
+    "PutResult",
+    "ComparisonRow",
+    "ComparisonOutput",
 ]

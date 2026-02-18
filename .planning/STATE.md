@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 8 in progress -- Rolling Tracker / Hedge Sizer. Plans 01, 02, and 05 complete.
+**Current focus:** Phase 8 in progress -- Rolling Tracker / Hedge Sizer. Plans 01, 02, 04, and 05 complete.
 
 ## Current Position
 
 Phase: 8 of 12 (Rolling Tracker / Hedge Sizer)
-Plan: 3 of 6 in current phase (01, 02, 05 complete)
+Plan: 4 of 6 in current phase (01, 02, 04, 05 complete)
 Status: In progress
-Last activity: 2026-02-18 -- Completed 08-05-PLAN.md
+Last activity: 2026-02-18 -- Completed 08-04-PLAN.md
 
-Progress: [███████████░░░░░░░░░] 56%
+Progress: [████████████░░░░░░░░] 58%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
+- Total plans completed: 21
 - Average duration: ~8 min
-- Total execution time: ~2.55 hours
+- Total execution time: ~2.57 hours
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: [███████████░░░░░░░░░] 56%
 | 06-config-loader-shared-hedging-models | 3/3 | 17 min | 6 min |
 | 07-total-return-calculator | 2/2 | 14 min | 7 min |
 
-| 08-rolling-tracker-hedge-sizer | 3/6 | 23 min | 8 min |
+| 08-rolling-tracker-hedge-sizer | 4/6 | 25 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 07-02 (8 min), 08-02 (6 min), 08-01 (8 min), 08-05 (9 min)
-- Trend: ~8 min/plan
+- Last 5 plans: 08-02 (6 min), 08-01 (8 min), 08-05 (9 min), 08-04 (2 min)
+- Trend: ~6 min/plan
 
 *Updated after each plan completion*
 
@@ -113,6 +113,8 @@ Recent decisions affecting current work:
 - [08-05]: Knowledge files force-added past fin-guru/data/ gitignore (educational content, not personal data)
 - [08-05]: BS-01 American options limitation documented in options-insurance-framework.md
 - [08-05]: Sean's three-pillar analogies (insurance/dividends/equity) preserved verbatim in both knowledge files
+- [08-04]: Equal-weight fallback when underlyings not in config weights (consistent with HedgeSizer.calculate)
+- [08-04]: stderr for progress messages, stdout for formatted output (agent-parseable CLI pattern)
 
 ### Pending Todos
 
@@ -133,6 +135,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 08-05-PLAN.md
+Stopped at: Completed 08-04-PLAN.md
 Resume file: None
-Next action: Continue Phase 8 (plans 03, 04, 06 remaining)
+Next action: Continue Phase 8 (plans 03, 06 remaining)
