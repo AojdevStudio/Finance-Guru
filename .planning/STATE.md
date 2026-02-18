@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 8 in progress -- Rolling Tracker / Hedge Sizer. Plans 01 and 02 complete.
+**Current focus:** Phase 8 in progress -- Rolling Tracker / Hedge Sizer. Plans 01, 02, and 05 complete.
 
 ## Current Position
 
 Phase: 8 of 12 (Rolling Tracker / Hedge Sizer)
-Plan: 2 of 6 in current phase
+Plan: 3 of 6 in current phase (01, 02, 05 complete)
 Status: In progress
-Last activity: 2026-02-18 -- Completed 08-01-PLAN.md
+Last activity: 2026-02-18 -- Completed 08-05-PLAN.md
 
-Progress: [██████████░░░░░░░░░░] 53%
+Progress: [███████████░░░░░░░░░] 56%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
+- Total plans completed: 20
 - Average duration: ~8 min
-- Total execution time: ~2.40 hours
+- Total execution time: ~2.55 hours
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: [██████████░░░░░░░░░░] 53%
 | 06-config-loader-shared-hedging-models | 3/3 | 17 min | 6 min |
 | 07-total-return-calculator | 2/2 | 14 min | 7 min |
 
-| 08-rolling-tracker-hedge-sizer | 2/6 | 14 min | 7 min |
+| 08-rolling-tracker-hedge-sizer | 3/6 | 23 min | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 07-01 (6 min), 07-02 (8 min), 08-02 (6 min), 08-01 (8 min)
-- Trend: ~7 min/plan
+- Last 5 plans: 07-02 (8 min), 08-02 (6 min), 08-01 (8 min), 08-05 (9 min)
+- Trend: ~8 min/plan
 
 *Updated after each plan completion*
 
@@ -110,6 +110,9 @@ Recent decisions affecting current work:
 - [08-02]: validate_budget uses median premium from scan_chain for cost estimation
 - [08-01]: Deep ITM puts cause GreeksOutput validation errors; price_american_put catches and returns intrinsic value
 - [08-01]: Extracted _dte_status and _rank_contract_score as module-level helpers for C901 compliance
+- [08-05]: Knowledge files force-added past fin-guru/data/ gitignore (educational content, not personal data)
+- [08-05]: BS-01 American options limitation documented in options-insurance-framework.md
+- [08-05]: Sean's three-pillar analogies (insurance/dividends/equity) preserved verbatim in both knowledge files
 
 ### Pending Todos
 
@@ -130,6 +133,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 08-01-PLAN.md
+Stopped at: Completed 08-05-PLAN.md
 Resume file: None
-Next action: Continue Phase 8 (plans 03-06 remaining)
+Next action: Continue Phase 8 (plans 03, 04, 06 remaining)
