@@ -117,14 +117,14 @@
 
 ### SQQQ vs Puts Comparison
 
-| ID | Requirement | Scope | Phase | Notes |
-|----|-------------|-------|-------|-------|
-| HEDG-06 | SQQQ vs puts comparison CLI: scenario modeling, breakeven, decay | v1 | 8 | Isolated phase — highest complexity |
-| HC-01 | Day-by-day SQQQ simulation with daily rebalancing and volatility drag | v1 | 8 | NOT simple -3x multiplication |
-| HC-02 | Discrete scenario modeling (-5%, -10%, -20%, -40% market drops) | v1 | 8 | Simpler than Monte Carlo, adequate for comparison |
-| HC-03 | Breakeven analysis per hedge type | v1 | 8 | At what % drop does each hedge profit? |
-| HC-04 | IV expansion estimate for puts during crashes | v1 | 8 | VIX-SPX regression model |
-| HC-05 | Clear disclaimer: SQQQ decay is path-dependent, results are approximate | v1 | 8 | Anti-feature: don't claim precision |
+| ID | Requirement | Scope | Phase | Status | Notes |
+|----|-------------|-------|-------|--------|-------|
+| HEDG-06 | SQQQ vs puts comparison CLI: scenario modeling, breakeven, decay | v1 | 9 | Complete | Isolated phase — highest complexity |
+| HC-01 | Day-by-day SQQQ simulation with daily rebalancing and volatility drag | v1 | 9 | Complete | NOT simple -3x multiplication |
+| HC-02 | Discrete scenario modeling (-5%, -10%, -20%, -40% market drops) | v1 | 9 | Complete | Simpler than Monte Carlo, adequate for comparison |
+| HC-03 | Breakeven analysis per hedge type | v1 | 9 | Complete | At what % drop does each hedge profit? |
+| HC-04 | IV expansion estimate for puts during crashes | v1 | 9 | Complete | VIX-SPX regression model |
+| HC-05 | Clear disclaimer: SQQQ decay is path-dependent, results are approximate | v1 | 9 | Complete | Anti-feature: don't claim precision |
 
 ### Knowledge & Agents
 
@@ -132,8 +132,8 @@
 |----|-------------|-------|-------|--------|-------|
 | HEDG-09 | Knowledge base files (hedging-strategies.md, options-insurance-framework.md, etc.) | v1 | 7 | Complete | Educational, generic content only |
 | HEDG-10 | Agent definitions updated to reference new knowledge files | v1 | 7 | Complete | Strategy Advisor, Teaching Specialist, Quant Analyst |
-| HEDG-11 | Architecture diagram (Mermaid .mmd) showing new components | v1 | 8 | After all components exist |
-| HEDG-12 | All 4 CLI tools work with `uv run python src/analysis/<tool>_cli.py` | v1 | 8 | Integration test |
+| HEDG-11 | Architecture diagram (Mermaid .mmd) showing new components | v1 | 9 | Complete | After all components exist |
+| HEDG-12 | All 4 CLI tools work with `uv run python src/analysis/<tool>_cli.py` | v1 | 9 | Complete | Integration test |
 | HEDG-13 | Tests for all new components | v1 | 6-8 | Incremental per phase |
 
 ### Standard Patterns (All M2 Tools)
