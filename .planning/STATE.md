@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 5 complete -- Agent Readiness Hardening
+**Current focus:** Phase 6 in progress -- Config Loader and Shared Hedging Models
 
 ## Current Position
 
-Phase: 5 of 12 (Agent Readiness Hardening)
-Plan: 5 of 5 in current phase
-Status: Phase complete
-Last activity: 2026-02-13 -- Completed 05-05-PLAN.md
+Phase: 6 of 12 (Config Loader and Shared Hedging Models)
+Plan: 2 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-17 -- Completed 06-02-PLAN.md
 
-Progress: [██████████░░░░░░░░░░] 37%
+Progress: [███████░░░░░░░░░░░░░] 36%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: ~9 min
-- Total execution time: ~1.66 hours
+- Total execution time: ~1.74 hours
 
 **By Phase:**
 
@@ -32,9 +32,10 @@ Progress: [██████████░░░░░░░░░░] 37%
 | 03-onboarding-wizard | 2/2 | 16 min | 8 min |
 | 04-onboarding-polish-hook-refactoring | 2/2 | 12 min | 6 min |
 | 05-agent-readiness-hardening | 5/5 | 59 min | 12 min |
+| 06-config-loader-shared-hedging-models | 1/3 | 5 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (17 min), 05-03 (12 min), 05-04 (14 min), 05-05 (12 min)
+- Last 5 plans: 05-03 (12 min), 05-04 (14 min), 05-05 (12 min), 06-02 (5 min)
 - Trend: ~11 min/plan
 
 *Updated after each plan completion*
@@ -84,6 +85,8 @@ Recent decisions affecting current work:
 - [05-04]: CLI wrapper files excluded from coverage targets (I/O-only thin wrappers)
 - [05-05]: Coverage omit patterns exclude CLI wrappers, UI, screener, dashboard models from coverage
 - [05-05]: branch=true in coverage.run for conditional path coverage
+- [06-02]: Converted src/config.py to src/config/ package for config_loader.py colocation; backward compat via __init__.py re-export
+- [06-02]: fin-guru-private/hedging/ templates are gitignored private data; not committed to git
 
 ### Pending Todos
 
@@ -103,7 +106,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: Completed 05-05-PLAN.md (coverage enforcement) -- Phase 05 complete
+Last session: 2026-02-17
+Stopped at: Completed 06-02-PLAN.md (config loader and hedging templates)
 Resume file: None
-Next action: Begin Phase 06 or next milestone planning
+Next action: Execute 06-03-PLAN.md (remaining Phase 06 plan)
