@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Anyone can clone the repo, run setup, and have a working personalized Finance Guru with their own financial data -- no hardcoded references, no manual configuration, and a growing suite of institutional-grade CLI analysis tools.
-**Current focus:** Phase 6 complete -- Config Loader and Shared Hedging Models
+**Current focus:** Phase 7 in progress -- Total Return Calculator
 
 ## Current Position
 
-Phase: 6 of 12 (Config Loader and Shared Hedging Models)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-17 -- Completed 06-03-PLAN.md
+Phase: 7 of 12 (Total Return Calculator)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-17 -- Completed 07-01-PLAN.md
 
-Progress: [████████░░░░░░░░░░░░] 42%
+Progress: [█████████░░░░░░░░░░░] 45%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 14
 - Average duration: ~9 min
-- Total execution time: ~1.93 hours
+- Total execution time: ~2.03 hours
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: [████████░░░░░░░░░░░░] 42%
 | 04-onboarding-polish-hook-refactoring | 2/2 | 12 min | 6 min |
 | 05-agent-readiness-hardening | 5/5 | 59 min | 12 min |
 | 06-config-loader-shared-hedging-models | 3/3 | 17 min | 6 min |
+| 07-total-return-calculator | 1/2 | 6 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-05 (12 min), 06-02 (5 min), 06-01 (8 min), 06-03 (4 min)
-- Trend: ~7 min/plan
+- Last 5 plans: 06-02 (5 min), 06-01 (8 min), 06-03 (4 min), 07-01 (6 min)
+- Trend: ~6 min/plan
 
 *Updated after each plan completion*
 
@@ -92,6 +93,10 @@ Recent decisions affecting current work:
 - [06-01]: DividendRecord.shares_at_ex is float (not int) to support fractional DRIP shares
 - [06-03]: underlying_weights validator auto-uppercases keys rather than rejecting lowercase; tests confirm normalization
 - [06-03]: TickerReturn consistency check uses warnings.warn (not rejection); tests verify both warning and no-warning paths
+- [07-01]: TotalReturnResult is a dataclass (not Pydantic) for computed output fields
+- [07-01]: ex_date_prices passed as dict[date, float] for DRIP reinvestment pricing
+- [07-01]: dividend-schedules.yaml lives in gitignored fin-guru-private/ (private per-user config)
+- [07-01]: Annualized return uses calendar days (365), not trading days (252)
 
 ### Pending Todos
 
@@ -112,6 +117,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 06-03-PLAN.md (Phase 6 complete)
+Stopped at: Completed 07-01-PLAN.md (Plan 1 of 2 in Phase 7)
 Resume file: None
-Next action: Begin Phase 7 (Total Return Calculator)
+Next action: Execute 07-02-PLAN.md (CLI wrapper for total return calculator)
