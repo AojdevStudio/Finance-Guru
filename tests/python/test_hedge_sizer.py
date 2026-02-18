@@ -7,12 +7,16 @@ Covers:
 - HedgeSizer.resolve_portfolio_value: cascade logic
 - HedgeSizer.calculate: sizing + allocation integration
 - HedgeSizer.validate_budget: budget validation with mocked chain scanner
+- CLI integration: --help, --skip-budget, --output json
 
 All tests use synthetic data -- zero real API calls.
 """
 
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
 import textwrap
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -520,3 +524,69 @@ class TestValidateBudget:
         # QQQ: 3 * $10 * 100 = $3000; SPY: 2 * $5 * 100 = $1000
         assert budget["total_estimated_monthly_cost"] == 4000.0
         assert budget["within_budget"] is False
+
+
+# ---------------------------------------------------------------------------
+# CLI integration tests (subprocess)
+# ---------------------------------------------------------------------------
+
+
+class TestHedgeSizerCLI:
+    """CLI integration tests using subprocess."""
+
+    _cwd = str(Path(__file__).parent.parent.parent)
+
+    def test_cli_help(self) -> None:
+        """--help exits 0 and shows --portfolio flag."""
+        result = subprocess.run(
+            [sys.executable, "src/analysis/hedge_sizer_cli.py", "--help"],
+            capture_output=True,
+            text=True,
+            cwd=self._cwd,
+        )
+        assert result.returncode == 0
+        assert "--portfolio" in result.stdout
+
+    def test_cli_sizing_skip_budget(self) -> None:
+        """--portfolio with --skip-budget exits 0 (no API calls)."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                "src/analysis/hedge_sizer_cli.py",
+                "--portfolio",
+                "200000",
+                "--underlyings",
+                "QQQ,SPY",
+                "--skip-budget",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=self._cwd,
+        )
+        assert result.returncode == 0
+        # Human output should mention contract count
+        assert "contract" in result.stdout.lower()
+
+    def test_cli_json_output(self) -> None:
+        """--output json returns valid JSON with expected keys."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                "src/analysis/hedge_sizer_cli.py",
+                "--portfolio",
+                "200000",
+                "--underlyings",
+                "QQQ,SPY",
+                "--skip-budget",
+                "--output",
+                "json",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=self._cwd,
+        )
+        assert result.returncode == 0
+        data = json.loads(result.stdout)
+        assert data["total_contracts"] == 4
+        assert "allocations" in data
+        assert "disclaimer" in data
