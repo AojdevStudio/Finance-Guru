@@ -17,13 +17,13 @@ from datetime import date
 from unittest.mock import patch
 
 import pytest
+
 from src.analysis.total_return import (
     DividendDataError,
     TotalReturnCalculator,
     TotalReturnResult,
     load_dividend_schedules,
 )
-
 from src.models.total_return_inputs import (
     DividendRecord,
     TotalReturnInput,
