@@ -12,16 +12,16 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 Phase: 6 of 12 (Config Loader and Shared Hedging Models)
 Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-17 -- Completed 06-02-PLAN.md
+Last activity: 2026-02-17 -- Completed 06-01-PLAN.md
 
-Progress: [███████░░░░░░░░░░░░░] 36%
+Progress: [████████░░░░░░░░░░░░] 39%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: ~9 min
-- Total execution time: ~1.74 hours
+- Total execution time: ~1.87 hours
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [███████░░░░░░░░░░░░░] 36%
 | 03-onboarding-wizard | 2/2 | 16 min | 8 min |
 | 04-onboarding-polish-hook-refactoring | 2/2 | 12 min | 6 min |
 | 05-agent-readiness-hardening | 5/5 | 59 min | 12 min |
-| 06-config-loader-shared-hedging-models | 1/3 | 5 min | 5 min |
+| 06-config-loader-shared-hedging-models | 2/3 | 13 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-03 (12 min), 05-04 (14 min), 05-05 (12 min), 06-02 (5 min)
-- Trend: ~11 min/plan
+- Last 5 plans: 05-04 (14 min), 05-05 (12 min), 06-02 (5 min), 06-01 (8 min)
+- Trend: ~10 min/plan
 
 *Updated after each plan completion*
 
@@ -87,6 +87,9 @@ Recent decisions affecting current work:
 - [05-05]: branch=true in coverage.run for conditional path coverage
 - [06-02]: Converted src/config.py to src/config/ package for config_loader.py colocation; backward compat via __init__.py re-export
 - [06-02]: fin-guru-private/hedging/ templates are gitignored private data; not committed to git
+- [06-01]: HedgePosition uses model_validator to conditionally require strike/expiry for puts only
+- [06-01]: TickerReturn warns (not rejects) when total_return != price_return + dividend_return
+- [06-01]: DividendRecord.shares_at_ex is float (not int) to support fractional DRIP shares
 
 ### Pending Todos
 
@@ -107,6 +110,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 06-02-PLAN.md (config loader and hedging templates)
+Stopped at: Completed 06-01-PLAN.md (shared hedging and total return models)
 Resume file: None
 Next action: Execute 06-03-PLAN.md (remaining Phase 06 plan)
