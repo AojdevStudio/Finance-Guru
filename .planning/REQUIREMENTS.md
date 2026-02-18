@@ -103,17 +103,17 @@
 
 ### Rolling Tracker & Hedge Sizer
 
-| ID | Requirement | Scope | Phase | Notes |
-|----|-------------|-------|-------|-------|
-| HEDG-04 | Rolling tracker CLI: status, suggest-roll, log-roll, history subcommands | v1 | 7 | First argparse subcommand pattern in codebase |
-| HEDG-05 | Hedge sizer CLI: sizing formula, budget validation, multi-underlying | v1 | 7 | floor(portfolio_value / 50000) baseline |
-| RT-01 | Position status display: current positions, P&L, DTE, value | v1 | 7 | Reads positions.yaml, fetches current prices |
-| RT-02 | DTE-based roll alerts (configurable threshold, default 7 days) | v1 | 7 | Standard 5-7 DTE roll window |
-| RT-03 | Roll suggestion engine: scan options chain for replacements | v1 | 7 | Integrates with options_chain_cli scan_chain() |
-| HS-01 | Contract sizing: 1 contract per $50k portfolio value | v1 | 7 | Configurable ratio via HedgeConfig |
-| HS-02 | Budget validation: compare cost against monthly budget, show utilization % | v1 | 7 | Fetch current premiums via yfinance |
-| HS-03 | Multi-underlying allocation (QQQ + SPY + IWM with weights) | v1 | 7 | Distribute contracts with configurable splits |
-| BS-01 | Document Black-Scholes limitation on American-style options | v1 | 7 | Add intrinsic value floor, disclaimer |
+| ID | Requirement | Scope | Phase | Status | Notes |
+|----|-------------|-------|-------|--------|-------|
+| HEDG-04 | Rolling tracker CLI: status, suggest-roll, log-roll, history subcommands | v1 | 7 | Complete | First argparse subcommand pattern in codebase |
+| HEDG-05 | Hedge sizer CLI: sizing formula, budget validation, multi-underlying | v1 | 7 | Complete | floor(portfolio_value / 50000) baseline |
+| RT-01 | Position status display: current positions, P&L, DTE, value | v1 | 7 | Complete | Reads positions.yaml, fetches current prices |
+| RT-02 | DTE-based roll alerts (configurable threshold, default 7 days) | v1 | 7 | Complete | Standard 5-7 DTE roll window |
+| RT-03 | Roll suggestion engine: scan options chain for replacements | v1 | 7 | Complete | Integrates with options_chain_cli scan_chain() |
+| HS-01 | Contract sizing: 1 contract per $50k portfolio value | v1 | 7 | Complete | Configurable ratio via HedgeConfig |
+| HS-02 | Budget validation: compare cost against monthly budget, show utilization % | v1 | 7 | Complete | Fetch current premiums via yfinance |
+| HS-03 | Multi-underlying allocation (QQQ + SPY + IWM with weights) | v1 | 7 | Complete | Distribute contracts with configurable splits |
+| BS-01 | Document Black-Scholes limitation on American-style options | v1 | 7 | Complete | Add intrinsic value floor, disclaimer |
 
 ### SQQQ vs Puts Comparison
 
@@ -128,10 +128,10 @@
 
 ### Knowledge & Agents
 
-| ID | Requirement | Scope | Phase | Notes |
-|----|-------------|-------|-------|-------|
-| HEDG-09 | Knowledge base files (hedging-strategies.md, options-insurance-framework.md, etc.) | v1 | 7 | Educational, generic content only |
-| HEDG-10 | Agent definitions updated to reference new knowledge files | v1 | 7 | Strategy Advisor, Teaching Specialist, Quant Analyst |
+| ID | Requirement | Scope | Phase | Status | Notes |
+|----|-------------|-------|-------|--------|-------|
+| HEDG-09 | Knowledge base files (hedging-strategies.md, options-insurance-framework.md, etc.) | v1 | 7 | Complete | Educational, generic content only |
+| HEDG-10 | Agent definitions updated to reference new knowledge files | v1 | 7 | Complete | Strategy Advisor, Teaching Specialist, Quant Analyst |
 | HEDG-11 | Architecture diagram (Mermaid .mmd) showing new components | v1 | 8 | After all components exist |
 | HEDG-12 | All 4 CLI tools work with `uv run python src/analysis/<tool>_cli.py` | v1 | 8 | Integration test |
 | HEDG-13 | Tests for all new components | v1 | 6-8 | Incremental per phase |
@@ -256,4 +256,4 @@
 | **11: Integration** | EXPL-07, EXPL-10, EXPL-12, EXPL-13 |
 
 ---
-*Last updated: 2026-02-05 (Phase 3 requirements marked Complete)*
+*Last updated: 2026-02-17 (Phase 8 requirements marked Complete)*

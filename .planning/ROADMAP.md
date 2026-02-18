@@ -38,7 +38,7 @@ Phase 1 rewrites git history (`git filter-repo`), so it must land directly on `m
 - [x] **Phase 5: Agent Readiness Hardening** - Linter, pre-commit hooks, issue/PR templates, and test coverage thresholds
 - [x] **Phase 6: Config Loader & Shared Hedging Models** - Foundation layer all four hedging CLIs depend on
 - [x] **Phase 7: Total Return Calculator** - Price + dividend return CLI with DRIP modeling
-- [ ] **Phase 8: Rolling Tracker & Hedge Sizer** - Options position management and contract sizing CLIs
+- [x] **Phase 8: Rolling Tracker & Hedge Sizer** - Options position management and contract sizing CLIs
 - [ ] **Phase 9: SQQQ vs Puts Comparison** - Hedge strategy comparison with daily-compounded decay modeling
 - [ ] **Phase 10: Template Engine & Dividend Topic Port** - Build pipeline that converts JSON + template into standalone HTML explorers
 - [ ] **Phase 11: Self-Assessment, Persistence & Additional Topics** - Core interaction loop with localStorage and two new topics
@@ -300,12 +300,12 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 08-01-PLAN.md -- RollingTracker calculator: scan_chain_quiet wrapper, American put pricing, position status, roll suggestions, log-roll, history (Layer 2)
-- [ ] 08-02-PLAN.md -- HedgeSizer calculator: contract sizing formula, multi-underlying allocation, budget validation (Layer 2)
-- [ ] 08-03-PLAN.md -- Rolling tracker CLI with argparse subcommands: status, suggest-roll, log-roll, history (Layer 3)
-- [ ] 08-04-PLAN.md -- Hedge sizer CLI with flat argparse: --portfolio, --underlyings, budget validation (Layer 3)
-- [ ] 08-05-PLAN.md -- Knowledge base files (hedging-strategies.md, options-insurance-framework.md) and agent definition updates
-- [ ] 08-06-PLAN.md -- Known-answer tests for both calculators and CLIs (TDD)
+- [x] 08-01-PLAN.md -- RollingTracker calculator: scan_chain_quiet wrapper, American put pricing, position status, roll suggestions, log-roll, history (Layer 2)
+- [x] 08-02-PLAN.md -- HedgeSizer calculator: contract sizing formula, multi-underlying allocation, budget validation (Layer 2)
+- [x] 08-03-PLAN.md -- Rolling tracker CLI with argparse subcommands: status, suggest-roll, log-roll, history (Layer 3)
+- [x] 08-04-PLAN.md -- Hedge sizer CLI with flat argparse: --portfolio, --underlyings, budget validation (Layer 3)
+- [x] 08-05-PLAN.md -- Knowledge base files (hedging-strategies.md, options-insurance-framework.md) and agent definition updates
+- [x] 08-06-PLAN.md -- Known-answer tests for both calculators and CLIs (TDD)
 
 ---
 
@@ -528,7 +528,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 5. Agent Readiness | M1 | 5/5 | Complete | 2026-02-13 |
 | 6. Config & Models | M2 | 3/3 | Complete | 2026-02-17 |
 | 7. Total Return | M2 | 2/2 | Complete | 2026-02-17 |
-| 8. Tracker & Sizer | M2 | 0/6 | Planned | - |
+| 8. Tracker & Sizer | M2 | 6/6 | Complete | 2026-02-17 |
 | 9. SQQQ vs Puts | M2 | 0/2 | Planned | - |
 | 10. Template Engine | M3 | 0/3 | Planned | - |
 | 11. Assessment & Topics | M3 | 0/3 | Planned | - |
