@@ -238,6 +238,36 @@ Once your profile is set up, activate the full Finance Guru system:
 *market-research  # "What's the momentum on NVDA?"
 ```
 
+### Justfile Recipes
+
+Finance Guru uses a [justfile](https://github.com/casey/just) as a command launchpad. Run `just --list` to see all available recipes.
+
+**Context Loading** — inject architecture diagrams into Claude Code sessions:
+
+| Command | What It Does |
+|---------|--------------|
+| `just load-diagrams` | Load all mermaid architecture diagrams |
+| `just load-hedging` | Load hedging integration architecture |
+| `just load-explorer` | Load interactive knowledge explorer architecture |
+| `just load <keyword>` | Load a specific diagram by keyword match |
+
+**Agent Personas** — launch Claude Code as a Finance Guru specialist:
+
+| Command | Specialist |
+|---------|------------|
+| `just orchestrator` | Finance Orchestrator (Cassandra Holt) |
+| `just quant` | Quant Analyst |
+| `just strategy` | Strategy Advisor |
+| `just market` | Market Researcher |
+| `just compliance` | Compliance Officer |
+| `just margin` | Margin Specialist |
+| `just dividend` | Dividend Specialist |
+| `just teaching` | Teaching Specialist |
+| `just builder` | Builder |
+| `just qa` | QA Advisor |
+
+See [docs/guides/just-commands.md](docs/guides/just-commands.md) for the full reference.
+
 ## 🍴 Fork Model: Use Finance Guru Safely
 
 Finance Guru is designed to be **forked** and used privately. Here's how it works:
