@@ -28,6 +28,9 @@ ALLOWED_FILES = {
     "fin-guru-private/",  # Private data directory (not distributed)
     "notebooks/",  # Private notebooks (not distributed)
     "docs/onboarding-flow-evaluation.md",  # Evaluation document referencing the owner's setup
+    "Plans/",  # Session plans (gitignored, not distributed)
+    ".prd/",  # PRD files (gitignored, not distributed)
+    ".planning/",  # Planning files (gitignored, not distributed)
 }
 
 # Files that MUST NOT contain the owner's name

@@ -26,6 +26,7 @@ dependencies = [
     "xlsxwriter>=3.2.9",
     "yfinance>=0.2.66",
     "questionary>=2.1.1",
+    "pillow>=12.1.1",
 ]
 
 [dependency-groups]
@@ -35,6 +36,9 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
+    "pandas-stubs>=3.0.0.260204",
+    "types-pyyaml>=6.0.12.20250915",
+    "types-requests>=2.32.4.20260107",
 ]
 
 [tool.pytest.ini_options]
@@ -170,6 +174,7 @@ module = [
     "src.utils.market_data",
     "src.ui.widgets.results_panel",
     "src.ui.widgets.portfolio_header",
+    "src.ui.app",
 ]
 warn_unused_ignores = false
 disable_error_code = ["arg-type", "assignment", "no-any-return", "operator", "var-annotated", "call-arg", "index", "return-value", "attr-defined", "union-attr", "type-var", "prop-decorator", "import-not-found"]
