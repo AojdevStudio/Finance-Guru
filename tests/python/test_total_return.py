@@ -44,6 +44,22 @@ from src.models.total_return_inputs import (
 )
 
 # ---------------------------------------------------------------------------
+# Mock dividend schedules (for CI where fin-guru-private/ doesn't exist)
+# ---------------------------------------------------------------------------
+
+MOCK_DIVIDEND_SCHEDULES = {
+    "SCHD": {"frequency": 4, "label": "quarterly"},
+    "VYM": {"frequency": 4, "label": "quarterly"},
+    "VOO": {"frequency": 4, "label": "quarterly"},
+    "CLM": {"frequency": 12, "label": "monthly"},
+    "CRF": {"frequency": 12, "label": "monthly"},
+    "YMAX": {"frequency": 52, "label": "weekly"},
+    "QQQY": {"frequency": 52, "label": "weekly"},
+    "JEPI": {"frequency": 12, "label": "monthly"},
+    "JEPQ": {"frequency": 12, "label": "monthly"},
+}
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -416,10 +432,14 @@ class TestAnnualizedReturn:
 # ---------------------------------------------------------------------------
 
 
+@patch(
+    "src.analysis.total_return.load_dividend_schedules",
+    return_value=MOCK_DIVIDEND_SCHEDULES,
+)
 class TestDataQualityValidation:
     """Gap detection, force override, split artifact detection."""
 
-    def test_gap_detection_quarterly_payer(self):
+    def test_gap_detection_quarterly_payer(self, _mock):
         """SCHD expected 4/year but only 1 found over 365 days -> warning."""
         inp = _make_input(
             ticker="SCHD",
@@ -435,7 +455,7 @@ class TestDataQualityValidation:
             "expected" in w.lower() or "incomplete" in w.lower() for w in warnings_list
         )
 
-    def test_gap_detection_monthly_payer(self):
+    def test_gap_detection_monthly_payer(self, _mock):
         """CLM expected 12/year but only 3 found over 365 days -> warning."""
         inp = _make_input(
             ticker="CLM",
@@ -452,7 +472,7 @@ class TestDataQualityValidation:
         warnings_list = calc.validate_dividend_data()
         assert len(warnings_list) > 0
 
-    def test_no_warning_when_count_sufficient(self):
+    def test_no_warning_when_count_sufficient(self, _mock):
         """SCHD with 4 dividends over 365 days -> no gap warning."""
         inp = _make_input(
             ticker="SCHD",
@@ -476,7 +496,7 @@ class TestDataQualityValidation:
         ]
         assert len(gap_warnings) == 0
 
-    def test_force_override_allows_calculation(self):
+    def test_force_override_allows_calculation(self, _mock):
         """With force=True, gaps produce warnings but calculate_all() succeeds."""
         inp = _make_input(
             ticker="SCHD",
@@ -491,7 +511,7 @@ class TestDataQualityValidation:
         assert isinstance(result, TotalReturnResult)
         assert len(result.data_quality_warnings) > 0
 
-    def test_no_force_raises_on_gaps(self):
+    def test_no_force_raises_on_gaps(self, _mock):
         """Without force, gaps cause DividendDataError."""
         inp = _make_input(
             ticker="SCHD",
@@ -504,7 +524,7 @@ class TestDataQualityValidation:
         with pytest.raises(DividendDataError):
             calc.calculate_all(force=False)
 
-    def test_split_artifact_detection(self):
+    def test_split_artifact_detection(self, _mock):
         """Dividend >3x median flagged as suspicious."""
         inp = _make_input(ticker="TEST")
         dividends = [
@@ -522,7 +542,7 @@ class TestDataQualityValidation:
             for w in warnings_list
         )
 
-    def test_unknown_ticker_no_frequency_warning(self):
+    def test_unknown_ticker_no_frequency_warning(self, _mock):
         """Unknown ticker gets no frequency-based warning (no expected schedule)."""
         inp = _make_input(ticker="ZZZZZ")
         dividends = [_div(date(2025, 3, 15), 1.0)]
@@ -536,7 +556,7 @@ class TestDataQualityValidation:
         ]
         assert len(gap_warnings) == 0
 
-    def test_known_payer_zero_dividends_warns(self):
+    def test_known_payer_zero_dividends_warns(self, _mock):
         """Known dividend payer with zero dividends gets a warning."""
         inp = _make_input(
             ticker="SCHD",
@@ -551,7 +571,7 @@ class TestDataQualityValidation:
             for w in warnings_list
         )
 
-    def test_unknown_ticker_zero_dividends_no_warning(self):
+    def test_unknown_ticker_zero_dividends_no_warning(self, _mock):
         """Unknown ticker with zero dividends -> no 'expected payer' warning."""
         inp = _make_input(ticker="ZZZZZ")
         prices = [100.0, 100.0]
@@ -568,35 +588,38 @@ class TestDataQualityValidation:
 # ---------------------------------------------------------------------------
 
 
+@patch(
+    "src.analysis.total_return.load_dividend_schedules",
+    return_value=MOCK_DIVIDEND_SCHEDULES,
+)
 class TestScheduleLoader:
     """YAML loading and missing file fallback."""
 
-    def test_load_dividend_schedules_returns_dict(self):
-        """Loading existing YAML returns a non-empty dict."""
-        schedules = load_dividend_schedules()
+    def test_load_dividend_schedules_returns_dict(self, mock_load):
+        """Loading returns a non-empty dict with expected tickers."""
+        schedules = mock_load()
         assert isinstance(schedules, dict)
-        # Should have at least one ticker
         assert len(schedules) > 0
 
-    def test_schedule_contains_clm(self):
+    def test_schedule_contains_clm(self, mock_load):
         """CLM must be present as a monthly payer."""
-        schedules = load_dividend_schedules()
+        schedules = mock_load()
         assert "CLM" in schedules
         assert schedules["CLM"]["frequency"] == 12
 
-    def test_schedule_contains_weekly_payers(self):
+    def test_schedule_contains_weekly_payers(self, mock_load):
         """YMAX and QQQY should be weekly (52)."""
-        schedules = load_dividend_schedules()
+        schedules = mock_load()
         assert schedules.get("YMAX", {}).get("frequency") == 52
         assert schedules.get("QQQY", {}).get("frequency") == 52
 
-    def test_schedule_contains_quarterly_payers(self):
+    def test_schedule_contains_quarterly_payers(self, mock_load):
         """SCHD, VYM, VOO should be quarterly (4)."""
-        schedules = load_dividend_schedules()
+        schedules = mock_load()
         for ticker in ["SCHD", "VYM", "VOO"]:
             assert schedules.get(ticker, {}).get("frequency") == 4
 
-    def test_missing_file_returns_empty_dict(self):
+    def test_missing_file_returns_empty_dict(self, _mock):
         """If YAML file does not exist, return empty dict (graceful fallback)."""
         with patch(
             "src.analysis.total_return.DIVIDEND_SCHEDULES_PATH",
