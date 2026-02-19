@@ -126,3 +126,94 @@ The `docs/csv-mappings/` coverage is missing several common brokers. We need exa
   - `docs/setup/api-keys.md`
   - `docs/setup/SETUP.md`
   - `docs/setup/TROUBLESHOOTING.md`
+
+
+
+    Best PAI skills for this build, in recommended order:
+
+  Tier 1: Architecture & Design (use first)
+
+  1. /brainstorming (compound-engineering)
+  Explore the TUI framework choice before committing. The key decision is:
+  - Ink (React for terminals) — component-based, styled, layout engine, TS-native
+  - Blessed-contrib — lower-level curses, more control, less ergonomic
+  - Raw ANSI + Inquirer — lightest weight, no framework dependency
+
+  This skill walks through user intent, tradeoffs, and design decisions before planning.
+
+  2. /CreateCLI
+  Generates TypeScript CLI structure with proper arg parsing, command routing, and project scaffolding. Would create the bin entry, command structure, and
+  interactive mode scaffolding.
+
+  3. BrandGuidelines
+  Defines the Finance Guru terminal color palette, text styling conventions, and visual identity rules for the TUI. Think: accent color for Cassandra,
+  specialist-specific colors, panel borders, logo treatment.
+
+  Tier 2: Implementation Planning
+
+  4. /compound-engineering:workflows:plan
+  Transforms the TUI feature description into a structured project plan with tasks, phases, and verification.
+
+  5. RepoArchitect
+  Structures the TUI code within the existing fin-guru standalone repo — where components live, how the Ink render tree maps to the agent system.
+
+  Tier 3: Build & Polish
+
+  6. /compound-engineering:frontend-design
+  Despite saying "frontend", this skill produces distinctive, polished interfaces. For a TUI, it'd drive the visual design: panel layouts, animation timing,
+  color harmony, typography (which matters even in terminals).
+
+  7. Agents (PAI custom agents)
+  Could compose custom rendering agents — one that handles the streaming chat view, one that handles the menu system, one that handles the
+  specialist-switcher panel.
+
+  8. BeCreative (extended thinking)
+  Deep design thinking for the interaction model: How does streaming SDK output map to the TUI? How do tool-use permission prompts surface? How does the menu
+   coexist with the chat?. Use the art skill to generate the banner once (FIGlet-style), then print it with ANSI color
+
+  Recommended Architecture
+
+  ┌─────────────────────────────────────────────┐
+  │  🎯 Finance Guru v3.0                       │
+  │  ─────────────────────────────────────────── │
+  │                                              │
+  │  Cassandra Holt, Master Portfolio            │
+  │  Orchestrator                                │
+  │                                              │
+  │  Welcome to your private Finance Guru        │
+  │  family office. How can I help today?        │
+  │                                              │
+  │  ┌──────────────────────────────────────┐    │
+  │  │ 1. Market Research  (Dr. Petrov)     │    │
+  │  │ 2. Quant Analysis   (Dr. Desai)     │    │
+  │  │ 3. Strategy         (Rodriguez-Park) │    │
+  │  │ 4. Compliance       (Marcus Allen)   │    │
+  │  │ 5. Margin           (Richard Chen)   │    │
+  │  │ 6. Dividends        (Sarah Martinez) │    │
+  │  │ 7. Learn            (Maya Brooks)    │    │
+  │  │ 8. Free-form prompt                  │    │
+  │  └──────────────────────────────────────┘    │
+  │                                              │
+  │  > _                                         │
+  └─────────────────────────────────────────────┘
+
+  Framework Recommendation: Ink (React for terminals)
+
+  - ink + ink-text-input + ink-select-input + ink-spinner
+  - Component-based: <ChatView>, <MenuPanel>, <AgentHeader>, <StreamingResponse>
+  - SDK query() runs async, Ink re-renders as tokens stream
+  - TS-native, works with Bun, fits the existing stack perfectly
+  - Used by Vercel CLI, Gatsby CLI, Prisma — battle-tested
+
+  Recommended Skill Sequence
+
+  /brainstorming          → Framework choice + interaction model
+  /CreateCLI              → Scaffold interactive CLI structure
+  BrandGuidelines         → Define terminal color/style system
+  /plan                   → Full implementation plan
+  /frontend-design        → Visual design for each TUI screen
+  BeCreative              → Deep think on streaming UX + menus
+  Build                   → Ink components wired to SDK query()
+
+  🗣️ Obi: Start with brainstorming for framework choice, then CreateCLI for scaffolding, BrandGuidelines for visual identity, and Ink for the React-based
+  terminal UI.
