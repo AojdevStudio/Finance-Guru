@@ -1,6 +1,5 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const { validateRuntime } = require('./src/main/config/validateRuntime');
 
 // ── PATH fix for macOS (apps launched from Dock have minimal PATH) ──
 if (process.platform !== 'win32') {
@@ -26,13 +25,14 @@ if (!gotTheLock) {
   console.log('Another instance is already running.');
   app.quit();
 } else {
-  // Register IPC handlers once per process, before any window creation
-  const { registerAllHandlers } = require('./src/main/ipc');
+  // Register IPC handlers once per process, before any window creation.
+  // This includes app-runtime-status so the renderer can always pull status.
+  const { registerAllHandlers, getCachedRuntimeResult } = require('./src/main/ipc');
   registerAllHandlers();
-  bootstrap();
+  bootstrap(getCachedRuntimeResult);
 }
 
-function createMainWindow(runtimeResult) {
+function createMainWindow() {
   const mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -51,21 +51,18 @@ function createMainWindow(runtimeResult) {
     mainWindow.webContents.openDevTools();
   }
 
-  // Pass runtime warnings to renderer once DOM is ready
-  mainWindow.webContents.once('did-finish-load', () => {
-    mainWindow.webContents.send('runtime-status', runtimeResult);
-  });
-
   mainWindow.on('closed', () => { /* allow GC */ });
   return mainWindow;
 }
 
-function bootstrap() {
+function bootstrap(getCachedRuntimeResult) {
   let mainWindow;
-  let runtimeResult;
 
   app.whenReady().then(() => {
-    runtimeResult = validateRuntime();
+    // Validate runtime — getCachedRuntimeResult runs validation once and caches.
+    // The same cached result is served by the app-runtime-status IPC handler,
+    // so the renderer never races against a one-shot push event.
+    const runtimeResult = getCachedRuntimeResult();
     if (!runtimeResult.ok) {
       console.error('Runtime validation failed:', runtimeResult.errors);
       app.quit();
@@ -76,7 +73,7 @@ function bootstrap() {
       console.warn('Runtime warnings:', runtimeResult.warnings);
     }
 
-    mainWindow = createMainWindow(runtimeResult);
+    mainWindow = createMainWindow();
   });
 
   app.on('window-all-closed', () => {
@@ -85,7 +82,7 @@ function bootstrap() {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      mainWindow = createMainWindow(runtimeResult);
+      mainWindow = createMainWindow();
     }
   });
 }
