@@ -5,6 +5,7 @@ const fs = require('fs');
 const FAMILY_OFFICE = path.resolve(__dirname, '..', '..', '..', '..');
 const sessions = new Map();
 let sdk = null;
+const CHAT_START_TIMEOUT_MS = 30000;
 
 function checkClaudeAuth() {
   // Check ANTHROPIC_API_KEY first
@@ -34,26 +35,73 @@ async function getSDK() {
   return sdk;
 }
 
-// Async message queue
-function createMessageQueue() {
-  let resolveNext;
-  const queue = [];
-
+function baseOptions(model) {
   return {
-    push(msg) {
-      queue.push(msg);
-      if (resolveNext) { resolveNext(); resolveNext = null; }
-    },
-    async *iterable() {
-      while (true) {
-        if (queue.length > 0) {
-          yield queue.shift();
-        } else {
-          await new Promise(r => { resolveNext = r; });
-        }
-      }
-    }
+    cwd: FAMILY_OFFICE,
+    model: model || 'claude-sonnet-4-6',
+    permissionMode: 'bypassPermissions',
+    allowDangerouslySkipPermissions: true,
+    maxTurns: 50
   };
+}
+
+// Start a query and wire up the message forwarding loop.
+// Returns the Query (AsyncGenerator) object.
+function startStreamLoop(stream, sessionId, event) {
+  const startTimeout = setTimeout(() => {
+    const session = sessions.get(sessionId);
+    if (!session || session.closed || session.messageDelivered) return;
+    event.sender.send('chat-error', {
+      sessionId,
+      error: 'Chat session timed out before the first response. Check Claude auth/permissions or SDK connectivity.'
+    });
+    sessions.delete(sessionId);
+    if (typeof stream.close === 'function') {
+      stream.close();
+    }
+  }, CHAT_START_TIMEOUT_MS);
+
+  const session = sessions.get(sessionId);
+  session.startTimeout = startTimeout;
+
+  (async () => {
+    try {
+      for await (const message of stream) {
+        const s = sessions.get(sessionId);
+        if (!s || s.closed) break;
+
+        if (!s.messageDelivered) {
+          s.messageDelivered = true;
+          if (s.startTimeout) {
+            clearTimeout(s.startTimeout);
+            s.startTimeout = null;
+          }
+        }
+
+        // Capture the SDK session ID from the init message for resume support
+        if (message.type === 'system' && message.subtype === 'init' && message.session_id) {
+          s.sdkSessionId = message.session_id;
+        }
+
+        event.sender.send('chat-message', { sessionId, message });
+      }
+    } catch (err) {
+      if (!sessions.get(sessionId)?.closed) {
+        event.sender.send('chat-error', { sessionId, error: err.message });
+      }
+    } finally {
+      const s = sessions.get(sessionId);
+      if (s?.startTimeout) {
+        clearTimeout(s.startTimeout);
+      }
+      // Mark the stream loop as done but keep the session alive for follow-ups
+      if (s && !s.closed) {
+        s.stream = null;
+        s.messageDelivered = false;
+      }
+      event.sender.send('chat-done', { sessionId });
+    }
+  })();
 }
 
 function registerChatHandlers() {
@@ -66,39 +114,23 @@ function registerChatHandlers() {
 
       const { query } = await getSDK();
       const sessionId = `chat-${Date.now()}`;
-      const messageQueue = createMessageQueue();
-
       const fullPrompt = skill ? `/${skill} ${prompt}` : prompt;
-      messageQueue.push({ role: 'human', content: fullPrompt });
 
       const stream = query({
-        prompt: messageQueue.iterable(),
-        options: {
-          cwd: FAMILY_OFFICE,
-          model: model || 'claude-sonnet-4-6',
-          permissionMode: 'default',
-          maxTurns: 50
-        }
+        prompt: fullPrompt,
+        options: baseOptions(model)
       });
 
-      sessions.set(sessionId, { messageQueue, stream, closed: false });
+      sessions.set(sessionId, {
+        stream,
+        model,
+        closed: false,
+        messageDelivered: false,
+        sdkSessionId: null,
+        startTimeout: null
+      });
 
-      // Forward messages to renderer
-      (async () => {
-        try {
-          for await (const message of stream) {
-            if (sessions.get(sessionId)?.closed) break;
-            event.sender.send('chat-message', { sessionId, message });
-          }
-        } catch (err) {
-          if (!sessions.get(sessionId)?.closed) {
-            event.sender.send('chat-error', { sessionId, error: err.message });
-          }
-        } finally {
-          event.sender.send('chat-done', { sessionId });
-          sessions.delete(sessionId);
-        }
-      })();
+      startStreamLoop(stream, sessionId, event);
 
       return { success: true, sessionId };
     } catch (err) {
@@ -109,14 +141,40 @@ function registerChatHandlers() {
   ipcMain.handle('chat-send', async (event, { sessionId, text }) => {
     const session = sessions.get(sessionId);
     if (!session) return { success: false, error: 'No active session' };
-    session.messageQueue.push({ role: 'human', content: text });
-    return { success: true };
+    if (!session.sdkSessionId) return { success: false, error: 'Session not yet initialized — wait for the first response' };
+
+    try {
+      const { query } = await getSDK();
+
+      // Resume the existing SDK session with a new prompt
+      const stream = query({
+        prompt: text,
+        options: {
+          ...baseOptions(session.model),
+          resume: session.sdkSessionId
+        }
+      });
+
+      session.stream = stream;
+      session.messageDelivered = false;
+      startStreamLoop(stream, sessionId, event);
+
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
   });
 
   ipcMain.handle('chat-close', async (event, { sessionId }) => {
     const session = sessions.get(sessionId);
     if (session) {
       session.closed = true;
+      if (session.startTimeout) {
+        clearTimeout(session.startTimeout);
+      }
+      if (typeof session.stream?.close === 'function') {
+        session.stream.close();
+      }
       sessions.delete(sessionId);
     }
     return { success: true };
@@ -130,4 +188,4 @@ function registerChatHandlers() {
   });
 }
 
-module.exports = { registerChatHandlers, checkClaudeAuth, createMessageQueue };
+module.exports = { registerChatHandlers, checkClaudeAuth };

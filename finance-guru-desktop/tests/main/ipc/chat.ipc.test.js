@@ -43,96 +43,64 @@ describe('chat.ipc', () => {
     expect(result.error).toBeNull();
   });
 
-  // ── createMessageQueue ──
-
-  test('createMessageQueue push/iterable delivers message', async () => {
-    const { createMessageQueue } = require('../../../src/main/ipc/chat.ipc');
-    const q = createMessageQueue();
-
-    const msg = { role: 'human', content: 'hello' };
-    q.push(msg);
-
-    const iter = q.iterable();
-    const result = await iter.next();
-
-    expect(result.done).toBe(false);
-    expect(result.value).toEqual(msg);
-  });
-
-  test('createMessageQueue delivers multiple messages in order', async () => {
-    const { createMessageQueue } = require('../../../src/main/ipc/chat.ipc');
-    const q = createMessageQueue();
-
-    const msgs = [
-      { role: 'human', content: 'first' },
-      { role: 'human', content: 'second' }
-    ];
-    q.push(msgs[0]);
-    q.push(msgs[1]);
-
-    const iter = q.iterable();
-    const r1 = await iter.next();
-    const r2 = await iter.next();
-
-    expect(r1.value).toEqual(msgs[0]);
-    expect(r2.value).toEqual(msgs[1]);
-  });
-
-  test('createMessageQueue resolves pending consumer when message pushed', async () => {
-    const { createMessageQueue } = require('../../../src/main/ipc/chat.ipc');
-    const q = createMessageQueue();
-
-    const iter = q.iterable();
-    // Start consuming before pushing — this waits for a message
-    const pending = iter.next();
-
-    // Push after a tick
-    await Promise.resolve();
-    q.push({ role: 'human', content: 'delayed' });
-
-    const result = await pending;
-    expect(result.value).toEqual({ role: 'human', content: 'delayed' });
-  });
-
   // ── chat-send session logic ──
 
   test('chat-send logic returns error for non-existent session', () => {
-    // Test the session lookup logic directly without going through ipcMain
     const sessions = new Map();
 
-    function handleChatSend(sessionId, text) {
+    function handleChatSend(sessionId) {
       const session = sessions.get(sessionId);
       if (!session) return { success: false, error: 'No active session' };
-      session.messageQueue.push({ role: 'human', content: text });
+      if (!session.sdkSessionId) return { success: false, error: 'Session not yet initialized — wait for the first response' };
       return { success: true };
     }
 
-    const result = handleChatSend('nonexistent-session-id', 'hello');
+    const result = handleChatSend('nonexistent-session-id');
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('No active session');
   });
 
-  test('chat-send logic succeeds for existing session', () => {
+  test('chat-send logic returns error when SDK session not yet initialized', () => {
     const sessions = new Map();
-    const pushed = [];
 
     sessions.set('test-session', {
-      messageQueue: { push: (msg) => pushed.push(msg) },
-      closed: false
+      stream: null,
+      closed: false,
+      sdkSessionId: null
     });
 
-    function handleChatSend(sessionId, text) {
+    function handleChatSend(sessionId) {
       const session = sessions.get(sessionId);
       if (!session) return { success: false, error: 'No active session' };
-      session.messageQueue.push({ role: 'human', content: text });
+      if (!session.sdkSessionId) return { success: false, error: 'Session not yet initialized — wait for the first response' };
       return { success: true };
     }
 
-    const result = handleChatSend('test-session', 'test message');
+    const result = handleChatSend('test-session');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('not yet initialized');
+  });
+
+  test('chat-send logic succeeds when SDK session is available', () => {
+    const sessions = new Map();
+
+    sessions.set('test-session', {
+      stream: null,
+      closed: false,
+      sdkSessionId: 'sdk-session-uuid-123'
+    });
+
+    function handleChatSend(sessionId) {
+      const session = sessions.get(sessionId);
+      if (!session) return { success: false, error: 'No active session' };
+      if (!session.sdkSessionId) return { success: false, error: 'Session not yet initialized — wait for the first response' };
+      return { success: true };
+    }
+
+    const result = handleChatSend('test-session');
 
     expect(result.success).toBe(true);
-    expect(pushed).toHaveLength(1);
-    expect(pushed[0].content).toBe('test message');
   });
 });
