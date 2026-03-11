@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;">
+  <title>Finance Guru</title>
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/commands.css">
+  <link rel="stylesheet" href="styles/finance.css">
+  <link rel="stylesheet" href="styles/chat.css">
+  <link rel="stylesheet" href="styles/modals.css">
+  <link rel="stylesheet" href="styles/animations.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- ── Sidebar: Command Palette ── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1 class="app-title">Finance Guru</h1>
+      </div>
+      <div class="sidebar-scroll" id="command-palette">
+        <!-- Rendered by CommandPalette.js -->
+      </div>
+    </aside>
+
+    <!-- ── Main Content ── -->
+    <main class="content" id="content">
+      <!-- Tab bar -->
+      <div class="tab-bar" id="tab-bar">
+        <button class="tab active" data-panel="dashboard">Dashboard</button>
+        <button class="tab" data-panel="analysis">Analysis</button>
+        <button class="tab" data-panel="csv">Data</button>
+        <button class="tab" data-panel="chat">Chat</button>
+      </div>
+
+      <!-- Panels -->
+      <div class="panel active" id="panel-dashboard">
+        <div class="dashboard-welcome">
+          <h2>Welcome to Finance Guru</h2>
+          <p>Select a tool from the sidebar or start a chat.</p>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-analysis">
+        <div id="chart-area">
+          <p class="empty-state">Run an analysis to see results here.</p>
+        </div>
+        <div id="metrics-area"></div>
+      </div>
+
+      <div class="panel" id="panel-csv">
+        <div class="csv-toolbar" id="csv-toolbar">
+          <button class="btn btn-secondary" id="btn-load-csv">Load CSV</button>
+          <span class="csv-filename" id="csv-filename"></span>
+        </div>
+        <div id="csv-table-area">
+          <p class="empty-state">Load a CSV file to view data.</p>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-chat">
+        <div id="chat-container">
+          <!-- Rendered by ChatView.js -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ── Modal Overlay ── -->
+  <div class="modal-overlay" id="modal-overlay" style="display:none">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title"></h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer" id="modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- ── Status Bar ── -->
+  <div class="status-bar" id="status-bar">
+    <span id="status-text">Ready</span>
+    <span id="status-time"></span>
+  </div>
+
+  <script src="dist/renderer.bundle.js"></script>
+</body>
+</html>
