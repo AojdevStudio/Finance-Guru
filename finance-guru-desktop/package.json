@@ -14,7 +14,7 @@
   "author": "AojDevStudio",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.0",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.73",
     "marked": "^17.0.3",
     "plotly.js-dist-min": "^2.35.0"
   },
