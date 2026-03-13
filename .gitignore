@@ -131,8 +131,5 @@ Plans/
 .overstory/
 .dmux/
 
-# Finance Guru Desktop
-finance-guru-desktop/node_modules/
-finance-guru-desktop/dist/
-finance-guru-desktop/build/
-finance-guru-desktop/.obsidian/
+# Finance Guru Desktop (entire directory — developed on its own branch/repo)
+finance-guru-desktop/

@@ -25,6 +25,10 @@ load-hedging:
 load-explorer:
   {{cc}} --append-system-prompt "$(cat {{diagrams}}/finance-guru-interactive-knowledge-explorer-arch.mmd)"
 
+# Load standalone SDK TUI architecture decision doc
+tui:
+  {{cc}} --append-system-prompt "$(cat .dev/sdk-notes.md)"
+
 # Load a specific diagram by keyword (e.g., just load hedging)
 load keyword:
   {{cc}} --append-system-prompt "$(cat {{diagrams}}/*{{keyword}}*.mmd 2>/dev/null)"

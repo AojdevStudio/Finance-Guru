@@ -1,6 +1,6 @@
 ---
 name: TransactionSyncing
-description: Import Fidelity transaction history CSV into Google Sheets with smart categorization. USE WHEN user mentions "sync transactions", "import transactions", "transaction history", OR wants to import Fidelity History CSV. Routes debit card purchases to Expense Tracker with auto-categorization.
+description: Import and manage Fidelity transaction history CSVs. Two workflows - IngestTransactions (local rolling archive from Downloads) and SyncTransactions (Google Sheets push). USE WHEN user mentions "sync transactions", "import transactions", "ingest transactions", "transaction history", OR wants to import Fidelity History CSV.
 ---
 
 # TransactionSyncing
@@ -17,7 +17,10 @@ Running the **SyncTransactions** workflow from the **TransactionSyncing** skill.
 
 | Workflow | Trigger | File |
 |----------|---------|------|
-| **SyncTransactions** | "sync transactions", "import transactions", "transaction sync" | `workflows/SyncTransactions.md` |
+| **IngestTransactions** | "ingest transactions", "import history", "bring in transactions", user points to Downloads CSV | `workflows/IngestTransactions.md` |
+| **SyncTransactions** | "sync transactions", "push to sheets", "transaction sync" | `workflows/SyncTransactions.md` |
+
+**Typical flow**: IngestTransactions (local archive) -> SyncTransactions (Google Sheets)
 
 ## Examples
 
