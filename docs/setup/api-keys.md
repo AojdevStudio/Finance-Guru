@@ -240,7 +240,7 @@ MCP servers provide external integrations for Claude Code. These are **recommend
 **Status**: Recommended for Market Researcher agent
 
 **What it provides**:
-- Semantic web search optimized for finance
+- Fastest and most accurate web search API for AI, optimized for finance
 - Real-time news and sentiment
 - Company filings and earnings reports
 - Alternative data sources
