@@ -14,7 +14,7 @@ jobs:
     name: Dead-code scan (vulture)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v6
       - name: Install deps
         run: uv sync --dev
@@ -27,7 +27,7 @@ jobs:
     name: Duplicate-code scan (jscpd)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -49,7 +49,7 @@ jobs:
     name: Tech-debt tracking (TODO / FIXME / sonar-style markers)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Grep for markers
         run: |
           echo "### Tech-debt markers" >> "$GITHUB_STEP_SUMMARY"
@@ -65,7 +65,7 @@ jobs:
     name: Flaky-test retry (pytest-rerunfailures) + test timing
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v6
       - uses: oven-sh/setup-bun@v2
         with:
@@ -90,7 +90,7 @@ jobs:
     name: Unused dependencies (deptry)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v6
       - name: Install deps
         run: uv sync --dev
@@ -103,7 +103,7 @@ jobs:
     name: Import-graph contracts (import-linter)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v6
       - name: Install deps
         run: uv sync --dev
@@ -116,7 +116,7 @@ jobs:
     name: Profile hot paths (pyinstrument)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v6
       - name: Install deps
         run: uv sync --dev
@@ -133,7 +133,7 @@ jobs:
     name: Dead feature-flag detection
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Scan for unreferenced feature_flag usages
         run: |
           echo "### Dead feature-flag detection" >> "$GITHUB_STEP_SUMMARY"
