@@ -1,0 +1,3 @@
+# Placeholder for future onboarding test harness.
+# Referenced by tests/python/test_onboarding_cli_structure.py::test_tests_directory_exists
+# — that test just asserts this directory exists on CI runners.
