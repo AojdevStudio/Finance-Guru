@@ -22,6 +22,7 @@ import json
 import os
 import tempfile
 from datetime import date
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -623,7 +624,7 @@ class TestScheduleLoader:
         """If YAML file does not exist, return empty dict (graceful fallback)."""
         with patch(
             "src.analysis.total_return.DIVIDEND_SCHEDULES_PATH",
-            "/nonexistent/path/dividend-schedules.yaml",
+            Path("/nonexistent/path/dividend-schedules.yaml"),
         ):
             schedules = load_dividend_schedules()
             assert schedules == {}
@@ -1168,8 +1169,7 @@ class TestEnvVarOverrides:
         try:
             assert tmp_path == reloaded.PRIVATE_DIR
             assert (
-                str(tmp_path / "dividend-schedules.yaml")
-                == reloaded.DIVIDEND_SCHEDULES_PATH
+                tmp_path / "dividend-schedules.yaml" == reloaded.DIVIDEND_SCHEDULES_PATH
             )
         finally:
             monkeypatch.delenv("FIN_GURU_PRIVATE_DIR")
@@ -1184,7 +1184,7 @@ class TestEnvVarOverrides:
         monkeypatch.setenv("FIN_GURU_DIVIDEND_SCHEDULES", str(explicit))
         reloaded = importlib.reload(total_return)
         try:
-            assert str(explicit) == reloaded.DIVIDEND_SCHEDULES_PATH
+            assert explicit == reloaded.DIVIDEND_SCHEDULES_PATH
         finally:
             monkeypatch.delenv("FIN_GURU_DIVIDEND_SCHEDULES")
             importlib.reload(total_return)

@@ -163,8 +163,9 @@ def allocate_contracts(
 def read_portfolio_value_from_csv() -> float | None:
     """Read total account value from latest Fidelity balance CSV.
 
-    Searches for ``notebooks/updates/Balances_for_Account_*.csv``,
-    picks the most recently modified file, and extracts the
+    Searches the configured portfolio directory (``FIN_GURU_PORTFOLIO_DIR``,
+    default ``notebooks/updates/``) via ``BALANCES_GLOB``, picks the most
+    recently modified ``Balances_for_Account_*.csv`` file, and extracts the
     "Total account value" row.
 
     Returns:
@@ -251,8 +252,8 @@ class HedgeSizer:
         # 3. No value found
         msg = (
             "No portfolio value found. Provide --portfolio-value flag or "
-            "ensure a Fidelity balance CSV exists at "
-            "notebooks/updates/Balances_for_Account_*.csv"
+            f"ensure a Fidelity balance CSV exists matching {BALANCES_GLOB} "
+            "(override the directory via FIN_GURU_PORTFOLIO_DIR)."
         )
         raise ValueError(msg)
 

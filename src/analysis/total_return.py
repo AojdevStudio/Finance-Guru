@@ -59,9 +59,11 @@ PRIVATE_DIR = Path(
 Override with ``FIN_GURU_PRIVATE_DIR`` for testing or portable deployment.
 """
 
-DIVIDEND_SCHEDULES_PATH = os.getenv(
-    "FIN_GURU_DIVIDEND_SCHEDULES",
-    str(PRIVATE_DIR / "dividend-schedules.yaml"),
+DIVIDEND_SCHEDULES_PATH = Path(
+    os.getenv(
+        "FIN_GURU_DIVIDEND_SCHEDULES",
+        str(PRIVATE_DIR / "dividend-schedules.yaml"),
+    )
 )
 """Path to dividend schedule YAML. Missing file is a graceful fallback."""
 
@@ -123,10 +125,9 @@ def load_dividend_schedules() -> dict:
     The YAML file lives in fin-guru-private/ which is gitignored.
     Missing file is normal (first clone, CI environment).
     """
-    path = Path(DIVIDEND_SCHEDULES_PATH)
-    if not path.exists():
+    if not DIVIDEND_SCHEDULES_PATH.exists():
         return {}
-    with open(path) as f:
+    with open(DIVIDEND_SCHEDULES_PATH) as f:
         data = yaml.safe_load(f)
     if not isinstance(data, dict):
         return {}

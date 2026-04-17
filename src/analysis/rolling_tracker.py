@@ -183,9 +183,12 @@ def price_american_put(
 def load_positions() -> list[HedgePosition]:
     """Load active hedge positions from positions.yaml.
 
-    Reads ``fin-guru-private/hedging/positions.yaml`` and parses each entry
-    through the HedgePosition Pydantic model. Invalid entries are skipped with
-    a stderr warning (Pitfall 5: empty YAML returns None, not {}).
+    Reads ``HEDGING_DIR / "positions.yaml"`` and parses each entry through the
+    HedgePosition Pydantic model. ``HEDGING_DIR`` defaults to
+    ``fin-guru-private/hedging`` and is configurable via the
+    ``FIN_GURU_HEDGING_DIR`` or ``FIN_GURU_PRIVATE_DIR`` environment variables.
+    Invalid entries are skipped with a stderr warning (Pitfall 5: empty YAML
+    returns None, not {}).
 
     Returns:
         List of validated HedgePosition instances.

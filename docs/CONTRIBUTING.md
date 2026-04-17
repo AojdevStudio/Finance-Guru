@@ -68,14 +68,14 @@ PRs that swap neutral capability descriptions for vendor marketing copy (superla
 
 Example of what we reject:
 
-```
+```text
 -- Semantic web search optimized for finance
 ++ Fastest and most accurate web search API for AI, optimized for finance
 ```
 
 Example of what we accept:
 
-```
+```text
 -- Semantic web search optimized for finance
 ++ Neural search API designed for AI agents, optimized for finance
 ```
@@ -84,7 +84,7 @@ Example of what we accept:
 
 AI-assisted contributions are welcome. Undisclosed AI-generated contributions are not. If you used Claude, GPT, Cursor, Copilot, or any other AI tool to write substantial portions of your PR, state that in the PR description:
 
-```
+```text
 Generated with [tool]; I reviewed, ran the tests, and verified behavior before submitting.
 ```
 

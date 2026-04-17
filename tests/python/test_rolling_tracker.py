@@ -9,6 +9,7 @@ interfaces work end-to-end.
 
 from __future__ import annotations
 
+import importlib
 import json
 import subprocess
 import sys
@@ -19,6 +20,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
+from src.analysis import rolling_tracker
 from src.analysis.rolling_tracker import (
     RollingTracker,
     _dte_status,
@@ -761,10 +763,6 @@ class TestEnvVarOverrides:
     """Verify module-level path constants honor their env var overrides."""
 
     def test_private_dir_env_var_shifts_hedging_default(self, monkeypatch, tmp_path):
-        import importlib
-
-        from src.analysis import rolling_tracker
-
         monkeypatch.setenv("FIN_GURU_PRIVATE_DIR", str(tmp_path))
         reloaded = importlib.reload(rolling_tracker)
         try:
@@ -775,10 +773,6 @@ class TestEnvVarOverrides:
             importlib.reload(rolling_tracker)
 
     def test_hedging_dir_env_var_takes_precedence(self, monkeypatch, tmp_path):
-        import importlib
-
-        from src.analysis import rolling_tracker
-
         explicit = tmp_path / "custom-hedging"
         monkeypatch.setenv("FIN_GURU_HEDGING_DIR", str(explicit))
         reloaded = importlib.reload(rolling_tracker)
