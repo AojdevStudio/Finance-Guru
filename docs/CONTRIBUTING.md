@@ -1,12 +1,12 @@
 ---
-title: "Contributing to Finance Guru"
+
+## title: "Contributing to Finance Guru"
 description: "Contribution guidelines, scope boundaries, and quality gates for Finance Guru"
 category: root
----
 
 # Contributing to Finance Guru
 
-Thanks for looking. Read the _Project State_ section below before investing time — it tells you which parts of this repo are worth contributing to and which are scheduled to be retired.
+Thanks for looking. Read the *Project State* section below before investing time — it tells you which parts of this repo are worth contributing to and which are scheduled to be retired.
 
 ---
 
@@ -16,15 +16,17 @@ Finance Guru is in the middle of a vision pivot. The project is transitioning fr
 
 What this means for contributors today:
 
-| Area | State | Safe to invest in? |
-|---|---|---|
-| Python analysis engine (`src/`) | **Stable, survives the pivot** | _Yes_ |
-| Claude Code skills (`.claude/skills/`) | **Transitional, likely retired** | No — file an issue instead |
-| BMAD-CORE agents (`fin-guru/agents/`) | **Transitional, likely retired** | No — file an issue instead |
-| macOS app scaffold | **Does not exist yet** | Not ready for contribution |
-| Documentation (`docs/`) | **Always safe** | _Yes_ |
 
-If the thing you want to work on is labelled _transitional_, open an issue — do not open a PR against it. It will likely be deleted in the pivot, and we do not want you to waste effort.
+| Area                                   | State                            | Safe to invest in?         |
+| -------------------------------------- | -------------------------------- | -------------------------- |
+| Python analysis engine (`src/`)        | **Stable, survives the pivot**   | *Yes*                      |
+| Claude Code skills (`.claude/skills/`) | **Transitional, likely retired** | No — file an issue instead |
+| BMAD-CORE agents (`fin-guru/agents/`)  | **Transitional, likely retired** | No — file an issue instead |
+| macOS app scaffold                     | **Does not exist yet**           | Not ready for contribution |
+| Documentation (`docs/`)                | **Always safe**                  | *Yes*                      |
+
+
+If the thing you want to work on is labelled *transitional*, open an issue — do not open a PR against it. It will likely be deleted in the pivot, and we do not want you to waste effort.
 
 ---
 
@@ -52,9 +54,8 @@ Everything else is issues-only. We will evaluate bug reports and feature request
 - Skills under `.claude/skills/`
 - Agents under `fin-guru/agents/` or `.claude/commands/fin-guru/agents/`
 - Hooks under `.claude/hooks/`
-- `apps/simplefin/` (active SimpleFIN sync, transitional)
-- `apps/plaid-dashboard/` (**deprecated** — being replaced by `apps/simplefin/`; do not open PRs here)
-- `finance-guru-desktop/` (Tauri macOS app, gitignored)
+- The `apps/plaid-dashboard/` Bun monorepo
+- `finance-guru-desktop/` (Electron POC, gitignored)
 
 These surfaces are either deeply coupled to the private user profile or scheduled for replacement in the Tauri pivot.
 
@@ -64,18 +65,18 @@ These surfaces are either deeply coupled to the private user profile or schedule
 
 ### Marketing or promotional content in documentation
 
-PRs that swap neutral capability descriptions for vendor marketing copy (superlatives like "fastest," "most accurate," "best-in-class," or direct taglines from a vendor's homepage) are closed without merge. Documentation describes _what a tool does_, not _how good it is_.
+PRs that swap neutral capability descriptions for vendor marketing copy (superlatives like "fastest," "most accurate," "best-in-class," or direct taglines from a vendor's homepage) are closed without merge. Documentation describes *what a tool does*, not *how good it is*.
 
 Example of what we reject:
 
-```text
+```
 -- Semantic web search optimized for finance
 ++ Fastest and most accurate web search API for AI, optimized for finance
 ```
 
 Example of what we accept:
 
-```text
+```
 -- Semantic web search optimized for finance
 ++ Neural search API designed for AI agents, optimized for finance
 ```
@@ -84,7 +85,7 @@ Example of what we accept:
 
 AI-assisted contributions are welcome. Undisclosed AI-generated contributions are not. If you used Claude, GPT, Cursor, Copilot, or any other AI tool to write substantial portions of your PR, state that in the PR description:
 
-```text
+```
 Generated with [tool]; I reviewed, ran the tests, and verified behavior before submitting.
 ```
 
@@ -108,7 +109,7 @@ Anything gitignored is internal. Do not reference gitignored paths, account iden
 
 1. **Open an issue first.** Describe the bug or enhancement. Wait for acknowledgment before writing code. This protects you from investing in a PR we would reject.
 2. Fork the repo and create a feature branch.
-3. Make the change following the _Quality Gates_ below.
+3. Make the change following the *Quality Gates* below.
 4. Open a PR referencing the issue (`Fixes #N`).
 
 ---
@@ -167,7 +168,7 @@ PRs that produce user-facing analysis output without the disclaimer will be aske
 
 ## Style Notes
 
-- Markdown emphasis uses underscores (`_text_`), not asterisks (`*text*`). Enforced by markdownlint (MD049).
+- Markdown emphasis uses underscores (`_text_`), not asterisks (`*text`*). Enforced by markdownlint (MD049).
 - Docstrings use Google style.
 - Commit messages use Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
 
@@ -179,4 +180,4 @@ Open an issue. Tag it `question`.
 
 ---
 
-_Last updated: 2026-04-17_
+*Last updated: 2026-04-17*
