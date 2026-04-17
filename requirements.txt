@@ -357,7 +357,7 @@ tornado==6.5.2
     # via streamlit
 tqdm==4.67.3
     # via nltk
-types-pyyaml==6.0.12.20250915
+types-pyyaml==6.0.12.20260408
 types-requests==2.32.4.20260107
 typing-extensions==4.15.0
     # via
