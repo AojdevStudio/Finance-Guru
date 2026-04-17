@@ -188,7 +188,7 @@ packaging==25.0
     #   pytest-rerunfailures
     #   requirements-parser
     #   streamlit
-pandas==2.3.2
+pandas==3.0.2
     # via
     #   family-office
     #   streamlit
