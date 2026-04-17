@@ -56,6 +56,7 @@ import contextlib
 import io
 import logging
 import math
+import os
 import statistics
 from glob import glob
 from pathlib import Path
@@ -74,9 +75,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_RATIO_PER_CONTRACT = 50_000.0
 """Default portfolio value per contract: $50,000. HS-01."""
 
-BALANCES_GLOB = str(
-    PROJECT_ROOT / "notebooks" / "updates" / "Balances_for_Account_*.csv"
+PORTFOLIO_DIR = Path(
+    os.getenv("FIN_GURU_PORTFOLIO_DIR", str(PROJECT_ROOT / "notebooks" / "updates"))
 )
+"""Directory holding broker export CSVs (balances, positions, transactions).
+
+Override with ``FIN_GURU_PORTFOLIO_DIR`` for testing or portable deployment.
+Matches the env var convention in ``src/config/fin_guru_config.py``.
+"""
+
+BALANCES_GLOB = str(PORTFOLIO_DIR / "Balances_for_Account_*.csv")
 """Glob pattern for Fidelity balance CSV files."""
 
 

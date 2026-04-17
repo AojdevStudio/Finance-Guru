@@ -32,6 +32,7 @@ Created: 2026-02-17
 
 from __future__ import annotations
 
+import os
 import statistics
 from dataclasses import dataclass, field
 from datetime import date
@@ -48,12 +49,21 @@ from src.models.total_return_inputs import (
 # Constants
 # ---------------------------------------------------------------------------
 
-# Path to dividend schedule YAML (in gitignored fin-guru-private/)
-DIVIDEND_SCHEDULES_PATH = str(
-    Path(__file__).resolve().parent.parent.parent
-    / "fin-guru-private"
-    / "dividend-schedules.yaml"
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+PRIVATE_DIR = Path(
+    os.getenv("FIN_GURU_PRIVATE_DIR", str(_PROJECT_ROOT / "fin-guru-private"))
 )
+"""Base directory for gitignored Finance Guru data.
+
+Override with ``FIN_GURU_PRIVATE_DIR`` for testing or portable deployment.
+"""
+
+DIVIDEND_SCHEDULES_PATH = os.getenv(
+    "FIN_GURU_DIVIDEND_SCHEDULES",
+    str(PRIVATE_DIR / "dividend-schedules.yaml"),
+)
+"""Path to dividend schedule YAML. Missing file is a graceful fallback."""
 
 
 # ---------------------------------------------------------------------------

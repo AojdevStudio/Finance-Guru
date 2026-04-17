@@ -590,3 +590,23 @@ class TestHedgeSizerCLI:
         assert data["total_contracts"] == 4
         assert "allocations" in data
         assert "disclaimer" in data
+
+
+class TestEnvVarOverrides:
+    """Verify module-level path constants honor their env var overrides."""
+
+    def test_portfolio_dir_env_var_shifts_balances_glob(self, monkeypatch, tmp_path):
+        import importlib
+
+        from src.analysis import hedge_sizer
+
+        monkeypatch.setenv("FIN_GURU_PORTFOLIO_DIR", str(tmp_path))
+        reloaded = importlib.reload(hedge_sizer)
+        try:
+            assert tmp_path == reloaded.PORTFOLIO_DIR
+            assert (
+                str(tmp_path / "Balances_for_Account_*.csv") == reloaded.BALANCES_GLOB
+            )
+        finally:
+            monkeypatch.delenv("FIN_GURU_PORTFOLIO_DIR")
+            importlib.reload(hedge_sizer)

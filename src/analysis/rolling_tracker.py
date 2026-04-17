@@ -36,6 +36,7 @@ from __future__ import annotations
 import contextlib
 import io
 import logging
+import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -54,8 +55,19 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 """Project root directory (three levels up from src/analysis/rolling_tracker.py)."""
 
-HEDGING_DIR = PROJECT_ROOT / "fin-guru-private" / "hedging"
-"""Directory containing hedge position and roll history YAML files."""
+PRIVATE_DIR = Path(
+    os.getenv("FIN_GURU_PRIVATE_DIR", str(PROJECT_ROOT / "fin-guru-private"))
+)
+"""Base directory for gitignored Finance Guru data.
+
+Override with ``FIN_GURU_PRIVATE_DIR`` for testing or portable deployment.
+"""
+
+HEDGING_DIR = Path(os.getenv("FIN_GURU_HEDGING_DIR", str(PRIVATE_DIR / "hedging")))
+"""Directory containing hedge position and roll history YAML files.
+
+Defaults to ``PRIVATE_DIR/hedging``. Override with ``FIN_GURU_HEDGING_DIR``.
+"""
 
 # Default parameters for pricing
 DEFAULT_IV = 0.30
