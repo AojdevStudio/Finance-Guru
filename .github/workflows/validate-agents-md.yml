@@ -13,7 +13,7 @@ jobs:
     name: Lint AGENTS.md + CLAUDE.md
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: markdownlint
         uses: DavidAnson/markdownlint-cli2-action@v18

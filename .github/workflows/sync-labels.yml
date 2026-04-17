@@ -16,7 +16,7 @@ jobs:
     name: Sync labels.yml to repo
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Apply labels
         uses: EndBug/label-sync@v2
         with:
