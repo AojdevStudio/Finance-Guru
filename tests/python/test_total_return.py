@@ -22,6 +22,7 @@ import json
 import os
 import tempfile
 from datetime import date
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -623,7 +624,7 @@ class TestScheduleLoader:
         """If YAML file does not exist, return empty dict (graceful fallback)."""
         with patch(
             "src.analysis.total_return.DIVIDEND_SCHEDULES_PATH",
-            "/nonexistent/path/dividend-schedules.yaml",
+            Path("/nonexistent/path/dividend-schedules.yaml"),
         ):
             schedules = load_dividend_schedules()
             assert schedules == {}
@@ -1151,3 +1152,39 @@ class TestFinnhubIntegration:
             fetch_ticker_data("TEST", days=252, realtime=False)
 
             mock_get_prices.assert_not_called()
+
+
+class TestEnvVarOverrides:
+    """Verify module-level path constants honor their env var overrides."""
+
+    def test_private_dir_env_var_shifts_dividend_schedules_default(
+        self, monkeypatch, tmp_path
+    ):
+        import importlib
+
+        from src.analysis import total_return
+
+        monkeypatch.setenv("FIN_GURU_PRIVATE_DIR", str(tmp_path))
+        reloaded = importlib.reload(total_return)
+        try:
+            assert tmp_path == reloaded.PRIVATE_DIR
+            assert (
+                tmp_path / "dividend-schedules.yaml" == reloaded.DIVIDEND_SCHEDULES_PATH
+            )
+        finally:
+            monkeypatch.delenv("FIN_GURU_PRIVATE_DIR")
+            importlib.reload(total_return)
+
+    def test_dividend_schedules_env_var_takes_precedence(self, monkeypatch, tmp_path):
+        import importlib
+
+        from src.analysis import total_return
+
+        explicit = tmp_path / "custom-schedules.yaml"
+        monkeypatch.setenv("FIN_GURU_DIVIDEND_SCHEDULES", str(explicit))
+        reloaded = importlib.reload(total_return)
+        try:
+            assert explicit == reloaded.DIVIDEND_SCHEDULES_PATH
+        finally:
+            monkeypatch.delenv("FIN_GURU_DIVIDEND_SCHEDULES")
+            importlib.reload(total_return)

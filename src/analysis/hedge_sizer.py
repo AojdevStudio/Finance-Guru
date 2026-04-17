@@ -56,6 +56,7 @@ import contextlib
 import io
 import logging
 import math
+import os
 import statistics
 from glob import glob
 from pathlib import Path
@@ -74,9 +75,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_RATIO_PER_CONTRACT = 50_000.0
 """Default portfolio value per contract: $50,000. HS-01."""
 
-BALANCES_GLOB = str(
-    PROJECT_ROOT / "notebooks" / "updates" / "Balances_for_Account_*.csv"
+PORTFOLIO_DIR = Path(
+    os.getenv("FIN_GURU_PORTFOLIO_DIR", str(PROJECT_ROOT / "notebooks" / "updates"))
 )
+"""Directory holding broker export CSVs (balances, positions, transactions).
+
+Override with ``FIN_GURU_PORTFOLIO_DIR`` for testing or portable deployment.
+Matches the env var convention in ``src/config/fin_guru_config.py``.
+"""
+
+BALANCES_GLOB = str(PORTFOLIO_DIR / "Balances_for_Account_*.csv")
 """Glob pattern for Fidelity balance CSV files."""
 
 
@@ -155,8 +163,9 @@ def allocate_contracts(
 def read_portfolio_value_from_csv() -> float | None:
     """Read total account value from latest Fidelity balance CSV.
 
-    Searches for ``notebooks/updates/Balances_for_Account_*.csv``,
-    picks the most recently modified file, and extracts the
+    Searches the configured portfolio directory (``FIN_GURU_PORTFOLIO_DIR``,
+    default ``notebooks/updates/``) via ``BALANCES_GLOB``, picks the most
+    recently modified ``Balances_for_Account_*.csv`` file, and extracts the
     "Total account value" row.
 
     Returns:
@@ -243,8 +252,8 @@ class HedgeSizer:
         # 3. No value found
         msg = (
             "No portfolio value found. Provide --portfolio-value flag or "
-            "ensure a Fidelity balance CSV exists at "
-            "notebooks/updates/Balances_for_Account_*.csv"
+            f"ensure a Fidelity balance CSV exists matching {BALANCES_GLOB} "
+            "(override the directory via FIN_GURU_PORTFOLIO_DIR)."
         )
         raise ValueError(msg)
 

@@ -170,9 +170,11 @@ def handle_status(args: argparse.Namespace, tracker: RollingTracker) -> int:  # 
     lines.append("=" * 80)
 
     if not positions:
+        from src.analysis.rolling_tracker import HEDGING_DIR
+
         lines.append("")
         lines.append("  No active hedge positions.")
-        lines.append("  Add positions to fin-guru-private/hedging/positions.yaml")
+        lines.append(f"  Add positions to {HEDGING_DIR / 'positions.yaml'}")
     else:
         # Table header
         lines.append("")

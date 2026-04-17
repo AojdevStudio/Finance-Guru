@@ -9,6 +9,7 @@ interfaces work end-to-end.
 
 from __future__ import annotations
 
+import importlib
 import json
 import subprocess
 import sys
@@ -19,6 +20,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
+from src.analysis import rolling_tracker
 from src.analysis.rolling_tracker import (
     RollingTracker,
     _dte_status,
@@ -746,7 +748,7 @@ class TestRollingTrackerCLI:
             cwd=str(Path(__file__).parent.parent.parent),
             env={
                 **__import__("os").environ,
-                "HEDGING_DIR_OVERRIDE": str(tmp_path),
+                "FIN_GURU_HEDGING_DIR": str(tmp_path),
             },
         )
         # The CLI may fail if config file is missing, but if it succeeds
@@ -755,3 +757,27 @@ class TestRollingTrackerCLI:
         if result.returncode == 0:
             data = json.loads(result.stdout)
             assert "positions" in data or "summary" in data
+
+
+class TestEnvVarOverrides:
+    """Verify module-level path constants honor their env var overrides."""
+
+    def test_private_dir_env_var_shifts_hedging_default(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("FIN_GURU_PRIVATE_DIR", str(tmp_path))
+        reloaded = importlib.reload(rolling_tracker)
+        try:
+            assert tmp_path == reloaded.PRIVATE_DIR
+            assert tmp_path / "hedging" == reloaded.HEDGING_DIR
+        finally:
+            monkeypatch.delenv("FIN_GURU_PRIVATE_DIR")
+            importlib.reload(rolling_tracker)
+
+    def test_hedging_dir_env_var_takes_precedence(self, monkeypatch, tmp_path):
+        explicit = tmp_path / "custom-hedging"
+        monkeypatch.setenv("FIN_GURU_HEDGING_DIR", str(explicit))
+        reloaded = importlib.reload(rolling_tracker)
+        try:
+            assert explicit == reloaded.HEDGING_DIR
+        finally:
+            monkeypatch.delenv("FIN_GURU_HEDGING_DIR")
+            importlib.reload(rolling_tracker)

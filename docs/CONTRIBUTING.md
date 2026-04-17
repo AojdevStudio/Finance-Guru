@@ -1,338 +1,183 @@
 ---
-title: "Contributing to Finance Guru"
-description: "Development guidelines, code standards, and contribution workflow for Finance Guru"
+
+## title: "Contributing to Finance Guru"
+description: "Contribution guidelines, scope boundaries, and quality gates for Finance Guru"
 category: root
----
 
 # Contributing to Finance Guru
 
-This is a private family office system. These guidelines are for the primary developer and any collaborators.
+Thanks for looking. Read the *Project State* section below before investing time — it tells you which parts of this repo are worth contributing to and which are scheduled to be retired.
 
-## Development Philosophy
-
-1. **Start simple, iterate**: Build the simplest working solution first
-2. **CLI-first**: Heavy computation in CLI tools, not context
-3. **Token efficiency**: Minimize context consumption
-4. **Type safety**: Pydantic models for all data structures
-
-## Getting Started
-
-### Prerequisites
-
-```bash
-# Python 3.12+ with uv
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install dependencies
-uv sync
-
-# Verify setup
-uv run python --version
-uv run python src/analysis/risk_metrics_cli.py SPY --days 30
-```
-
-### Project Structure
-
-```
-family-office/
-├── src/                 # Python analysis tools
-│   ├── analysis/        # Risk, correlation, ITC
-│   ├── strategies/      # Optimizer, backtester
-│   ├── utils/           # Momentum, volatility
-│   └── models/          # Pydantic type definitions
-├── fin-guru/            # Agent system
-│   ├── agents/          # Specialist definitions
-│   ├── tasks/           # Workflow configs
-│   └── data/            # Knowledge base
-├── .claude/             # Claude Code configuration
-│   ├── hooks/           # Hook scripts
-│   └── skills/          # Skill definitions
-├── docs/                # Documentation
-└── tests/               # Test suite
-```
-
-## Code Standards
-
-### Python CLI Tools
-
-Follow the 3-layer architecture:
-
-```python
-# Layer 1: Pydantic Models (src/models/)
-class RiskMetrics(BaseModel):
-    var_95: float
-    cvar_95: float
-    sharpe_ratio: float
-    # ...
-
-# Layer 2: Calculator Classes (src/analysis/)
-class RiskCalculator:
-    def __init__(self, prices: pd.DataFrame):
-        self.prices = prices
-
-    def calculate_var(self, confidence: float = 0.95) -> float:
-        # Business logic here
-        pass
-
-# Layer 3: CLI Interface (src/analysis/risk_metrics_cli.py)
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('ticker')
-    parser.add_argument('--days', type=int, default=90)
-    # ...
-```
-
-### Type Hints
-
-Always use type hints:
-
-```python
-def calculate_sharpe(
-    returns: pd.Series,
-    risk_free_rate: float = 0.0
-) -> float:
-    """Calculate Sharpe ratio."""
-    excess_returns = returns - risk_free_rate
-    return excess_returns.mean() / excess_returns.std() * np.sqrt(252)
-```
-
-### Documentation
-
-Add docstrings to public functions:
-
-```python
-def calculate_var(
-    returns: pd.Series,
-    confidence: float = 0.95
-) -> float:
-    """
-    Calculate Value at Risk.
-
-    Args:
-        returns: Daily returns series
-        confidence: Confidence level (default 95%)
-
-    Returns:
-        VaR as a negative percentage (e.g., -0.034 for -3.4%)
-    """
-    pass
-```
-
-## Adding New CLI Tools
-
-### 1. Create the Calculator
-
-```python
-# src/analysis/my_tool.py
-from pydantic import BaseModel
-import pandas as pd
-
-class MyToolOutput(BaseModel):
-    metric_1: float
-    metric_2: float
-
-class MyToolCalculator:
-    def __init__(self, prices: pd.DataFrame):
-        self.prices = prices
-
-    def calculate(self) -> MyToolOutput:
-        # Implementation
-        return MyToolOutput(metric_1=..., metric_2=...)
-```
-
-### 2. Create the CLI
-
-```python
-# src/analysis/my_tool_cli.py
-import argparse
-from src.utils.market_data import fetch_prices
-from src.analysis.my_tool import MyToolCalculator
-
-def main():
-    parser = argparse.ArgumentParser(description='My Tool')
-    parser.add_argument('ticker', help='Stock ticker')
-    parser.add_argument('--days', type=int, default=90)
-    parser.add_argument('--output', choices=['text', 'json'], default='text')
-
-    args = parser.parse_args()
-
-    # Fetch data
-    prices = fetch_prices(args.ticker, days=args.days)
-
-    # Calculate
-    calc = MyToolCalculator(prices)
-    result = calc.calculate()
-
-    # Output
-    if args.output == 'json':
-        print(result.model_dump_json(indent=2))
-    else:
-        print(f"Metric 1: {result.metric_1:.2f}")
-        print(f"Metric 2: {result.metric_2:.2f}")
-
-if __name__ == '__main__':
-    main()
-```
-
-### 3. Update CLAUDE.md
-
-Add the new tool to the tool reference table in `CLAUDE.md`.
-
-### 4. Add Tests
-
-```python
-# tests/test_my_tool.py
-import pytest
-from src.analysis.my_tool import MyToolCalculator
-
-def test_calculation():
-    # Test with known data
-    pass
-```
-
-## Adding New Hooks
-
-### 1. Create the Hook Script
-
-```bash
-#!/bin/bash
-# .claude/hooks/my-hook.sh
-
-input=$(cat)
-# Process input
-echo "Hook output"
-exit 0
-```
-
-### 2. Make Executable
-
-```bash
-chmod +x .claude/hooks/my-hook.sh
-```
-
-### 3. Add to settings.json
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/my-hook.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-### 4. Test
-
-```bash
-echo '{"session_id": "test"}' | ./.claude/hooks/my-hook.sh
-```
-
-## Adding New Skills
-
-### 1. Create Skill Directory
-
-```
-.claude/skills/my-skill/
-├── SKILL.md          # Main skill file
-└── resources/        # Optional resource files
-    └── examples.md
-```
-
-### 2. Write SKILL.md
-
-```markdown
----
-name: my-skill
-description: What this skill does. USE WHEN user asks about X OR mentions Y.
 ---
 
-# My Skill
+## Project State (Read This First)
 
-## Purpose
-[Why this skill exists]
+Finance Guru is in the middle of a vision pivot. The project is transitioning from a Claude Code skill/hook/agent stack into a standalone macOS native application (Tauri v2 + Bun sidecar). See `docs/VISION.md` for the full rationale.
 
-## When to Use
-[Activation scenarios]
+What this means for contributors today:
 
-## Quick Reference
-[Key patterns and examples]
+
+| Area                                   | State                            | Safe to invest in?         |
+| -------------------------------------- | -------------------------------- | -------------------------- |
+| Python analysis engine (`src/`)        | **Stable, survives the pivot**   | *Yes*                      |
+| Claude Code skills (`.claude/skills/`) | **Transitional, likely retired** | No — file an issue instead |
+| BMAD-CORE agents (`fin-guru/agents/`)  | **Transitional, likely retired** | No — file an issue instead |
+| macOS app scaffold                     | **Does not exist yet**           | Not ready for contribution |
+| Documentation (`docs/`)                | **Always safe**                  | *Yes*                      |
+
+
+If the thing you want to work on is labelled *transitional*, open an issue — do not open a PR against it. It will likely be deleted in the pivot, and we do not want you to waste effort.
+
+---
+
+## Contribution Stance
+
+This project is AGPLv3-licensed and open to contribution, but it is not actively recruiting contributors. We accept high-quality PRs that land on the repo; we do not maintain a roadmap of "good first issues" or guarantee rapid triage. Forks for private use are welcome and encouraged — see the README.
+
+If you want something built and you are not sure we will merge it, open an issue first and ask.
+
+---
+
+## What We Accept
+
+### Pull requests
+
+Only these surfaces are in scope for PRs:
+
+1. **Documentation** — Typo fixes, broken links, corrected API information, new MCP server entries in `docs/setup/api-keys.md`, clarified setup steps in `docs/setup/SETUP.md` and `TROUBLESHOOTING.md`, README polish.
+2. **Python analysis engine** — Generic calculators and utilities under `src/analysis/`, `src/strategies/`, `src/utils/`, and their corresponding tests under `tests/python/`. Examples: `correlation.py`, `backtester.py`, `momentum.py`, `risk_metrics.py`, `screener.py`, `volatility.py`, `market_data.py`. Path-coupled calculators accept `FIN_GURU_PRIVATE_DIR` / `FIN_GURU_PORTFOLIO_DIR` environment variables; contributors do not need access to the private data to work on them.
+
+### Issues only (no PRs)
+
+Everything else is issues-only. We will evaluate bug reports and feature requests for these areas but will close PRs against them without review:
+
+- Skills under `.claude/skills/`
+- Agents under `fin-guru/agents/` or `.claude/commands/fin-guru/agents/`
+- Hooks under `.claude/hooks/`
+- The `apps/plaid-dashboard/` Bun monorepo
+- `finance-guru-desktop/` (Electron POC, gitignored)
+
+These surfaces are either deeply coupled to the private user profile or scheduled for replacement in the Tauri pivot.
+
+---
+
+## What We Reject
+
+### Marketing or promotional content in documentation
+
+PRs that swap neutral capability descriptions for vendor marketing copy (superlatives like "fastest," "most accurate," "best-in-class," or direct taglines from a vendor's homepage) are closed without merge. Documentation describes *what a tool does*, not *how good it is*.
+
+Example of what we reject:
+
+```
+-- Semantic web search optimized for finance
+++ Fastest and most accurate web search API for AI, optimized for finance
 ```
 
-### 3. Add to skill-rules.json
-
-```json
-{
-  "my-skill": {
-    "type": "domain",
-    "enforcement": "suggest",
-    "priority": "medium",
-    "promptTriggers": {
-      "keywords": ["keyword1", "keyword2"]
-    }
-  }
-}
-```
-
-## Git Workflow
-
-### Commit Messages
-
-Use conventional commits:
+Example of what we accept:
 
 ```
-feat: add new volatility regime detection
-fix: correct Sharpe ratio calculation
-docs: update API documentation
-refactor: simplify correlation calculator
-test: add backtester edge cases
+-- Semantic web search optimized for finance
+++ Neural search API designed for AI agents, optimized for finance
 ```
 
-### Before Committing
+### AI-generated PRs without disclosure
 
-1. Run tests: `uv run pytest`
-2. Check types: `uv run mypy src/`
-3. Format code: `uv run black src/`
+AI-assisted contributions are welcome. Undisclosed AI-generated contributions are not. If you used Claude, GPT, Cursor, Copilot, or any other AI tool to write substantial portions of your PR, state that in the PR description:
 
-## Testing
+```
+Generated with [tool]; I reviewed, ran the tests, and verified behavior before submitting.
+```
 
-### Run All Tests
+PRs that look AI-generated and carry no disclosure will be asked to either disclose or close.
+
+### Changes to internal data or paths
+
+Anything gitignored is internal. Do not reference gitignored paths, account identifiers, dollar amounts, or the `fin-guru-private/` directory in code you submit. If you need test data, use synthetic data (numpy / fixtures) under `tests/python/`.
+
+---
+
+## How to Contribute
+
+### For documentation PRs
+
+1. Fork the repo.
+2. Make your change.
+3. Open a PR. No issue required for doc fixes.
+
+### For code PRs
+
+1. **Open an issue first.** Describe the bug or enhancement. Wait for acknowledgment before writing code. This protects you from investing in a PR we would reject.
+2. Fork the repo and create a feature branch.
+3. Make the change following the *Quality Gates* below.
+4. Open a PR referencing the issue (`Fixes #N`).
+
+---
+
+## Quality Gates
+
+All code PRs must pass these checks locally before submission:
 
 ```bash
-uv run pytest
+uv run pytest                  # All tests pass
+uv run ruff format .           # Code is formatted
+uv run ruff check .            # No lint errors
+uv run mypy src/               # No type errors
 ```
 
-### Run Specific Test
+Additionally:
 
-```bash
-uv run pytest tests/test_risk_metrics.py -v
-```
+- **New code requires new tests.** Any new CLI tool, calculator, or utility must ship with tests under `tests/python/` using synthetic data. Target coverage is 80%.
+- **No real API calls in tests.** Tests must run offline. Mark network-dependent tests with `@pytest.mark.integration` (they are skipped by default in CI).
+- **Three-layer pattern.** New financial tools follow the repo architecture: Pydantic input models in `src/models/`, calculator class in `src/analysis/` (or `strategies/` or `utils/`), CLI entry point as `{tool}_cli.py`. Reference implementation: `src/analysis/risk_metrics.py` + `src/models/risk_inputs.py` + `src/analysis/risk_metrics_cli.py`.
 
-### Test Coverage
+See `src/CLAUDE.md` for conventions (Pydantic + pandas gotchas, naming, typing, docstrings).
 
-```bash
-uv run pytest --cov=src --cov-report=html
-```
+---
 
-## Documentation Updates
+## Review Process
 
-When adding features, update:
+Every PR must pass:
 
-1. **CLAUDE.md** - Tool reference, agent-tool matrix
-2. **docs/reference/api.md** - CLI usage examples
-3. **README.md** - If it affects quick start or architecture
+1. **CodeRabbit review** — Automated; typically comments within minutes of opening.
+2. **Maintainer review** — The maintainer reviews every PR personally before merge.
+
+Both must approve. Respond to CodeRabbit's comments in the same way you respond to a human reviewer — accept valid feedback, push back on incorrect feedback with reasoning.
+
+There is no SLA. If a PR sits without review for more than two weeks, ping the issue thread.
+
+---
+
+## Legal
+
+This project is licensed under AGPLv3. By opening a PR, you agree that your contribution is licensed under AGPLv3 and that you have the right to license it. No separate CLA or DCO signoff is required at this time.
+
+---
+
+## Financial Disclaimer (Required in Analysis Output)
+
+Finance Guru is educational software. Any new CLI tool that produces analysis output (PDF reports, Markdown analyses, buy tickets, etc.) must include the disclaimer block in its output. Reference: `fin-guru/templates/` and existing tools like `FinanceReport`. The disclaimer includes:
+
+- "For educational purposes only; not investment advice."
+- "Consult a licensed financial professional before acting on any analysis."
+- An explicit risk disclosure appropriate to the strategy being discussed.
+
+PRs that produce user-facing analysis output without the disclaimer will be asked to add it.
+
+---
+
+## Style Notes
+
+- Markdown emphasis uses underscores (`_text_`), not asterisks (`*text`*). Enforced by markdownlint (MD049).
+- Docstrings use Google style.
+- Commit messages use Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
+
+---
 
 ## Questions?
 
-This is a private system. If you're working on this codebase and have questions, check:
+Open an issue. Tag it `question`.
 
-1. `CLAUDE.md` - Development context
-2. `docs/` - Technical documentation
-3. `fin-guru/data/` - System knowledge base
+---
+
+*Last updated: 2026-04-17*
