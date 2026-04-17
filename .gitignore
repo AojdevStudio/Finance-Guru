@@ -127,6 +127,9 @@ Plans/
 # Beads task tracker (local)
 .beads/
 
+# Local research/scratch notes (not project artifacts)
+MEMORY/
+
 # Overstory (local)
 .overstory/
 .dmux/

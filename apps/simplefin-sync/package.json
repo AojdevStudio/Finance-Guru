@@ -1,0 +1,14 @@
+{
+  "name": "simplefin-sync",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "claim": "bun run src/claim.ts",
+    "accounts": "bun run src/accounts.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}
