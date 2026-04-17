@@ -1,0 +1,53 @@
+---
+# Declarative record of the branch-protection rules applied to `main`.
+# This file documents intent; the live state is enforced by GitHub repo settings.
+# Verify live state with:
+#   gh api repos/AojdevStudio/Finance-Guru/branches/main/protection
+#
+# To change rules: edit this file in a PR, then update GitHub via
+# .github/workflows/sync-branch-protection.yml (see below) or manually.
+
+branch: main
+
+protection:
+  require_pull_request: true
+  require_code_owner_review: true
+  dismiss_stale_reviews: true
+  required_approving_review_count: 0   # solo-maintainer repo; CODEOWNERS still enforced
+  require_last_push_approval: false
+  required_signatures: false
+  enforce_admins: false
+
+  # Merge constraints
+  allow_force_pushes: false
+  allow_deletions: false
+  required_linear_history: false
+  required_conversation_resolution: true
+
+  # Required status checks (must pass before merge)
+  required_status_checks:
+    strict: true  # PRs must be up to date with base
+    contexts:
+      - lint-and-test               # from .github/workflows/ci.yml
+      - dead-code-vulture           # from .github/workflows/quality-gates.yml
+      - duplicate-code-jscpd
+      - tech-debt-todos
+      - flaky-test-rerun
+
+rulesets:
+  # Repo rulesets (newer GitHub feature) — apply in addition to branch protection
+  - name: main-branch-ruleset
+    target: branch
+    enforcement: active
+    conditions:
+      ref_name:
+        include:
+          - refs/heads/main
+    rules:
+      - type: deletion
+      - type: non_fast_forward
+      - type: pull_request
+        parameters:
+          require_code_owner_review: true
+          dismiss_stale_reviews_on_push: true
+          required_review_thread_resolution: true

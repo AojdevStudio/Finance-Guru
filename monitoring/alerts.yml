@@ -1,0 +1,71 @@
+---
+# Finance Guru alerting configuration
+#
+# This is a solo-maintainer family-office system. Alerts route to GitHub
+# Issues (via error-to-issue workflow) and Claude Code notifications.
+# For production deployments of apps/plaid-dashboard you would wire this
+# up to PagerDuty, Grafana OnCall, or similar.
+
+channels:
+  github-issues:
+    type: github-issue
+    repo: AojdevStudio/Finance-Guru
+    labels: [bug, needs-triage, priority:high]
+    template: .github/ISSUE_TEMPLATE/bug-report.yml
+    on:
+      - workflow_failure
+      - ci_failure_on_main
+
+  claude-voice:
+    type: webhook
+    url: http://localhost:8888/notify
+    headers:
+      Content-Type: application/json
+    body_template: |
+      {"message":"Alert: {{.RuleName}} fired. {{.Summary}}","voice_enabled":true}
+    on:
+      - margin_coverage_below_1_5
+      - layer_2_income_below_target
+
+alerts:
+  - name: ci_failure_on_main
+    description: CI workflow failed on the main branch
+    severity: high
+    source: github-actions
+    query: workflow=ci.yml branch=main conclusion=failure
+    action: notify[github-issues, claude-voice]
+
+  - name: workflow_failure
+    description: Any workflow failure on PR or main
+    severity: medium
+    source: github-actions
+    query: conclusion=failure
+    action: notify[github-issues]
+
+  - name: margin_coverage_below_1_5
+    description: Margin coverage ratio dropped below 1.5x (Red band)
+    severity: critical
+    source: margin-management-skill
+    action: notify[claude-voice, github-issues]
+    runbook: docs/runbooks/margin-dashboard-update.md
+
+  - name: layer_2_income_below_target
+    description: Monthly dividend income below Layer 2 target for two months
+    severity: medium
+    source: dividend-tracking-skill
+    action: notify[claude-voice]
+    runbook: docs/runbooks/monthly-dividend-review.md
+
+  - name: vulnerability_high_severity
+    description: pip-audit or Dependabot found a high-severity vulnerability
+    severity: high
+    source: dependabot
+    action: notify[github-issues]
+
+silences:
+  # Silence non-critical alerts during the quarterly-review runbook window
+  # (last week of Mar/Jun/Sep/Dec)
+  - matcher: severity=medium
+    schedule: "0 0 24-31 3,6,9,12 *"
+    duration: 7d
+    reason: Quarterly review window — expected churn in metrics

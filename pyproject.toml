@@ -36,16 +36,31 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
+    "pytest-xdist>=3.6.0",
+    "pytest-rerunfailures>=14.0",
     "pandas-stubs>=3.0.0.260204",
     "types-pyyaml>=6.0.12.20250915",
     "types-requests>=2.32.4.20260107",
+    "structlog>=24.1.0",
+    "python-json-logger>=2.0.7",
+    "scrubadub>=2.0.1",
+    "growthbook>=1.1.0",
+    "vulture>=2.11",
+    "import-linter>=2.0",
+    "deptry>=0.20.0",
+    "pyinstrument>=5.0",
+    "sentry-sdk>=2.18",
+    "opentelemetry-api>=1.28",
+    "opentelemetry-sdk>=1.28",
+    "prometheus-client>=0.21",
+    "pip-audit>=2.7",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short --cov=src --cov-report=term-missing --cov-fail-under=80"
+addopts = "-v --tb=short --cov=src --cov-report=term-missing --cov-fail-under=80 -n auto --reruns 1 --durations=10"
 pythonpath = ["."]
 markers = [
     "integration: marks tests as integration tests (require real API keys)",
@@ -84,6 +99,12 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.vulture]
+paths = ["src"]
+exclude = ["tests/", ".venv/", "src/*/__init__.py"]
+min_confidence = 80
+ignore_names = ["_*", "test_*", "setUp", "tearDown"]
 
 [tool.coverage.run]
 branch = true
@@ -139,6 +160,10 @@ module = [
     "rich.*",
     "rich.text",
     "rich.table",
+    "structlog.*",
+    "scrubadub.*",
+    "growthbook.*",
+    "prometheus_client.*",
 ]
 ignore_missing_imports = true
 

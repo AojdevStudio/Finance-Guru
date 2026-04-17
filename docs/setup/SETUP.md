@@ -56,15 +56,27 @@ Before installing Finance Guru, ensure you have the following tools installed on
 |------|---------|-------------|---------|
 | **Python** | 3.12+ | [python.org/downloads](https://www.python.org/downloads/) | `python --version` |
 | **uv** | Latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | `uv --version` |
-| **Claude Code** | Latest | `curl -fsSL https://claude.ai/install.sh \| bash` | `claude --version` |
+| **Claude Code** _or_ **pi-coding-agent** | Latest | See _Agent harness_ below | `claude --version` or `pi --version` |
 | **Bun** | Latest | `curl -fsSL https://bun.sh/install \| bash` | `bun --version` |
 | **Git** | 2.0+ | [git-scm.com](https://git-scm.com/) | `git --version` |
+
+### Agent harness (pick one — or run both)
+
+Finance Guru skills follow the [Agent Skills standard](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/sdk.md), so the same skills work in any compatible harness:
+
+| Harness | Install | Reads skills from |
+|---------|---------|-------------------|
+| **Claude Code** (default) | `curl -fsSL https://claude.ai/install.sh \| bash` | `.claude/skills/` |
+| **pi-coding-agent** (alt) | `npm i -g @mariozechner/pi-coding-agent` | `.pi/skills/` → `.agents/skills/` (symlinked) |
+
+Both read the same underlying `SKILL.md` files — you don't have to choose permanently. Run `claude` in one window and `pi` in another; both see the same skills.
 
 ### Optional (Recommended)
 
 | Tool | Purpose | Installation |
 |------|---------|-------------|
 | **Docker** | For Google Drive MCP (portfolio syncing) | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
+| **Dev Container** | Reproducible environment (auto-installs everything above) | See `.devcontainer/README.md` — works in VS Code or GitHub Codespaces |
 
 ### System Requirements
 

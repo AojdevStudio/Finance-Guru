@@ -37,6 +37,20 @@ Technical reference documentation.
 | [API Reference](reference/api.md) | CLI tools documentation |
 | [Hooks System](reference/hooks.md) | How hooks power auto-activation |
 | [Tools Reference](reference/tools.md) | Quick reference for available tools |
+| [Observability](reference/observability.md) | Structured logging, PII scrubbing, feature flags |
+| [Cross-Harness Skills](reference/cross-harness-skills.md) | Using Finance Guru skills in Claude Code, pi-coding-agent, and other harnesses |
+
+## Runbooks
+
+Step-by-step operational procedures.
+
+| Runbook | Cadence | Summary |
+|---------|---------|---------|
+| [Runbooks Index](runbooks/README.md) | — | Overview and cadence guide |
+| [Margin Dashboard Update](runbooks/margin-dashboard-update.md) | Weekly | Refresh coverage ratio, act on alerts |
+| [Portfolio Sync](runbooks/portfolio-sync.md) | Ad-hoc | Ingest broker CSVs → Google Sheets |
+| [Monthly Dividend Review](runbooks/monthly-dividend-review.md) | Monthly | Confirm Layer 2 income on target |
+| [Quarterly Review](runbooks/quarterly-review.md) | Quarterly | Full orchestrator + MonteCarlo + reports |
 
 ## Reports
 
@@ -117,6 +131,18 @@ Activation triggers:
 - File path patterns
 - Content patterns
 
+### Cross-Harness Skill Portability
+
+Finance Guru skills follow the [Agent Skills standard](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/sdk.md) — the same `SKILL.md` files work in multiple AI coding agents without rewriting:
+
+| Harness | Reads skills from |
+|---------|-------------------|
+| Claude Code | `.claude/skills/` (primary source) |
+| pi-coding-agent | `.pi/skills/` → (symlink) → `.agents/skills/` → `.claude/skills/` |
+| Any Agent-Skills-standard harness | `.agents/skills/` (symlinked fanout) |
+
+See [reference/cross-harness-skills.md](reference/cross-harness-skills.md) for the full setup.
+
 ### Multi-Agent Orchestration
 
 Finance Guru uses specialized agents:
@@ -141,36 +167,49 @@ Finance Guru uses specialized agents:
 ```
 family-office/
 ├── .claude/
-│   ├── hooks/           # Hook scripts
+│   ├── hooks/                # Hook scripts
 │   │   ├── load-fin-core-config.ts    # SessionStart
 │   │   ├── skill-activation-prompt.sh # UserPromptSubmit
 │   │   ├── post-tool-use-tracker.sh   # PostToolUse
 │   │   └── stop-build-check-enhanced.sh # Stop
-│   ├── settings.json    # Hook configuration
-│   └── skills/          # Skill definitions
-│       ├── fin-core/    # Finance Guru core skill
-│       └── skill-rules.json # Activation rules
-├── docs/                # Public documentation (tracked in git)
-│   ├── index.md         # This file
-│   ├── CONTRIBUTING.md  # Contribution guide
-│   ├── setup/           # Installation and configuration
-│   ├── guides/          # User walkthroughs
-│   ├── reference/       # Technical reference
-│   └── reports/         # Evaluation reports
-├── fin-guru/            # Agent system module
-│   ├── agents/          # Agent definitions
-│   ├── config.yaml      # Module configuration
-│   ├── data/            # Knowledge base (gitignored)
-│   └── tasks/           # Workflow definitions
-├── fin-guru-private/    # Private docs (gitignored, created by setup.sh)
-│   └── fin-guru/        # Your strategies, tickets, analysis
+│   ├── settings.json         # Hook configuration
+│   └── skills/               # Skill definitions (primary source — 19 FG skills)
+├── .agents/skills/           # Cross-harness mirror (symlinks to .claude/skills)
+├── .pi/skills/               # pi-coding-agent path (→ .agents/skills)
+├── .devcontainer/            # Codespaces / VS Code dev container
+├── .github/
+│   ├── dependabot.yml        # Dependency automation
+│   ├── labels.yml            # Label taxonomy
+│   ├── branch-protection.yml # Declared branch rules
+│   └── workflows/            # CI, release, quality-gates, rollback, error-to-issue
+├── apps/                     # Bun monorepo workspaces (turbo.json)
+│   ├── plaid-dashboard/      # Next.js 15 + Hono + Drizzle + Plaid
+│   └── simplefin-sync/       # Bun/TS indie Plaid alternative
+├── docs/                     # Public documentation (tracked in git)
+│   ├── index.md              # This file
+│   ├── CONTRIBUTING.md       # Contribution guide
+│   ├── setup/                # Installation and configuration
+│   ├── guides/               # User walkthroughs
+│   ├── reference/            # Technical reference
+│   ├── runbooks/             # Weekly / monthly / quarterly procedures
+│   └── reports/              # Evaluation reports
+├── fin-guru/                 # Agent system module (11 specialists)
+│   ├── agents/               # Agent definitions
+│   ├── config.yaml           # Module configuration
+│   ├── data/                 # Knowledge base (gitignored)
+│   └── tasks/                # Workflow definitions
+├── fin-guru-private/         # Private docs (gitignored, created by setup.sh)
+├── finance-guru-desktop/     # Electron + Agent SDK preview (gitignored)
+├── monitoring/               # Declarative alerts + routing config
 ├── src/
-│   ├── analysis/        # Risk, correlation, ITC, hedging CLIs
-│   ├── config/          # Config loader (YAML-default chain)
-│   ├── strategies/      # Optimizer, backtester
-│   └── utils/           # Momentum, volatility
+│   ├── analysis/             # Risk, correlation, ITC, hedging, options CLIs
+│   ├── config/               # Config loader (YAML-default chain)
+│   ├── strategies/           # Optimizer, backtester
+│   ├── utils/                # Momentum, volatility, logging, feature flags
+│   └── models/               # Pydantic type definitions
+├── tests/                    # 365+ pytest tests
 └── notebooks/
-    └── updates/         # Fidelity CSV exports (gitignored)
+    └── updates/              # Fidelity CSV exports (gitignored)
 ```
 
 ## Getting Help
@@ -182,6 +221,6 @@ family-office/
 
 ## Version
 
-- **Finance Guru**: v2.0.0
+- **Finance Guru**: v2.1.0
 - **BMAD-CORE**: v6.0.0
-- **Last Updated**: 2026-02-18
+- **Last Updated**: 2026-04-17

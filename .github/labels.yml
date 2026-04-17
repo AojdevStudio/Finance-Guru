@@ -1,0 +1,63 @@
+- name: bug
+  color: d73a4a
+  description: Something is broken or behaving unexpectedly
+
+- name: feature
+  color: a2eeef
+  description: New capability or enhancement
+
+- name: enhancement
+  color: a2eeef
+  description: Improvement to an existing feature
+
+- name: docs
+  color: 0075ca
+  description: Documentation changes
+
+- name: security
+  color: b60205
+  description: Security fix, CVE, or disclosure
+
+- name: dependencies
+  color: 0366d6
+  description: Dependency updates (dependabot, renovate)
+
+- name: good-first-issue
+  color: 7057ff
+  description: Approachable for new contributors
+
+- name: priority:low
+  color: fbca04
+  description: Nice-to-have, no deadline pressure
+
+- name: priority:medium
+  color: f5a623
+  description: Should ship within the quarter
+
+- name: priority:high
+  color: e11d48
+  description: Blocking or time-sensitive
+
+- name: agent-ready
+  color: 00d084
+  description: Well-scoped and suitable for autonomous AI work
+
+- name: needs-triage
+  color: d4c5f9
+  description: Needs initial review, labeling, or prioritization
+
+- name: python
+  color: 3572A5
+  description: Affects the Python analysis engine
+
+- name: plaid-dashboard
+  color: 1f6feb
+  description: Affects apps/plaid-dashboard
+
+- name: simplefin-sync
+  color: 6e40c9
+  description: Affects apps/simplefin-sync
+
+- name: ci
+  color: 2da44e
+  description: Continuous integration or workflow change

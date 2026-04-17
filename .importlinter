@@ -1,0 +1,45 @@
+[importlinter]
+root_packages =
+    src
+
+# Contracts declare architectural rules. `uv run lint-imports` enforces them.
+
+[importlinter:contract:layered-architecture]
+name = 3-layer architecture (Models → Calculators → CLIs)
+type = layers
+layers =
+    src.models
+    src.utils
+    src.analysis
+    src.strategies
+    src.config
+ignore_imports =
+    src.* -> src.models
+
+[importlinter:contract:cli-isolation]
+name = CLIs do not import each other
+type = independence
+modules =
+    src.analysis.risk_metrics_cli
+    src.analysis.correlation_cli
+    src.analysis.itc_risk_cli
+    src.analysis.options_pricer_cli
+    src.analysis.total_return_cli
+    src.analysis.rolling_tracker_cli
+    src.analysis.hedge_sizer_cli
+    src.analysis.hedge_comparison_cli
+    src.strategies.backtester_cli
+    src.strategies.optimizer_cli
+    src.utils.momentum_cli
+    src.utils.moving_averages_cli
+    src.utils.volatility_cli
+
+[importlinter:contract:models-are-leaves]
+name = Pydantic models do not import from analysis or strategies
+type = forbidden
+source_modules =
+    src.models
+forbidden_modules =
+    src.analysis
+    src.strategies
+    src.utils

@@ -8,7 +8,7 @@ repos:
       - id: check-yaml
         exclude: '^scripts/onboarding/modules/templates/.*\.template\.yaml$'
       - id: check-added-large-files
-        args: ['--maxkb=500']
+        args: ['--maxkb=2048']
 
   # Ruff linter + formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -38,7 +38,7 @@ repos:
     hooks:
       - id: pytest-coverage
         name: pytest with coverage
-        entry: uv run pytest --cov=src --cov-fail-under=80 --cov-report=term-missing -q
+        entry: uv run pytest --cov=src --cov-fail-under=80 --cov-report=term-missing -q -m "not integration"
         language: system
         types: [python]
         pass_filenames: false

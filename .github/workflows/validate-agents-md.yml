@@ -1,0 +1,40 @@
+name: Validate AGENTS.md
+
+on:
+  pull_request:
+    paths:
+      - AGENTS.md
+      - CLAUDE.md
+      - .github/workflows/validate-agents-md.yml
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Lint AGENTS.md + CLAUDE.md
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          globs: |
+            AGENTS.md
+            CLAUDE.md
+          config: .markdownlint.json
+
+      - name: AGENTS.md sanity checks
+        run: |
+          if [ ! -f AGENTS.md ] && [ ! -f CLAUDE.md ]; then
+            echo "::error::Neither AGENTS.md nor CLAUDE.md found"
+            exit 1
+          fi
+          for f in AGENTS.md CLAUDE.md; do
+            if [ -f "$f" ]; then
+              lines=$(wc -l < "$f")
+              echo "$f has $lines lines"
+              if [ "$lines" -lt 5 ]; then
+                echo "::warning::$f is very short ($lines lines) — consider expanding"
+              fi
+            fi
+          done

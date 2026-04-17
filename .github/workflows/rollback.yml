@@ -1,0 +1,107 @@
+name: Rollback Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to rollback to (e.g. v2.0.0)
+        required: true
+        type: string
+      reason:
+        description: Reason for rollback (will be recorded in revert commit)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: rollback-${{ github.event.inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: Revert main to target tag and open rollback PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate tag exists
+        run: |
+          if ! git rev-parse "refs/tags/${{ github.event.inputs.tag }}" >/dev/null 2>&1; then
+            echo "::error::Tag ${{ github.event.inputs.tag }} does not exist"
+            exit 1
+          fi
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create rollback branch
+        run: |
+          BRANCH="rollback/${{ github.event.inputs.tag }}-$(date +%Y%m%d-%H%M%S)"
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          git checkout -b "$BRANCH"
+
+      - name: Revert to target tag
+        run: |
+          TARGET_COMMIT=$(git rev-parse "refs/tags/${{ github.event.inputs.tag }}")
+          CURRENT=$(git rev-parse HEAD)
+          echo "Reverting from $CURRENT back to $TARGET_COMMIT (${{ github.event.inputs.tag }})"
+          git revert --no-commit "${TARGET_COMMIT}..${CURRENT}"
+          git commit -m "revert: rollback to ${{ github.event.inputs.tag }}
+
+          Reason: ${{ github.event.inputs.reason }}
+
+          Initiated via rollback workflow by ${{ github.actor }}."
+
+      - name: Push rollback branch
+        run: git push origin "$BRANCH"
+
+      - name: Open rollback PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = process.env.BRANCH;
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `revert: rollback to ${{ github.event.inputs.tag }}`,
+              head: branch,
+              base: 'main',
+              body: [
+                '## Rollback to `${{ github.event.inputs.tag }}`',
+                '',
+                '**Reason:** ${{ github.event.inputs.reason }}',
+                '',
+                '**Initiated by:** @${{ github.actor }}',
+                '',
+                'This PR reverts every commit between `${{ github.event.inputs.tag }}` and the current `main`.',
+                'Review carefully before merging — this is a destructive operation.',
+                '',
+                '- [ ] Verified the revert diff makes sense',
+                '- [ ] Ran tests locally',
+                '- [ ] Confirmed no data migrations were rolled back unsafely',
+              ].join('\n')
+            });
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['rollback', 'priority:high', 'needs-triage']
+            });
+            core.setOutput('pr_number', pr.number);
+            core.setOutput('pr_url', pr.html_url);
+
+      - name: Summary
+        run: |
+          echo "### Rollback initiated" >> "$GITHUB_STEP_SUMMARY"
+          echo "Target: \`${{ github.event.inputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Reason: ${{ github.event.inputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Branch: \`$BRANCH\`" >> "$GITHUB_STEP_SUMMARY"

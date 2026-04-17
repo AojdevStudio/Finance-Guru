@@ -10,6 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - _SimpleFIN sync app_ scaffold — indie alternative to Plaid for bank account aggregation (`apps/simplefin-sync/`)
 - _Finance Guru vision doc_ — long-form pivot/strategy artifact
+- _Cross-harness skill portability_ — 16 Finance Guru skills symlinked into `.agents/skills/` and a top-level `.pi/skills` symlink, making every skill usable in `pi-coding-agent` and any Agent-Skills-standard harness with zero rewrites. Docs: `docs/reference/cross-harness-skills.md`.
+- _Agent readiness infrastructure_ — lifted from L1 (47.3%) to L4 (89.5%) via:
+  - `.devcontainer/` for reproducible dev environments (Codespaces + local)
+  - `.github/dependabot.yml`, `labels.yml`, and `workflows/` — release-please, quality-gates (vulture, jscpd, deptry, import-linter, pyinstrument, flaky-retry), sync-labels, validate-agents-md, rollback, error-to-issue
+  - `.github/branch-protection.yml` — declarative ruleset record
+  - `src/utils/logging.py` with structlog + PII scrubbing processor
+  - `src/utils/feature_flags.py` — env-driven feature flags
+  - `monitoring/alerts.yml` — declarative alert routing
+  - Root `turbo.json` + updated `package.json` with size-limit bundle tracking
+  - `docs/runbooks/` — weekly/monthly/quarterly procedures (margin, portfolio, dividend, quarterly review)
+  - `docs/reference/observability.md` and `docs/reference/cross-harness-skills.md`
+  - `PRIVACY.md` and root `CONTRIBUTING.md` pointer
+  - `codecov.yml` and `requirements.txt` generation via `uv export`
+- _Dev dependency expansion_ — structlog, python-json-logger, scrubadub, growthbook, pytest-xdist, pytest-rerunfailures, vulture, import-linter, deptry, pyinstrument, sentry-sdk, opentelemetry (api + sdk), prometheus-client, pip-audit
+
+### Changed
+- _README and docs refresh_ — Desktop hero banner, accurate agent/skill counts (11 specialists, 19 skills), new Apps Workspace + Cross-Harness Skills sections, updated directory tree and version block in `docs/index.md`
+- _Issue templates_ — bug-report and feature-request now include `needs-triage` label; new `question.md` template with `docs` + `needs-triage` labels
+- _pytest config_ — addopts now runs tests in parallel (`-n auto`), retries once on failure, and prints the 10 slowest (`--durations=10`)
 
 ## [2.1.0] - 2026-04-16
 

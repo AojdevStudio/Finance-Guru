@@ -33,7 +33,13 @@ ALLOWED_FILES = {
     ".planning/",  # Planning files (gitignored, not distributed)
     "docs/solutions/",  # Architecture decision records (internal docs)
     "docs/VISION.md",  # Personal vision document — owner-authored, by definition contains the owner's name
+    "docs/runbooks/",  # Internal operational runbooks for this family office (not distributed)
     "MEMORY/",  # Local research scratch notes (gitignored)
+    ".venv/",  # Virtual env — third-party packages may coincidentally contain the name
+    "venv/",  # Alt venv location
+    "node_modules/",  # JS deps
+    ".pi/",  # Symlinked skills / cross-harness bridge
+    ".agents/",  # Symlinked skills / cross-harness bridge
 }
 
 # Files that MUST NOT contain the owner's name

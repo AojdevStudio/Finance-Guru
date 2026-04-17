@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release Please — automated release + publish PRs
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: python
+          package-name: family-office
+          bump-minor-pre-major: true
+          bump-patch-for-minor-pre-major: true
+          changelog-types: |
+            [
+              {"type":"feat","section":"Added","hidden":false},
+              {"type":"fix","section":"Fixed","hidden":false},
+              {"type":"chore","section":"Changed","hidden":false},
+              {"type":"docs","section":"Documentation","hidden":false},
+              {"type":"security","section":"Security","hidden":false}
+            ]
+
+  deploy-notes:
+    name: Deploy release notes
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Announce deploy + observability (datadog-style notify)
+        run: |
+          echo "::notice::Release ${{ needs.release-please.outputs.tag_name }} created and ready to deploy."
+          echo "Tag: ${{ needs.release-please.outputs.tag_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "This is an announce-only step — no binaries are published." >> "$GITHUB_STEP_SUMMARY"
+          # Deployment observability hook — wire up to Grafana/Datadog here when available.
+          # For now we emit a local-voice notify for the solo maintainer.
+          curl -s -X POST http://localhost:8888/notify \
+            -H "Content-Type: application/json" \
+            -d "{\"message\":\"Release ${{ needs.release-please.outputs.tag_name }} created.\",\"voice_enabled\":false}" \
+            || true
+
+  # Error → insight pipeline: if release-please or deploy-notes fails,
+  # create a GitHub issue so the failure becomes a tracked work item.
+  # (Sentry-style error capture without a third-party service.)
+  create-issue-on-failure:
+    name: Create issue on release failure (error-to-issue pipeline)
+    needs: [release-please, deploy-notes]
+    if: always() && (needs.release-please.result == 'failure' || needs.deploy-notes.result == 'failure')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Release failure] run ${context.runId}`,
+              body: `Release workflow failed. Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              labels: ['bug','ci','needs-triage','priority:high']
+            });

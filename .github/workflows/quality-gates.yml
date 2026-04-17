@@ -1,0 +1,148 @@
+name: Quality Gates
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: quality-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dead-code-vulture:
+    name: Dead-code scan (vulture)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install deps
+        run: uv sync --dev
+      - name: Run vulture
+        run: |
+          echo "### Dead-code report" >> "$GITHUB_STEP_SUMMARY"
+          uv run vulture src/ --min-confidence 80 | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+  duplicate-code-jscpd:
+    name: Duplicate-code scan (jscpd)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Run jscpd
+        run: |
+          echo "### Duplicate-code report (jscpd)" >> "$GITHUB_STEP_SUMMARY"
+          bunx jscpd src/ \
+            --min-lines 10 \
+            --min-tokens 50 \
+            --threshold 5 \
+            --ignore "**/__init__.py" \
+            --reporters "console,markdown" \
+            --output ./jscpd-report || true
+          if [ -f ./jscpd-report/jscpd-report.md ]; then
+            cat ./jscpd-report/jscpd-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  tech-debt-todos:
+    name: Tech-debt tracking (TODO / FIXME / sonar-style markers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Grep for markers
+        run: |
+          echo "### Tech-debt markers" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Searching for TODO, FIXME, HACK, XXX comments (sonar-style tech-debt tracking)." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          git grep -nE '(TODO|FIXME|HACK|XXX):' -- 'src/' 'tests/' 'scripts/' || echo "No tech-debt markers found."
+          git grep -nE '(TODO|FIXME|HACK|XXX):' -- 'src/' 'tests/' 'scripts/' | tee -a "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  flaky-test-rerun:
+    name: Flaky-test retry (pytest-rerunfailures) + test timing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install deps
+        run: uv sync --dev
+      - name: Run tests with retry + benchmark durations (flaky detection, timing)
+        run: |
+          uv run pytest \
+            --reruns 2 \
+            --reruns-delay 5 \
+            --durations=20 \
+            -x \
+            -m "not integration" \
+            --tb=short | tee pytest-report.txt
+          echo "### Slowest tests (timing benchmark)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          grep -A 30 "slowest" pytest-report.txt >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  unused-dependencies-deptry:
+    name: Unused dependencies (deptry)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install deps
+        run: uv sync --dev
+      - name: Run deptry
+        run: |
+          echo "### Unused-dependency report (deptry)" >> "$GITHUB_STEP_SUMMARY"
+          uv run deptry . --extend-exclude ".agents|.claude|scripts|apps" | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+  import-graph-linter:
+    name: Import-graph contracts (import-linter)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install deps
+        run: uv sync --dev
+      - name: Run import-linter
+        run: |
+          echo "### Import-graph contracts (import-linter)" >> "$GITHUB_STEP_SUMMARY"
+          uv run lint-imports --config .importlinter | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+  profiling-hot-paths:
+    name: Profile hot paths (pyinstrument)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install deps
+        run: uv sync --dev
+      - name: Profile a representative CLI with py-spy-equivalent (pyinstrument)
+        run: |
+          echo "### Profiling report (pyinstrument)" >> "$GITHUB_STEP_SUMMARY"
+          uv run python -m pyinstrument -r text -o pyinstrument-report.txt \
+            -m src.utils.market_data SPY || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          head -80 pyinstrument-report.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Profiling step completed with caveats — see logs."
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  dead-flag-detection:
+    name: Dead feature-flag detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan for unreferenced feature_flag usages
+        run: |
+          echo "### Dead feature-flag detection" >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Flags referenced in src/utils/feature_flags.py or FG_FLAG_ env vars without a call site:' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          # extract FG_FLAG_* refs from code and compare to flags.enabled() call sites
+          DECLARED=$(git grep -hE "FG_FLAG_[A-Z_]+" -- 'src/**/*.py' 'docs/**/*.md' | grep -oE "FG_FLAG_[A-Z_]+" | sort -u || true)
+          CALLED=$(git grep -hE 'flags\.enabled\("([A-Z_]+)"' -- 'src/**/*.py' | grep -oE '"[A-Z_]+"' | tr -d '"' | sort -u || true)
+          echo "Declared: $DECLARED" >> "$GITHUB_STEP_SUMMARY"
+          echo "Called: $CALLED" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

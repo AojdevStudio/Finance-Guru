@@ -1,0 +1,17 @@
+{
+  "default": true,
+  "MD049": { "style": "underscore" },
+  "MD001": false,
+  "MD012": false,
+  "MD013": false,
+  "MD022": false,
+  "MD025": false,
+  "MD026": false,
+  "MD031": false,
+  "MD032": false,
+  "MD033": false,
+  "MD036": false,
+  "MD040": false,
+  "MD041": false,
+  "MD046": false
+}

@@ -1,17 +1,39 @@
 {
   "name": "family-office",
+  "version": "2.1.0",
   "module": "index.ts",
   "type": "module",
   "private": true,
   "license": "AGPL-3.0-or-later",
+  "description": "Finance Guru monorepo root — Python engine + TypeScript apps",
+  "workspaces": ["apps/*"],
   "scripts": {
     "test": "uv run pytest tests/python/ -v",
-    "typecheck": "echo 'Python project - typecheck skipped'"
+    "typecheck": "echo 'Python project - typecheck skipped'",
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "size": "size-limit",
+    "size-analyze": "size-limit --why"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "turbo": "^2.3.0",
+    "size-limit": "^11.1.6",
+    "@size-limit/preset-app": "^11.1.6",
+    "bundlesize": "^0.18.2"
   },
   "peerDependencies": {
     "typescript": "^5"
-  }
+  },
+  "size-limit": [
+    {
+      "name": "plaid-dashboard (main bundle)",
+      "path": "apps/plaid-dashboard/.next/static/**/*.js",
+      "limit": "500 KB",
+      "ignore": ["framework", "main-app", "webpack"]
+    }
+  ],
+  "packageManager": "bun@1.2.0"
 }
