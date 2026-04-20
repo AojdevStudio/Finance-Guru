@@ -15,7 +15,7 @@ attrs==25.3.0
     #   aiohttp
     #   jsonschema
     #   referencing
-beautifulsoup4==4.13.5
+beautifulsoup4==4.14.3
     # via
     #   family-office
     #   yfinance
@@ -38,11 +38,11 @@ cffi==2.0.0
     # via
     #   cryptography
     #   curl-cffi
-charset-normalizer==3.4.3
+charset-normalizer==3.4.7
     # via
     #   reportlab
     #   requests
-click==8.3.0
+click==8.3.2
     # via
     #   deptry
     #   import-linter
@@ -56,11 +56,11 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   tqdm
 contourpy==1.3.3
     # via matplotlib
-coverage==7.13.1
+coverage==7.13.5
     # via pytest-cov
 cryptography==46.0.7
     # via growthbook
-curl-cffi==0.13.0
+curl-cffi==0.15.0
     # via yfinance
 cycler==0.12.1
     # via matplotlib
@@ -75,13 +75,13 @@ et-xmlfile==2.0.0
     # via openpyxl
 execnet==2.1.2
     # via pytest-xdist
-faker==40.13.0
+faker==40.15.0
     # via scrubadub
-filelock==3.28.0
+filelock==3.29.0
     # via cachecontrol
-fonttools==4.61.0
+fonttools==4.62.1
     # via matplotlib
-frozendict==2.4.6
+frozendict==2.4.7
     # via yfinance
 frozenlist==1.8.0
     # via
@@ -89,12 +89,12 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.45
+gitpython==3.1.46
     # via streamlit
 grimp==3.14
     # via import-linter
 growthbook==2.2.0
-idna==3.10
+idna==3.11
     # via
     #   requests
     #   yarl
@@ -107,28 +107,28 @@ jinja2==3.1.6
     # via
     #   altair
     #   pydeck
-joblib==1.5.2
+joblib==1.5.3
     # via
     #   nltk
     #   scikit-learn
-jsonschema==4.25.1
+jsonschema==4.26.0
     # via altair
 jsonschema-specifications==2025.9.1
     # via jsonschema
-kiwisolver==1.4.9
+kiwisolver==1.5.0
     # via matplotlib
-librt==0.7.8 ; platform_python_implementation != 'PyPy'
+librt==0.9.0 ; platform_python_implementation != 'PyPy'
     # via mypy
 license-expression==30.4.4
     # via cyclonedx-python-lib
-linkify-it-py==2.0.3
+linkify-it-py==2.1.0
     # via markdown-it-py
 markdown-it-py==4.0.0
     # via
     #   mdit-py-plugins
     #   rich
     #   textual
-markupsafe==3.0.2
+markupsafe==3.0.3
     # via jinja2
 matplotlib==3.10.8
     # via family-office
@@ -144,16 +144,16 @@ multidict==6.7.1
     #   yarl
 multitasking==0.0.12
     # via yfinance
-mypy==1.19.1
+mypy==1.20.1
 mypy-extensions==1.1.0
     # via mypy
-narwhals==2.5.0
+narwhals==2.20.0
     # via
     #   altair
     #   plotly
 nltk==3.9.4
     # via textblob
-numpy==2.3.3
+numpy==2.4.4
     # via
     #   contourpy
     #   family-office
@@ -194,13 +194,13 @@ pandas==2.3.2
     #   streamlit
     #   yfinance
 pandas-stubs==3.0.0.260204
-pathspec==1.0.3
+pathspec==1.0.4
     # via mypy
 peewee==3.18.2
     # via yfinance
 phonenumbers==9.0.28
     # via scrubadub
-pillow==12.1.1
+pillow==12.2.0
     # via
     #   family-office
     #   matplotlib
@@ -213,12 +213,12 @@ pip-api==0.0.34
 pip-audit==2.10.0
 pip-requirements-parser==32.0.1
     # via pip-audit
-platformdirs==4.4.0
+platformdirs==4.9.6
     # via
     #   pip-audit
     #   textual
     #   yfinance
-plotly==6.3.0
+plotly==6.7.0
     # via family-office
 pluggy==1.6.0
     # via
@@ -242,29 +242,29 @@ pyarrow==21.0.0
     # via streamlit
 pycparser==2.23 ; implementation_name != 'PyPy'
     # via cffi
-pydantic==2.12.0
+pydantic==2.13.3
     # via family-office
-pydantic-core==2.41.1
+pydantic-core==2.46.3
     # via pydantic
-pydeck==0.9.1
+pydeck==0.9.2
     # via streamlit
-pygments==2.19.2
+pygments==2.20.0
     # via
     #   pytest
     #   rich
     #   textual
 pyinstrument==5.1.2
-pyparsing==3.2.5
+pyparsing==3.3.2
     # via
     #   matplotlib
     #   pip-requirements-parser
-pytest==9.0.2
+pytest==9.0.3
     # via
     #   pytest-cov
     #   pytest-mock
     #   pytest-rerunfailures
     #   pytest-xdist
-pytest-cov==7.0.0
+pytest-cov==7.1.0
 pytest-mock==3.15.1
 pytest-rerunfailures==16.1
 pytest-xdist==3.8.0
@@ -273,7 +273,7 @@ python-dateutil==2.9.0.post0
     #   dateparser
     #   matplotlib
     #   pandas
-python-dotenv==1.1.1
+python-dotenv==1.2.2
     # via family-office
 python-json-logger==4.1.0
 python-stdnum==2.2
@@ -287,7 +287,7 @@ pyyaml==6.0.3
     # via family-office
 questionary==2.1.1
     # via family-office
-referencing==0.36.2
+referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
@@ -295,9 +295,9 @@ regex==2026.4.4
     # via
     #   dateparser
     #   nltk
-reportlab==4.4.5
+reportlab==4.4.10
     # via family-office
-requests==2.32.5
+requests==2.33.1
     # via
     #   cachecontrol
     #   family-office
@@ -311,16 +311,16 @@ rich==14.2.0
     #   import-linter
     #   pip-audit
     #   textual
-rpds-py==0.27.1
+rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-ruff==0.15.1
-scikit-learn==1.7.2
+ruff==0.15.11
+scikit-learn==1.8.0
     # via
     #   family-office
     #   scrubadub
-scipy==1.16.2
+scipy==1.17.1
     # via
     #   family-office
     #   scikit-learn
@@ -328,18 +328,18 @@ scrubadub==2.0.1
 sentry-sdk==2.58.0
 six==1.17.0
     # via python-dateutil
-smmap==5.0.2
+smmap==5.0.3
     # via gitdb
 sortedcontainers==2.4.0
     # via cyclonedx-python-lib
-soupsieve==2.8
+soupsieve==2.8.3
     # via beautifulsoup4
-streamlit==1.54.0
+streamlit==1.56.0
     # via family-office
 structlog==25.5.0
-tenacity==9.1.2
+tenacity==9.1.4
     # via streamlit
-textblob==0.15.3
+textblob==0.20.0
     # via scrubadub
 textual==6.6.0
     # via family-office
@@ -353,12 +353,12 @@ tomli==2.4.1
     #   pip-audit
 tomli-w==1.2.0
     # via pip-audit
-tornado==6.5.2
+tornado==6.5.5
     # via streamlit
 tqdm==4.67.3
     # via nltk
 types-pyyaml==6.0.12.20250915
-types-requests==2.32.4.20260107
+types-requests==2.33.0.20260408
 typing-extensions==4.15.0
     # via
     #   aiosignal
@@ -400,7 +400,7 @@ urllib3==2.6.3
 vulture==2.16
 watchdog==6.0.0 ; sys_platform != 'darwin'
     # via streamlit
-wcwidth==0.5.3
+wcwidth==0.6.0
     # via prompt-toolkit
 websockets==15.0.1
     # via yfinance
