@@ -21,6 +21,12 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
 
+      - name: Validate exported requirements.txt is in sync
+        env:
+          UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
+        run: |
+          uv export --format requirements.txt --no-hashes --no-emit-project --frozen | diff -u requirements.txt -
+
       - name: Set up Bun
         # Needed by tests that shell out to bun for the onboarding
         # TypeScript sections (test_cash_flow_section, test_debt_profile_section,

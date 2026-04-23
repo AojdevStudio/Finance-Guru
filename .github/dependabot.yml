@@ -1,6 +1,9 @@
 version: 2
 updates:
-  - package-ecosystem: pip
+  # This repo is uv-managed. Point Dependabot at the uv project state so it
+  # updates pyproject/uv.lock instead of only touching the exported
+  # requirements.txt artifact.
+  - package-ecosystem: uv
     directory: /
     schedule:
       interval: weekly
