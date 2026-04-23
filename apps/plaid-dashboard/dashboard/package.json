@@ -14,7 +14,7 @@
     "react-dom": "^19.0.0",
     "react-plaid-link": "^3.6.0",
     "@tanstack/react-query": "^5.60.0",
-    "lucide-react": "^0.460.0",
+    "lucide-react": "^1.9.0",
     "clsx": "^2.1.0",
     "tailwind-merge": "^2.5.0"
   },
