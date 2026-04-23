@@ -408,7 +408,7 @@ xlsxwriter==3.2.9
     # via family-office
 yarl==1.23.0
     # via aiohttp
-yfinance==0.2.66
+yfinance==1.3.0
     # via family-office
 zipp==3.23.1
     # via importlib-metadata
