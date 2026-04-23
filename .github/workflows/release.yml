@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Run release-please
         id: release
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         with:
           # Prefer a PAT when available to avoid repository-level restrictions
           # on pull request creation from the default GITHUB_TOKEN.
