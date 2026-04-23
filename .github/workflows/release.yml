@@ -23,20 +23,17 @@ jobs:
     steps:
       - name: Run release-please
         id: release
+        if: ${{ secrets.RELEASE_PLEASE_TOKEN != '' }}
         uses: googleapis/release-please-action@v4
         with:
           release-type: python
-          package-name: family-office
-          bump-minor-pre-major: true
-          bump-patch-for-minor-pre-major: true
-          changelog-types: |
-            [
-              {"type":"feat","section":"Added","hidden":false},
-              {"type":"fix","section":"Fixed","hidden":false},
-              {"type":"chore","section":"Changed","hidden":false},
-              {"type":"docs","section":"Documentation","hidden":false},
-              {"type":"security","section":"Security","hidden":false}
-            ]
+          target-branch: main
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+
+      - name: Skip release-please when token is not configured
+        if: ${{ secrets.RELEASE_PLEASE_TOKEN == '' }}
+        run: |
+          echo "::notice::RELEASE_PLEASE_TOKEN is not configured; skipping release-please to avoid branch protection failure."
 
   deploy-notes:
     name: Deploy release notes
