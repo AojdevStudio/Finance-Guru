@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Keep routine version-update noise low. Security updates are controlled by
+  # Disable scheduled version-update PRs. Security updates are controlled by
   # GitHub repository settings; this file only governs scheduled version bumps.
   #
   # This repo is uv-managed. Dependabot must target the uv project state so it
@@ -13,7 +13,7 @@ updates:
       day: monday
       time: "08:00"
       timezone: America/Chicago
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
     labels:
       - dependencies
       - python
