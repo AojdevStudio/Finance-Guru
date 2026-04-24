@@ -1,16 +1,19 @@
 version: 2
 updates:
-  # This repo is uv-managed. Point Dependabot at the uv project state so it
-  # updates pyproject/uv.lock instead of only touching the exported
+  # Keep routine version-update noise low. Security updates are controlled by
+  # GitHub repository settings; this file only governs scheduled version bumps.
+  #
+  # This repo is uv-managed. Dependabot must target the uv project state so it
+  # updates pyproject.toml/uv.lock instead of only touching the exported
   # requirements.txt artifact.
   - package-ecosystem: uv
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
       day: monday
       time: "08:00"
       timezone: America/Chicago
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     labels:
       - dependencies
       - python
@@ -21,41 +24,3 @@ updates:
         update-types:
           - minor
           - patch
-
-  - package-ecosystem: bun
-    directory: /apps/plaid-dashboard
-    schedule:
-      interval: weekly
-      day: monday
-      time: "08:00"
-      timezone: America/Chicago
-    open-pull-requests-limit: 3
-    labels:
-      - dependencies
-      - plaid-dashboard
-    commit-message:
-      prefix: "chore(plaid-deps)"
-
-  - package-ecosystem: bun
-    directory: /apps/simplefin-sync
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    labels:
-      - dependencies
-      - simplefin-sync
-    commit-message:
-      prefix: "chore(simplefin-deps)"
-
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - ci
-    commit-message:
-      prefix: "chore(ci)"
