@@ -14,8 +14,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  preflight:
+    name: Preflight — ensure release token exists
+    runs-on: ubuntu-latest
+    outputs:
+      has_release_token: ${{ steps.check.outputs.has_release_token }}
+    steps:
+      - name: Check token availability
+        id: check
+        env:
+          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          if [ -n "$RELEASE_PLEASE_TOKEN" ]; then
+            echo "has_release_token=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::RELEASE_PLEASE_TOKEN detected; release automation enabled."
+          else
+            echo "has_release_token=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::RELEASE_PLEASE_TOKEN is not configured; skipping release-please to avoid PR permission failures."
+          fi
+
   release-please:
     name: Release Please — automated release + publish PRs
+    needs: preflight
+    if: needs.preflight.outputs.has_release_token == 'true'
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
@@ -25,16 +46,16 @@ jobs:
         id: release
         uses: googleapis/release-please-action@v5
         with:
-          # Prefer a PAT when available to avoid repository-level restrictions
-          # on pull request creation from the default GITHUB_TOKEN.
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN != '' && secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          # release-please must use a PAT when repository settings block
+          # pull-request creation by the default GITHUB_TOKEN.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
   deploy-notes:
     name: Deploy release notes
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    needs: [preflight, release-please]
+    if: needs.preflight.outputs.has_release_token == 'true' && needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -52,13 +73,25 @@ jobs:
             -d "{\"message\":\"Release ${{ needs.release-please.outputs.tag_name }} created.\",\"voice_enabled\":false}" \
             || true
 
+
+  release-skipped:
+    name: Release skipped (missing RELEASE_PLEASE_TOKEN)
+    needs: preflight
+    if: needs.preflight.outputs.has_release_token != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain skip
+        run: |
+          echo "Release workflow skipped: configure RELEASE_PLEASE_TOKEN to enable automated release PRs."
+          echo "Release skipped because RELEASE_PLEASE_TOKEN is missing." >> "$GITHUB_STEP_SUMMARY"
+
   # Error → insight pipeline: if release-please or deploy-notes fails,
   # create a GitHub issue so the failure becomes a tracked work item.
   # (Sentry-style error capture without a third-party service.)
   create-issue-on-failure:
     name: Create issue on release failure (error-to-issue pipeline)
-    needs: [release-please, deploy-notes]
-    if: always() && (needs.release-please.result == 'failure' || needs.deploy-notes.result == 'failure')
+    needs: [preflight, release-please, deploy-notes]
+    if: always() && needs.preflight.outputs.has_release_token == 'true' && (needs.release-please.result == 'failure' || needs.deploy-notes.result == 'failure')
     runs-on: ubuntu-latest
     permissions:
       issues: write
