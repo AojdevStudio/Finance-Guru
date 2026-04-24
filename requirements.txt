@@ -60,7 +60,7 @@ coverage==7.13.1
     # via pytest-cov
 cryptography==46.0.7
     # via growthbook
-curl-cffi==0.13.0
+curl-cffi==0.15.0
     # via yfinance
 cycler==0.12.1
     # via matplotlib
@@ -281,7 +281,6 @@ python-stdnum==2.2
 pytz==2025.2
     # via
     #   dateparser
-    #   pandas
     #   yfinance
 pyyaml==6.0.3
     # via family-office
@@ -308,6 +307,7 @@ requirements-parser==0.13.0
     # via deptry
 rich==14.2.0
     # via
+    #   curl-cffi
     #   import-linter
     #   pip-audit
     #   textual
@@ -334,7 +334,7 @@ sortedcontainers==2.4.0
     # via cyclonedx-python-lib
 soupsieve==2.8
     # via beautifulsoup4
-streamlit==1.54.0
+streamlit==1.56.0
     # via family-office
 structlog==25.5.0
 tenacity==9.1.2
@@ -381,7 +381,7 @@ typing-extensions==4.15.0
     #   typing-inspection
 typing-inspection==0.4.2
     # via pydantic
-tzdata==2025.2
+tzdata==2025.2 ; sys_platform == 'emscripten' or sys_platform == 'win32'
     # via
     #   faker
     #   pandas
