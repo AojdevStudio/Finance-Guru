@@ -9,9 +9,12 @@ Ingest Fidelity portfolio CSVs from Downloads into `notebooks/updates/`. Handles
 
 ## Triggers
 
-- "ingest positions", "import positions", "bring in positions"
-- "portfolio-sync" (chains: IngestPositions -> SyncPortfolio)
-- User mentions downloading positions/balances from Fidelity
+This workflow runs in two contexts — standalone, or as the first half of the E2E chain. See `SKILL.md` → "Workflow Routing" for the authoritative trigger table.
+
+- **Standalone (ingest-only mode)**: `ingest positions`, `import positions`, `bring in positions`, `move fidelity files`, or the user mentions downloading positions/balances from Fidelity but doesn't ask for the sheet to be updated.
+- **Chained (E2E mode)**: `portfolio-sync`, `sync portfolio`, `import fidelity`, `run the full skill`, `run the full skill e2e`, `full portfolio sync`, `sync my portfolio`, or the user says they just downloaded from Fidelity and wants the sheet updated. In this mode, this workflow finishes with a one-line handoff and SyncPortfolio runs next, automatically (no "Proceed?" prompt).
+
+If the trigger is ambiguous, prefer chained/E2E — that matches what users usually mean when they ask about syncing.
 
 ## Step 1: Locate Source Files in Downloads
 
@@ -122,7 +125,21 @@ ls -la notebooks/updates/Dividend_Positions_*.csv | tail -3
 ls -la notebooks/updates/Balances_for_Account_*.csv
 ```
 
-**Generate ingestion report**:
+The report format depends on the invocation mode (see `SKILL.md` → "Workflow Routing"). Use the mode the skill was invoked in; do not improvise a third variant.
+
+### Mode A — Chained from E2E flow (default for "portfolio-sync")
+
+When this workflow is running as the first half of the E2E chain, emit a single handoff line and **immediately continue into SyncPortfolio**. Do NOT print the full report, do NOT ask "Proceed?", do NOT wait for confirmation.
+
+```
+Ingest complete ({N} files moved, ~/Downloads/ cleaned). Chaining into SyncPortfolio ->
+```
+
+The full summary will appear at the end of SyncPortfolio, where it's actually useful (the positions are in the sheet by then).
+
+### Mode B — Standalone ingest ("ingest positions" trigger)
+
+When the user explicitly asked to ingest only (not sync), print the full report and stop. The user wants a breakpoint here to inspect files before writing to the sheet.
 
 ```
 POSITION INGESTION COMPLETE - {date}
@@ -136,11 +153,13 @@ FILES MOVED:
 DOWNLOADS CLEANED:
   Removed {N} files from ~/Downloads/
 
-NEXT STEPS:
-  -> Run "portfolio-sync" to push positions to Google Sheets
-  -> Run "sync dividends" to update Dividend Tracker
+NEXT STEPS (user's choice — do not auto-run):
+  → "portfolio-sync" to push positions to Google Sheets
+  → "sync dividends" to update Dividend Tracker
 ---
 ```
+
+**Why the mode matters**: The historical version of this workflow always printed Mode B, which caused agents to stop and ask "Proceed?" even when the user had clearly asked for the full end-to-end flow. The fix is to let the trigger phrase decide — if the user said "portfolio-sync" or any E2E phrase, use Mode A. If they said "ingest positions", use Mode B.
 
 ## Edge Cases
 

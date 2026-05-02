@@ -118,24 +118,25 @@ mcp__gdrive__sheets(
 )
 ```
 
-### 5. Click "Add Dividend" Button (Browser Automation)
+### 5. Click "Add Dividend" Button (via `/InterceptBrowser`)
 
-After writing records, use browser automation to process them:
+After writing records, invoke the **`/InterceptBrowser`** skill to click the button. Interceptor uses an authenticated real Chrome/Brave session, so it bypasses Google's bot detection and keeps the existing login.
 
-```javascript
-// 1. Open Google Sheets
-mcp__claude-in-chrome__tabs_create_mcp({
-    url: "https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid=2068577140"
-})
+**Prompt template for `/InterceptBrowser`:**
 
-// 2. Wait for sheet to load
-// 3. Look for "Add Dividend" button or custom menu
-// 4. Click to trigger Apps Script
+```
+Navigate to https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid=2068577140
+and click the "Add Dividend" button (drawing/image embedded in the Dividends tab,
+near the input area). Wait 3 seconds after click for the Apps Script to process.
+Confirm the input area A2:D10 is cleared. Return PASS/FAIL.
 ```
 
-**Alternative: Use Apps Script Menu**
-- Extensions → Apps Script macros
-- Or custom menu added by the script
+**Fallback order:**
+1. `/InterceptBrowser` (preferred — authenticated, no 2FA prompts)
+2. Apps Script macro direct call: Extensions → Macros → `addDividendFast`
+3. Ask user to click manually (last resort — report link + pause)
+
+**Why not `mcp__claude-in-chrome__*`:** that MCP is deprecated in this environment; `/InterceptBrowser` is the sanctioned browser tool per Article IX. Do NOT invoke playwright-cli directly for this — the sheet requires the logged-in Google session.
 
 ### 6. Verify Processing
 
@@ -171,7 +172,7 @@ After clicking button:
                ▼
 ┌─────────────────────────────────┐
 │  CLICK "Add Dividend" BUTTON    │
-│  (Browser automation or manual) │
+│  via /InterceptBrowser skill    │
 └──────────────┬──────────────────┘
                │
                ▼
@@ -220,11 +221,21 @@ The Dividends sheet has **Apps Script automation** that:
 ## Pre-Flight Checklist
 
 Before syncing dividends:
-- [ ] `dividend.csv` exists in `notebooks/updates/`
+- [ ] `dividend.csv` OR `Dividend_Positions_MMM-DD-YYYY.csv` (freshest) exists in `notebooks/updates/`
 - [ ] CSV is recent (check "Date downloaded" at bottom)
 - [ ] Input area (A2:D43) has available slots
 - [ ] If input area has data, click button first to clear it
-- [ ] Browser automation available for button click
+- [ ] `/InterceptBrowser` skill available for button click (or manual-click fallback confirmed)
+
+## Known Limitation: Historical Log Ticker Roster
+
+The historical log (G-U) aggregates via per-ticker SUMIFS rows (rows 4-31). **Dividends for tickers NOT in that roster get appended to the raw record log but orphaned from the aggregated totals.**
+
+**Check before syncing**: if a CSV row has a ticker that doesn't appear in column H of the historical log (rows 4-31), flag the user and either:
+1. Add a new roster row for that ticker (Fund Name in G, Ticker in H, SUMIFS formulas in I-U copied from sibling row)
+2. Accept the orphan (dividend still lands in raw log at `A50+`, just won't roll up)
+
+Known orphans (as of 2026-04-21): SPMO, NVDA — roster needs expansion.
 
 ## Example Scenario
 

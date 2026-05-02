@@ -56,8 +56,8 @@
 
   <item cmd="*optimize">Optimize income portfolio for yield and tax efficiency</item>
 
-  <item cmd="*buy-ticket" exec="{project-root}/fin-guru/tasks/create-doc.md" tmpl="{project-root}/fin-guru/templates/buy-ticket-template.md">
-    Generate buy ticket for Layer 2 income deployment using the canonical ticket contract
+  <item cmd="*buy-ticket" skill="fin-guru-buy-ticket">
+    Generate buy ticket for Layer 2 income deployment — delegates to the fin-guru-buy-ticket skill which orchestrates portfolio load, price snapshot, ITC advisory, allocation, pre-flight gates, and save to fin-guru-private/fin-guru/tickets/
   </item>
 
   <item cmd="*checklist" exec="{project-root}/fin-guru/tasks/execute-checklist.md" data="{project-root}/fin-guru/checklists/dividend-framework.md">

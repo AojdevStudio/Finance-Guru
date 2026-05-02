@@ -62,8 +62,12 @@
 
   <item cmd="*rebalance">Recommend strategic rebalancing with timing and triggers</item>
 
-  <item cmd="*buy-ticket" exec="{project-root}/fin-guru/tasks/create-doc.md" tmpl="{project-root}/fin-guru/templates/buy-ticket-template.md">
-    Generate buy ticket for capital deployment using the canonical ticket contract
+  <item cmd="*buy-ticket" skill="fin-guru-buy-ticket">
+    Generate buy ticket for capital deployment — delegates to the fin-guru-buy-ticket skill which orchestrates portfolio load, price snapshot, ITC advisory, allocation, pre-flight gates, and save to fin-guru-private/fin-guru/tickets/
+  </item>
+
+  <item cmd="*hedge-roll" skill="fin-guru-hedge-roll">
+    Open, roll, or close options hedges — delegates to the fin-guru-hedge-roll skill which infers mode from user phrasing and orchestrates the protective-put lifecycle per hedging-strategies.md
   </item>
 
   <item cmd="*risk-validate">Validate proposed positions using comprehensive risk metrics</item>

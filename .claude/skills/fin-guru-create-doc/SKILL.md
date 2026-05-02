@@ -29,11 +29,19 @@ Create professional financial documents using Finance Guru templates.
    - Buy tickets: `tickets/buy-ticket-{YYYY-MM-DD}-{short-descriptor}.md`
    - Strategy docs: `analysis/{strategy-name}-master-strategy.md`
 
-## Buy Ticket Contract
+## Delegation to Specialized Ticket Skills
 
-Buy tickets use the canonical `buy-ticket-template.md` contract:
+For the two ticket types below, **do not draft here — delegate to the specialized skill**:
 
-- Builder is not a direct buy-ticket entrypoint; buy-ticket creation should begin from Strategy Advisor or Dividend Specialist
+- **Buy tickets** (capital deployment) → use `fin-guru-buy-ticket`. That skill enforces portfolio CSV loading, live price snapshot, ITC advisory, allocation table generation, and pre-flight gates before writing to `fin-guru-private/fin-guru/tickets/`.
+- **Options hedge tickets** (open / roll / close protective puts) → use `fin-guru-hedge-roll`. That skill handles mode selection (OPEN | ROLL | CLOSE), enforces framework invariants from `hedging-strategies.md`, and writes to `fin-guru-private/fin-guru/tickets/rolls/`.
+
+This skill remains the entrypoint for: analysis reports, compliance memos, Excel model specs, presentations, and onboarding reports — everything else covered by the templates table above.
+
+## Buy Ticket Contract (Legacy Reference)
+
+This contract is now enforced by `fin-guru-buy-ticket`. Preserved here for documents that cite it:
+
 - YAML frontmatter plus a structured `## Execution Summary` section
 - Portfolio context must already be loaded
 - Require deployment amount, allocation table, price snapshot, strategy rationale, risk notes, and sources/assumptions

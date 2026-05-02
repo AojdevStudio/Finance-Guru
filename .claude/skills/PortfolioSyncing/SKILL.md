@@ -19,55 +19,81 @@ Safely import broker CSV position exports into the Google Sheets DataHub tab, en
 
 ## Workflow Routing
 
-**When executing a workflow, output the corresponding notification:**
+This skill has three invocation modes. Pick the one that matches the user's trigger phrase and run it without detours.
 
-| Workflow | Trigger | File |
-|----------|---------|------|
-| **IngestPositions** | "ingest positions", "import positions", "bring in positions", user mentions downloading from Fidelity | `workflows/IngestPositions.md` |
-| **SyncPortfolio** | "sync portfolio", "portfolio-sync", "import fidelity" | `workflows/SyncPortfolio.md` |
+| Mode | Trigger phrases | What runs | Behavior |
+|------|-----------------|-----------|----------|
+| **E2E (default for "portfolio-sync")** | `portfolio-sync`, `sync portfolio`, `import fidelity`, `run the full skill`, `run the full skill e2e`, `full portfolio sync`, `sync my portfolio`, user says they just downloaded from Fidelity and wants the sheet updated | IngestPositions -> SyncPortfolio, chained | Run both in sequence with a single one-line handoff between them. Do NOT ask "Proceed?" between the two workflows. Pause only if a Safety Gate fires. |
+| **Ingest-only** | `ingest positions`, `import positions`, `bring in positions`, `move fidelity files`, user explicitly wants to stage files without touching the sheet | `workflows/IngestPositions.md` | Stop after ingest. Report files moved and let the user decide next steps. |
+| **Sync-only** | `push to sheets`, `sync to datahub`, user confirms files are already in `notebooks/updates/` | `workflows/SyncPortfolio.md` | Skip ingest. Read existing CSVs in `notebooks/updates/` and push to Google Sheets. |
 
-**Typical flow**: IngestPositions (move from Downloads) -> SyncPortfolio (push to Google Sheets)
+**Default-to-E2E rule**: When the trigger is ambiguous (e.g., "portfolio-sync"), assume the user wants the whole flow. The noun "portfolio-sync" in this household means "take what I just downloaded and make the sheet reflect it." The split between Ingest and Sync is an implementation detail, not a user-facing choice.
 
-**Notifications:**
+**Chaining rule (E2E mode)**: Between IngestPositions and SyncPortfolio, log exactly one handoff line and continue:
+
 ```
-Running the **IngestPositions** workflow from the **PortfolioSyncing** skill...
+Ingest complete ({N} files moved). Chaining into SyncPortfolio ->
+```
+
+Then run SyncPortfolio immediately. Do not re-confirm, re-list files, or ask the user to approve the handoff. The only valid reasons to pause mid-chain are the Safety Gate conditions below — real data anomalies, not routine workflow boundaries.
+
+**Notifications (emit once when the mode is chosen):**
+
+```
+Running the **Full E2E** flow from the **PortfolioSyncing** skill (IngestPositions -> SyncPortfolio)...
 ```
 ```
-Running the **SyncPortfolio** workflow from the **PortfolioSyncing** skill...
+Running the **IngestPositions** workflow from the **PortfolioSyncing** skill (ingest-only mode)...
+```
+```
+Running the **SyncPortfolio** workflow from the **PortfolioSyncing** skill (sync-only mode)...
 ```
 
 ## Examples
 
-**Example 1: Full flow from Downloads**
+**Example 1: E2E flow (default) — "portfolio-sync" or "run the full skill e2e"**
+```
+User: "portfolio-sync"  (or "sync portfolio", "run the full skill e2e", etc.)
+-> Emits: "Running the Full E2E flow from the PortfolioSyncing skill..."
+-> Runs IngestPositions:
+   -> Scans ~/Downloads/ for Portfolio_Positions_*.csv and Balances_*.csv
+   -> Classifies regular vs dividend view by headers
+   -> Moves files into notebooks/updates/ (regular as-is, dividend renamed, Balances overwrites)
+-> Emits ONE handoff line: "Ingest complete (3 files moved). Chaining into SyncPortfolio ->"
+-> Runs SyncPortfolio immediately (no "Proceed?" prompt):
+   -> Reads CSVs from notebooks/updates/, compares with DataHub
+   -> Updates quantities, cost basis, SPAXX, margin debt
+-> Prints final summary. Pauses only if a Safety Gate fired mid-flow.
+```
+
+**Example 2: Ingest-only — "ingest positions"**
 ```
 User: "ingest positions" or "bring in positions"
--> Scans ~/Downloads/ for Portfolio_Positions_*.csv and Balances_*.csv
--> Classifies regular vs dividend view by reading headers
--> Moves regular view as-is (already date-tagged)
--> Renames dividend view to Dividend_Positions_MMM-DD-YYYY.csv
--> Moves Balances file (overwrites existing)
--> Reports files moved and suggests "portfolio-sync" next
+-> Emits: "Running the IngestPositions workflow ... (ingest-only mode)..."
+-> Moves files from ~/Downloads/ to notebooks/updates/
+-> Prints the full POSITION INGESTION COMPLETE report
+-> Stops. User decides whether to run "portfolio-sync" next.
 ```
 
-**Example 2: Sync after ingest**
+**Example 3: Sync-only — files already staged**
 ```
-User: "portfolio-sync"
--> Reads Portfolio_Positions_*.csv and Balances_*.csv from notebooks/updates/
--> Compares with Google Sheets DataHub
--> Updates quantities, cost basis, SPAXX, margin debt
--> Reports changes and validates formulas
+User: "push to sheets"  (files are already in notebooks/updates/)
+-> Emits: "Running the SyncPortfolio workflow ... (sync-only mode)..."
+-> Skips ingest
+-> Reads existing CSVs in notebooks/updates/ and pushes to Google Sheets
 ```
 
-**Example 3: Update positions after trades**
+**Example 4: Update positions after trades (safety gate trips)**
 ```
 User: "I just bought more JEPI, sync my portfolio"
--> Invokes SyncPortfolio workflow
--> Detects quantity change in JEPI
--> If >10% change, asks for confirmation
--> Updates DataHub with new position data
+-> Runs E2E flow
+-> During SyncPortfolio, detects JEPI quantity change > 10%
+-> STOP condition fires: pauses, shows diff table, asks for confirmation
+-> Resumes only after user approves
+-> This is the ONLY kind of pause the skill should produce
 ```
 
-**Example 4: Handling duplicate downloads**
+**Example 5: Handling duplicate downloads**
 ```
 User downloads both regular and dividend views from Fidelity
 -> ~/Downloads/ contains: Portfolio_Positions_Mar-06-2026.csv
@@ -165,21 +191,34 @@ If a new ticker doesn't clearly match any layer pattern, set to `"UNKNOWN - Manu
 
 ## Safety Gates
 
-**STOP conditions** (require user confirmation):
-1. CSV has fewer tickers than sheet (possible sales)
+Safety Gates exist for one reason: to catch data that looks wrong before it hits the sheet. They are **not** a generic "are you sure?" prompt. The list below is exhaustive — if none of these fire, do not pause.
+
+**STOP conditions** (require user confirmation — these are the ONLY legitimate reasons to pause mid-flow):
+1. CSV has fewer tickers than sheet (possible sales or missing data)
 2. Any quantity change > 10%
 3. Any cost basis change > 20%
 4. 3+ formula errors detected
 5. Margin balance jumped > $5,000 (unintentional draw)
 6. **SPAXX discrepancy > $100** (cash mismatch between sheet and CSV)
 
-**FLAG conditions** (alert user but proceed):
+**FLAG conditions** (alert user but proceed — do NOT pause):
 - SPAXX differs from "Settled cash" by $1-$100 (minor discrepancy)
 - Pending Activity differs from "Net debit" by >$100
 
 **When STOPPED**: Show clear diff table, ask user to confirm, proceed only after explicit approval.
 
 **When FLAGGED**: Show the discrepancy, proceed with update but highlight in summary.
+
+### When NOT to pause
+
+Agents tend to over-confirm data operations. Resist that instinct. Specifically, do **not** pause for confirmation:
+
+- Between IngestPositions and SyncPortfolio in the E2E flow — that's routine, not suspicious.
+- Before reading files that are already in `notebooks/updates/`.
+- Before issuing writes to the sheet that fall within the FLAG or no-gate range.
+- To restate the plan the user already triggered by invoking the skill.
+
+The user invoked this skill because they want the sheet updated from the latest Fidelity export. Asking "Proceed?" between routine steps defeats the purpose and is the single most common UX complaint with this skill. Pause only when the data itself is flagged by a STOP condition above.
 
 ## Google Sheets Integration
 

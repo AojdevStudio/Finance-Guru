@@ -2,6 +2,8 @@
 
 **Purpose:** Read Fidelity CSV exports from `notebooks/updates/`, compare with Google Sheets DataHub, and sync position data while preserving sacred formulas.
 
+**Invocation contexts**: This workflow runs either standalone (`push to sheets`, `sync to datahub`) or as the second half of the E2E chain after IngestPositions. When chained, begin immediately — the handoff line from IngestPositions (`Ingest complete (...). Chaining into SyncPortfolio ->`) is your cue to proceed without asking the user to confirm. See `SKILL.md` → "Workflow Routing".
+
 ---
 
 ## Step 1: Pre-Flight Checks
@@ -11,7 +13,9 @@ Before importing CSV:
 - [ ] **Balances CSV** (`Balances_for_Account_*.csv`) is available and current in `notebooks/updates/`
 - [ ] Both CSVs are from Fidelity (not M1 Finance or other broker)
 
-**Files not in `notebooks/updates/`?** Run **IngestPositions** workflow first.
+**Files not in `notebooks/updates/`?** Run **IngestPositions** workflow first (or use the E2E trigger `portfolio-sync` to run both back-to-back).
+
+Pre-flight is a sanity check, not a confirmation gate. If all boxes pass, proceed to Step 2 without prompting.
 
 ---
 

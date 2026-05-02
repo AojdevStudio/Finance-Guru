@@ -91,6 +91,9 @@ function processHook(inputData: string) {
 
         // Read input from stdin
         const data: HookInput = JSON.parse(inputData);
+        if (typeof data.prompt !== 'string' || data.prompt.length === 0) {
+            process.exit(0);
+        }
         const prompt = data.prompt.toLowerCase();
 
         // Load skill rules

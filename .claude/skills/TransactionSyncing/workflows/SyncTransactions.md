@@ -179,48 +179,47 @@ transaction_row = [
 
 ## Step 5: Batch Update Transactions Tab
 
+⚠️ **KNOWN BUG**: `mcp__gdrive__execute(operation: "appendRows")` is broken — it defaults to `Sheet1` regardless of the `range` argument. Use `updateCells` with an explicit row range instead:
+
 ```javascript
-// Append all new transactions at once
-mcp__gdrive__sheets(operation: "appendRows", params: {
-    spreadsheetId: "{spreadsheet_id}",
-    sheetName: "Transactions",
-    values: new_transaction_rows
-})
+// 1) Find last filled row (binary-search if needed; start with rowCount and work down)
+mcp__gdrive__execute(service: "sheets", operation: "readSheet",
+    args: { spreadsheetId, range: "Transactions!A<last>:A<last+100>" })
+// Keep halving/shifting until you find the transition from values -> empty.
+
+// 2) Write at <last_filled + 1>
+const startRow = last_filled + 1;
+const endRow = startRow + new_rows.length - 1;
+mcp__gdrive__execute(service: "sheets", operation: "updateCells",
+    args: { spreadsheetId, range: `Transactions!A${startRow}:I${endRow}`, values: new_rows })
 ```
 
 ## Step 6: Route Expenses to Expense Tracker
 
-**Filter debit card purchases**:
+**Filter expense-bearing actions (NOT just DEBIT CARD PURCHASE)**:
 ```python
+EXPENSE_ACTIONS = ('DEBIT CARD PURCHASE', 'CASH ADVANCE')  # add others as discovered
 expense_rows = []
 for tx in new_transactions:
-    if "debit card" in tx['action'].lower():
-        # Format for Expense Tracker
-        month = get_month_name(tx['date'])  # "January", "February", etc.
-        expense_rows.append([
-            tx['date'],
-            tx['description'],
-            tx['category'],
-            format_amount(tx['amount']),  # "$XX.XX" format
-            month
-        ])
+    if any(a in tx['action'].upper() for a in EXPENSE_ACTIONS):
+        month = get_month_name(tx['date'])  # "January", etc.
+        expense_rows.append([tx['date'], tx['description'], tx['category'],
+                             format_amount(tx['amount']), month])
 ```
 
-**Read existing Expense Tracker for deduplication**:
-```javascript
-mcp__gdrive__sheets(operation: "readSheet", params: {
-    spreadsheetId: "{spreadsheet_id}",
-    range: "Expense Tracker!A:D"
-})
-```
+**Dedup gotcha — scan the FULL existing tab**:
 
-**Append only new expenses**:
+The Transactions tab may have two format eras (e.g., `M/D/YY` old block at the top, `MM/DD/YYYY` new block near the bottom) because the sort order can break over time. A prior sync may have appended to the bottom. Reading only the top rows misses these existing entries, which causes the next sync to re-insert the same dates as duplicates.
+
+- Before appending, read the FULL column A and build a set of all dates present (normalize to one format).
+- Skip any CSV rows whose date is already covered, OR use `Date|Action|Amount` dedup key if you need finer resolution.
+- When in doubt, filter aggressively (only sync dates > the newest existing date seen ANYWHERE in the tab).
+
+**Append new expenses via `updateCells`** (same fix as Step 5 — `appendRows` is broken):
+
 ```javascript
-mcp__gdrive__sheets(operation: "appendRows", params: {
-    spreadsheetId: "{spreadsheet_id}",
-    sheetName: "Expense Tracker",
-    values: new_expense_rows
-})
+mcp__gdrive__execute(service: "sheets", operation: "updateCells",
+    args: { spreadsheetId, range: `Expense Tracker!A${startRow}:E${endRow}`, values: new_expense_rows })
 ```
 
 ## Step 7: Generate Summary Report

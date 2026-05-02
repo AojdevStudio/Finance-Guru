@@ -43,6 +43,7 @@
     ]
   },
   "enabledPlugins": {
-    "superpowers@claude-plugins-official": true
+    "superpowers@claude-plugins-official": true,
+    "imessage@claude-plugins-official": true
   }
 }
