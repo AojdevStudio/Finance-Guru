@@ -1,0 +1,16 @@
+{
+  "eval_id": 6,
+  "eval_name": "close-partial-qqq-only",
+  "prompt": "Close my QQQ puts but keep the SPY ones — I reduced tech concentration but broad-market risk is still live.",
+  "assertions": [
+    {"text": "Ticket file exists at outputs/hedge-close-2026-04-22-qqq-only.md", "check": "file_exists"},
+    {"text": "YAML document_type equals 'options-close-ticket'", "check": "yaml_value"},
+    {"text": "Execution Summary table contains ONLY QQQ SELL TO CLOSE legs — no SPY legs being closed", "check": "qqq_only_close"},
+    {"text": "Position History covers only the QQQ legs", "check": "history_qqq_only"},
+    {"text": "Close Rationale cites Playbook E (Partial Close) or equivalent mixed-rationale pattern", "check": "partial_rationale"},
+    {"text": "Post-Close Portfolio State explicitly reflects MIXED coverage: still hedged vs broad-market drawdown (SPY retained), NOT hedged vs tech-specific drawdown (QQQ closed)", "check": "asymmetric_coverage_stated"},
+    {"text": "Tax Impact Summary covers only QQQ legs", "check": "tax_qqq_only"},
+    {"text": "Rationale explicitly ties close decision to user's stated 'reduced tech concentration'", "check": "rationale_addresses_prompt"},
+    {"text": "Educational disclaimer present", "check": "disclaimer"}
+  ]
+}

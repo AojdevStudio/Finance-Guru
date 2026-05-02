@@ -1,0 +1,47 @@
+{
+  "skill_name": "fin-guru-hedge-roll",
+  "evals": [
+    {
+      "id": 1,
+      "name": "open-tech-heavy-200k",
+      "prompt": "I have no protective puts on yet. Put on a hedge program for my $200k portfolio. It's tech-heavy (PLTR 27%, TSLA 13%, NVDA 8%, MSTR and COIN significant). Budget is $800/month per my Layer 3 allocation.",
+      "expected_output": "Mode selection: OPEN (from 'I have no ... put on'). hedge-open-ticket-template.md filled. Sizing: 4 contracts ($200k / $50k). Multi-underlying weights: QQQ-heavy (50%+) given tech concentration, SPY 30-40%, IWM 10% or dropped. Strike selection 10-20% OTM with 25-35 DTE. Budget check: $800/month amortized not exceeded. Saved to fin-guru-private/fin-guru/tickets/rolls/hedge-open-YYYY-MM-DD-*.md",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "open-ambiguous-phrasing",
+      "prompt": "Let's start protecting my portfolio.",
+      "expected_output": "Ambiguous phrasing — skill should ask 'Open, roll, or close?' before proceeding. Does NOT auto-detect from rolling_tracker state. If user is truly at zero positions, that's still a confirmation not an inference.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "roll-7-dte",
+      "prompt": "My hedges are at 7 DTE. Roll them. I have 2x SPY May-15 $590 PUT and 2x QQQ May-15 $525 PUT.",
+      "expected_output": "Mode selection: ROLL. Audit shows DTE=7, flags both positions [ROLL]. options_chain_cli scans replacement contracts at 10-20% OTM, 20-45 DTE. Picks new strikes (likely SPY ~$580 and QQQ ~$480 given a current-spot analysis). hedge-roll-ticket-template.md filled with 4-leg table (sell-to-close both old, buy-to-open both new). Cost-to-roll calculated. Rationale explains new expiry, new strikes, why not collar, why not SQQQ. Saved to rolls/hedge-roll-YYYY-MM-DD-*.md",
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "roll-vix-spike-early",
+      "prompt": "VIX just spiked to 25. Should I roll my puts early, or wait? My positions are 12 DTE.",
+      "expected_output": "Mode: ROLL but triggers early-roll decision branch from references/roll-decision-tree.md. Analysis: IV elevated = new puts expensive but thesis may still hold; old puts may have gained on IV-lift (partial offset). Output is a recommendation (roll now vs wait) with cost-to-roll comparison — not a final ticket unless user approves. If user confirms, proceeds to full ticket.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "close-correction-over",
+      "prompt": "The correction is over, VIX is back to 14, my puts have expired-worthless premiums left on them. Close them out.",
+      "expected_output": "Mode: CLOSE. hedge-close-ticket-template.md filled. SELL TO CLOSE table for all open legs. Position history shows realized P&L per leg (total premium cost, residual at close). Tax impact summary (likely STCL given 'expired-worthless premiums left' suggests small residual). Post-Close Portfolio State section explicitly describes unhedged downside exposure with -10/-20/-30% scenarios. Rationale cites hedging-strategies.md line 129 skip-roll guidance. Saved to rolls/hedge-close-YYYY-MM-DD-*.md",
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "close-partial-qqq-only",
+      "prompt": "Close my QQQ puts but keep the SPY ones — I reduced tech concentration but broad-market risk is still live.",
+      "expected_output": "Mode: CLOSE (partial). Execution Summary shows only QQQ legs being sold. Position history only for QQQ. Post-Close Portfolio State reflects MIXED coverage: still hedged against broad-market drawdown (SPY legs retained), but not against tech-specific drawdown. Rationale explicitly notes the asymmetric coverage the user is now accepting.",
+      "files": []
+    }
+  ]
+}

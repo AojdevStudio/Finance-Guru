@@ -1,0 +1,12 @@
+{
+  "eval_id": 2,
+  "eval_name": "open-ambiguous-phrasing",
+  "prompt": "Let's start protecting my portfolio.",
+  "assertions": [
+    {"text": "response.md file exists at outputs/response.md", "check": "file_exists"},
+    {"text": "Response contains an explicit clarification question asking user to choose between OPEN / ROLL / CLOSE modes (or equivalent)", "check": "clarification_question"},
+    {"text": "Response does NOT contain a completed options ticket (no Execution Summary table with filled legs)", "check": "no_ticket_generated"},
+    {"text": "Response does NOT guess mode from portfolio state alone — explicitly acknowledges ambiguity", "check": "no_auto_inference"},
+    {"text": "Response mentions the three modes by name (OPEN, ROLL, CLOSE) or equivalent phrasing", "check": "modes_enumerated"}
+  ]
+}

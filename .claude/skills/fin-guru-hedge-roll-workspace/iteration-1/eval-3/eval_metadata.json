@@ -1,0 +1,19 @@
+{
+  "eval_id": 3,
+  "eval_name": "roll-7-dte",
+  "prompt": "My hedges are at 7 DTE. Roll them. I have 2x SPY May-15 $590 PUT and 2x QQQ May-15 $525 PUT.",
+  "assertions": [
+    {"text": "Ticket file exists at outputs/hedge-roll-2026-04-22-may-to-jun.md", "check": "file_exists"},
+    {"text": "YAML document_type equals 'options-roll-ticket'", "check": "yaml_value"},
+    {"text": "YAML contains net_debit_estimate field with numeric value", "check": "net_debit_field"},
+    {"text": "Execution Summary table contains 4 legs: 2 SELL TO CLOSE (SPY May-15 $590 + QQQ May-15 $525) and 2 BUY TO OPEN (new expiry, new strikes)", "check": "four_legs"},
+    {"text": "New expiry selection explained (likely Jun-19 or similar June monthly)", "check": "new_expiry_explained"},
+    {"text": "New strikes are within 10-20% OTM of current spot per framework", "check": "strike_in_framework"},
+    {"text": "Current Hedge State section has DTE/residual/P&L table per existing position", "check": "hedge_state_table"},
+    {"text": "Roll Strategy Rationale explicitly addresses: why this expiry, why these strikes, why NOT a collar, why NOT SQQQ", "check": "four_rationales"},
+    {"text": "Sizing & Cost Verification section has framework checklist with ✅/⚠️ markers", "check": "framework_checklist"},
+    {"text": "Risk Notes covers IV, leg-risk, assignment risk, tax treatment of closes", "check": "risk_notes_complete"},
+    {"text": "Execution Checklist has bid/ask verification items and hard-stop net debit", "check": "execution_checklist"},
+    {"text": "Educational disclaimer with options-specific language", "check": "disclaimer"}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "eval_id": 1,
+  "eval_name": "layer2-paycheck-deploy",
+  "prompt": "I just got paid $3,200 from my Avanade W2 check. Deploy it into Layer 2 income using the usual JEPI/JEPQ/QQQI/SPYI pattern — 30/30/20/20 weighting. Portfolio is ~$220k with 19-20% margin utilization. Draft the buy ticket.",
+  "assertions": [
+    {"text": "Ticket file exists at outputs/buy-ticket-2026-04-22-avanade-layer2.md", "check": "file_exists"},
+    {"text": "YAML frontmatter contains all 11 required fields (document_type, strategy_name, generated_on, generated_by, portfolio_context_date, deployment_amount, cash_available, remaining_cash_buffer, price_snapshot_as_of, itc_applicability, itc_risk_score)", "check": "yaml_complete"},
+    {"text": "document_type equals 'buy-ticket'", "check": "yaml_value"},
+    {"text": "Execution Summary table contains exactly 4 ticker rows: JEPI, JEPQ, QQQI, SPYI", "check": "table_rows"},
+    {"text": "Weights are 30%/30%/20%/20% for JEPI/JEPQ/QQQI/SPYI respectively", "check": "weights"},
+    {"text": "Sum of dollar amounts in table equals $3,200 within ±$0.01", "check": "math_consistency"},
+    {"text": "Strategy Rationale cites at least two frameworks from fin-guru/data/ (e.g., margin-strategy.md, dividend-framework.md, modern-income-vehicles.md)", "check": "framework_citation"},
+    {"text": "ITC Advisory section is OMITTED (covered-call ETFs are unsupported in ITC universe) — itc_applicability set to 'unsupported'", "check": "itc_omitted"},
+    {"text": "Educational-only disclaimer present at end of document", "check": "disclaimer"},
+    {"text": "Risk Notes section addresses concentration (covered-call ETF total) and margin interaction", "check": "risk_notes"}
+  ]
+}

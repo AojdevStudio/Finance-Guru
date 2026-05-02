@@ -1,0 +1,15 @@
+{
+  "eval_id": 3,
+  "eval_name": "rebalance-underweight",
+  "prompt": "Rebalance $5,000 into whatever is underweight across my portfolio. I want the skill to read my current positions, figure out what's under its target allocation, and propose tickers.",
+  "assertions": [
+    {"text": "Ticket file exists at outputs/buy-ticket-2026-04-22-rebalance-underweight.md", "check": "file_exists"},
+    {"text": "YAML frontmatter contains all 11 required fields", "check": "yaml_complete"},
+    {"text": "Execution Summary table contains at least 2 ticker rows (not a single-ticker deployment)", "check": "table_rows"},
+    {"text": "Sum of dollar amounts equals $5,000 within ±$0.01", "check": "math_consistency"},
+    {"text": "Strategy Rationale references specific current portfolio weights (by ticker or layer) — not generic 'market conditions'", "check": "portfolio_state_awareness"},
+    {"text": "Each selected ticker has rationale tying it to an underweight category or gap", "check": "per_ticker_rationale"},
+    {"text": "Framework citation present (likely margin-strategy.md or cashflow-policy.md)", "check": "framework_citation"},
+    {"text": "Educational-only disclaimer present", "check": "disclaimer"}
+  ]
+}

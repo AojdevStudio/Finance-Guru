@@ -1,0 +1,16 @@
+{
+  "eval_id": 2,
+  "eval_name": "growth-dca-pltr-tsla",
+  "prompt": "Draft a buy ticket for $2,000 DCA into PLTR and TSLA, 60/40 split. Both have had pullbacks. Portfolio has TSLA around 13% and PLTR around 28%.",
+  "assertions": [
+    {"text": "Ticket file exists at outputs/buy-ticket-2026-04-22-pltr-tsla-dca.md", "check": "file_exists"},
+    {"text": "YAML frontmatter contains all 11 required fields", "check": "yaml_complete"},
+    {"text": "Execution Summary table contains exactly 2 ticker rows: PLTR and TSLA", "check": "table_rows"},
+    {"text": "Allocation is 60% PLTR ($1,200) and 40% TSLA ($800) — within ±$0.01", "check": "math_consistency"},
+    {"text": "Risk Notes section surfaces concentration warning: PLTR post-deploy would exceed 30% portfolio concentration limit", "check": "concentration_warning"},
+    {"text": "ITC Advisory section present OR ITC discussion in Risk Notes (TSLA is in ITC tradfi universe; score reported or 'not-run' with explanation)", "check": "itc_present"},
+    {"text": "Strategy Rationale explains the DCA timing decision referencing 'pullback' context from user", "check": "rationale_addresses_prompt"},
+    {"text": "Educational-only disclaimer present", "check": "disclaimer"},
+    {"text": "Framework citation present (margin-strategy.md for concentration limits)", "check": "framework_citation"}
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "eval_id": 1,
+  "eval_name": "open-tech-heavy-200k",
+  "prompt": "I have no protective puts on yet. Put on a hedge program for my $200k portfolio. It's tech-heavy (PLTR 27%, TSLA 13%, NVDA 8%, MSTR and COIN significant). Budget is $800/month per my Layer 3 allocation.",
+  "assertions": [
+    {"text": "Ticket file exists at outputs/hedge-open-2026-04-22-tech-heavy-200k.md", "check": "file_exists"},
+    {"text": "YAML frontmatter document_type equals 'options-open-ticket'", "check": "yaml_value"},
+    {"text": "YAML contains total_premium_outlay and monthly_amortized_cost fields with numeric values", "check": "yaml_budget_fields"},
+    {"text": "Execution Summary table contains BUY TO OPEN legs (at least 2 contracts, likely 4 per $50k sizing rule)", "check": "buy_to_open_legs"},
+    {"text": "Contract count approximately 4 total ($200k / $50k per contract)", "check": "sizing_correct"},
+    {"text": "Multi-underlying allocation reflects tech-heavy adjustment: QQQ weight ≥50%, SPY 30-40%, IWM ≤10% or dropped", "check": "tech_heavy_weighting"},
+    {"text": "Strike selection noted as 10-20% OTM per framework", "check": "strike_selection"},
+    {"text": "DTE target 25-35 days per OPEN workflow step 4", "check": "dte_selection"},
+    {"text": "Monthly amortized cost ≤ $800 budget (framework check passes)", "check": "budget_compliance"},
+    {"text": "Sizing Rationale section cites hedging-strategies.md framework", "check": "framework_citation"},
+    {"text": "Educational disclaimer with options-specific language (premium loss risk)", "check": "disclaimer"},
+    {"text": "First Roll Trigger section specifies a date 5-7 days before expiry", "check": "roll_trigger_noted"}
+  ]
+}

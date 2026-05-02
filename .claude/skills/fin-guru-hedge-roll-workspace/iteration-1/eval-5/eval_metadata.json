@@ -1,0 +1,17 @@
+{
+  "eval_id": 5,
+  "eval_name": "close-correction-over",
+  "prompt": "The correction is over, VIX is back to 14, my puts have expired-worthless premiums left on them. Close them out.",
+  "assertions": [
+    {"text": "Ticket file exists at outputs/hedge-close-2026-04-22-thesis-change.md", "check": "file_exists"},
+    {"text": "YAML document_type equals 'options-close-ticket'", "check": "yaml_value"},
+    {"text": "YAML contains net_credit_realized, realized_pnl, tax_treatment, post_close_exposure fields", "check": "yaml_close_fields"},
+    {"text": "Execution Summary table contains SELL TO CLOSE legs only (no BUY TO OPEN)", "check": "only_close_legs"},
+    {"text": "Position History section present with per-leg open-to-close P&L table", "check": "position_history"},
+    {"text": "Close Rationale cites Playbook A (Thesis Change) or equivalent — references VIX normalization", "check": "playbook_a_rationale"},
+    {"text": "Tax Impact Summary with STCL/STCG per leg (short-term given typical <1yr hold)", "check": "tax_summary"},
+    {"text": "Post-Close Portfolio State section with -10%/-20%/-30% downside scenarios", "check": "downside_scenarios"},
+    {"text": "Framework citation references hedging-strategies.md line 129 (skip-roll guidance)", "check": "framework_line_129"},
+    {"text": "Educational disclaimer with close-specific language about accepting unhedged downside", "check": "close_disclaimer"}
+  ]
+}

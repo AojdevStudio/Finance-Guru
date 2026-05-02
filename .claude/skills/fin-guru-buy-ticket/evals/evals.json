@@ -1,0 +1,26 @@
+{
+  "skill_name": "fin-guru-buy-ticket",
+  "evals": [
+    {
+      "id": 1,
+      "name": "layer2-paycheck-deploy",
+      "prompt": "I just got paid $3,200 from my Avanade W2 check. Deploy it into Layer 2 income using the usual JEPI/JEPQ/QQQI/SPYI pattern — 30/30/20/20 weighting. Portfolio is ~$220k with 19-20% margin utilization. Draft the buy ticket.",
+      "expected_output": "A buy ticket at fin-guru-private/fin-guru/tickets/buy-ticket-YYYY-MM-DD-*.md with all 4 tickers allocated correctly (JEPI 30%, JEPQ 30%, QQQI 20%, SPYI 20%), prices from latest CSV or market_data.py, share counts math to within $0.01, rationale cites margin-strategy.md and modern-income-vehicles.md, ITC section omitted (covered-call ETFs unsupported), disclaimer present.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "growth-dca-tsla-pltr",
+      "prompt": "Draft a buy ticket for $2,000 DCA into PLTR and TSLA, 60/40 split. Both have had pullbacks. Portfolio has TSLA around 13% and PLTR around 28%.",
+      "expected_output": "A buy ticket with PLTR 60% and TSLA 40% allocation, but MUST surface concentration warning for PLTR post-deploy (will exceed 30% limit). ITC advisory triggered for TSLA (supported ticker, medium-to-high score likely). Rationale addresses the concentration tradeoff explicitly.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "rebalance-underweight",
+      "prompt": "Rebalance $5,000 into whatever is underweight across my portfolio. I want the skill to read my current positions, figure out what's under its target allocation, and propose tickers.",
+      "expected_output": "A buy ticket where allocation targets underweight categories (e.g., international via VXUS if tech is over-allocated, small-cap via FNILX if equity is concentrated in large-cap). Rationale explains WHY each ticker was picked via comparison to allocation targets. Requires the skill to read the positions CSV and reason about weights — this tests the analytical depth of the workflow.",
+      "files": []
+    }
+  ]
+}

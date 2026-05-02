@@ -1,0 +1,13 @@
+{
+  "eval_id": 4,
+  "eval_name": "roll-vix-spike-early",
+  "prompt": "VIX just spiked to 25. Should I roll my puts early, or wait? My positions are 12 DTE.",
+  "assertions": [
+    {"text": "Analysis file exists at outputs/roll-early-analysis.md", "check": "file_exists"},
+    {"text": "Analysis discusses IV impact on NEW put premiums (elevated cost) AND potential gain on OLD puts (IV lift)", "check": "iv_bilateral_analysis"},
+    {"text": "Analysis presents a clear recommendation (roll now vs wait) with explicit reasoning", "check": "clear_recommendation"},
+    {"text": "Framework citation present (hedging-strategies.md line 128 or similar)", "check": "framework_citation"},
+    {"text": "Analysis does NOT generate a full roll ticket prematurely — offers to draft it if user confirms", "check": "no_auto_ticket"},
+    {"text": "Cost-to-roll math shown or described (new_premium − old_residual)", "check": "cost_to_roll_math"}
+  ]
+}
