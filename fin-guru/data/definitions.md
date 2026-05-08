@@ -8,6 +8,8 @@ _Single source of truth for every named formula, threshold, classifier, and rule
 
 **Maintenance rule:** When a formula or threshold changes anywhere else in the repo, update _this_ file too — divergence here is a bug.
 
+> **Note on numbers:** The constants in §1 are real defaults imported from `src/` and skill files. Every other dollar figure, portfolio size, deployment amount, milestone target, and date in this document is **illustrative**. Real operating values for the principal — W2 income, current portfolio NAV, business-income backstop, milestone trajectory, Monte Carlo outcomes — live in the private side of the repo (`fin-guru-private/`, `user-profile.yaml`) and never in this file.
+
 ---
 
 ## Contents
@@ -52,7 +54,8 @@ _Single source of truth for every named formula, threshold, classifier, and rule
 | `MARGIN_RATE_FIDELITY_DEFAULT` | 0.10875 (10.875%) | `.claude/skills/margin-management/SKILL.md:39`, `fin-guru/data/margin-strategy.md` | Monthly interest cost calc (Fidelity $1k–$24.9k tier) |
 | `PUT_CALL_PARITY_TOLERANCE` | $0.10 | `src/analysis/options.py:251-298` | Arbitrage-detection band |
 | `CONCENTRATION_LIMIT_HARD` | 0.30 (30%) | `.claude/skills/fin-guru-buy-ticket/SKILL.md:129` | Single-position deployment cap |
-| `STRATEGY_START_DATE` | 2025-10-09 | `.claude/skills/margin-management/SKILL.md` | Anchor for `months_elapsed` and milestones |
+
+_Strategy anchor date (`STRATEGY_START_DATE`) is operational metadata, not methodology — it lives in `fin-guru-private/` and is loaded at runtime by the margin-management skill._
 
 ---
 
@@ -71,30 +74,32 @@ ELSE:                                                                           
 ### 2.1 Layer 1 — Growth Engine
 
 - _Definition:_ Buy-and-hold growth equities and broad-market index funds. Never sold; diluted naturally as Layer 2 grows.
-- _Current value (as of Q1 2026):_ ~$175k–$192k.
-- _Allocation rule:_ Keep 100%. New W2 capital does NOT flow here (except the SPMO weekly DCA and the GOOGL scale-in).
+- _Allocation rule:_ Keep 100%. New W2 capital does NOT flow here (except the SPMO weekly DCA and any single-name scale-in carved out separately).
+- _Current value:_ tracked in `fin-guru-private/`; not pinned here.
 - _Source:_ `fin-guru-private/fin-guru/strategies/active/portfolio-master-strategy.md`.
 
 ### 2.2 Layer 2 — Income Generation
 
-- _Definition:_ Monthly-distribution vehicles built with W2 deployments. Target final value $350k–$400k by Month 28.
+- _Definition:_ Monthly-distribution vehicles built with W2 deployments.
 - _Target blended TTM yield:_ 24–30% annualized.
-- _Monthly deployment:_ $12,517 (94% of total $13,317 W2).
+- _Monthly deployment:_ a fixed share of monthly W2 take-home (e.g., 94%); exact value lives in `fin-guru-private/.../bucket-allocations.json` and `user-profile.yaml`.
 - _Allocation:_ Five buckets (see § 3.4).
+- _Target portfolio value at Month 28:_ illustrative example $300k–$400k Layer 2 capital with associated dividend run-rate.
 - _Source:_ `fin-guru-private/fin-guru/strategies/active/dividend-income-master-strategy.md`.
 
 ### 2.3 Layer 3 — Downside Protection
 
 - _Definition:_ Tail-risk hedge against 30–50% market drawdowns.
-- _Current vehicle (post 2026-03-06):_ Protective puts on QQQ + SPY, 15% OTM, ~30 DTE. _Previously SQQQ (exited 2026-03-06)._
+- _Current vehicle pattern:_ Protective puts on QQQ + SPY, 15% OTM, ~30 DTE. Earlier vehicle was SQQQ (deprecated; see § 11.6).
 - _Sizing rule:_ 1 contract per $50,000 of portfolio value. _This is the canonical sizing rule; budget bends to match actual market premium, not the other way around._
 - _Target weights across underlyings:_ QQQ 40–50%, SPY 30–40%, IWM 10–20% (default; tilt by portfolio composition).
 - _Source:_ `fin-guru-private/fin-guru/strategies/risk-management/downside-protection-strategy.md`, `.claude/skills/fin-guru-hedge-roll/`.
 
 ### 2.4 GOOGL — special scale-in
 
-- _Status:_ Scaling 6 → ~$7.5k–$12.5k by Q2 2026 (~$1,000/month from Layer 2 YieldMax bucket).
+- _Pattern:_ GOOGL is the single ticker carved out for staged accumulation, funded from Layer 2 cash (typically a small monthly bleed from the YieldMax bucket).
 - Treated as a Layer 1 holding for risk purposes but funded out of Layer 2 cash.
+- Share-count target, pace, and current position size live in `fin-guru-private/`.
 
 ---
 
@@ -139,7 +144,7 @@ monthly_dividend_income  =  Σ estimated_dividend_per_ticker
 - Date format in sheet: `MM/DD/YYYY`.
 - DRIP flag: `TRUE` = reinvested (shares grew), `FALSE` = cash. Default `TRUE` during accumulation.
 
-**Known orphan tickers** (as of 2026-04-21): `SPMO`, `NVDA` — historical-log roster does not yet aggregate their dividends; they land in raw log only.
+**Orphan tickers (pattern):** When a ticker has been bought into the portfolio but the historical-log roster does not yet aggregate its dividends, it lands in the raw log only and is flagged as an orphan. Current orphan list lives in `fin-guru-private/`.
 
 ### 3.3 Total return decomposition
 
@@ -166,15 +171,15 @@ drip_return         =  (final_shares × final_price) / (initial_shares × initia
 
 ### 3.4 Five-bucket Layer 2 allocation
 
-`fin-guru-private/fin-guru/strategies/.../bucket-allocations.json`. Total monthly deployment must sum to $12,517 (validation invariant).
+Source-of-truth: `fin-guru-private/fin-guru/strategies/.../bucket-allocations.json`. Bucket weights sum to 100% and the $/month column derives from `total_monthly_deployment × weight`. The dollar column below is illustrative for a $10,000/month example deployment; the real total lives in the private config.
 
-| # | Bucket | Weight | $/month | Target yield | Variance band | Holdings |
+| # | Bucket | Weight | $/month (example: $10k total) | Target yield | Variance band | Holdings |
 |---|---|---:|---:|---:|---:|---|
-| 1 | JPMorgan Income | 27% | $3,380 | 8–10% | ±10% | JEPI 50% / JEPQ 50% |
-| 2 | CEF Stable | 20% | $2,503 | 20–22% | ±15% | CLM 33% / CRF 33% / ECAT 20% |
-| 3 | Covered-Call ETFs | 35% | $4,381 | 12–20% | ±15% | QQQI 33% / SPYI 33% / QQQY 34% |
-| 4 | YieldMax Volatility | 10% | $1,252 | 60–85% | ±25% | YMAX 33% / MSTY 34% / AMZY 33% |
-| 5 | DRIP v2 CEFs | 8% | $1,001 | 8–10% | ±10% | BDJ 20% / ETY 20% / ETV 20% / BST 20% / UTG 20% |
+| 1 | JPMorgan Income | 27% | $2,700 | 8–10% | ±10% | JEPI 50% / JEPQ 50% |
+| 2 | CEF Stable | 20% | $2,000 | 20–22% | ±15% | CLM 33% / CRF 33% / ECAT 34% |
+| 3 | Covered-Call ETFs | 35% | $3,500 | 12–20% | ±15% | QQQI 33% / SPYI 33% / QQQY 34% |
+| 4 | YieldMax Volatility | 10% | $1,000 | 60–85% | ±25% | YMAX 33% / MSTY 34% / AMZY 33% |
+| 5 | DRIP v2 CEFs | 8% | $800 | 8–10% | ±10% | BDJ 20% / ETY 20% / ETV 20% / BST 20% / UTG 20% |
 
 ### 3.5 Distribution variance bands (by vehicle class)
 
@@ -297,9 +302,11 @@ portfolio_to_margin_ratio  =  total_account_value / margin_balance
 |---:|---|---|
 | ≥ 4.0:1 | 🟢 Green | Continue per strategy |
 | 3.5–4.0:1 | 🟡 Yellow | Pause scaling, monitor weekly |
-| 3.0–3.5:1 | 🟠 Alert | Stop new draws, inject $20k business income |
+| 3.0–3.5:1 | 🟠 Alert | Stop new draws, inject business-income reserve |
 | < 3.0:1 | 🔴 Red | All draws halted, mandatory business-income injection |
-| < 2.5:1 | ⚫ Critical | $30k+ injection, consider selling hedge (SQQQ/puts) |
+| < 2.5:1 | ⚫ Critical | Larger injection, consider selling hedge (SQQQ/puts) |
+
+_Specific injection thresholds (e.g., $20k at Alert, $30k+ at Critical) live in `fin-guru-private/.../risk-thresholds.json`._
 
 ### 5.5 Margin jump alert
 
@@ -323,23 +330,25 @@ The 1.5× safety multiplier accommodates dividend cuts and rate increases. Net s
 
 ### 5.7 Margin scaling milestones
 
-Anchor: `STRATEGY_START_DATE = 2025-10-09`. `months_elapsed = (today − start).days // 30`.
+Anchor: a `STRATEGY_START_DATE` loaded from `fin-guru-private/`. `months_elapsed = (today − start).days // 30`.
 
-| Milestone | Month | Trigger | Action | Required ratio |
+The table below is a sample trajectory; actual triggers and dollar amounts live in `fin-guru-private/.../active-management-triggers.json`.
+
+| Milestone | Month | Trigger (illustrative) | Action (illustrative) | Required ratio |
 |---|---:|---|---|---:|
-| Phase 1 | 0 | Portfolio > $300k | Begin $4,500/month draw (rent/utilities) | ≥ 4.0:1 |
-| Month 6 | 6 | Dividends > $2,000/month AND ratio > 4:1 | Scale to $6,213/month (add mortgage) | ≥ 4.0:1 |
-| Month 12 | 12 | Dividends > $4,500/month | Break-even; hold or scale to $8,000/month | ≥ 3.5:1 |
-| Month 18 | 18 | Dividends > $7,000/month AND margin declining | Scale to $10,000/month | ≥ 3.0:1 |
-| Month 28 | 28 | Dividends > $8,300/month (≈$100k annualized) | Full FI declared (69.2% MC probability) | ≥ 2.5:1 |
+| Phase 1 | 0 | Portfolio > $X | Begin a fixed monthly draw (essential expenses) | ≥ 4.0:1 |
+| Month 6 | 6 | Dividends > $Y/month AND ratio > 4:1 | Scale draw upward (add next expense bucket) | ≥ 4.0:1 |
+| Month 12 | 12 | Dividends > 2× phase-1 draw | Break-even; hold or scale incrementally | ≥ 3.5:1 |
+| Month 18 | 18 | Dividends > 3× phase-1 draw AND margin declining | Scale draw further | ≥ 3.0:1 |
+| Month 28 | 28 | Dividend run-rate ≈ FI target (~$100k annualized example) | Full FI declared (Monte Carlo confirms) | ≥ 2.5:1 |
 
 ### 5.8 Business-income backstop
 
-- _Available:_ $22,000/month from business operations.
-- _Philosophy:_ insurance only — not a primary strategy lever.
+- _Available:_ a monthly business-income line, used only as insurance — not a primary strategy lever.
 - _Mandatory use:_ ratio < 3:1 (margin call risk).
 - _Optional use:_ market correction 20–30%, or to accelerate FI timeline.
-- _Monte Carlo expectation:_ used in 98.5% of paths at least once.
+- _Monte Carlo expectation:_ used in the vast majority of simulation paths at least once.
+- Specific dollar capacity lives in `fin-guru-private/`.
 
 ---
 
@@ -542,7 +551,9 @@ Annual hedge cost target: **3.0–3.5% of portfolio** (`framework-rules.md:57-69
 
 Linear piecewise interpolation between rows; extrapolation beyond −0.40 used cautiously.
 
-### 11.9 Put hedge effectiveness (post 2026-03-06 setup)
+### 11.9 Put hedge effectiveness (illustrative, $200k portfolio example)
+
+For a $200k portfolio carrying 4 contracts (= floor($200k / $50k)) of 15%-OTM ~30 DTE puts:
 
 | Market decline | Per-contract value | Notes |
 |---|---|---|
@@ -551,7 +562,7 @@ Linear piecewise interpolation between rows; extrapolation beyond −0.40 used c
 | −30% | ~$12,000–18,000 | Offsets ~$48k–72k |
 | −40% | ~$18,000+ | Tail-risk catch |
 
-Funding model: $4,517 reserve covers ~4.5 months; ongoing premiums then funded from monthly dividend income (~$1,072/month current) → puts are self-funding.
+**Funding model (illustrative):** an upfront premium reserve covers the first few months; ongoing premiums then come out of monthly dividend income — at the right ratio of dividend income to per-contract premium, puts become self-funding. Actual reserve and current monthly draw live in `fin-guru-private/`.
 
 ---
 
@@ -568,7 +579,7 @@ Funding model: $4,517 reserve covers ~4.5 months; ongoing premiums then funded f
 
 **Concentration warning:** average correlation > 0.7 across the book triggers a portfolio-level alert.
 
-**Pairwise correlation cap:** ≤ 0.85 between any two Layer 2 holdings (`fin-guru-private/.../concentration-limits.json`). Currently monitored: CLM–CRF at 0.861 (acceptable in context).
+**Pairwise correlation cap:** ≤ 0.85 between any two Layer 2 holdings (`fin-guru-private/.../concentration-limits.json`). Pairs that breach 0.85 require an explicit context note in the private config; "acceptable-in-context" exceptions are tracked there, not here.
 
 ---
 
@@ -606,8 +617,8 @@ See § 3.3 for primary formulas. Key invariants worth restating:
 |---|---|---|
 | **Single position (general risk)** | ≤ 10% of total portfolio | `risk-framework.md:149-153` |
 | **Single position (deployment cap)** | ≤ 30% post-deploy; warn above | `fin-guru-buy-ticket/SKILL.md:129` |
-| **PLTR exception** | Up to 30% of Layer 1 (currently 31.53%, approved) — natural dilution as portfolio grows | `concentration-limits.json` |
-| **TSLA tactical cap** | ≤ 15% (was trimmed Nov 2025 from 20.78%) | `concentration-limits.json` |
+| **Approved Layer 1 exceptions** | A small list of growth tickers may exceed 30% temporarily, with natural dilution expected as the portfolio grows | `concentration-limits.json` (private) |
+| **Tactical caps (single-name)** | Volatility-prone single-names carry tighter caps (e.g., ≤ 15%); breaches trigger a trim | `concentration-limits.json` (private) |
 | **Single Layer 2 fund** | ≤ 5% of Layer 2 | `concentration-limits.json` |
 | **Layer 2 bucket** | Target weight + 10% (e.g., 27% target → max 37%) | `concentration-limits.json` |
 | **Sector concentration** | ≤ 25% (per brainstorming framework) | `risk-framework.md` |
@@ -699,11 +710,11 @@ Single-source rule book. Variance bands from § 3.5; class semantics from § 4.
 
 | Condition | Action | Priority |
 |---|---|---|
-| Month 6: Dividends > $2,000 AND ratio > 4:1 | Scale to $6,213/month | Confidence-based |
-| Month 12: Dividends > $4,500 | Break-even — hold or scale to $8,000 | Confidence-based |
+| Month 6: Dividends > phase-1 draw AND ratio > 4:1 | Scale draw upward (next-tier expense bucket) | Confidence-based |
+| Month 12: Dividends ≈ break-even with carrying cost + draw | Hold or scale incrementally | Confidence-based |
 | Portfolio-to-margin ratio < 3.5:1 | Pause scaling; monitor weekly | Warning |
-| Portfolio-to-margin ratio < 3.0:1 | Stop draws; inject $20k business income | Alert |
-| Portfolio-to-margin ratio < 2.5:1 | $30k+ injection; consider selling hedge | Critical |
+| Portfolio-to-margin ratio < 3.0:1 | Stop draws; inject business-income reserve | Alert |
+| Portfolio-to-margin ratio < 2.5:1 | Larger injection; consider selling hedge | Critical |
 
 ### 17.3 Portfolio drawdown triggers
 
@@ -761,19 +772,20 @@ If all three test negative → **skip** (let the hedge expire).
 
 **Portfolio:** Median, P5, P95 at month 28 per layer.
 
-### 18.3 Headline result (Oct 2025 run)
+### 18.3 Output schema (illustrative)
 
-| Metric | Value | Interpretation |
+The Monte Carlo run emits a headline table of the form below. The numbers shown are representative shapes only; the live results live in `fin-guru-private/fin-guru/strategies/.../` after each run.
+
+| Metric | Shape | Interpretation |
 |---|---|---|
-| P($100k @ Month 28) | 69.2% | Strong probability of FI hit |
-| Median income (Month 28) | $110,661 | Exceeds target by 10.7% |
-| P95 income | $138,392 | 38% upside |
-| P5 income | $65,326 | Worst-case still 65% of target |
-| Median portfolio (Month 28) | $409,356 | +9.7% over capital deployed |
-| Capital deployed | $373,076 | — |
-| Median break-even | Month 15 | — |
-| Median max drawdown | −1.7% | P95 = 0%; worst case −92.6% (5%) |
-| Backstop usage rate | 98.5% | Business income used at least once |
+| P(FI target @ Month 28) | percentage | Probability of hitting the FI dividend target |
+| Median income (Month 28) | $/yr | Median annualized dividend income |
+| P95 / P5 income | $/yr | Upper / lower band on income distribution |
+| Median portfolio (Month 28) | $ | Median portfolio NAV |
+| Capital deployed | $ | Cumulative W2 deployment over 28 months |
+| Median break-even | month # | When monthly dividends ≥ monthly margin interest |
+| Median max drawdown | % | Peak-to-trough drop; check P95 separately |
+| Backstop usage rate | percentage | Share of paths that called the business-income backstop at least once |
 
 ---
 
@@ -886,15 +898,17 @@ Example: 4% muni at 32% bracket = 5.88% taxable equivalent.
 
 ## 21. Milestones & 28-month roadmap
 
-Anchor: `STRATEGY_START_DATE = 2025-10-09`. Capital deployment cumulative.
+Anchor: `STRATEGY_START_DATE` (loaded from `fin-guru-private/`). Capital deployment is cumulative.
 
-| Phase | Window | Capital deployed | Expected dividends | Milestone |
+The phases below are the structural shape of the 28-month plan. The capital and dividend columns are illustrative for an example $10,000/month deployment (28 × $10k = $280k cumulative). Real numbers live in `fin-guru-private/`.
+
+| Phase | Window | Capital deployed (illustrative) | Expected dividends (illustrative) | Milestone |
 |---|---|---:|---:|---|
-| Foundation | Months 1–6 | $79,902 | $1,000–2,000/mo | All 11 positions established |
-| Acceleration | Months 7–12 | $159,804 | $3,000–4,500/mo | First fund rotation likely (MSTY/YMAX yield compression) |
-| Break-even zone | Months 13–18 | $239,706 | $5,000–7,000/mo | Dividends > $4,500/mo (covers fixed expenses) |
-| Scale or consolidate | Months 19–24 | $319,608 | $7,000–9,000/mo | Decision point: scale margin or pay it down |
-| Victory lap | Months 25–28 | $373,076 | ~$9,222/mo ≈ $110,661/yr | Financial independence (69.2% MC probability) |
+| Foundation | Months 1–6 | $60,000 | $1,000–2,000/mo | All target positions established |
+| Acceleration | Months 7–12 | $120,000 | $3,000–4,500/mo | First fund rotation likely (e.g., MSTY/YMAX yield compression) |
+| Break-even zone | Months 13–18 | $180,000 | $5,000–7,000/mo | Dividends cover phase-1 draw |
+| Scale or consolidate | Months 19–24 | $240,000 | $7,000–9,000/mo | Decision point: scale margin or pay it down |
+| Victory lap | Months 25–28 | $280,000 | ~$8,000–9,000/mo ≈ $96k–108k/yr | Financial-independence target hit (Monte Carlo confirms) |
 
 ### 21.1 Fund-rotation triggers (active management)
 
@@ -1100,7 +1114,7 @@ tax_equivalent_yield           = muni_yield / (1 − marginal_tax_rate)
 after_tax_yield                = gross_yield × (1 − effective_tax_rate)
 
 # Strategy timing
-months_elapsed                 = (today − 2025-10-09).days // 30
+months_elapsed                 = (today − STRATEGY_START_DATE).days // 30   # anchor loaded from private profile
 ```
 
 ---

@@ -226,22 +226,6 @@ class TestSkillConstants:
         documented = _row_value("MARGIN_RATE_FIDELITY_DEFAULT", doc_text)
         assert "0.10875" in documented or "10.875%" in documented
 
-    def test_strategy_start_date_matches_skill(self, doc_text):
-        skill = (
-            REPO_ROOT / ".claude" / "skills" / "margin-management" / "SKILL.md"
-        ).read_text()
-        assert (
-            "datetime(2025, 10, 9)" in skill
-            or "October 9, 2025" in skill
-            or "2025-10-09" in skill
-        ), (
-            "margin-management/SKILL.md no longer anchors the strategy at 2025-10-09. "
-            "If the start date moved, update definitions.md §1 (STRATEGY_START_DATE) "
-            "and §21 milestones."
-        )
-        documented = _row_value("STRATEGY_START_DATE", doc_text)
-        assert "2025-10-09" in documented
-
     def test_concentration_limit_hard_matches_skill(self, doc_text):
         skill_path = (
             REPO_ROOT / ".claude" / "skills" / "fin-guru-buy-ticket" / "SKILL.md"
@@ -276,7 +260,6 @@ CONSTANTS_TESTED = (
     "CALENDAR_DAYS_PER_YEAR",
     "PUT_CALL_PARITY_TOLERANCE",
     "MARGIN_RATE_FIDELITY_DEFAULT",
-    "STRATEGY_START_DATE",
     "CONCENTRATION_LIMIT_HARD",
 )
 
