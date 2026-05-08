@@ -189,18 +189,20 @@ class TestInlineLiterals:
 
     def test_calendar_days_365_in_total_return(self, doc_text):
         tr = (REPO_ROOT / "src" / "analysis" / "total_return.py").read_text()
-        assert "365" in tr, (
-            "total_return.py must annualize via 365 calendar days "
-            "(see the docstring at line ~277). If changed, update definitions.md §1 and §3.3."
+        assert re.search(r"365\.0\s*/\s*calendar_days", tr), (
+            "total_return.py no longer applies the canonical "
+            "(1 + total_return) ** (365.0 / calendar_days) − 1 annualization. "
+            "If the calendar-day base genuinely moved, update definitions.md §1 "
+            "(CALENDAR_DAYS_PER_YEAR) and §3.3."
         )
         documented = _row_value("CALENDAR_DAYS_PER_YEAR", doc_text)
         assert "365" in documented
 
     def test_put_call_parity_tolerance_in_options(self, doc_text):
         opt = (REPO_ROOT / "src" / "analysis" / "options.py").read_text()
-        # The doc claims a $0.10 tolerance for put-call parity arbitrage detection.
-        assert "0.10" in opt or "0.1 " in opt, (
-            "options.py no longer references the $0.10 put-call parity tolerance. "
+        assert re.search(r"\bdifference\s*>\s*0\.10\b", opt), (
+            "options.py no longer enforces the $0.10 put-call parity tolerance "
+            "via the canonical `difference > 0.10` comparison. "
             "If the threshold moved, update definitions.md §1 (PUT_CALL_PARITY_TOLERANCE) "
             "and §10.4."
         )
