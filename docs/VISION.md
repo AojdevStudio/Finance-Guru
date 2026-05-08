@@ -293,7 +293,7 @@ The DataHub replaces what was the Google Sheets "DataHub" tab — same concept, 
 ### 5.2 Chat + Agent Panels
 
 **Primary**: Chat interface. Talk to Finance Guru like an advisor.
-- "What should I do with this $5k?"
+- "What should I do with this cash windfall?"
 - "How's my margin health looking?"
 - "Run a Monte Carlo on my current allocation"
 - The system routes to the right agent behind the scenes.
@@ -407,28 +407,28 @@ layers:
     rebalance: false
   income:
     description: "Dividend and income vehicles"
-    deployment: "$13,317/month from W2"
+    deployment: "${FG_W2_MONTHLY_INCOME}/month from W2"
     strategy: "Hybrid DRIP v2 with active rotation"
-    target: "$100k annual dividend income"
+    target: "${FG_ANNUAL_DIVIDEND_TARGET} annual dividend income"
   hedge:
     description: "Portfolio insurance"
     instruments: ["protective puts", "SQQQ"]
-    budget: "$500-600/month"
+    budget: "${FG_HEDGE_BUDGET_MONTHLY}/month"
     philosophy: "Always-on, not timing-based"
   scale_in:
     ticker: "GOOGL"
-    deployment: "$1,000/month diverted from Layer 2"
+    deployment: "${FG_GOOGL_DEPLOYMENT_MONTHLY}/month diverted from Layer 2"
 
 margin:
   philosophy: "Confidence-based scaling, not time-based mandates"
   safety_ratio: 4.0  # minimum portfolio:margin ratio
-  interest_rate: 0.11825  # Fidelity rate
-  backstop: "$22k/month business income"
+  interest_rate: ${FG_MARGIN_INTEREST_RATE_DECIMAL}  # from .env
+  backstop: "${FG_BUSINESS_INCOME_MONTHLY}/month business income"
 
 income_sources:
-  w2: "$13,317/month"
-  business: "$22,000/month"
-  dividends: "tracked via Income Tracking view, growing toward $100k/year"
+  w2: "${FG_W2_MONTHLY_INCOME}/month"
+  business: "${FG_BUSINESS_INCOME_MONTHLY}/month"
+  dividends: "tracked via Income Tracking view, growing toward ${FG_ANNUAL_DIVIDEND_TARGET}/year"
 ```
 
 ### 8.3 Compliance Mode

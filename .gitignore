@@ -109,7 +109,15 @@ scripts/qa/author-mailmap.txt
 .claude/data/sessions/
 
 # Private Finance Guru data (personal financial details)
-fin-guru/data/
+# Use `fin-guru/data/*` (glob, not dir-exclude) so that `!` exceptions
+# can re-include specific methodology files; gitignore can't re-include
+# children of an excluded directory.
+fin-guru/data/*
+
+# Methodology files that ARE tracked (not personal data):
+!fin-guru/data/definitions.md
+!fin-guru/data/hedging-strategies.md
+!fin-guru/data/options-insurance-framework.md
 
 # Private docs (buy tickets, analysis, strategies)
 # Note: fin-guru-private/ is already ignored above

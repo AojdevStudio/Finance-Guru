@@ -74,3 +74,9 @@ builder:
 # Launch Claude Code as QA Advisor
 qa:
   {{cc}} --append-system-prompt "$(cat .claude/agents/fg-qa-advisor.md)"
+
+# --- Quality gates ---
+
+# Verify fin-guru/data/definitions.md stays in sync with src/ constants and skill files
+check-definitions:
+  uv run pytest tests/python/test_definitions_sync.py -v --no-cov
