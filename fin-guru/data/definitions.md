@@ -2,7 +2,7 @@
 
 _Single source of truth for every named formula, threshold, classifier, and rule that governs Finance Guru analysis, deployment, and risk management._
 
-**Audience:** Finance Guru agents (Cassandra and her specialists), KeepFolio engineers porting these rules into TypeScript, and the principal ({user_name}) reviewing methodology.
+**Audience:** Finance Guru agents (Cassandra and her specialists), KeepFolio engineers porting these rules into TypeScript, and the principal reviewing methodology.
 
 **Status:** v1.0 — 2026-05-02. Compiled from `src/` (Python toolkit), `fin-guru/data/`, `fin-guru/tasks/`, `.claude/skills/`, and `fin-guru-private/fin-guru/strategies/`. Every entry cites its origin so the glossary stays auditable.
 
