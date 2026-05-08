@@ -21,7 +21,7 @@ Use this skill when:
 
 ## Personal Strategy Inputs
 
-Real dollar amounts, dates, and private strategy targets must come from `.env` (see `.env.example`). Use `python-dotenv` or shell environment variables; do not hardcode personal numbers in this skill.
+Static private assumptions come from `.env` (see `.env.example`). Current portfolio facts come from the latest Fidelity balances CSV and spreadsheet data, then `src/analysis/margin_metrics.py` derives ratios/costs at runtime. Do not hardcode personal numbers in this skill.
 
 ### Required `.env` values
 
@@ -30,27 +30,29 @@ Real dollar amounts, dates, and private strategy targets must come from `.env` (
 - `FG_MARGIN_JUMP_ALERT_THRESHOLD`
 - `FG_CURRENT_MONTHLY_DRAW`, `FG_MONTH6_DRAW_TARGET`, `FG_MONTH12_DRAW_TARGET`, `FG_MONTH18_DRAW_TARGET`
 - `FG_BUSINESS_INCOME_MONTHLY`, `FG_BUSINESS_INJECTION_RED`, `FG_BUSINESS_INJECTION_CRITICAL`
-- Latest example/demo values: `FG_PORTFOLIO_BASELINE_VALUE`, `FG_MARGIN_BASELINE_BALANCE`, `FG_DIVIDEND_MONTHLY_INCOME`
+- Live facts are not `.env` values: portfolio value, margin balance, interest cost, dividend income, coverage ratio, and portfolio-to-margin ratio must be read/calculated at runtime.
 
 ## Core Workflow
 
 ### 1. Read Fidelity Balances CSV
+
+Use `uv run python -m src.analysis.margin_metrics --pretty` to load `.env`, read the latest `Balances_for_Account_*.csv`, and emit current JSON metrics.
 
 **Location**: `notebooks/updates/Balances_for_Account_{account_id}.csv`
 
 **Key Fields to Extract**:
 ```csv
 Balance,Day change
-Total account value,${FG_PORTFOLIO_BASELINE_VALUE_RAW},${FG_PORTFOLIO_DAY_CHANGE_RAW}      → Portfolio Value
-Margin buying power,${FG_MARGIN_BUYING_POWER_RAW},${FG_MARGIN_BUYING_POWER_DAY_CHANGE_RAW}
-Net debit,${FG_MARGIN_BASELINE_BALANCE_RAW},${FG_MARGIN_DAY_CHANGE_RAW}                 → Margin Balance (abs value)
-Margin interest accrued this month,${FG_MARGIN_INTEREST_ACCRUED_THIS_MONTH_RAW},    → Monthly Interest (actual)
+Total account value,{live.portfolio_value_raw},{live.portfolio_day_change_raw}      → Portfolio Value
+Margin buying power,{live.margin_buying_power_raw},{live.margin_buying_power_day_change_raw}
+Net debit,{live.net_debit_raw},{live.net_debit_day_change_raw}                 → Margin Balance (abs value)
+Margin interest accrued this month,{live.margin_interest_accrued_this_month_raw},    → Monthly Interest (actual)
 ```
 
 **Calculations**:
-- **Margin Balance**: Absolute value of "Net debit" = ${FG_MARGIN_BASELINE_BALANCE}
+- **Margin Balance**: Absolute value of "Net debit" = {live.margin_balance}
 - **Interest Rate**: Default ${FG_MARGIN_INTEREST_RATE} (Fidelity $1k-$24.9k tier) unless specified
-- **Monthly Interest Cost**: Balance × Rate ÷ 12 = ${FG_MARGIN_BASELINE_BALANCE} × ${FG_MARGIN_INTEREST_RATE_DECIMAL} ÷ 12 = ${FG_MARGIN_MONTHLY_INTEREST_COST}
+- **Monthly Interest Cost**: Balance × Rate ÷ 12 = {live.margin_balance} × ${FG_MARGIN_INTEREST_RATE_DECIMAL} ÷ 12 = {derived.monthly_interest_cost}
 
 ### 2. Safety Check: Margin Jump Alert
 
@@ -60,13 +62,13 @@ Margin interest accrued this month,${FG_MARGIN_INTEREST_ACCRUED_THIS_MONTH_RAW},
 
 **Example**:
 ```
-Previous: ${FG_MARGIN_BASELINE_BALANCE}
-Current: ${FG_MARGIN_JUMP_EXAMPLE_CURRENT} (+${FG_MARGIN_JUMP_EXAMPLE_DIFF}) → 🚨 ALERT - Confirm intentional draw
+Previous: {live.margin_balance}
+Current: {example.margin_current} (+{derived.margin_increase}) → 🚨 ALERT - Confirm intentional draw
 ```
 
 **Action**:
 - Alert user immediately
-- Show diff: "Margin increased by ${FG_MARGIN_JUMP_EXAMPLE_DIFF} - Confirm this was intentional"
+- Show diff: "Margin increased by {derived.margin_increase} - Confirm this was intentional"
 - Wait for user confirmation before proceeding
 
 ### 3. Add Entry to Margin Dashboard
@@ -80,10 +82,10 @@ Current: ${FG_MARGIN_JUMP_EXAMPLE_CURRENT} (+${FG_MARGIN_JUMP_EXAMPLE_DIFF}) →
 
 **Example Entry**:
 ```
-Date: ${FG_MARGIN_EXAMPLE_DATE}
-Margin Balance: ${FG_MARGIN_BASELINE_BALANCE}
+Date: {today}
+Margin Balance: {live.margin_balance}
 Interest Rate: ${FG_MARGIN_INTEREST_RATE}
-Monthly Interest Cost: ${FG_MARGIN_MONTHLY_INTEREST_COST}
+Monthly Interest Cost: {derived.monthly_interest_cost}
 Notes: Month 1 - Building foundation, on track per strategy
 ```
 
@@ -111,32 +113,32 @@ else:
 #### Current Margin Balance
 ```
 = Latest entry from Margin Dashboard
-Example: ${FG_MARGIN_BASELINE_BALANCE}
+Example: {live.margin_balance}
 ```
 
 #### Monthly Interest Cost
 ```
 = Latest calculated cost
-Example: ${FG_MARGIN_MONTHLY_INTEREST_COST}/month
+Example: {derived.monthly_interest_cost}/month
 ```
 
 #### Annual Interest Cost
 ```
 = Monthly Interest Cost × 12
-Example: ${FG_MARGIN_MONTHLY_INTEREST_COST} × 12 = ${FG_MARGIN_ANNUAL_INTEREST_COST}/year
+Example: {derived.monthly_interest_cost} × 12 = {derived.annual_interest_cost}/year
 ```
 
 #### Dividend Income (from Dividend Tracker)
 ```
 = Pull from Dividend Tracker "TOTAL EXPECTED DIVIDENDS"
-Example: ${FG_DIVIDEND_MONTHLY_INCOME}/month
+Example: {live.monthly_dividend_income}/month
 ```
 
 #### Coverage Ratio
 ```
 = Dividend Income ÷ Monthly Interest Cost
 Formula: =IFERROR(Dividends / Interest, 0)
-Example: ${FG_DIVIDEND_MONTHLY_INCOME} ÷ ${FG_MARGIN_MONTHLY_INTEREST_COST} = ${FG_DIVIDEND_COVERAGE_RATIO} 🟢
+Example: {live.monthly_dividend_income} ÷ {derived.monthly_interest_cost} = {derived.coverage_ratio} 🟢
 ```
 
 **Fix #DIV/0! if margin balance = $0**:
@@ -150,7 +152,7 @@ After: =IFERROR(B10 / B11, 0)  (returns 0 when no margin)
 #### Portfolio-to-Margin Ratio
 ```
 = Total account value ÷ Margin Balance
-Example: ${FG_PORTFOLIO_BASELINE_VALUE} ÷ ${FG_MARGIN_BASELINE_BALANCE} = ${FG_PORTFOLIO_MARGIN_RATIO} 🟢🟢🟢
+Example: {live.portfolio_value} ÷ {live.margin_balance} = {derived.portfolio_margin_ratio} 🟢🟢🟢
 ```
 
 **Safety Thresholds**:
@@ -182,8 +184,8 @@ months_elapsed = (current - start).days // 30
 #### Month 6 Alert
 ```
 📊 MONTH 6 MILESTONE CHECK:
-✅ Dividends: ${FG_DIVIDEND_MONTHLY_INCOME}/month (need ${FG_MONTH6_DIVIDEND_MINIMUM})
-✅ Portfolio-to-Margin Ratio: ${FG_PORTFOLIO_MARGIN_RATIO} (need 4:1+)
+✅ Dividends: {live.monthly_dividend_income}/month (need ${FG_MONTH6_DIVIDEND_MINIMUM})
+✅ Portfolio-to-Margin Ratio: {derived.portfolio_margin_ratio} (need 4:1+)
 ✅ Dividend Growth: On track
 
 🎯 RECOMMENDATION: Scale margin draw to ${FG_MONTH6_DRAW_TARGET}/month (add mortgage)
@@ -275,39 +277,39 @@ Action: STOP draws, inject ${FG_BUSINESS_INJECTION_CRITICAL} business income, co
 
 ### Scenario 1: Month 1 (Current State)
 ```
-Portfolio Value: ${FG_PORTFOLIO_BASELINE_VALUE}
-Margin Balance: ${FG_MARGIN_BASELINE_BALANCE}
-Ratio: ${FG_PORTFOLIO_MARGIN_RATIO} 🟢🟢🟢
+Portfolio Value: {live.portfolio_value}
+Margin Balance: {live.margin_balance}
+Ratio: {derived.portfolio_margin_ratio} 🟢🟢🟢
 
-Monthly Interest: ${FG_MARGIN_MONTHLY_INTEREST_COST}
-Dividend Income: ${FG_DIVIDEND_MONTHLY_INCOME}
-Coverage: ${FG_DIVIDEND_COVERAGE_RATIO} 🟢
+Monthly Interest: {derived.monthly_interest_cost}
+Dividend Income: {live.monthly_dividend_income}
+Coverage: {derived.coverage_ratio} 🟢
 
 Status: Excellent - building foundation
 ```
 
 ### Scenario 2: Month 6 (Projected)
 ```
-Portfolio Value: ${FG_MONTH6_PROJECTED_PORTFOLIO} (projected with W2 contributions)
-Margin Balance: ${FG_MONTH6_PROJECTED_MARGIN} (scaled to ${FG_MONTH6_DRAW_TARGET}/month draw)
-Ratio: ${FG_MONTH6_PROJECTED_RATIO} 🟢
+Portfolio Value: {projection.month6_portfolio_value} (projected with W2 contributions)
+Margin Balance: {projection.month6_margin_balance} (scaled to ${FG_MONTH6_DRAW_TARGET}/month draw)
+Ratio: {projection.month6_portfolio_margin_ratio} 🟢
 
-Monthly Interest: ${FG_MONTH6_PROJECTED_MONTHLY_INTEREST}
+Monthly Interest: {projection.month6_monthly_interest_cost}
 Dividend Income: ${FG_CURRENT_MONTHLY_DRAW} (projected)
-Coverage: ${FG_MONTH6_PROJECTED_COVERAGE} 🟢
+Coverage: {projection.month6_coverage_ratio} 🟢
 
 Status: Healthy - on track for break-even
 ```
 
 ### Scenario 3: Month 15 (Break-Even)
 ```
-Portfolio Value: ${FG_MONTH15_PROJECTED_PORTFOLIO}
-Margin Balance: ${FG_MONTH15_PROJECTED_MARGIN} (scaled to ${FG_MONTH12_DRAW_TARGET}/month draw)
-Ratio: ${FG_MONTH15_PROJECTED_RATIO} 🟢
+Portfolio Value: {projection.month15_portfolio_value}
+Margin Balance: {projection.month15_margin_balance} (scaled to ${FG_MONTH12_DRAW_TARGET}/month draw)
+Ratio: {projection.month15_portfolio_margin_ratio} 🟢
 
-Monthly Interest: ${FG_MONTH15_PROJECTED_MONTHLY_INTEREST}
-Dividend Income: ${FG_MONTH15_PROJECTED_DIVIDEND_INCOME}
-Coverage: ${FG_MONTH15_PROJECTED_COVERAGE} 🟢
+Monthly Interest: {projection.month15_monthly_interest_cost}
+Dividend Income: {projection.month15_monthly_dividend_income}
+Coverage: {projection.month15_coverage_ratio} 🟢
 
 Status: Break-even achieved, dividends > interest
 ```
@@ -387,26 +389,26 @@ Before updating Margin Dashboard:
 **Trigger**: User downloads new Fidelity balances CSV
 
 **Agent workflow**:
-1. ✅ Read Balances CSV - Portfolio: ${FG_PORTFOLIO_BASELINE_VALUE}, Margin: ${FG_MARGIN_BASELINE_BALANCE}
-2. ✅ Safety check - Previous: $0, Current: ${FG_MARGIN_BASELINE_BALANCE} (+${FG_MARGIN_BASELINE_BALANCE} < ${FG_MARGIN_JUMP_ALERT_THRESHOLD} threshold) - PASS
+1. ✅ Read Balances CSV - Portfolio: {live.portfolio_value}, Margin: {live.margin_balance}
+2. ✅ Safety check - Previous: $0, Current: {live.margin_balance} (+{live.margin_balance} < ${FG_MARGIN_JUMP_ALERT_THRESHOLD} threshold) - PASS
 3. ✅ Calculate metrics:
-   - Monthly interest: ${FG_MARGIN_MONTHLY_INTEREST_COST}
-   - Portfolio-to-margin ratio: ${FG_PORTFOLIO_MARGIN_RATIO}
-   - Coverage ratio: ${FG_DIVIDEND_COVERAGE_RATIO} (dividends ÷ interest)
+   - Monthly interest: {derived.monthly_interest_cost}
+   - Portfolio-to-margin ratio: {derived.portfolio_margin_ratio}
+   - Coverage ratio: {derived.coverage_ratio} (dividends ÷ interest)
 4. ✅ Add entry to Margin Dashboard:
-   - Date: ${FG_MARGIN_EXAMPLE_DATE}
-   - Balance: ${FG_MARGIN_BASELINE_BALANCE}
+   - Date: {today}
+   - Balance: {live.margin_balance}
    - Rate: ${FG_MARGIN_INTEREST_RATE}
-   - Cost: ${FG_MARGIN_MONTHLY_INTEREST_COST}
+   - Cost: {derived.monthly_interest_cost}
    - Notes: "Month 1 - Building foundation, on track"
 5. ✅ Update summary section:
-   - Current balance: ${FG_MARGIN_BASELINE_BALANCE}
-   - Monthly cost: ${FG_MARGIN_MONTHLY_INTEREST_COST}
-   - Annual cost: ${FG_MARGIN_ANNUAL_INTEREST_COST}
-   - Dividend income: ${FG_DIVIDEND_MONTHLY_INCOME}
-   - Coverage: ${FG_DIVIDEND_COVERAGE_RATIO}
-6. ✅ Generate status: "🟢 Excellent health - Ratio ${FG_PORTFOLIO_MARGIN_RATIO}, Coverage ${FG_DIVIDEND_COVERAGE_RATIO}"
-7. ✅ LOG: "Updated Margin Dashboard - Month 1, ${FG_MARGIN_BASELINE_BALANCE} balance, ${FG_PORTFOLIO_MARGIN_RATIO} ratio"
+   - Current balance: {live.margin_balance}
+   - Monthly cost: {derived.monthly_interest_cost}
+   - Annual cost: {derived.annual_interest_cost}
+   - Dividend income: {live.monthly_dividend_income}
+   - Coverage: {derived.coverage_ratio}
+6. ✅ Generate status: "🟢 Excellent health - Ratio {derived.portfolio_margin_ratio}, Coverage {derived.coverage_ratio}"
+7. ✅ LOG: "Updated Margin Dashboard - Month 1, {live.margin_balance} balance, {derived.portfolio_margin_ratio} ratio"
 
 ---
 
