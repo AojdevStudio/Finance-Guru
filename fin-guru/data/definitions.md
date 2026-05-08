@@ -51,7 +51,7 @@ _Single source of truth for every named formula, threshold, classifier, and rule
 | `IMPLIED_VOLATILITY_DEFAULT` | 0.30 (30%) | `src/analysis/rolling_tracker.py` | Fallback when live IV unavailable |
 | `VAR_CONFIDENCE_DEFAULT` | 0.95 | `src/analysis/risk_metrics.py:158-198` | VaR / CVaR confidence band |
 | `PORTFOLIO_PER_CONTRACT` | $50,000 | `src/analysis/hedge_sizer.py:96-114`, `.claude/skills/fin-guru-hedge-roll/SKILL.md:80-86` | Hedge sizing rule (the sizing rule) |
-| `MARGIN_RATE_FIDELITY_DEFAULT` | 0.10875 (10.875%) | `.claude/skills/margin-management/SKILL.md:39`, `fin-guru/data/margin-strategy.md` | Monthly interest cost calc (Fidelity $1k–$24.9k tier) |
+| `MARGIN_RATE_FIDELITY_DEFAULT` | `${FG_MARGIN_INTEREST_RATE_DECIMAL}` / `${FG_MARGIN_INTEREST_RATE}` from `.env` | `.env.example`, `.claude/skills/margin-management/SKILL.md`, `fin-guru/data/margin-strategy.md` | Monthly interest cost calc (broker margin tier; personal value is local-only) |
 | `PUT_CALL_PARITY_TOLERANCE` | $0.10 | `src/analysis/options.py:251-298` | Arbitrage-detection band |
 | `CONCENTRATION_LIMIT_HARD` | 0.30 (30%) | `.claude/skills/fin-guru-buy-ticket/SKILL.md:129` | Single-position deployment cap |
 
@@ -265,13 +265,13 @@ monthly_interest_cost  =  margin_balance × annual_rate / 12
 annual_interest_cost   =  monthly_interest_cost × 12
 ```
 
-Default `annual_rate = 0.10875` for Fidelity $1k–$24.9k tier. Other broker reference rates (`fin-guru/data/margin-strategy.md`):
+Default `annual_rate = float(os.getenv("FG_MARGIN_INTEREST_RATE_DECIMAL"))`; keep the actual broker tier in local `.env`, not tracked markdown. Other broker reference-rate ranges (`fin-guru/data/margin-strategy.md`):
 
 | Broker | Rate |
 |---|---:|
 | Interactive Brokers | 2.5–4.5% |
 | Robinhood Gold | 5.25% |
-| Fidelity | 6–8% (negotiable; current tier 10.875%) |
+| Fidelity | negotiable; use `${FG_MARGIN_INTEREST_RATE}` from `.env` for current tier |
 | Schwab | 7–9% |
 
 _Target (long-term):_ refinance to sub-5%, ideally 2.5–4%.

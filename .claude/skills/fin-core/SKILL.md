@@ -33,7 +33,7 @@ These files are automatically loaded into context at session start:
 
 ### 2. User Profile
 **Path**: `fin-guru/data/user-profile.yaml`
-**Contains**: Portfolio structure ($500k), investment capacity ($13.3k/month W2), risk profile (aggressive), Layer 2 Income strategy
+**Contains**: Portfolio structure (${FG_PORTFOLIO_STRUCTURE}), investment capacity (${FG_W2_MONTHLY_INCOME}/month W2), risk profile (aggressive), Layer 2 Income strategy
 
 ### 3. Portfolio Updates
 **Path**: `notebooks/updates/`
@@ -92,11 +92,15 @@ All tools use 3-layer type-safe architecture (Pydantic → Calculator → CLI):
 
 ---
 
+## Personal Strategy Inputs
+
+Real portfolio size, income, target, and model-probability values are read from `.env` (see `.env.example`): `FG_PORTFOLIO_STRUCTURE`, `FG_W2_MONTHLY_INCOME`, `FG_ANNUAL_DIVIDEND_TARGET`, `FG_DIVIDEND_TARGET_MONTHS`, and `FG_MONTE_CARLO_PROBABILITY`. Do not hardcode personal numbers in this skill.
+
 ## Current Strategic Focus
 
 **Layer 1 (Growth)**: Keep 100% - DO NOT TOUCH
-**Layer 2 (Income)**: Building dividend portfolio with $13,317/month W2 income
-**Target**: $100k annual dividend income in 28 months (69.2% Monte Carlo probability)
+**Layer 2 (Income)**: Building dividend portfolio with ${FG_W2_MONTHLY_INCOME}/month W2 income
+**Target**: ${FG_ANNUAL_DIVIDEND_TARGET} annual dividend income in ${FG_DIVIDEND_TARGET_MONTHS} months (${FG_MONTE_CARLO_PROBABILITY} Monte Carlo probability)
 **Strategy**: Hybrid DRIP v2 with active rotation, confidence-based margin scaling
 
 ---

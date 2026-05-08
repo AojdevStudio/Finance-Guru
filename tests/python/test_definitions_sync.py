@@ -221,12 +221,12 @@ class TestSkillConstants:
         skill = (
             REPO_ROOT / ".claude" / "skills" / "margin-management" / "SKILL.md"
         ).read_text()
-        assert "10.875%" in skill, (
-            "margin-management/SKILL.md no longer states the 10.875% Fidelity rate. "
-            "If the rate genuinely changed, update both the skill and definitions.md §1 + §5.2."
+        assert "FG_MARGIN_INTEREST_RATE" in skill, (
+            "margin-management/SKILL.md must read the margin rate from .env, "
+            "not tracked personal strategy numbers."
         )
         documented = _row_value("MARGIN_RATE_FIDELITY_DEFAULT", doc_text)
-        assert "0.10875" in documented or "10.875%" in documented
+        assert "FG_MARGIN_INTEREST_RATE" in documented
 
     def test_concentration_limit_hard_matches_skill(self, doc_text):
         skill_path = (
