@@ -527,14 +527,14 @@ console.log('📋 Section implementations coming in subsequent tasks.');
    - Priority: P1 (high)
 
 3. **[Task] Test full onboarding flow manually** → Verify UX
-   - Bead: Create new task "Manual QA of complete onboarding"
+   - Tracking: Create a GitHub issue or repo follow-up for "Manual QA of complete onboarding"
    - Estimate: 1-2 hours
    - Priority: P1 (high)
 
 ### Next Sprint
 
 4. **[Epic] Multi-broker support** → Public release requirement
-   - Already tracked in beads: `family-office-fy0`, `family-office-nc2`, `family-office-59f`
+   - Tracking: migrate prior local tracker IDs (`family-office-fy0`, `family-office-nc2`, `family-office-59f`) to GitHub issues or repo follow-up docs
    - Estimate: 2-3 days
    - Priority: P1 (high)
 
@@ -771,4 +771,4 @@ From Spec (AOJ-194 Acceptance Criteria):
 
 ---
 
-**Next Action**: Create beads for Phase 1 tasks (wire up flow, MCP config) and mark this evaluation bead as complete.
+**Next Action**: Create GitHub issues or repo follow-up docs for Phase 1 tasks (wire up flow, MCP config) and mark this evaluation complete.

@@ -135,7 +135,7 @@ fin-guru/data/*
 .planning/
 Plans/
 
-# Beads task tracker (local)
+# Local task tracker data
 .beads/
 
 # Local research/scratch notes (not project artifacts)
