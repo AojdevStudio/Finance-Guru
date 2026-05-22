@@ -110,7 +110,6 @@ done
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd sync
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -124,7 +123,7 @@ done
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 
-Use 'bd' for task tracking
+Use GitHub Issues or repo docs for follow-up tracking
 
 ---
 

@@ -119,7 +119,7 @@ bun run scripts/qa/pre-codex-validation.ts
 1. **✅ Pre-Codex validation complete** - This task (family-office-c3m)
 2. **➡️ Proceed to Task 5.2**: Run Codex Full Review
    ```bash
-   bd update family-office-spr --status=in_progress
+   Create/update a GitHub issue or handoff doc for the Codex review
    ```
 
 ### Task 5.2 Preparation

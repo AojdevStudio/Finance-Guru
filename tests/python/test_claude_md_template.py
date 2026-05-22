@@ -403,7 +403,7 @@ def test_landing_the_plane_section(
 
     # Check for critical workflow steps
     assert "git pull --rebase" in result, "Landing the Plane missing git commands"
-    assert "bd sync" in result, "Landing the Plane missing bd sync"
+    assert "bd sync" not in result, "Landing the Plane should not reference bd sync"
     assert "git push" in result, "Landing the Plane missing git push"
     assert "MANDATORY WORKFLOW" in result, (
         "Landing the Plane missing mandatory workflow section"
