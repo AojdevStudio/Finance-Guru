@@ -696,6 +696,7 @@ dependencies = [
     { name = "requests" },
     { name = "scikit-learn" },
     { name = "scipy" },
+    { name = "snaptrade-python-sdk" },
     { name = "streamlit" },
     { name = "textual" },
     { name = "urllib3" },
@@ -748,6 +749,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32.5" },
     { name = "scikit-learn", specifier = ">=1.7.2" },
     { name = "scipy", specifier = ">=1.16.2" },
+    { name = "snaptrade-python-sdk", specifier = ">=11.0.197" },
     { name = "streamlit", specifier = ">=1.50.0" },
     { name = "textual", specifier = ">=6.6.0" },
     { name = "urllib3", specifier = ">=2.6.3" },
@@ -2899,6 +2901,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/44/cd/a040c4b3119bbe532e5b0732286f805445375489fceaec1f48306068ee3b/smmap-5.0.2.tar.gz", hash = "sha256:26ea65a03958fa0c8a1c7e8c7a58fdc77221b8910f6be2131affade476898ad5", size = 22329, upload-time = "2025-01-02T07:14:40.909Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/04/be/d09147ad1ec7934636ad912901c5fd7667e1c858e19d355237db0d0cd5e4/smmap-5.0.2-py3-none-any.whl", hash = "sha256:b30115f0def7d7531d22a0fb6502488d879e75b260a9db4d0819cfb25403af5e", size = 24303, upload-time = "2025-01-02T07:14:38.724Z" },
+]
+
+[[package]]
+name = "snaptrade-python-sdk"
+version = "11.0.197"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "certifi" },
+    { name = "cryptography" },
+    { name = "frozendict" },
+    { name = "python-dateutil" },
+    { name = "typing-extensions" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/aa/f6/def338cb84c787735f2ce5bf267e7c9646705c650fafc1935097ca557b51/snaptrade_python_sdk-11.0.197.tar.gz", hash = "sha256:576537a1e938de05e8a9006a2ed6eb5a7ef45605e180b3e0c2ef921755d86f90", size = 309167, upload-time = "2026-05-22T07:22:12.799Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fd/32/26ec9e529a701bcee470057a8a86f5b676acf13c474fa7666a75926695f1/snaptrade_python_sdk-11.0.197-py3-none-any.whl", hash = "sha256:0a757bf434bd14e5c134edbf70a19c762a2668701fb55c9d84de928a7231f48a", size = 1183709, upload-time = "2026-05-22T07:22:10.528Z" },
 ]
 
 [[package]]

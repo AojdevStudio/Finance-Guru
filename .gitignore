@@ -27,6 +27,9 @@ yarn-error.log*
 .env.local
 *.env
 
+# Local SnapTrade account routing (contains personal brokerage account ids)
+config/snaptrade-accounts.yaml
+
 # Data files
 data/raw/*
 data/processed/*

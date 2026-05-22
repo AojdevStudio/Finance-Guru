@@ -27,6 +27,7 @@ dependencies = [
     "yfinance>=1.3.0",
     "questionary>=2.1.1",
     "pillow>=12.1.1",
+    "snaptrade-python-sdk>=11.0.197",
 ]
 
 [dependency-groups]
@@ -156,6 +157,7 @@ module = [
     "questionary.*",
     "numpy.*",
     "pytest.*",
+    "snaptrade_client.*",
     "dotenv.*",
     "rich.*",
     "rich.text",
