@@ -118,24 +118,21 @@ mcp__gdrive__sheets(
 )
 ```
 
-### 5. Click "Add Dividend" Button (Browser Automation)
+### 5. Trigger `addDividendFast()` via apps-script-run web app
 
-After writing records, use browser automation to process them:
+After writing records, invoke the dispatcher (replaces the old "click Add Dividend button" UI step):
 
-```javascript
-// 1. Open Google Sheets
-mcp__claude-in-chrome__tabs_create_mcp({
-    url: "https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid=2068577140"
-})
-
-// 2. Wait for sheet to load
-// 3. Look for "Add Dividend" button or custom menu
-// 4. Click to trigger Apps Script
+```bash
+curl -sL "${APPS_SCRIPT_RUN_URL}?fn=addDividendFast"
 ```
 
-**Alternative: Use Apps Script Menu**
-- Extensions → Apps Script macros
-- Or custom menu added by the script
+The function appends each input row to the historical raw data (cols A-F at the bottom of the sheet) and clears `A2:D44`. SUMIFS formulas in the historical log (cols G-U) auto-aggregate by ticker × month. Returns JSON `{"ok": true, ...}` on success. See the `apps-script-run` skill for the full dispatcher reference.
+
+**Fallback (if web app is unreachable):** Replicate `addDividendFast` directly via the gdrive Sheets API:
+1. Read input area `A2:D44`, skip blank rows
+2. For each row, compute `year = new Date(date).getFullYear()` and `month = getMonth() + 1`
+3. Append `[ticker, amount, date, drip, year, month]` to the next empty row in cols A-F (typically row `getLastRow() + 1`)
+4. Clear `A2:D44`
 
 ### 6. Verify Processing
 

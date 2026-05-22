@@ -10,7 +10,7 @@ Finance Guru ships with a small, opinionated observability layer. Two modules li
 
 | Module | Purpose |
 |--------|---------|
-| `src/utils/logging.py` | Structured logging via _structlog_ with built-in PII scrubbing |
+| `src/utils/log.py` | Structured logging via _structlog_ with built-in PII scrubbing |
 | `src/utils/feature_flags.py` | Env-var-driven feature flag system |
 
 ## Structured logging
@@ -18,7 +18,7 @@ Finance Guru ships with a small, opinionated observability layer. Two modules li
 Replace `print()` in any CLI tool or long-running script with the structured logger:
 
 ```python
-from src.utils.logging import get_logger
+from src.utils.log import get_logger
 
 log = get_logger(__name__)
 log.info("analysis_started", ticker="TSLA", days=90, benchmark="SPY")
@@ -41,7 +41,7 @@ The logger runs every string value through a PII scrubber before rendering. The 
 | API tokens (`sk-`, `pk-`, `ghp_`, `ghs_` prefixes) | first 4 chars + `***` |
 | Email addresses | `***@domain.tld` (local part only) |
 
-Need to redact something else? Extend `src/utils/logging.py:ScrubPIIProcessor` — add a regex and unit-test it under `tests/python/test_logging.py`.
+Need to redact something else? Extend `src/utils/log.py:ScrubPIIProcessor` — add a regex and unit-test it under `tests/python/test_log.py`.
 
 ## Feature flags
 

@@ -1,0 +1,11 @@
+{
+  "_comment": "Known-accepted PII exceptions. Reserve for cases where the value is legitimately committed (e.g., a golden test fixture captured from real production). Every entry needs a reason and approval trail. Adding here suppresses ALL pattern scans on the matching path.",
+  "allow": [
+    {
+      "path": "tests/python/fixtures/fidelity_history_golden_expected.json",
+      "reason": "Golden test fixture captured from real Fidelity history import; real employer string is intentional and accepted",
+      "approved_by": "ossie",
+      "date": "2026-05-16"
+    }
+  ]
+}

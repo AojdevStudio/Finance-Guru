@@ -2,7 +2,7 @@
     "version": "1.0",
     "description": "Skill activation triggers for Claude Code. Controls when skills automatically suggest or block actions.",
     "skills": {
-        "PortfolioSyncing": {
+        "portfolio-syncing": {
             "type": "domain",
             "enforcement": "block",
             "priority": "critical",
@@ -174,7 +174,7 @@
                 ]
             }
         },
-        "FinanceReport": {
+        "finance-report": {
             "type": "domain",
             "enforcement": "suggest",
             "priority": "high",
@@ -207,7 +207,7 @@
                 ]
             }
         },
-        "TransactionSyncing": {
+        "transaction-syncing": {
             "type": "domain",
             "enforcement": "suggest",
             "priority": "high",

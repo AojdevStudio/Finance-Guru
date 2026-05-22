@@ -1,5 +1,5 @@
 ---
-name: TransactionSyncing
+name: transaction-syncing
 description: Import and manage Fidelity transaction history CSVs. Two workflows - IngestTransactions (local rolling archive from Downloads) and SyncTransactions (Google Sheets push). USE WHEN user mentions "sync transactions", "import transactions", "ingest transactions", "transaction history", OR wants to import Fidelity History CSV.
 ---
 

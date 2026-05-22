@@ -128,6 +128,9 @@ fin-guru/data/*
 .claude/get-shit-done/
 .claude/hooks/gsd-*
 
+# Private skills containing PII (live URLs, dispatcher endpoints, etc.)
+.claude/skills/apps-script-run/
+
 # Planning state (local project management)
 .planning/
 Plans/

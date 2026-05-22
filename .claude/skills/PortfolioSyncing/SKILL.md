@@ -1,5 +1,5 @@
 ---
-name: PortfolioSyncing
+name: portfolio-syncing
 description: Import and sync broker CSV portfolio data to Google Sheets DataHub. Supports Fidelity (automated) with multi-broker planned. USE WHEN user mentions import broker data OR sync portfolio OR update positions OR CSV import OR portfolio-sync OR ingest positions OR bring in positions OR downloaded from Fidelity OR working with Portfolio_Positions CSVs. Handles file ingestion from Downloads, position updates, SPAXX/margin validation, safety checks, and formula protection.
 ---
 
@@ -70,10 +70,10 @@ User: "I just bought more JEPI, sync my portfolio"
 **Example 4: Handling duplicate downloads**
 ```
 User downloads both regular and dividend views from Fidelity
--> ~/Downloads/ contains: Portfolio_Positions_Mar-06-2026.csv
-                          Portfolio_Positions_Mar-06-2026 (1).csv
+-> ~/Downloads/ contains: Portfolio_Positions_REDACTED.csv
+                          Portfolio_Positions_REDACTED (1).csv
 -> Reads header of each to classify
--> Regular view (has "Average Cost Basis") -> notebooks/updates/Portfolio_Positions_Mar-06-2026.csv
+-> Regular view (has "Average Cost Basis") -> notebooks/updates/Portfolio_Positions_REDACTED.csv
 -> Dividend view (has "Ex-date") -> notebooks/updates/Dividend_Positions_Mar-06-2026.csv
 ```
 

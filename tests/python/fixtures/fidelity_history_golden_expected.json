@@ -1,0 +1,91 @@
+{
+  "_description": "Golden expected output for fidelity_history_golden.csv. Pinned contract for any Fidelity transaction parser (Python or Keepfolio TS). If totals diverge, the parser has regressed.",
+  "_taxonomy_reference": "docs/csv-mappings/fidelity-mapping.json action_taxonomy block",
+  "row_count": 7,
+  "rows": [
+    {
+      "index": 0,
+      "run_date": "05/05/2026",
+      "amount": 5000.00,
+      "expected_category": "INCOME_WAGES",
+      "expected_employer": "Avanade Inc.PAYROLL",
+      "counts_as_wages": true,
+      "counts_as_investment_income": false,
+      "counts_as_spending": false,
+      "_test_intent": "Plain DIRECT DEPOSIT — base wages case. Employer name extracted from Action."
+    },
+    {
+      "index": 1,
+      "run_date": "05/04/2026",
+      "amount": 100.00,
+      "expected_category": "INCOME_DIVIDEND",
+      "counts_as_wages": false,
+      "counts_as_investment_income": true,
+      "counts_as_spending": false,
+      "_test_intent": "Standard DIVIDEND RECEIVED — base investment-income case."
+    },
+    {
+      "index": 2,
+      "run_date": "05/03/2026",
+      "amount": 50.00,
+      "expected_category": "INCOME_DIVIDEND",
+      "counts_as_wages": false,
+      "counts_as_investment_income": true,
+      "counts_as_spending": false,
+      "_test_intent": "DIVIDEND RECEIVED SUBSTITUTE PAYMENT — verifies the more-specific pattern is checked BEFORE plain DIVIDEND RECEIVED. If the match order is wrong, this row still lands in INCOME_DIVIDEND by accident, so the assertion is on category PLUS the marker text in the action — see test_substitute_payment_pattern_priority."
+    },
+    {
+      "index": 3,
+      "run_date": "05/02/2026",
+      "amount": -100.00,
+      "expected_category": "REINVESTMENT",
+      "counts_as_wages": false,
+      "counts_as_investment_income": false,
+      "counts_as_spending": false,
+      "_test_intent": "REINVESTMENT — must NOT count as income. The cash was already booked under the matching DIVIDEND RECEIVED row. Double-counting here was the Q1 2026 analysis bug."
+    },
+    {
+      "index": 4,
+      "run_date": "05/01/2026",
+      "amount": 200.00,
+      "expected_category": "INTERNAL_TRANSFER",
+      "counts_as_wages": false,
+      "counts_as_investment_income": false,
+      "counts_as_spending": false,
+      "_test_intent": "JOURNALED (cash <-> margin sweep) — net economic effect zero. MUST NOT inflate income totals."
+    },
+    {
+      "index": 5,
+      "run_date": "04/30/2026",
+      "amount": -1500.00,
+      "expected_category": "CC_PAYMENT_PASSTHROUGH",
+      "counts_as_wages": false,
+      "counts_as_investment_income": false,
+      "counts_as_spending": false,
+      "_test_intent": "DIRECT DEBIT APPLECARD — credit card payoff. The merchant-level spending is captured on the CC statement. Counting this as spending double-counts. This was the cause of the initial $38,842/mo (142% of income) error in Q1 2026."
+    },
+    {
+      "index": 6,
+      "run_date": "04/29/2026",
+      "amount": -75.00,
+      "expected_category": "DEBIT_CARD_PURCHASE",
+      "expected_sub_category": "Groceries",
+      "counts_as_wages": false,
+      "counts_as_investment_income": false,
+      "counts_as_spending": true,
+      "_test_intent": "DEBIT CARD PURCHASE H-E-B — real spending. Merchant name in Action, NOT Description (which says 'No Description'). Sub-category resolves via EXPENSE_PATTERNS."
+    }
+  ],
+  "totals": {
+    "wages_total": 5000.00,
+    "investment_income_total": 150.00,
+    "total_income": 5150.00,
+    "true_spending_total": 75.00,
+    "_excluded_from_both": {
+      "internal_transfer_amount": 200.00,
+      "reinvestment_amount": -100.00,
+      "cc_passthrough_amount": -1500.00,
+      "_note": "These are listed separately for diagnostic visibility. They are NOT income and NOT spending. A parser that includes any of them in either total has regressed."
+    }
+  }
+}
