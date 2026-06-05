@@ -1,11 +1,13 @@
-"""SQLite state store for buy-ticket agent smoke runs."""
+"""SQLite state store for buy-ticket agent smoke and pipeline runs."""
 
 from __future__ import annotations
 
+import json
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 SCHEMA_STATEMENTS = (
     """
@@ -38,6 +40,17 @@ SCHEMA_STATEMENTS = (
         decision TEXT NOT NULL,
         source TEXT NOT NULL,
         FOREIGN KEY(ticket_id) REFERENCES tickets(id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS layer3_bundles (
+        id TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        primary_ticker TEXT NOT NULL,
+        tickers_json TEXT NOT NULL,
+        status TEXT NOT NULL,
+        bundle_path TEXT NOT NULL,
+        payload_json TEXT NOT NULL
     )
     """,
 )
@@ -175,5 +188,53 @@ def record_smoke_failure(
                 status,
                 None,
                 str(log_path),
+            ),
+        )
+
+
+def record_layer3_bundle(
+    db_path: Path,
+    *,
+    run_id: str,
+    created_at: str,
+    primary_ticker: str,
+    tickers: Sequence[str],
+    status: str,
+    bundle_path: Path | str,
+    payload: dict[str, Any],
+) -> None:
+    """Persist a deterministic Layer 3 pipeline bundle."""
+    tickers_json = json.dumps(list(tickers), sort_keys=True)
+    payload_json = json.dumps(payload, sort_keys=True)
+    with connect_state(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO layer3_bundles
+                (
+                    id,
+                    created_at,
+                    primary_ticker,
+                    tickers_json,
+                    status,
+                    bundle_path,
+                    payload_json
+                )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                created_at = excluded.created_at,
+                primary_ticker = excluded.primary_ticker,
+                tickers_json = excluded.tickers_json,
+                status = excluded.status,
+                bundle_path = excluded.bundle_path,
+                payload_json = excluded.payload_json
+            """,
+            (
+                run_id,
+                created_at,
+                primary_ticker,
+                tickers_json,
+                status,
+                str(bundle_path),
+                payload_json,
             ),
         )
