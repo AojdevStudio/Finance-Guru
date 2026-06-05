@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "claim": "bun run src/claim.ts",
-    "accounts": "bun run src/accounts.ts"
+    "accounts": "bun run src/accounts.ts",
+    "trigger": "bun run src/trigger.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/bun": "latest",
