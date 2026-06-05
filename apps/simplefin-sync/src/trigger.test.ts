@@ -260,6 +260,43 @@ describe("SimpleFIN deposit trigger", () => {
     }
   });
 
+  test("marks successful triggers even when log writing fails", async () => {
+    const projectRoot = await mkdtemp(path.join(tmpdir(), "simplefin-trigger-"));
+    const seenStore = createMemorySeenStore();
+    const client: SimpleFinClient = {
+      baseUrl: "https://simplefin.example.test",
+      async fetchAccounts() {
+        return accountSet([transaction({ id: "tx-1", amount: "3100.00" })]);
+      },
+    };
+    let transactionKey = "";
+
+    try {
+      await Bun.write(path.join(projectRoot, "notebooks"), "not a directory");
+      await expect(
+        pollDepositTriggers({
+          client,
+          seenStore,
+          projectRoot,
+          trigger: async (detection) => {
+            transactionKey = detection.transactionKey;
+            return {
+              status: "triggered",
+              exitCode: 0,
+              stdoutChars: 10,
+              stderrChars: 0,
+            };
+          },
+        }),
+      ).rejects.toThrow();
+
+      expect(transactionKey).not.toBe("");
+      expect(await seenStore.has(transactionKey)).toBe(true);
+    } finally {
+      await rm(projectRoot, { recursive: true, force: true });
+    }
+  });
+
   test("builds the buy-ticket subprocess command and sanitized trigger env", () => {
     const detection = {
       amount: "3100.00",

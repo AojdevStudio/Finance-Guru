@@ -3,7 +3,7 @@
  * SimpleFIN deposit trigger for the buy-ticket smoke pipeline.
  */
 import { createHash } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rename } from "node:fs/promises";
 import path from "node:path";
 
 import { createClient, toSfinTimestamp, type SimpleFinClient } from "./client";
@@ -35,8 +35,8 @@ export interface TriggerResult {
 export interface SeenTransactionStore {
   has(key: string): boolean | Promise<boolean>;
   mark(key: string): void | Promise<void>;
-  failureCount?(key: string): number | Promise<number>;
-  markFailure?(key: string): number | Promise<number>;
+  failureCount(key: string): number | Promise<number>;
+  markFailure(key: string): number | Promise<number>;
 }
 
 export interface PollOptions {
@@ -112,8 +112,9 @@ export function createFileSeenStore(statePath: string): SeenTransactionStore {
 
   async function persist(): Promise<void> {
     await mkdir(path.dirname(statePath), { recursive: true });
+    const tempPath = `${statePath}.${process.pid}.${Date.now()}.tmp`;
     await Bun.write(
-      statePath,
+      tempPath,
       `${JSON.stringify(
         {
           seen: [...seen].sort(),
@@ -123,6 +124,7 @@ export function createFileSeenStore(statePath: string): SeenTransactionStore {
         2,
       )}\n`,
     );
+    await rename(tempPath, statePath);
   }
 
   return {
@@ -331,14 +333,21 @@ async function failureCount(
   seenStore: SeenTransactionStore,
   key: string,
 ): Promise<number> {
-  return seenStore.failureCount ? await seenStore.failureCount(key) : 0;
+  return seenStore.failureCount(key);
 }
 
 async function markFailure(
   seenStore: SeenTransactionStore,
   key: string,
 ): Promise<number> {
-  return seenStore.markFailure ? await seenStore.markFailure(key) : 0;
+  return seenStore.markFailure(key);
+}
+
+function toScrubbedError(error: unknown, fallback: string): Error {
+  if (error instanceof Error) {
+    return new Error(scrubSensitiveText(error.message || fallback));
+  }
+  return new Error(fallback);
 }
 
 export async function pollDepositTriggers(options: PollOptions): Promise<PollResult> {
@@ -376,7 +385,13 @@ export async function pollDepositTriggers(options: PollOptions): Promise<PollRes
     }
 
     const result = await trigger(detection);
-    await writeTriggerLog(options.projectRoot, detection, result, now);
+    let logWriteError: unknown = null;
+    try {
+      await writeTriggerLog(options.projectRoot, detection, result, now);
+    } catch (error) {
+      logWriteError = error;
+    }
+
     if (result.status === "triggered") {
       await options.seenStore.mark(detection.transactionKey);
       triggered += 1;
@@ -387,6 +402,10 @@ export async function pollDepositTriggers(options: PollOptions): Promise<PollRes
         cappedFailures += 1;
       }
       failed += 1;
+    }
+
+    if (logWriteError) {
+      throw toScrubbedError(logWriteError, "Trigger log write failed");
     }
   }
 
@@ -454,8 +473,8 @@ async function runCli(argv: string[]): Promise<number> {
       });
       console.log(JSON.stringify(result));
     } catch (error) {
-      if (!watch) throw error;
       console.error(JSON.stringify(pollErrorPayload(error)));
+      if (!watch) return 1;
       await Bun.sleep(intervalMs);
       continue;
     }
