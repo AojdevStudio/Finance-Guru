@@ -3,7 +3,7 @@
  * SimpleFIN deposit trigger for the buy-ticket smoke pipeline.
  */
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { createClient, toSfinTimestamp, type SimpleFinClient } from "./client";
@@ -12,6 +12,9 @@ import type { SfinAccount, SfinAccountSet, SfinTransaction } from "./types";
 const DEFAULT_THRESHOLD = "3000.00";
 const MONEY_SCALE = 4;
 const DEFAULT_POLL_INTERVAL_MS = 4 * 60 * 60 * 1000;
+const DEFAULT_TRIGGER_TIMEOUT_MS = 10 * 60 * 1000;
+const DEFAULT_MAX_TRIGGER_FAILURES = 3;
+const CHILD_ENV_DENYLIST_PREFIXES = ["SIMPLEFIN_"];
 
 export interface DepositDetection {
   transactionKey: string;
@@ -26,11 +29,14 @@ export interface TriggerResult {
   exitCode: number;
   stdoutChars: number;
   stderrChars: number;
+  timedOut?: boolean;
 }
 
 export interface SeenTransactionStore {
   has(key: string): boolean | Promise<boolean>;
   mark(key: string): void | Promise<void>;
+  failureCount?(key: string): number | Promise<number>;
+  markFailure?(key: string): number | Promise<number>;
 }
 
 export interface PollOptions {
@@ -41,6 +47,7 @@ export interface PollOptions {
   trigger?: (detection: DepositDetection) => Promise<TriggerResult>;
   now?: Date;
   lookbackDays?: number;
+  maxFailures?: number;
 }
 
 export interface PollResult {
@@ -49,18 +56,96 @@ export interface PollResult {
   triggered: number;
   skippedDuplicates: number;
   failed: number;
+  cappedFailures: number;
+}
+
+interface SeenStateFile {
+  seen?: string[];
+  failures?: Record<string, number>;
 }
 
 export function createMemorySeenStore(
   initialKeys: Iterable<string> = [],
 ): SeenTransactionStore {
   const seen = new Set(initialKeys);
+  const failures = new Map<string, number>();
   return {
     has(key: string) {
       return seen.has(key);
     },
     mark(key: string) {
       seen.add(key);
+      failures.delete(key);
+    },
+    failureCount(key: string) {
+      return failures.get(key) ?? 0;
+    },
+    markFailure(key: string) {
+      const count = (failures.get(key) ?? 0) + 1;
+      failures.set(key, count);
+      return count;
+    },
+  };
+}
+
+export function createFileSeenStore(statePath: string): SeenTransactionStore {
+  const seen = new Set<string>();
+  const failures = new Map<string, number>();
+  let loaded = false;
+
+  async function load(): Promise<void> {
+    if (loaded) return;
+    const file = Bun.file(statePath);
+    if (await file.exists()) {
+      const parsed = JSON.parse(await file.text()) as SeenStateFile;
+      for (const key of parsed.seen ?? []) {
+        seen.add(key);
+      }
+      for (const [key, count] of Object.entries(parsed.failures ?? {})) {
+        if (Number.isInteger(count) && count > 0) {
+          failures.set(key, count);
+        }
+      }
+    }
+    loaded = true;
+  }
+
+  async function persist(): Promise<void> {
+    await mkdir(path.dirname(statePath), { recursive: true });
+    await Bun.write(
+      statePath,
+      `${JSON.stringify(
+        {
+          seen: [...seen].sort(),
+          failures: Object.fromEntries([...failures].sort()),
+        },
+        null,
+        2,
+      )}\n`,
+    );
+  }
+
+  return {
+    async has(key: string) {
+      await load();
+      return seen.has(key);
+    },
+    async mark(key: string) {
+      await load();
+      seen.add(key);
+      failures.delete(key);
+      await persist();
+    },
+    async failureCount(key: string) {
+      await load();
+      return failures.get(key) ?? 0;
+    },
+    async markFailure(key: string) {
+      await load();
+      const count = (failures.get(key) ?? 0) + 1;
+      failures.set(key, count);
+      await persist();
+      return count;
     },
   };
 }
@@ -140,12 +225,23 @@ export function buildBuyTicketCommand(): string[] {
   return ["uv", "run", "python", "-m", "buy_ticket_agent.main", "--smoke"];
 }
 
+function childProcessEnv(baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(baseEnv)) {
+    if (CHILD_ENV_DENYLIST_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+      continue;
+    }
+    env[key] = value;
+  }
+  return env;
+}
+
 export function buildBuyTicketEnv(
   detection: DepositDetection,
   baseEnv: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
   return {
-    ...baseEnv,
+    ...childProcessEnv(baseEnv),
     BUY_TICKET_TRIGGER_SOURCE: "simplefin_deposit",
     BUY_TICKET_TRIGGER_AMOUNT: detection.amount,
     BUY_TICKET_TRIGGER_ACCOUNT_KEY: detection.sourceAccountKey,
@@ -171,6 +267,7 @@ async function countStreamChars(stream: ReadableStream<Uint8Array>): Promise<num
 export async function runBuyTicketSubprocess(
   detection: DepositDetection,
   projectRoot: string,
+  timeoutMs = DEFAULT_TRIGGER_TIMEOUT_MS,
 ): Promise<TriggerResult> {
   const proc = Bun.spawn(buildBuyTicketCommand(), {
     cwd: projectRoot,
@@ -178,19 +275,29 @@ export async function runBuyTicketSubprocess(
     stdout: "pipe",
     stderr: "pipe",
   });
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    proc.kill();
+  }, timeoutMs);
 
-  const [stdoutChars, stderrChars, exitCode] = await Promise.all([
-    countStreamChars(proc.stdout),
-    countStreamChars(proc.stderr),
-    proc.exited,
-  ]);
+  try {
+    const [stdoutChars, stderrChars, exitCode] = await Promise.all([
+      countStreamChars(proc.stdout),
+      countStreamChars(proc.stderr),
+      proc.exited,
+    ]);
 
-  return {
-    status: exitCode === 0 ? "triggered" : "failed",
-    exitCode,
-    stdoutChars,
-    stderrChars,
-  };
+    return {
+      status: exitCode === 0 && !timedOut ? "triggered" : "failed",
+      exitCode,
+      stdoutChars,
+      stderrChars,
+      ...(timedOut ? { timedOut } : {}),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function writeTriggerLog(
@@ -217,12 +324,27 @@ async function writeTriggerLog(
   };
 
   await mkdir(logDir, { recursive: true });
-  await writeFile(logPath, `${JSON.stringify(payload, null, 2)}\n`);
+  await Bun.write(logPath, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+async function failureCount(
+  seenStore: SeenTransactionStore,
+  key: string,
+): Promise<number> {
+  return seenStore.failureCount ? await seenStore.failureCount(key) : 0;
+}
+
+async function markFailure(
+  seenStore: SeenTransactionStore,
+  key: string,
+): Promise<number> {
+  return seenStore.markFailure ? await seenStore.markFailure(key) : 0;
 }
 
 export async function pollDepositTriggers(options: PollOptions): Promise<PollResult> {
   const now = options.now ?? new Date();
   const lookbackDays = options.lookbackDays ?? 7;
+  const maxFailures = options.maxFailures ?? DEFAULT_MAX_TRIGGER_FAILURES;
   const startDate = toSfinTimestamp(
     new Date(now.valueOf() - lookbackDays * 24 * 60 * 60 * 1000),
   );
@@ -242,13 +364,28 @@ export async function pollDepositTriggers(options: PollOptions): Promise<PollRes
 
   let triggered = 0;
   let failed = 0;
+  let cappedFailures = 0;
   for (const detection of detections) {
+    if (
+      maxFailures > 0 &&
+      (await failureCount(options.seenStore, detection.transactionKey)) >= maxFailures
+    ) {
+      await options.seenStore.mark(detection.transactionKey);
+      cappedFailures += 1;
+      continue;
+    }
+
     const result = await trigger(detection);
     await writeTriggerLog(options.projectRoot, detection, result, now);
     if (result.status === "triggered") {
       await options.seenStore.mark(detection.transactionKey);
       triggered += 1;
     } else {
+      const failures = await markFailure(options.seenStore, detection.transactionKey);
+      if (maxFailures > 0 && failures >= maxFailures) {
+        await options.seenStore.mark(detection.transactionKey);
+        cappedFailures += 1;
+      }
       failed += 1;
     }
   }
@@ -259,6 +396,35 @@ export async function pollDepositTriggers(options: PollOptions): Promise<PollRes
     triggered,
     skippedDuplicates,
     failed,
+    cappedFailures,
+  };
+}
+
+function scrubSensitiveText(value: string): string {
+  let scrubbed = value.replace(/https?:\/\/[^@\s]+@/g, "https://[redacted]@");
+  const accessUrl = process.env.SIMPLEFIN_ACCESS_URL?.trim();
+  if (accessUrl) {
+    scrubbed = scrubbed.split(accessUrl).join("[redacted]");
+  }
+  return scrubbed;
+}
+
+function pollErrorPayload(error: unknown): object {
+  if (error instanceof Error) {
+    return {
+      event: "simplefin_trigger_poll_error",
+      error: {
+        name: error.name,
+        message: scrubSensitiveText(error.message),
+      },
+    };
+  }
+  return {
+    event: "simplefin_trigger_poll_error",
+    error: {
+      name: "Error",
+      message: "Poll failed",
+    },
   };
 }
 
@@ -271,19 +437,28 @@ async function runCli(argv: string[]): Promise<number> {
 
   const projectRoot = path.resolve(import.meta.dir, "..", "..", "..");
   const client = createClient(accessUrl);
-  const seenStore = createMemorySeenStore();
+  const seenStore = createFileSeenStore(
+    path.join(projectRoot, "notebooks", "auto-tickets", "simplefin-seen.json"),
+  );
   const watch = argv.includes("--watch");
   const intervalMs =
     Number(process.env.SIMPLEFIN_TRIGGER_INTERVAL_MS ?? "") ||
     DEFAULT_POLL_INTERVAL_MS;
 
   do {
-    const result = await pollDepositTriggers({
-      client,
-      seenStore,
-      projectRoot,
-    });
-    console.log(JSON.stringify(result));
+    try {
+      const result = await pollDepositTriggers({
+        client,
+        seenStore,
+        projectRoot,
+      });
+      console.log(JSON.stringify(result));
+    } catch (error) {
+      if (!watch) throw error;
+      console.error(JSON.stringify(pollErrorPayload(error)));
+      await Bun.sleep(intervalMs);
+      continue;
+    }
     if (!watch) break;
     await Bun.sleep(intervalMs);
   } while (true);

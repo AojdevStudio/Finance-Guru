@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -9,6 +9,7 @@ import type { SfinAccount, SfinAccountSet, SfinTransaction } from "./types";
 import {
   buildBuyTicketCommand,
   buildBuyTicketEnv,
+  createFileSeenStore,
   createMemorySeenStore,
   findNewDepositDetections,
   pollDepositTriggers,
@@ -135,7 +136,7 @@ describe("SimpleFIN deposit trigger", () => {
 
       const logDir = path.join(projectRoot, "notebooks", "auto-tickets", "runs");
       const [logFile] = await readdir(logDir);
-      const log = JSON.parse(await readFile(path.join(logDir, logFile), "utf8"));
+      const log = JSON.parse(await Bun.file(path.join(logDir, logFile)).text());
       expect(log).toMatchObject({
         event: "simplefin_deposit_detection",
         status: "triggered",
@@ -143,6 +144,117 @@ describe("SimpleFIN deposit trigger", () => {
       });
       expect(log.transaction_key).toBe(calls[0]);
       expect(log.transaction_key).not.toContain("tx-1");
+    } finally {
+      await rm(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("persists seen transaction ids across store instances", async () => {
+    const projectRoot = await mkdtemp(path.join(tmpdir(), "simplefin-trigger-"));
+    const statePath = path.join(projectRoot, "notebooks", "auto-tickets", "seen.json");
+    const client: SimpleFinClient = {
+      baseUrl: "https://simplefin.example.test",
+      async fetchAccounts() {
+        return accountSet([transaction({ id: "tx-1", amount: "3100.00" })]);
+      },
+    };
+    const calls: string[] = [];
+
+    try {
+      await pollDepositTriggers({
+        client,
+        seenStore: createFileSeenStore(statePath),
+        projectRoot,
+        trigger: async (detection) => {
+          calls.push(detection.transactionKey);
+          return {
+            status: "triggered",
+            exitCode: 0,
+            stdoutChars: 10,
+            stderrChars: 0,
+          };
+        },
+      });
+      const second = await pollDepositTriggers({
+        client,
+        seenStore: createFileSeenStore(statePath),
+        projectRoot,
+        trigger: async (detection) => {
+          calls.push(detection.transactionKey);
+          return {
+            status: "triggered",
+            exitCode: 0,
+            stdoutChars: 10,
+            stderrChars: 0,
+          };
+        },
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(second).toMatchObject({
+        detections: 0,
+        triggered: 0,
+        skippedDuplicates: 1,
+      });
+      const state = JSON.parse(await Bun.file(statePath).text());
+      expect(state.seen).toHaveLength(1);
+      expect(state.seen[0]).not.toContain("tx-1");
+    } finally {
+      await rm(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("caps repeated failed trigger attempts", async () => {
+    const projectRoot = await mkdtemp(path.join(tmpdir(), "simplefin-trigger-"));
+    const seenStore = createMemorySeenStore();
+    const client: SimpleFinClient = {
+      baseUrl: "https://simplefin.example.test",
+      async fetchAccounts() {
+        return accountSet([transaction({ id: "tx-1", amount: "3100.00" })]);
+      },
+    };
+    const calls: string[] = [];
+
+    try {
+      const trigger = async (detection: { transactionKey: string }) => {
+        calls.push(detection.transactionKey);
+        return {
+          status: "failed" as const,
+          exitCode: 1,
+          stdoutChars: 0,
+          stderrChars: 10,
+        };
+      };
+      const first = await pollDepositTriggers({
+        client,
+        seenStore,
+        projectRoot,
+        maxFailures: 2,
+        trigger,
+      });
+      const second = await pollDepositTriggers({
+        client,
+        seenStore,
+        projectRoot,
+        maxFailures: 2,
+        trigger,
+      });
+      const third = await pollDepositTriggers({
+        client,
+        seenStore,
+        projectRoot,
+        maxFailures: 2,
+        trigger,
+      });
+
+      expect(calls).toHaveLength(2);
+      expect(first).toMatchObject({ failed: 1, cappedFailures: 0 });
+      expect(second).toMatchObject({ failed: 1, cappedFailures: 1 });
+      expect(third).toMatchObject({
+        detections: 0,
+        skippedDuplicates: 1,
+        failed: 0,
+      });
     } finally {
       await rm(projectRoot, { recursive: true, force: true });
     }
@@ -157,6 +269,12 @@ describe("SimpleFIN deposit trigger", () => {
       pending: false,
     };
 
+    const env = buildBuyTicketEnv(detection, {
+      PATH: "/bin",
+      SIMPLEFIN_ACCESS_URL: "credential-bearing-url",
+      SIMPLEFIN_TRIGGER_INTERVAL_MS: "1000",
+    });
+
     expect(buildBuyTicketCommand()).toEqual([
       "uv",
       "run",
@@ -165,12 +283,14 @@ describe("SimpleFIN deposit trigger", () => {
       "buy_ticket_agent.main",
       "--smoke",
     ]);
-    expect(buildBuyTicketEnv(detection, { PATH: "/bin" })).toMatchObject({
+    expect(env).toMatchObject({
       PATH: "/bin",
       BUY_TICKET_TRIGGER_SOURCE: "simplefin_deposit",
       BUY_TICKET_TRIGGER_AMOUNT: "3100.00",
       BUY_TICKET_TRIGGER_ACCOUNT_KEY: "source-account-key",
       BUY_TICKET_TRIGGER_TRANSACTION_KEY: "transaction-key",
     });
+    expect(env).not.toHaveProperty("SIMPLEFIN_ACCESS_URL");
+    expect(env).not.toHaveProperty("SIMPLEFIN_TRIGGER_INTERVAL_MS");
   });
 });
