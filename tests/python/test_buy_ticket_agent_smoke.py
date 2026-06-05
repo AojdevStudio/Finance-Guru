@@ -251,6 +251,40 @@ def test_run_smoke_writes_draft_log_and_state(tmp_path: Path, monkeypatch) -> No
     assert (run_count, ticket_count, decision_count) == (1, 1, 1)
 
 
+def test_run_smoke_includes_sanitized_trigger_context(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Smoke artifacts include trigger context passed by the event poller."""
+    monkeypatch.delenv("BUY_TICKET_AGENT_NTFY_TOPIC_SECRET_ID", raising=False)
+    monkeypatch.delenv("NTFY_TOPIC_SECRET_ID", raising=False)
+    monkeypatch.delenv("BUY_TICKET_AGENT_NTFY_TOPIC", raising=False)
+    monkeypatch.delenv("NTFY_TOPIC", raising=False)
+    monkeypatch.setenv("BUY_TICKET_TRIGGER_SOURCE", "simplefin_deposit")
+    monkeypatch.setenv("BUY_TICKET_TRIGGER_AMOUNT", "3100.00")
+    monkeypatch.setenv("BUY_TICKET_TRIGGER_ACCOUNT_KEY", "account-key")
+    monkeypatch.setenv("BUY_TICKET_TRIGGER_TRANSACTION_KEY", "transaction-key")
+
+    completed = MagicMock()
+    completed.returncode = 0
+    completed.stdout = '{"symbol":"SP500","current_risk_score":0.4}'
+    completed.stderr = ""
+
+    with patch("buy_ticket_agent.pipeline.subprocess.run", return_value=completed):
+        result = run_smoke(project_root=tmp_path)
+
+    draft = json.loads((tmp_path / result.draft_path).read_text())
+    log = json.loads((tmp_path / result.log_path).read_text())
+    expected_context = {
+        "source": "simplefin_deposit",
+        "amount": "3100.00",
+        "source_account_key": "account-key",
+        "transaction_key": "transaction-key",
+    }
+
+    assert draft["trigger"] == expected_context
+    assert log["trigger"] == expected_context
+
+
 def test_run_smoke_does_not_record_success_state_if_log_write_fails(
     tmp_path: Path, monkeypatch
 ) -> None:

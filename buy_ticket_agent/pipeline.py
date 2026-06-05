@@ -70,6 +70,24 @@ def _output_length(output: str | bytes | None) -> int:
     return len(output)
 
 
+def _trigger_context_from_env() -> dict[str, str] | None:
+    source = os.getenv("BUY_TICKET_TRIGGER_SOURCE")
+    if not source:
+        return None
+
+    context = {"source": source}
+    optional_fields = {
+        "BUY_TICKET_TRIGGER_AMOUNT": "amount",
+        "BUY_TICKET_TRIGGER_ACCOUNT_KEY": "source_account_key",
+        "BUY_TICKET_TRIGGER_TRANSACTION_KEY": "transaction_key",
+    }
+    for env_name, field_name in optional_fields.items():
+        value = os.getenv(env_name)
+        if value:
+            context[field_name] = value
+    return context
+
+
 def run_layer3_smoke_cli(project_root: Path) -> CliEnvelope:
     """Invoke the existing ITC Risk CLI once for the smoke path."""
     command_args = (
@@ -133,8 +151,9 @@ def _make_ticket_payload(
     ticket_id: str,
     created_at: str,
     cli_result: CliEnvelope,
+    trigger_context: dict[str, str] | None,
 ) -> dict:
-    return {
+    payload = {
         "id": ticket_id,
         "run_id": run_id,
         "created_at": created_at,
@@ -151,6 +170,9 @@ def _make_ticket_payload(
         },
         "disclaimer": DISCLAIMER,
     }
+    if trigger_context is not None:
+        payload["trigger"] = trigger_context
+    return payload
 
 
 def run_smoke(project_root: Path | None = None) -> SmokeResult:
@@ -162,6 +184,7 @@ def run_smoke(project_root: Path | None = None) -> SmokeResult:
     ticket_id = f"ticket-{run_id}"
 
     notification_config = resolve_notification_config()
+    trigger_context = _trigger_context_from_env()
     initialize_state(paths.state_db)
     cli_result = run_layer3_smoke_cli(paths.project_root)
 
@@ -179,6 +202,7 @@ def run_smoke(project_root: Path | None = None) -> SmokeResult:
             "status": status,
             "draft_path": None,
             "state_db": _relative(paths.state_db, paths.project_root),
+            "trigger": trigger_context,
             "layer3": asdict(cli_result),
             "notification": None,
         }
@@ -205,6 +229,7 @@ def run_smoke(project_root: Path | None = None) -> SmokeResult:
         ticket_id=ticket_id,
         created_at=created_at,
         cli_result=cli_result,
+        trigger_context=trigger_context,
     )
     _write_json(draft_path, ticket_payload)
 
@@ -227,6 +252,7 @@ def run_smoke(project_root: Path | None = None) -> SmokeResult:
         "status": status,
         "draft_path": _relative(draft_path, paths.project_root),
         "state_db": _relative(paths.state_db, paths.project_root),
+        "trigger": trigger_context,
         "layer3": asdict(cli_result),
         "notification": asdict(notification),
     }
