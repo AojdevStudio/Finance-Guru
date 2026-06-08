@@ -14,7 +14,10 @@ def _is_pipeline_acceptance_run(config) -> bool:
     for arg in config.invocation_params.args or config.args:
         if arg.startswith("-"):
             continue
-        path = Path(arg)
+        path_arg = arg.split("::", 1)[0]
+        if not path_arg:
+            continue
+        path = Path(path_arg)
         if not path.is_absolute():
             path = root / path
         resolved = path.resolve()
@@ -37,5 +40,6 @@ def pytest_sessionstart(session) -> None:
     if not _is_pipeline_acceptance_run(session.config):
         return
     cov_plugin = session.config.pluginmanager.get_plugin("_cov")
-    if cov_plugin is not None:
-        cov_plugin.options.cov_fail_under = 0
+    options = getattr(cov_plugin, "options", None)
+    if options is not None and hasattr(options, "cov_fail_under"):
+        options.cov_fail_under = 0
