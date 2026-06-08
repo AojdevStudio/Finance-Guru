@@ -13,6 +13,7 @@ from buy_ticket_agent.ticket_models import BuyTicket, PortfolioState
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 TICKET_TOOL_NAME = "emit_buy_ticket"
+SYSTEM_MANAGED_TICKET_FIELDS = frozenset({"advisory_block"})
 FRAMEWORK_DOC_PATHS = (
     "fin-guru/templates/buy-ticket-template.md",
     "fin-guru/data/definitions.md",
@@ -95,10 +96,25 @@ def _system_blocks(
 
 
 def _tool_schema() -> dict[str, Any]:
+    input_schema = BuyTicket.model_json_schema()
+    properties = input_schema.get("properties")
+    if isinstance(properties, dict):
+        input_schema["properties"] = {
+            field_name: schema
+            for field_name, schema in properties.items()
+            if field_name not in SYSTEM_MANAGED_TICKET_FIELDS
+        }
+    required = input_schema.get("required")
+    if isinstance(required, list):
+        input_schema["required"] = [
+            field_name
+            for field_name in required
+            if field_name not in SYSTEM_MANAGED_TICKET_FIELDS
+        ]
     return {
         "name": TICKET_TOOL_NAME,
         "description": "Emit one structured buy-ticket JSON object.",
-        "input_schema": BuyTicket.model_json_schema(),
+        "input_schema": input_schema,
     }
 
 
