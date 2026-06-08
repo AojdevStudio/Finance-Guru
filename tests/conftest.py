@@ -14,12 +14,18 @@ ACCEPTANCE_TEST_FILE_SETS = (
 )
 
 
+def _is_test_path_arg(value: str) -> bool:
+    """Return whether an invocation argument looks like a selected test path."""
+    path_arg = value.split("::", 1)[0]
+    return path_arg.startswith("tests/") or path_arg.endswith(".py")
+
+
 def _is_acceptance_run(config) -> bool:
     """Return whether pytest was invoked only for root acceptance tests."""
     root = Path(config.rootpath)
     selected_paths = set()
     for arg in config.invocation_params.args or config.args:
-        if arg.startswith("-"):
+        if arg.startswith("-") or not _is_test_path_arg(arg):
             continue
         path_arg = arg.split("::", 1)[0]
         if not path_arg:
