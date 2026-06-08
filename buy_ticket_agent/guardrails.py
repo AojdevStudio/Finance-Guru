@@ -95,9 +95,10 @@ def check(
         if violation is not None
     ]
     if not violations:
+        accepted_ticket = parsed_ticket.model_copy(update={"advisory_block": None})
         return GuardrailResult(
             status="accepted",
-            ticket=parsed_ticket,
+            ticket=accepted_ticket,
             advisory_block=None,
             violations=[],
         )

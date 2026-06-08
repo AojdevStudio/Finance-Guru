@@ -114,8 +114,14 @@ def _portfolio_state() -> PortfolioState:
 class FakeMessages:
     """Capture Anthropic request payloads and return forced tool-use blocks."""
 
-    def __init__(self, cache_reads: list[int]) -> None:
+    def __init__(
+        self,
+        cache_reads: list[int],
+        *,
+        tool_input: dict[str, Any] | None = None,
+    ) -> None:
         self.cache_reads = cache_reads
+        self.tool_input = tool_input
         self.calls: list[dict[str, Any]] = []
 
     def create(self, **kwargs: Any) -> SimpleNamespace:
@@ -126,7 +132,9 @@ class FakeMessages:
                 SimpleNamespace(
                     type="tool_use",
                     name="emit_buy_ticket",
-                    input=_ticket_payload(),
+                    input=self.tool_input
+                    if self.tool_input is not None
+                    else _ticket_payload(),
                 )
             ],
             usage=SimpleNamespace(
@@ -141,8 +149,13 @@ class FakeMessages:
 class FakeAnthropicClient:
     """Minimal fake client exposing the SDK messages namespace."""
 
-    def __init__(self, cache_reads: list[int]) -> None:
-        self.messages = FakeMessages(cache_reads)
+    def __init__(
+        self,
+        cache_reads: list[int],
+        *,
+        tool_input: dict[str, Any] | None = None,
+    ) -> None:
+        self.messages = FakeMessages(cache_reads, tool_input=tool_input)
 
 
 def test_generate_calls_claude_with_prompt_cache_and_returns_valid_ticket() -> None:
@@ -169,6 +182,9 @@ def test_generate_calls_claude_with_prompt_cache_and_returns_valid_ticket() -> N
         "disable_parallel_tool_use": True,
     }
     assert call["tools"][0]["name"] == "emit_buy_ticket"
+    input_schema = call["tools"][0]["input_schema"]
+    assert "advisory_block" not in input_schema["properties"]
+    assert "advisory_block" not in input_schema.get("required", [])
     assert any(
         block.get("cache_control", {}).get("type") == "ephemeral"
         for block in call["system"]
@@ -196,3 +212,15 @@ def test_second_identical_generation_reports_prompt_cache_hit() -> None:
     assert first.usage.cache_read_input_tokens == 0
     assert second.usage.cache_read_input_tokens == 1200
     assert len(client.messages.calls) == 2
+
+
+def test_generate_clears_llm_authored_advisory_block_on_accepted_ticket() -> None:
+    """System-owned advisory blocks cannot persist on accepted LLM output."""
+    payload = {**_ticket_payload(), "advisory_block": "llm-authored advisory"}
+    client = FakeAnthropicClient(cache_reads=[0], tool_input=payload)
+
+    result = generate(_layer3_bundle(), _portfolio_state(), client=client)
+
+    assert result.guardrails.status == "accepted"
+    assert result.guardrails.advisory_block is None
+    assert result.ticket.advisory_block is None

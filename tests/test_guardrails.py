@@ -102,7 +102,9 @@ def test_check_sums_duplicate_normalized_positions_before_concentration() -> Non
 
 def test_check_accepts_ticket_within_all_hard_limits() -> None:
     """A ticket within every hard threshold is accepted without violations."""
-    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=20000.0)
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=20000.0).model_copy(
+        update={"advisory_block": "llm-authored advisory"}
+    )
     portfolio = PortfolioState(
         portfolio_value=100000.0,
         cash_available=20000.0,
