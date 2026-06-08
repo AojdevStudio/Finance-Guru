@@ -49,7 +49,7 @@ def test_check_rejects_ticket_proposing_thirty_five_percent_concentration() -> N
     """A ticket proposing 35% concentration is hard-blocked after LLM output."""
     ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=35000.0)
     portfolio = PortfolioState(
-        portfolio_value=65000.0,
+        portfolio_value=100000.0,
         cash_available=100000.0,
         monthly_dividend_income=500.0,
         monthly_margin_interest=200.0,
@@ -64,12 +64,30 @@ def test_check_rejects_ticket_proposing_thirty_five_percent_concentration() -> N
     assert result.ticket.advisory_block == "concentration>30%"
 
 
+def test_check_rejects_cash_funded_deployment_above_concentration_limit() -> None:
+    """Cash-funded deployments do not inflate the concentration denominator."""
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=33000.0)
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=33000.0,
+        monthly_dividend_income=500.0,
+        monthly_margin_interest=200.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(ticket, portfolio)
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "concentration>30%"
+
+
 def test_check_sums_duplicate_normalized_positions_before_concentration() -> None:
     """Differently formatted duplicate position keys cannot hide concentration."""
     ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=10000.0)
     portfolio = PortfolioState(
-        portfolio_value=90000.0,
-        cash_available=100000.0,
+        portfolio_value=100000.0,
+        cash_available=10000.0,
         monthly_dividend_income=500.0,
         monthly_margin_interest=200.0,
         current_positions={"TSLA": 20000.0, " tsla ": 5000.0},
@@ -80,6 +98,26 @@ def test_check_sums_duplicate_normalized_positions_before_concentration() -> Non
 
     assert result.status == "blocked"
     assert result.advisory_block == "concentration>30%"
+
+
+def test_check_accepts_ticket_within_all_hard_limits() -> None:
+    """A ticket within every hard threshold is accepted without violations."""
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=20000.0)
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=20000.0,
+        monthly_dividend_income=500.0,
+        monthly_margin_interest=200.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(ticket, portfolio)
+
+    assert result.status == "accepted"
+    assert result.advisory_block is None
+    assert result.violations == []
+    assert result.ticket.advisory_block is None
 
 
 def test_check_rejects_ticket_when_margin_coverage_is_below_two_times() -> None:

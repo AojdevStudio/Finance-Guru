@@ -6,11 +6,12 @@ from pathlib import Path
 
 import pytest
 
-ACCEPTANCE_TEST_FILE_SETS = (
-    frozenset({"tests/test_pipeline.py"}),
-    frozenset({"tests/test_guardrails.py"}),
-    frozenset({"tests/test_ticket_generator.py"}),
-    frozenset({"tests/test_guardrails.py", "tests/test_ticket_generator.py"}),
+ACCEPTANCE_TEST_FILES = frozenset(
+    {
+        "tests/test_pipeline.py",
+        "tests/test_guardrails.py",
+        "tests/test_ticket_generator.py",
+    }
 )
 
 
@@ -38,7 +39,8 @@ def _is_acceptance_run(config) -> bool:
             selected_paths.add(resolved.relative_to(root).as_posix())
         except ValueError:
             continue
-    return frozenset(selected_paths) in ACCEPTANCE_TEST_FILE_SETS
+    selected = frozenset(selected_paths)
+    return bool(selected) and selected.issubset(ACCEPTANCE_TEST_FILES)
 
 
 @pytest.hookimpl(tryfirst=True)

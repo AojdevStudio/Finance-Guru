@@ -88,7 +88,7 @@ def _system_blocks(
             {
                 "type": "text",
                 "text": f"Framework document: {doc['path']}\n\n{doc['text']}",
-                "cache_control": {"type": "ephemeral", "ttl": "5m"},
+                "cache_control": {"type": "ephemeral"},
             }
         )
     return blocks

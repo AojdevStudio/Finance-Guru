@@ -33,11 +33,22 @@ def _deployment_by_ticker(ticket: BuyTicket) -> dict[str, float]:
     return deployments
 
 
+def _post_deployment_portfolio_value(
+    ticket: BuyTicket,
+    portfolio: PortfolioState,
+) -> float:
+    externally_funded_deployment = max(
+        ticket.deployment_amount - portfolio.cash_available,
+        0.0,
+    )
+    return portfolio.portfolio_value + externally_funded_deployment
+
+
 def _first_concentration_violation(
     ticket: BuyTicket,
     portfolio: PortfolioState,
 ) -> str | None:
-    portfolio_after = portfolio.portfolio_value + ticket.deployment_amount
+    portfolio_after = _post_deployment_portfolio_value(ticket, portfolio)
     if portfolio_after <= 0.0:
         return None
 
