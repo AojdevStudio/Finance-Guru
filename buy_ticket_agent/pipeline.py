@@ -2,20 +2,26 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import subprocess
 import sys
+import time
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, Literal
 from uuid import uuid4
+
+from pydantic import BaseModel, ConfigDict
 
 from buy_ticket_agent.config import SmokePaths
 from buy_ticket_agent.notifier import NotificationResult, push_ticket_preview
 from buy_ticket_agent.secrets import resolve_notification_config
 from buy_ticket_agent.state import (
     initialize_state,
+    record_layer3_bundle,
     record_smoke_failure,
     record_smoke_run,
 )
@@ -26,6 +32,10 @@ DISCLAIMER = (
     "For educational purposes only; not investment advice. Consult a licensed "
     "financial professional before acting. Loss of principal is possible."
 )
+Layer3ToolKey = Literal["itc", "risk", "mom", "vol", "opt"]
+Layer3ToolStatus = Literal["succeeded", "failed"]
+Layer3BundleStatus = Literal["succeeded", "partial", "failed"]
+PIPELINE_TOOL_KEYS: tuple[Layer3ToolKey, ...] = ("itc", "risk", "mom", "vol", "opt")
 
 
 @dataclass(frozen=True)
@@ -53,6 +63,63 @@ class SmokeResult:
     notification: NotificationResult | None
 
 
+@dataclass(frozen=True)
+class Layer3ToolSpec:
+    """Command metadata for one deterministic Layer 3 tool call."""
+
+    key: Layer3ToolKey
+    command: list[str]
+    logged_command: list[str]
+
+
+@dataclass(frozen=True)
+class Layer3ProcessResult:
+    """Raw subprocess outcome before JSON parsing."""
+
+    returncode: int
+    stdout: str
+    stderr: str
+    duration_ms: int
+    error: str | None = None
+
+
+class Layer3ToolResult(BaseModel):
+    """Sanitized result envelope for one Layer 3 CLI."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key: Layer3ToolKey
+    command: list[str]
+    status: Layer3ToolStatus
+    returncode: int
+    duration_ms: int
+    stdout_chars: int
+    stderr_chars: int
+    data: Any | None = None
+    error: str | None = None
+
+
+class Layer3Bundle(BaseModel):
+    """Deterministic JSON bundle consumed by later ticket-generation layers."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    event: Literal["layer3_pipeline_bundle"] = "layer3_pipeline_bundle"
+    run_id: str
+    created_at: str
+    status: Layer3BundleStatus
+    primary_ticker: str
+    tickers: list[str]
+    universe: Literal["crypto", "tradfi"]
+    bundle_path: str
+    state_db: str
+    itc: Layer3ToolResult
+    risk: Layer3ToolResult
+    mom: Layer3ToolResult
+    vol: Layer3ToolResult
+    opt: Layer3ToolResult
+
+
 def _utc_now() -> datetime:
     return datetime.now(tz=UTC)
 
@@ -68,6 +135,328 @@ def _output_length(output: str | bytes | None) -> int:
     if output is None:
         return 0
     return len(output)
+
+
+def _decode_output(output: bytes | str | None) -> str:
+    """Decode subprocess output without raising on malformed bytes."""
+    if output is None:
+        return ""
+    if isinstance(output, str):
+        return output
+    return output.decode("utf-8", errors="replace")
+
+
+def _normalize_tickers(tickers: list[str] | tuple[str, ...]) -> tuple[str, ...]:
+    """Normalize ticker input while preserving first-seen order."""
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for ticker in tickers:
+        value = ticker.strip().upper()
+        if not value or value in seen:
+            continue
+        normalized.append(value)
+        seen.add(value)
+    if not normalized:
+        raise ValueError("At least one ticker is required")
+    return tuple(normalized)
+
+
+def _validate_universe(universe: str) -> Literal["crypto", "tradfi"]:
+    """Validate the ITC universe value used by the Layer 3 bundle."""
+    if universe == "crypto":
+        return "crypto"
+    if universe == "tradfi":
+        return "tradfi"
+    raise ValueError("universe must be 'crypto' or 'tradfi'")
+
+
+def _logged_command(command: list[str]) -> list[str]:
+    """Return a stable command representation without local interpreter paths."""
+    return ["python", *command[1:]]
+
+
+def _build_layer3_specs(
+    tickers: tuple[str, ...],
+    *,
+    universe: Literal["crypto", "tradfi"],
+    days: int,
+    optimizer_days: int,
+) -> tuple[Layer3ToolSpec, ...]:
+    """Build the fixed AOJ-460 Layer 3 CLI command matrix."""
+    primary_ticker = tickers[0]
+    benchmark = next(
+        (ticker for ticker in tickers[1:] if ticker != primary_ticker), None
+    )
+
+    itc_command = [
+        sys.executable,
+        "src/analysis/itc_risk_cli.py",
+        primary_ticker,
+        "--universe",
+        universe,
+        "--output",
+        "json",
+        "--no-price",
+    ]
+    risk_command = [
+        sys.executable,
+        "src/analysis/risk_metrics_cli.py",
+        primary_ticker,
+        "--days",
+        str(days),
+        "--output",
+        "json",
+    ]
+    if benchmark:
+        risk_command.extend(["--benchmark", benchmark])
+
+    commands: dict[Layer3ToolKey, list[str]] = {
+        "itc": itc_command,
+        "risk": risk_command,
+        "mom": [
+            sys.executable,
+            "src/utils/momentum_cli.py",
+            primary_ticker,
+            "--days",
+            str(days),
+            "--output",
+            "json",
+        ],
+        "vol": [
+            sys.executable,
+            "src/utils/volatility_cli.py",
+            primary_ticker,
+            "--days",
+            str(days),
+            "--output",
+            "json",
+        ],
+        "opt": [
+            sys.executable,
+            "src/strategies/optimizer_cli.py",
+            *tickers,
+            "--days",
+            str(optimizer_days),
+            "--method",
+            "max_sharpe",
+            "--output",
+            "json",
+        ],
+    }
+    return tuple(
+        Layer3ToolSpec(
+            key=key,
+            command=commands[key],
+            logged_command=_logged_command(commands[key]),
+        )
+        for key in PIPELINE_TOOL_KEYS
+    )
+
+
+async def _run_cli_subprocess(
+    spec: Layer3ToolSpec,
+    *,
+    project_root: Path,
+    timeout_seconds: int,
+) -> Layer3ProcessResult:
+    """Run one Layer 3 CLI and capture only scrub-safe process metadata."""
+    started = time.perf_counter()
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *spec.command,
+            cwd=project_root,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=timeout_seconds,
+            )
+        except TimeoutError:
+            process.kill()
+            stdout, stderr = await process.communicate()
+            return Layer3ProcessResult(
+                returncode=-1,
+                stdout=_decode_output(stdout),
+                stderr=_decode_output(stderr),
+                duration_ms=int((time.perf_counter() - started) * 1000),
+                error="TimeoutExpired",
+            )
+    except FileNotFoundError:
+        return Layer3ProcessResult(
+            returncode=-1,
+            stdout="",
+            stderr="",
+            duration_ms=int((time.perf_counter() - started) * 1000),
+            error="FileNotFoundError",
+        )
+    except Exception as exc:
+        return Layer3ProcessResult(
+            returncode=-1,
+            stdout="",
+            stderr="",
+            duration_ms=int((time.perf_counter() - started) * 1000),
+            error=type(exc).__name__,
+        )
+
+    return Layer3ProcessResult(
+        returncode=process.returncode if process.returncode is not None else -1,
+        stdout=_decode_output(stdout),
+        stderr=_decode_output(stderr),
+        duration_ms=int((time.perf_counter() - started) * 1000),
+    )
+
+
+def _make_failed_tool_result(
+    spec: Layer3ToolSpec,
+    process_result: Layer3ProcessResult,
+    *,
+    error: str,
+) -> Layer3ToolResult:
+    """Build a scrubbed failed tool envelope."""
+    return Layer3ToolResult(
+        key=spec.key,
+        command=spec.logged_command,
+        status="failed",
+        returncode=process_result.returncode,
+        duration_ms=process_result.duration_ms,
+        stdout_chars=_output_length(process_result.stdout),
+        stderr_chars=_output_length(process_result.stderr),
+        error=error,
+    )
+
+
+async def _run_layer3_tool(
+    spec: Layer3ToolSpec,
+    *,
+    project_root: Path,
+    timeout_seconds: int,
+) -> Layer3ToolResult:
+    """Run one Layer 3 CLI and parse successful JSON output."""
+    process_result = await _run_cli_subprocess(
+        spec,
+        project_root=project_root,
+        timeout_seconds=timeout_seconds,
+    )
+    if process_result.error is not None:
+        return _make_failed_tool_result(
+            spec, process_result, error=process_result.error
+        )
+    if process_result.returncode != 0:
+        return _make_failed_tool_result(spec, process_result, error="ProcessFailed")
+    if not process_result.stdout.strip():
+        return _make_failed_tool_result(spec, process_result, error="NoJsonOutput")
+
+    try:
+        data = json.loads(process_result.stdout)
+    except json.JSONDecodeError:
+        return _make_failed_tool_result(spec, process_result, error="JSONDecodeError")
+
+    return Layer3ToolResult(
+        key=spec.key,
+        command=spec.logged_command,
+        status="succeeded",
+        returncode=process_result.returncode,
+        duration_ms=process_result.duration_ms,
+        stdout_chars=_output_length(process_result.stdout),
+        stderr_chars=_output_length(process_result.stderr),
+        data=data,
+    )
+
+
+async def _run_layer3_tools(
+    specs: tuple[Layer3ToolSpec, ...],
+    *,
+    project_root: Path,
+    timeout_seconds: int,
+) -> dict[Layer3ToolKey, Layer3ToolResult]:
+    """Run the Layer 3 CLI matrix concurrently and return ordered results."""
+    results = await asyncio.gather(
+        *(
+            _run_layer3_tool(
+                spec,
+                project_root=project_root,
+                timeout_seconds=timeout_seconds,
+            )
+            for spec in specs
+        )
+    )
+    return {result.key: result for result in results}
+
+
+def _bundle_status(
+    results: dict[Layer3ToolKey, Layer3ToolResult],
+) -> Layer3BundleStatus:
+    """Summarize per-tool statuses into a bundle-level status."""
+    succeeded = sum(1 for result in results.values() if result.status == "succeeded")
+    if succeeded == len(results):
+        return "succeeded"
+    if succeeded == 0:
+        return "failed"
+    return "partial"
+
+
+def run(
+    tickers: list[str] | tuple[str, ...],
+    *,
+    universe: str = "tradfi",
+    project_root: Path | None = None,
+    timeout_seconds: int = 55,
+    days: int = 90,
+    optimizer_days: int = 252,
+) -> dict[str, Any]:
+    """Run the deterministic AOJ-460 Layer 3 pipeline and persist its bundle."""
+    normalized_tickers = _normalize_tickers(tickers)
+    validated_universe = _validate_universe(universe)
+    paths = SmokePaths.from_project_root(project_root)
+    now = _utc_now()
+    created_at = now.isoformat()
+    run_id = f"layer3-{now:%Y%m%d}-{uuid4().hex[:8]}"
+    bundle_path = paths.bundles_dir / f"{run_id}.json"
+    specs = _build_layer3_specs(
+        normalized_tickers,
+        universe=validated_universe,
+        days=days,
+        optimizer_days=optimizer_days,
+    )
+
+    initialize_state(paths.state_db)
+    tool_results = asyncio.run(
+        _run_layer3_tools(
+            specs,
+            project_root=paths.project_root,
+            timeout_seconds=timeout_seconds,
+        )
+    )
+    bundle = Layer3Bundle(
+        run_id=run_id,
+        created_at=created_at,
+        status=_bundle_status(tool_results),
+        primary_ticker=normalized_tickers[0],
+        tickers=list(normalized_tickers),
+        universe=validated_universe,
+        bundle_path=_relative(bundle_path, paths.project_root),
+        state_db=_relative(paths.state_db, paths.project_root),
+        itc=tool_results["itc"],
+        risk=tool_results["risk"],
+        mom=tool_results["mom"],
+        vol=tool_results["vol"],
+        opt=tool_results["opt"],
+    )
+    payload = bundle.model_dump(mode="json")
+    _write_json(bundle_path, payload)
+    record_layer3_bundle(
+        paths.state_db,
+        run_id=run_id,
+        created_at=created_at,
+        primary_ticker=normalized_tickers[0],
+        tickers=normalized_tickers,
+        status=bundle.status,
+        bundle_path=_relative(bundle_path, paths.project_root),
+        payload=payload,
+    )
+    return payload
 
 
 def _trigger_context_from_env() -> dict[str, str] | None:

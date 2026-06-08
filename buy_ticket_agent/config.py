@@ -16,6 +16,7 @@ class SmokePaths(BaseModel):
     project_root: Path
     drafts_dir: Path
     runs_dir: Path
+    bundles_dir: Path
     state_db: Path
 
     @classmethod
@@ -30,6 +31,7 @@ class SmokePaths(BaseModel):
             / "tickets"
             / "auto-drafts",
             runs_dir=root / "notebooks" / "auto-tickets" / "runs",
+            bundles_dir=root / "notebooks" / "auto-tickets" / "bundles",
             state_db=root / "notebooks" / "auto-tickets" / "state.db",
         )
 
