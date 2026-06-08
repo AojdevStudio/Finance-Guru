@@ -125,5 +125,5 @@ class PortfolioState(BaseModel):
                 raise ValueError("position ticker is required")
             if market_value < 0.0:
                 raise ValueError("position market value cannot be negative")
-            normalized[key] = market_value
+            normalized[key] = normalized.get(key, 0.0) + market_value
         return normalized
