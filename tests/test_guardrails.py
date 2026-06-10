@@ -209,3 +209,23 @@ def test_check_accepts_ticket_when_itc_is_not_supported_and_score_is_missing() -
 
     assert result.status == "accepted"
     assert result.advisory_block is None
+
+
+def test_check_accepts_ticket_when_itc_is_unsupported_and_score_is_missing() -> None:
+    """Unsupported ITC applicability with a None score is not a violation."""
+    ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=20000.0).model_copy(
+        update={"itc_applicability": "unsupported", "itc_risk_score": None}
+    )
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=100000.0,
+        monthly_dividend_income=500.0,
+        monthly_margin_interest=200.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(ticket, portfolio)
+
+    assert result.status == "accepted"
+    assert result.advisory_block is None
