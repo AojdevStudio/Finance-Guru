@@ -70,6 +70,10 @@ def _margin_coverage_violation(portfolio: PortfolioState) -> str | None:
 
 
 def _itc_risk_violation(ticket: BuyTicket) -> str | None:
+    if ticket.itc_applicability == "supported" and ticket.itc_risk_score is None:
+        # ITC was declared applicable but no score arrived (e.g. ITC CLI failure).
+        # Fail-safe: block rather than silently skip the guardrail.
+        return "itc_risk_score_missing"
     if ticket.itc_risk_score is None:
         return None
     if ticket.itc_risk_score >= MAX_ITC_RISK:

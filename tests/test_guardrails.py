@@ -160,3 +160,52 @@ def test_check_rejects_ticket_when_itc_risk_is_at_hard_limit() -> None:
     assert result.status == "blocked"
     assert result.advisory_block == "itc_risk>=0.7"
     assert result.ticket.advisory_block == "itc_risk>=0.7"
+
+
+def test_check_rejects_ticket_when_itc_is_supported_but_score_is_missing() -> None:
+    """ITC-supported tickets require a risk score; a None score is hard-blocked.
+
+    Realistic trigger: the ITC CLI fails during Layer 3 pipeline execution so the
+    bundle carries itc.data=null.  The LLM faithfully emits
+    itc_applicability='supported' (tradfi asset) but itc_risk_score=null because no
+    score was available.  Without this guard the guardrail would silently pass.
+    """
+    ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=20000.0).model_copy(
+        update={"itc_risk_score": None}
+    )
+    # _ticket_with_allocation always sets itc_applicability="supported".
+    assert ticket.itc_applicability == "supported"
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=100000.0,
+        monthly_dividend_income=500.0,
+        monthly_margin_interest=200.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(ticket, portfolio)
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "itc_risk_score_missing"
+    assert result.ticket.advisory_block == "itc_risk_score_missing"
+
+
+def test_check_accepts_ticket_when_itc_is_not_supported_and_score_is_missing() -> None:
+    """Non-supported ITC applicability with a None score is not a violation."""
+    ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=20000.0).model_copy(
+        update={"itc_applicability": "not-run", "itc_risk_score": None}
+    )
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=100000.0,
+        monthly_dividend_income=500.0,
+        monthly_margin_interest=200.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(ticket, portfolio)
+
+    assert result.status == "accepted"
+    assert result.advisory_block is None
