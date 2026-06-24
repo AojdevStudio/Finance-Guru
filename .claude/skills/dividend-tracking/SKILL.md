@@ -55,6 +55,29 @@ The Dividends tab has **TWO SECTIONS**:
 
 The Apps Script reads from the input area (A-D) and appends to the historical log (G onwards).
 
+## Input Source: SnapTrade activities (preferred) — CSV is fallback
+
+As of SnapTrade Phase 2 (#72), the preferred input is **live normalized activities**, not `dividend.csv`:
+
+```bash
+uv run python -m src.integrations.snaptrade.cli activities --output json
+```
+
+Filter the returned records to `type == "DIVIDEND"`. Each record carries `date`,
+`symbol`, `amount`, `description`, and `account`. **Null-symbol dividends already
+have a ticker resolved** — the CLI parses it from the `description` (e.g. `... ETF
+(SCHD)`), mirroring the positions/options symbol fallback — so `symbol` is safe to
+write straight to Column A.
+
+**Dedupe is unchanged:** Google Sheets stays the single source of truth. The
+historical log (cols A-F / SUMIFS in G-U) is the ledger; only write input rows
+that are not already represented, and only for pay dates that have passed. No
+local cache or state file is introduced.
+
+**Fallback:** the `dividend.csv` path below still works and remains the fallback
+until the human reconciliation gate (#72) confirms parity. CSV ingestion is not
+removed in this phase (deletion is Phase 3 / #73).
+
 ## Core Workflow
 
 ### 1. Read Dividend CSV

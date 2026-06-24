@@ -17,6 +17,47 @@ from src.integrations.snaptrade.models import (
     SnapTradeCredentials,
 )
 
+# Three activities across the page boundary: a normal-symbol dividend, a
+# null-symbol dividend that must fall back to the description ticker, and a buy.
+_ACTIVITY_FIXTURE = [
+    {
+        "id": "a1",
+        "type": "DIVIDEND",
+        "symbol": {"symbol": "SCHD"},
+        "units": 0,
+        "price": 0,
+        "amount": 51.63,
+        "currency": {"code": "USD"},
+        "description": "DIVIDEND RECEIVED SCHWAB US DIVIDEND EQUITY ETF (SCHD)",
+        "trade_date": "2026-01-05",
+        "account": {"id": "acct-1"},
+    },
+    {
+        "id": "a2",
+        "type": "DIVIDEND",
+        "symbol": None,
+        "units": 0,
+        "price": 0,
+        "amount": 78.62,
+        "currency": {"code": "USD"},
+        "description": "DIVIDEND RECEIVED JPMORGAN NASDAQ EQTY PREM INC ETF (JEPQ)",
+        "trade_date": "2026-01-05",
+        "account": {"id": "acct-1"},
+    },
+    {
+        "id": "a3",
+        "type": "BUY",
+        "symbol": {"symbol": "TSLA"},
+        "units": 10,
+        "price": 200,
+        "amount": -2000,
+        "currency": {"code": "USD"},
+        "description": "YOU BOUGHT TSLA",
+        "trade_date": "2026-01-03",
+        "account": {"id": "acct-1"},
+    },
+]
+
 
 class FakeResponse:
     """Small SDK response double with a `.body` attribute."""
@@ -86,6 +127,29 @@ class FakeAccountInformation:
         assert account_id == "acct-1"
         return FakeResponse(
             {"balance": {"total": {"amount": 1000.0, "currency": "USD"}}}
+        )
+
+    def get_account_activities(
+        self,
+        account_id: str,
+        user_id: str,
+        user_secret: str,
+        offset: int = 0,
+        limit: int = 1000,
+        type: str | None = None,
+    ):
+        """Return a paginated slice of activities (offset/limit, total honored)."""
+        assert account_id == "acct-1"
+        page = _ACTIVITY_FIXTURE[offset : offset + limit]
+        return FakeResponse(
+            {
+                "data": page,
+                "pagination": {
+                    "offset": offset,
+                    "limit": limit,
+                    "total": len(_ACTIVITY_FIXTURE),
+                },
+            }
         )
 
 
@@ -287,6 +351,51 @@ def test_positions_command_syncs_enabled_account(
     assert round(opt["average_purchase_price"], 5) == 4.61675
 
 
+def test_activities_command_emits_normalized_json(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    """The activities subcommand syncs a routed account and emits valid JSON."""
+    config_path = tmp_path / "snaptrade-accounts.yaml"
+    _write_routing_config(config_path, role="taxable_margin", enabled=True)
+    monkeypatch.setattr(
+        "src.integrations.snaptrade.cli.SnapTradeClientWrapper", _RoutingWrapper
+    )
+
+    exit_code = main(["activities", "--config", str(config_path), "--output", "json"])
+
+    assert exit_code == 0
+    out = json.loads(capsys.readouterr().out)  # criterion: valid JSON
+    assert out["kind"] == "activities"
+    assert out["synced_account_count"] == 1
+    activities = out["accounts"][0]["activities"]
+    assert len(activities) == 3
+    null_div = next(a for a in activities if a["amount"] == 78.62)
+    assert null_div["symbol"] == "JEPQ"
+
+
+def test_activities_command_refuses_unassigned_without_network(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    """An unrouted account is refused and never reaches the SnapTrade API."""
+    config_path = tmp_path / "snaptrade-accounts.yaml"
+    _write_routing_config(config_path, role="unassigned", enabled=False)
+
+    def _explode():
+        raise AssertionError("from_env must not run when nothing is syncable")
+
+    monkeypatch.setattr(
+        "src.integrations.snaptrade.cli.SnapTradeClientWrapper.from_env",
+        staticmethod(_explode),
+    )
+
+    exit_code = main(["activities", "--config", str(config_path), "--output", "json"])
+
+    assert exit_code == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["synced_account_count"] == 0
+    assert out["refused_account_count"] == 1
+
+
 def test_balances_command_derives_margin_debt(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ):
@@ -384,3 +493,50 @@ def test_derive_margin_debt_math():
     debt4, gross4 = derive_margin_debt(with_spaxx, [], equity=800.0)
     assert gross4 == 1100.0
     assert debt4 == 300.0  # = loan, not loan - cash
+
+
+def test_get_activities_pages_through_full_result_set():
+    """Activities fetch follows offset/limit pagination until total is reached."""
+    client = SnapTradeClientWrapper(_credentials(), sdk_client=FakeSDKClient())
+
+    # page_size 2 forces >1 page over the 3-record fixture (pages of 2 then 1).
+    activities = client.get_activities("acct-1", page_size=2)
+
+    assert len(activities) == 3
+    assert [a["type"] for a in activities] == ["DIVIDEND", "DIVIDEND", "BUY"]
+
+
+def test_dividend_with_null_symbol_resolves_ticker_from_description():
+    """A DIVIDEND whose symbol is null derives its ticker from the description."""
+    client = SnapTradeClientWrapper(_credentials(), sdk_client=FakeSDKClient())
+
+    activities = client.get_activities("acct-1", page_size=2)
+    by_id = {a["account"]: a for a in activities}  # all on acct-1
+    null_symbol_div = next(
+        a for a in activities if a["type"] == "DIVIDEND" and a["amount"] == 78.62
+    )
+
+    assert by_id  # sanity: account field is populated
+    # symbol was null on the wire; parsed "(JEPQ)" out of the description
+    assert null_symbol_div["symbol"] == "JEPQ"
+    # the normal-symbol dividend still resolves straight from the symbol object
+    schd = next(a for a in activities if a["amount"] == 51.63)
+    assert schd["symbol"] == "SCHD"
+
+
+def test_summarize_activity_emits_stable_shape():
+    """Each normalized activity carries the documented stable field set."""
+    from src.integrations.snaptrade.client import _summarize_activity
+
+    record = _summarize_activity(_ACTIVITY_FIXTURE[2])  # the TSLA buy
+
+    assert record == {
+        "type": "BUY",
+        "date": "2026-01-03",
+        "symbol": "TSLA",
+        "amount": -2000.0,
+        "quantity": 10.0,
+        "currency": "USD",
+        "description": "YOU BOUGHT TSLA",
+        "account": "acct-1",
+    }

@@ -17,6 +17,10 @@ USAGE:
     # so the live path stays inert until an account is verified and routed.
     uv run python -m src.integrations.snaptrade.cli positions --output json
     uv run python -m src.integrations.snaptrade.cli balances --output json
+
+    # Phase 2 — fetch all transaction/dividend activities (paged) for the same
+    # config-enabled accounts. Feeds TransactionSyncing + dividend-tracking.
+    uv run python -m src.integrations.snaptrade.cli activities --output json
 """
 
 from __future__ import annotations
@@ -48,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "accounts":
         return _accounts_command(args)
-    if args.command in ("positions", "balances"):
+    if args.command in ("positions", "balances", "activities"):
         return _routing_command(args)
     parser.print_help(sys.stderr)
     return 2
@@ -90,7 +94,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Overwrite an existing config when used with --write-config.",
     )
 
-    for kind in ("positions", "balances"):
+    for kind in ("positions", "balances", "activities"):
         sub = subparsers.add_parser(
             kind,
             help=f"Sync {kind} for config-enabled accounts only (read-only).",
@@ -141,7 +145,7 @@ def _accounts_command(args: argparse.Namespace) -> int:
 
 
 def _routing_command(args: argparse.Namespace) -> int:
-    kind = args.command  # "positions" or "balances"
+    kind = args.command  # "positions", "balances", or "activities"
     try:
         config = SnapTradeAccountsConfig.from_path(Path(args.config))
     except (FileNotFoundError, ValueError) as exc:
@@ -191,6 +195,8 @@ def _fetch_routing_records(
             record["positions"] = _account_positions(
                 client, account.snaptrade_account_id
             )
+        elif kind == "activities":
+            record["activities"] = client.get_activities(account.snaptrade_account_id)
         else:
             record["balances"] = _account_balances(client, account.snaptrade_account_id)
         records.append(record)
@@ -279,8 +285,10 @@ def _print_routing(payload: dict[str, Any], output_format: str) -> None:
     )
     for account in payload["accounts"]:
         data = account[payload["kind"]]
-        if payload["kind"] == "positions":
-            print(f"- {account['name']} ({account['role']}): {len(data)} positions")
+        if payload["kind"] in ("positions", "activities"):
+            print(
+                f"- {account['name']} ({account['role']}): {len(data)} {payload['kind']}"
+            )
         else:
             print(
                 f"- {account['name']} ({account['role']}): "

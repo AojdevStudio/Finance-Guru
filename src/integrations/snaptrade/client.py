@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Mapping
 from typing import Any, TypeVar, cast
 
@@ -94,6 +95,44 @@ class SnapTradeClientWrapper:
         return [
             _summarize_option(item) for item in _ensure_list(_response_body(response))
         ]
+
+    def get_activities(
+        self, account_id: str, page_size: int = 1000
+    ) -> list[dict[str, Any]]:
+        """Return all normalized transaction/dividend activities for an account.
+
+        Pages through SnapTrade's offset/limit activities endpoint until the
+        reported total is consumed, so the result is the full history rather
+        than the first page. Google Sheets stays the dedupe source of truth;
+        this adds no local cache.
+        """
+        activities: list[dict[str, Any]] = []
+        offset = 0
+        while True:
+            page, total = self._activities_page(account_id, offset, page_size)
+            activities.extend(_summarize_activity(item) for item in page)
+            offset += len(page)
+            # ponytail: any of empty page / short page / total reached ends the
+            # loop, so it terminates even if the broker omits `total`.
+            if not page or len(page) < page_size:
+                break
+            if total is not None and offset >= total:
+                break
+        return activities
+
+    def _activities_page(
+        self, account_id: str, offset: int, limit: int
+    ) -> tuple[list[Any], int | None]:
+        response = self._call(
+            lambda: self._client.account_information.get_account_activities(
+                account_id=account_id,
+                user_id=self.credentials.user_id_value,
+                user_secret=self.credentials.user_secret_value,
+                offset=offset,
+                limit=limit,
+            )
+        )
+        return _activity_page(_response_body(response))
 
     def get_account_equity(self, account_id: str) -> float | None:
         """Return net account equity (total value) from account details."""
@@ -295,6 +334,112 @@ def _summarize_option(raw_option: Any) -> dict[str, Any]:
         "price": _to_float(_first_present(raw, "price", "last_price")),
         "instrument": "option",
     }
+
+
+_DESC_TICKER_STOPWORDS = frozenset(
+    {
+        "CASH",
+        "DIV",
+        "DIVIDEND",
+        "RECEIVED",
+        "REINVESTMENT",
+        "SUBSTITUTE",
+        "PAYMENT",
+        "ETF",
+        "REIT",
+        "INC",
+        "THE",
+        "FUND",
+        "TRUST",
+        "ADR",
+        "USD",
+        "US",
+        "LLC",
+        "LP",
+        "CO",
+        "CORP",
+        "EQUITY",
+        "INCOME",
+        "PREM",
+        "NASDAQ",
+    }
+)
+_PAREN_TICKER = re.compile(r"\(([A-Z]{1,5})\)")
+_BARE_TICKER = re.compile(r"\b([A-Z]{1,5})\b")
+
+
+def _activity_page(body: Any) -> tuple[list[Any], int | None]:
+    """Split a paginated activities body into (records, total)."""
+    if isinstance(body, Mapping):
+        data = body.get("data")
+        records = data if isinstance(data, list) else []
+        pagination = body.get("pagination")
+        total = pagination.get("total") if isinstance(pagination, Mapping) else None
+        return records, total if isinstance(total, int) else None
+    if isinstance(body, list):
+        return body, None
+    return [], None
+
+
+def _summarize_activity(raw_activity: Any) -> dict[str, Any]:
+    """Normalize one SnapTrade activity to a stable dict the consumers ingest."""
+    raw = _to_plain(raw_activity)
+    if not isinstance(raw, Mapping):
+        return {}
+    return {
+        "type": _first_present(raw, "type"),
+        "date": _first_present(raw, "trade_date", "settlement_date"),
+        "symbol": _activity_symbol(raw),
+        "amount": _to_float(_first_present(raw, "amount")),
+        "quantity": _to_float(_first_present(raw, "units", "quantity")),
+        "currency": _currency_code(_first_present(raw, "currency")),
+        "description": _first_present(raw, "description"),
+        "account": _activity_account(raw),
+    }
+
+
+def _activity_symbol(raw: Mapping[str, Any]) -> str | None:
+    # Reuse the position symbol parser (nested symbol objects), then the option
+    # ticker helper, then the DIVIDEND-from-description fallback. No fork.
+    symbol = _position_symbol(raw)
+    if symbol:
+        return symbol
+    option_symbol = _first_present(raw, "option_symbol")
+    if isinstance(option_symbol, Mapping):
+        ticker = option_symbol.get("ticker")
+        if isinstance(ticker, str):
+            return _occ_to_fidelity_symbol(ticker) or ticker
+    if str(_first_present(raw, "type") or "").upper() == "DIVIDEND":
+        return _ticker_from_description(_first_present(raw, "description"))
+    return None
+
+
+def _ticker_from_description(description: Any) -> str | None:
+    """Parse a ticker out of a dividend description when `symbol` is null.
+
+    Mirrors the symbol-fallback approach used for positions/options: a
+    parenthesized all-caps ticker (e.g. "... ETF (SCHD)") is the reliable
+    broker signal, with a bare all-caps token scan as the backstop.
+    """
+    # ponytail: heuristic over free text — covers Fidelity's "(TICKER)" form and
+    # bare-token descriptions; add a broker-specific rule if one slips past both.
+    if not isinstance(description, str):
+        return None
+    candidates = _PAREN_TICKER.findall(description) + _BARE_TICKER.findall(description)
+    for candidate in candidates:
+        if candidate not in _DESC_TICKER_STOPWORDS:
+            return str(candidate)  # regex groups are str; cast satisfies mypy
+    return None
+
+
+def _activity_account(raw: Mapping[str, Any]) -> str | None:
+    account = _first_present(raw, "account")
+    if isinstance(account, Mapping):
+        value = account.get("id")
+        return str(value) if value is not None else None
+    if isinstance(account, str):
+        return account
+    return None
 
 
 def _option_occ_ticker(raw: Mapping[str, Any]) -> str | None:

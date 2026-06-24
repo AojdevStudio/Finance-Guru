@@ -93,6 +93,29 @@ See `CategoryRules.md` for the full pattern matching rules.
 - `BENIHANA`, `GOLDEN CORRAL`, `PAPA JOHN` -> Dining Out
 - `CVS`, `PHARMACY` -> Health & Wellness
 
+## Input Source: SnapTrade activities (preferred) — CSV is fallback
+
+As of SnapTrade Phase 2 (#72), the preferred input is **live normalized activities**, not a CSV:
+
+```bash
+uv run python -m src.integrations.snaptrade.cli activities --output json
+```
+
+This returns one record per activity with a stable shape — `type`, `date`,
+`symbol`, `amount`, `quantity`, `currency`, `description`, `account` — paged
+across the full history. Map it onto the master Transactions tab exactly as the
+CSV columns map (Fidelity action -> `type`, run date -> `date`, amount ->
+`amount`, etc.).
+
+**Dedupe is unchanged:** Google Sheets stays the single source of truth. Detect
+duplicates the same way — by `date` + `type` + `amount` against existing rows —
+and add only new ones. No local cache or state file is introduced; re-running is
+idempotent because the Sheet is the ledger.
+
+**Fallback:** the Fidelity CSV path below still works and remains the fallback
+until the human reconciliation gate (#72) confirms parity. CSV ingestion is not
+removed in this phase (deletion is Phase 3 / #73).
+
 ## Core Workflow
 
 ### 1. Read Fidelity Transaction History CSV
