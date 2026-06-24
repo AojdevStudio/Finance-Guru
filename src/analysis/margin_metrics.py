@@ -1,7 +1,8 @@
 """Runtime margin-health metrics from live broker balances plus local config.
 
-Personal assumptions come from .env. Current portfolio facts come from the latest
-Fidelity ``Balances_for_Account_*.csv`` export.
+Personal assumptions come from .env. Current portfolio facts come from SnapTrade
+(live, the default) or, as a fallback, the latest Fidelity
+``Balances_for_Account_*.csv`` export (``--source csv``).
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ DEFAULT_PORTFOLIO_DIR = Path("notebooks/updates")
 
 @dataclass(frozen=True)
 class FidelityBalances:
-    """Current values parsed from a Fidelity balances CSV."""
+    """Current broker balances (from a Fidelity CSV or derived from SnapTrade)."""
 
     source_file: str
     total_account_value: float
@@ -145,6 +146,56 @@ def read_fidelity_balances(path: str | Path | None = None) -> FidelityBalances:
     )
 
 
+def _broker_balances_from_snaptrade(client: Any, account_id: str) -> FidelityBalances:
+    """Adapt live SnapTrade holdings into the broker-balances shape.
+
+    Margin debt is derived (gross market value − net equity); SnapTrade does not
+    expose the loan, accrued interest, or day-change directly, so those are None.
+    """
+    from src.integrations.snaptrade.client import derive_margin_debt
+
+    raw = client.get_balances(account_id)
+    first = raw[0] if raw else {}
+    equity = client.get_account_equity(account_id)
+    if equity is None:
+        msg = "SnapTrade did not return account equity"
+        raise ValueError(msg)
+    margin_debt, _gross = derive_margin_debt(
+        client.get_positions(account_id), client.get_options(account_id), equity
+    )
+    # Fidelity convention: net debit is negative; calculate_margin_metrics abs()-es it.
+    net_debit = -margin_debt if margin_debt and margin_debt > 0 else 0.0
+    return FidelityBalances(
+        source_file=f"snaptrade:{account_id}",
+        total_account_value=equity,
+        total_account_day_change=None,
+        margin_buying_power=first.get("buying_power"),
+        margin_buying_power_day_change=None,
+        net_debit=net_debit,
+        net_debit_day_change=None,
+        margin_interest_accrued_this_month=None,
+    )
+
+
+def read_snaptrade_balances(
+    config_path: str | Path = "config/snaptrade-accounts.yaml",
+) -> FidelityBalances:
+    """Pull live balances for the first enabled+routed SnapTrade account."""
+    from src.integrations.snaptrade.client import SnapTradeClientWrapper
+    from src.integrations.snaptrade.models import SnapTradeAccountsConfig
+
+    config = SnapTradeAccountsConfig.from_path(Path(config_path))
+    syncable = config.syncable
+    if not syncable:
+        msg = (
+            "No SnapTrade account is enabled+routed in "
+            f"{config_path}; cannot read margin balances"
+        )
+        raise ValueError(msg)
+    client = SnapTradeClientWrapper.from_env()
+    return _broker_balances_from_snaptrade(client, syncable[0].snaptrade_account_id)
+
+
 def months_elapsed_since_start(today: date | None = None) -> int | None:
     """Return elapsed strategy months from FG_STRATEGY_START_DATE."""
     raw = os.getenv("FG_STRATEGY_START_DATE")
@@ -213,14 +264,22 @@ def calculate_margin_metrics(
 
 def metrics_from_runtime(
     *,
+    source: str = "snaptrade",
     csv_path: str | Path | None = None,
     annual_rate: float | None = None,
     monthly_dividend_income: float | None = None,
     today: date | None = None,
 ) -> MarginMetrics:
-    """Load .env/config + latest CSV and return derived live metrics."""
+    """Load .env/config + live balances and return derived metrics.
+
+    Source is SnapTrade by default; ``source="csv"`` (or passing ``csv_path``)
+    reads the legacy Fidelity balances CSV instead.
+    """
     load_dotenv()
-    balances = read_fidelity_balances(csv_path)
+    if csv_path is not None or source == "csv":
+        balances = read_fidelity_balances(csv_path)
+    else:
+        balances = read_snaptrade_balances()
     resolved_rate = annual_rate or parse_rate(
         os.getenv("FG_MARGIN_INTEREST_RATE_DECIMAL")
         or os.getenv("FG_MARGIN_INTEREST_RATE")
@@ -250,6 +309,12 @@ def _json_default(value: Any) -> Any:
 def main() -> None:
     """Run the margin metrics CLI."""
     parser = argparse.ArgumentParser(description="Calculate live margin health metrics")
+    parser.add_argument(
+        "--source",
+        choices=("snaptrade", "csv"),
+        default="snaptrade",
+        help="Balance source. Defaults to live SnapTrade; 'csv' reads Fidelity export.",
+    )
     parser.add_argument("--csv", help="Specific Fidelity balances CSV to read")
     parser.add_argument(
         "--annual-rate",
@@ -265,6 +330,7 @@ def main() -> None:
     args = parser.parse_args()
 
     metrics = metrics_from_runtime(
+        source=args.source,
         csv_path=args.csv,
         annual_rate=args.annual_rate,
         monthly_dividend_income=args.monthly_dividend_income,

@@ -12,7 +12,7 @@ Monitor and manage margin-living strategy by tracking margin balances, interest 
 ## When to Use
 
 Use this skill when:
-- Importing new Fidelity balances CSV
+- Syncing live margin balances from SnapTrade
 - Updating margin balance or interest rate
 - Calculating coverage ratio (dividends ÷ interest)
 - User mentions: "margin dashboard", "margin balance", "coverage ratio", "margin strategy"
@@ -21,7 +21,7 @@ Use this skill when:
 
 ## Personal Strategy Inputs
 
-Static private assumptions come from `.env` (see `.env.example`). Current portfolio facts come from the latest Fidelity balances CSV and spreadsheet data, then `src/analysis/margin_metrics.py` derives ratios/costs at runtime. Do not hardcode personal numbers in this skill.
+Static private assumptions come from `.env` (see `.env.example`). Current portfolio facts come from **SnapTrade (live)** by default, then `src/analysis/margin_metrics.py` derives ratios/costs at runtime. Do not hardcode personal numbers in this skill. The legacy Fidelity balances CSV is a fallback only (`--source csv`).
 
 ### Required `.env` values
 
@@ -34,23 +34,20 @@ Static private assumptions come from `.env` (see `.env.example`). Current portfo
 
 ## Core Workflow
 
-### 1. Read Fidelity Balances CSV
+### 1. Read Live Margin Balances (SnapTrade)
 
-Use `uv run python -m src.analysis.margin_metrics --pretty` to load `.env`, read the latest `Balances_for_Account_*.csv`, and emit current JSON metrics.
+Use `uv run python -m src.analysis.margin_metrics --pretty` to load `.env`, pull live balances from the enabled+routed SnapTrade account, and emit current JSON metrics. (Add `--source csv` to fall back to the latest `Balances_for_Account_*.csv` if SnapTrade is unavailable.)
 
-**Location**: `notebooks/updates/Balances_for_Account_{account_id}.csv`
+**Source**: SnapTrade account in `config/snaptrade-accounts.yaml` (`enabled: true`, `role` set). Requires `SNAPTRADE_*` keys in `.env`.
 
-**Key Fields to Extract**:
-```csv
-Balance,Day change
-Total account value,{live.portfolio_value_raw},{live.portfolio_day_change_raw}      → Portfolio Value
-Margin buying power,{live.margin_buying_power_raw},{live.margin_buying_power_day_change_raw}
-Net debit,{live.net_debit_raw},{live.net_debit_day_change_raw}                 → Margin Balance (abs value)
-Margin interest accrued this month,{live.margin_interest_accrued_this_month_raw},    → Monthly Interest (actual)
-```
+**Key JSON fields the tool emits**:
+- `portfolio_value` → net account equity (SnapTrade `account_equity`) → Portfolio Value
+- `margin_balance` → derived margin debt (gross market value − net equity) → Margin Balance
+- `monthly_interest_cost` → Balance × Rate ÷ 12 (the primary interest figure)
+- `margin_interest_accrued_this_month` → **null under SnapTrade** (not exposed; only present via `--source csv`)
 
 **Calculations**:
-- **Margin Balance**: Absolute value of "Net debit" = {live.margin_balance}
+- **Margin Balance**: Derived margin debt = {live.margin_balance} (tracks Fidelity "Net debit" within ~0.1%)
 - **Interest Rate**: Default ${FG_MARGIN_INTEREST_RATE} (Fidelity $1k-$24.9k tier) unless specified
 - **Monthly Interest Cost**: Balance × Rate ÷ 12 = {live.margin_balance} × ${FG_MARGIN_INTEREST_RATE_DECIMAL} ÷ 12 = {derived.monthly_interest_cost}
 
@@ -377,8 +374,7 @@ For complete strategy details, see:
 ## Pre-Flight Checklist
 
 Before updating Margin Dashboard:
-- [ ] Fidelity Balances CSV is latest by date
-- [ ] CSV is in `notebooks/updates/` directory
+- [ ] SnapTrade account is enabled+routed in `config/snaptrade-accounts.yaml` and `SNAPTRADE_*` keys are in `.env`
 - [ ] Margin Dashboard sheet exists in Google Sheets
 - [ ] Previous margin balance known (for jump detection)
 - [ ] Dividend Tracker is up-to-date (for coverage ratio)
@@ -386,10 +382,10 @@ Before updating Margin Dashboard:
 
 ## Example Scenario
 
-**Trigger**: User downloads new Fidelity balances CSV
+**Trigger**: User asks to sync/refresh margin from SnapTrade
 
 **Agent workflow**:
-1. ✅ Read Balances CSV - Portfolio: {live.portfolio_value}, Margin: {live.margin_balance}
+1. ✅ Pull live SnapTrade balances - Portfolio: {live.portfolio_value}, Margin: {live.margin_balance}
 2. ✅ Safety check - Previous: $0, Current: {live.margin_balance} (+{live.margin_balance} < ${FG_MARGIN_JUMP_ALERT_THRESHOLD} threshold) - PASS
 3. ✅ Calculate metrics:
    - Monthly interest: {derived.monthly_interest_cost}

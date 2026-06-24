@@ -49,10 +49,10 @@ User: "ingest positions" or "bring in positions"
 -> Reports files moved and suggests "portfolio-sync" next
 ```
 
-**Example 2: Sync after ingest**
+**Example 2: Sync (live from SnapTrade)**
 ```
 User: "portfolio-sync"
--> Reads Portfolio_Positions_*.csv and Balances_*.csv from notebooks/updates/
+-> Pulls live positions + balances via the SnapTrade CLI (no CSV read)
 -> Compares with Google Sheets DataHub
 -> Updates quantities, cost basis, SPAXX, margin debt
 -> Reports changes and validates formulas
@@ -200,19 +200,13 @@ If a new ticker doesn't clearly match any layer pattern, set to `"UNKNOWN - Manu
 
 ## Pre-Flight Checklist
 
-Before syncing (SyncPortfolio):
-- [ ] **Positions CSV** (`Portfolio_Positions_*.csv`) is latest by date in `notebooks/updates/`
-- [ ] **Balances CSV** (`Balances_for_Account_*.csv`) is available and current in `notebooks/updates/`
-- [ ] Both CSVs are from Fidelity (not M1 Finance or other broker)
+Before syncing (SyncPortfolio) — **positions + balances now come live from SnapTrade**:
+- [ ] SnapTrade account is enabled+routed in `config/snaptrade-accounts.yaml` (`role` set, `enabled: true`)
+- [ ] `SNAPTRADE_*` keys are present in `.env`
 - [ ] Google Sheets DataHub tab exists
 - [ ] No pending manual edits in sheet (user should save first)
-- [ ] Current portfolio value is known (for validation)
 
-**Files not in `notebooks/updates/` yet?** Run **IngestPositions** first to move them from `~/Downloads/`.
-
-**Both CSVs Required**: Positions CSV alone is insufficient. Balances CSV provides:
-- "Settled cash" → SPAXX value
-- "Net debit" → Pending Activity and Margin Debt values
+The CSV format reference above still applies to the **CSV fallback** (`--source csv` for margin, or re-verification) and to the **Dividend view** / **History** CSVs, which `dividend-tracking` and `TransactionSyncing` still consume.
 
 ---
 

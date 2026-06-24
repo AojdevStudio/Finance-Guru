@@ -5,7 +5,10 @@ from datetime import date
 
 import pytest
 
+from src.analysis import margin_metrics as mm
 from src.analysis.margin_metrics import (
+    FidelityBalances,
+    _broker_balances_from_snaptrade,
     calculate_margin_metrics,
     metrics_from_runtime,
     parse_money,
@@ -84,9 +87,59 @@ def test_metrics_from_runtime_uses_latest_csv_and_env_config(tmp_path, monkeypat
     monkeypatch.setenv("FG_DIVIDEND_MONTHLY_INCOME", "$250")
     monkeypatch.setenv("FG_STRATEGY_START_DATE", "2025-12-01")
 
-    metrics = metrics_from_runtime(today=date(2026, 1, 1))
+    metrics = metrics_from_runtime(source="csv", today=date(2026, 1, 1))
 
     assert metrics.source_file.endswith("Balances_for_Account_NEW.csv")
     assert metrics.monthly_interest_cost == 100
     assert metrics.coverage_ratio == 2.5
     assert metrics.months_elapsed == 1
+
+
+class _FakeSnapClient:
+    """Minimal SnapTrade client double for the balance adapter."""
+
+    def get_balances(self, account_id):
+        return [{"currency": "USD", "cash": 0.0, "buying_power": 0.0}]
+
+    def get_account_equity(self, account_id):
+        return 185294.88
+
+    def get_positions(self, account_id):
+        return [{"price": 100.0, "quantity": 2668.029}]  # ~266,802.90 MV
+
+    def get_options(self, account_id):
+        return [{"price": 3.93, "quantity": 2.0}]  # 786.00 MV (x100)
+
+
+def test_metrics_from_runtime_defaults_to_snaptrade(monkeypatch):
+    """With no source/csv_path, runtime metrics pull from SnapTrade (the default)."""
+    sentinel = FidelityBalances(
+        source_file="snaptrade:acct-1",
+        total_account_value=185294.88,
+        total_account_day_change=None,
+        margin_buying_power=0.0,
+        margin_buying_power_day_change=None,
+        net_debit=-83820.02,
+        net_debit_day_change=None,
+        margin_interest_accrued_this_month=None,
+    )
+    monkeypatch.setattr(mm, "read_snaptrade_balances", lambda: sentinel)
+    monkeypatch.setenv("FG_MARGIN_INTEREST_RATE_DECIMAL", "0.12")
+    monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "$5,000")
+
+    metrics = metrics_from_runtime(today=date(2026, 1, 1))
+
+    assert metrics.source_file == "snaptrade:acct-1"
+    assert metrics.margin_balance == 83820.02
+
+
+def test_broker_balances_from_snaptrade_derives_net_debit():
+    """SnapTrade adapter yields a Fidelity-shaped balance with derived net debit."""
+    balances = _broker_balances_from_snaptrade(_FakeSnapClient(), "acct-1")
+
+    assert balances.source_file == "snaptrade:acct-1"
+    assert balances.total_account_value == 185294.88
+    # gross MV 266802.90 + 786.00 = 267588.90; minus equity -> debt 82294.02
+    # net_debit is the negative (Fidelity convention)
+    assert balances.net_debit == pytest.approx(-82294.02, abs=0.01)
+    assert balances.margin_interest_accrued_this_month is None

@@ -5,8 +5,10 @@ from __future__ import annotations
 import os
 from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Any, Self
 
+import yaml
 from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_serializer
 
@@ -108,6 +110,26 @@ class SnapTradeAccountConfig(BaseModel):
     enabled: bool = False
     notes: str = "Set role and enabled=true only after CSV-vs-SnapTrade verification."
 
+    @property
+    def refusal_reason(self) -> str | None:
+        """Return why this account must not live-sync, or None if it may.
+
+        Implements the issue-71 guardrail: an account syncs only after it has
+        been verified and routed. ``enabled=false`` or ``role=unassigned`` both
+        keep it out of live sync.
+        """
+        reasons: list[str] = []
+        if not self.enabled:
+            reasons.append("enabled=false")
+        if self.role == AccountRole.UNASSIGNED:
+            reasons.append("role=unassigned")
+        return ", ".join(reasons) if reasons else None
+
+    @property
+    def is_syncable(self) -> bool:
+        """Whether the account is verified-and-routed for live sync."""
+        return self.refusal_reason is None
+
 
 class SnapTradeAccountsConfig(BaseModel):
     """Config file mapping SnapTrade accounts to Finance Guru Sheet roles."""
@@ -132,6 +154,19 @@ class SnapTradeAccountsConfig(BaseModel):
                 for account in accounts
             ]
         )
+
+    @classmethod
+    def from_path(cls, path: Path) -> Self:
+        """Load and validate the account routing config from a YAML file."""
+        if not path.exists():
+            raise FileNotFoundError(f"SnapTrade routing config not found: {path}")
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        return cls.model_validate(data)
+
+    @property
+    def syncable(self) -> list[SnapTradeAccountConfig]:
+        """Accounts cleared for live sync (enabled and role-assigned)."""
+        return [account for account in self.accounts if account.is_syncable]
 
 
 def _safe_config_account_name(account: SnapTradeAccount) -> str:

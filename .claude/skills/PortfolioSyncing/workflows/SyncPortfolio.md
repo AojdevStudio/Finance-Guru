@@ -1,51 +1,47 @@
 # SyncPortfolio Workflow
 
-**Purpose:** Read Fidelity CSV exports from `notebooks/updates/`, compare with Google Sheets DataHub, and sync position data while preserving sacred formulas.
+**Purpose:** Pull live positions + balances from SnapTrade, compare with the Google Sheets DataHub, and sync position data while preserving sacred formulas.
+
+> **Data source:** Positions and balances come from the **SnapTrade CLI** (live, read-only). The legacy Fidelity-CSV read path was retired after account-by-account verification (issue 71). Equity positions, options, settled cash, and margin debt were verified to match a known-good Fidelity export before cutover. CSV files are no longer read for position/balance sync.
 
 ---
 
 ## Step 1: Pre-Flight Checks
 
-Before importing CSV:
-- [ ] **Positions CSV** (`Portfolio_Positions_*.csv`) is latest by date in `notebooks/updates/`
-- [ ] **Balances CSV** (`Balances_for_Account_*.csv`) is available and current in `notebooks/updates/`
-- [ ] Both CSVs are from Fidelity (not M1 Finance or other broker)
-
-**Files not in `notebooks/updates/`?** Run **IngestPositions** workflow first.
+- [ ] SnapTrade account is **enabled and routed** in `config/snaptrade-accounts.yaml` (`role` ≠ `unassigned`, `enabled: true`). Disabled/unassigned accounts are refused by the CLI, not synced.
+- [ ] SnapTrade credentials are present in `.env` (`SNAPTRADE_CLIENT_ID`, `SNAPTRADE_CONSUMER_KEY`, `SNAPTRADE_USER_ID`, `SNAPTRADE_USER_SECRET`).
 
 ---
 
-## Step 2: Read Latest Fidelity CSVs
+## Step 2: Pull Live SnapTrade Data
 
-### Positions File
+### Positions
 
-`notebooks/updates/Portfolio_Positions_MMM-DD-YYYY.csv` — find the latest by date in filename.
-
-**CSV has 17 columns.** Extract these fields:
-- **Symbol** (col 4) → maps to DataHub Column A
-- **Quantity** (col 6) → maps to DataHub Column B
-- **Average Cost Basis** (col 16) → maps to DataHub Column G
-- **Type** (col 17) → "Margin" or "Cash" (same ticker may appear in both — combine quantities)
-
-**Combining Cash + Margin positions**: When a ticker appears in both Margin and Cash rows, sum the quantities and use the weighted average cost basis.
-
-### Balances File
-
-`notebooks/updates/Balances_for_Account_{account_id}.csv`
-
-**Key fields to extract**:
-- **"Settled cash"** → SPAXX row (DataHub Column L)
-- **"Net debit"** → Pending Activity and Margin Debt
-- **"Account equity percentage"** → Margin status
-
-**Margin Debt Logic**:
+```bash
+uv run python -m src.integrations.snaptrade.cli positions --output json
 ```
-IF "Account equity percentage" == 100% THEN
-    Margin Debt = $0.00
-ELSE
-    Margin Debt = Total Account Value × (1 - Equity Percentage)
-END
+
+Per account, `accounts[].positions[]` carries:
+- **`symbol`** → DataHub Column A (equities are plain tickers; options use Fidelity form `-QQQ260918P595`)
+- **`quantity`** → DataHub Column B
+- **`average_purchase_price`** → DataHub Column G (per-share; options already normalized ÷100)
+- **`instrument`** → `"equity"` or `"option"`
+
+**Sync only `instrument == "equity"` to the position rows (DataHub rows 2-40).** SnapTrade returns one net position per symbol — there is no Margin/Cash split to combine. Options are **not** written as position rows (the DataHub does not track option rows); they are reflected only in the margin-debt math (Step 7).
+
+### Balances
+
+```bash
+uv run python -m src.integrations.snaptrade.cli balances --output json
 ```
+
+Per account, `accounts[].balances` carries:
+- **`settled_cash`** → SPAXX row (DataHub Column L)
+- **`margin_debt`** → Margin Debt and Pending Activity rows (derived: gross market value − net equity; SnapTrade does not expose the loan directly)
+- **`account_equity`** → net account value (for the Step 8 total check)
+- **`gross_market_value`** → total long market value (sanity check)
+
+**Margin Debt Logic**: `margin_debt > 0` means a margin loan exists. `margin_debt <= 0` means no debt — set the SPAXX/Pending Activity/Margin Debt rows to `$0` accordingly.
 
 ---
 
@@ -67,41 +63,41 @@ Extract:
 
 ## Step 4: Compare and Identify Changes
 
-**Identify**:
-- ✅ **NEW tickers**: In CSV but not in sheet (additions)
+**Identify** (SnapTrade equity positions vs sheet):
+- ✅ **NEW tickers**: In SnapTrade but not in sheet (additions)
 - ✅ **EXISTING tickers**: In both (updates)
-- ⚠️ **MISSING tickers**: In sheet but not in CSV (possible sales)
+- ⚠️ **MISSING tickers**: In sheet but not in SnapTrade (possible sales)
 
 ---
 
 ## Step 5: Safety Checks (STOP if triggered)
 
 **STOP conditions** (require user confirmation):
-1. CSV has fewer tickers than sheet (possible sales)
+1. SnapTrade returns fewer tickers than the sheet (possible sales)
 2. Any quantity change > 10%
 3. Any cost basis change > 20%
 4. 3+ formula errors detected
-5. Margin balance jumped > $5,000
-6. **SPAXX discrepancy > $100**
+5. Margin balance jumped > $5,000 vs the sheet's current Margin Debt
+6. **SPAXX discrepancy > $100** (SnapTrade `settled_cash` vs sheet SPAXX)
 
 **When STOPPED**:
 - Show clear diff table
 - Ask user to confirm changes
 - Proceed only after explicit approval
 
-### Transaction History Cross-Check (Optional)
+### Transaction History Cross-Check (Optional, legacy CSV)
 
-When large quantity changes (>10%) are detected, cross-reference with `notebooks/transactions/History_for_Account_{account_id}.csv`:
+Transaction-level verification still uses the Fidelity History CSV (transactions are out of scope for the SnapTrade positions/balances cutover). When large quantity changes (>10%) are detected and `notebooks/transactions/History_for_Account_{account_id}.csv` is available:
 
 ```
 For each ticker with >10% change:
 1. Read transaction history for that ticker
 2. Sum recent BUY transactions since last sync
-3. Verify: Current CSV Qty ≈ Previous Sheet Qty + Net Transactions
+3. Verify: Current SnapTrade Qty ≈ Previous Sheet Qty + Net Transactions
 4. If mismatch > 1 share, FLAG for manual review
 ```
 
-Skip cross-check if: small changes (<10%), user explicitly confirms, or transaction file unavailable.
+Skip cross-check if: small changes (<10%), user explicitly confirms, or the transaction file is unavailable.
 
 ---
 
@@ -142,37 +138,36 @@ Added {TICKER} - {SHARES} shares @ ${AVG_COST} - Layer: {LAYER}
 
 ## Step 7: Update Cash & Margin Rows (MANDATORY)
 
-This step is NOT optional. SPAXX and Margin must be updated every sync.
+This step is NOT optional. SPAXX and Margin must be updated every sync, from the SnapTrade `balances` output.
 
-**SPAXX (Row 37, Column L)**:
+**SPAXX (Row 37, Column L)** — from `settled_cash`:
 ```javascript
-// From "Settled cash" in Balances CSV
 mcp__gdrive__sheets(operation: "updateCells", params: {
     spreadsheetId: SPREADSHEET_ID,
     range: "DataHub!L37:L37",
-    values: [[" $ -   "]]  // or formatted value if > 0
+    values: [[" $ -   "]]  // settled_cash; " $ -   " when 0, else " $ X,XXX.XX "
 })
 ```
 
-**Pending Activity (Row 38, Column L)**:
+**Pending Activity (Row 38, Column L)** — negative of `margin_debt`:
 ```javascript
-// From "Net debit" in Balances CSV (negative value)
 mcp__gdrive__sheets(operation: "updateCells", params: {
     spreadsheetId: SPREADSHEET_ID,
     range: "DataHub!L38:L38",
-    values: [[" $ (7,822.71)"]]  // format: " $ (X,XXX.XX)" for negative
+    values: [[" $ (83,820.02)"]]  // -(margin_debt), format " $ (X,XXX.XX)"; " $ -   " if no debt
 })
 ```
 
-**Margin Debt (Row 39, Column L)**:
+**Margin Debt (Row 39, Column L)** — `margin_debt` (positive):
 ```javascript
-// ABS of "Net debit"
 mcp__gdrive__sheets(operation: "updateCells", params: {
     spreadsheetId: SPREADSHEET_ID,
     range: "DataHub!L39:L39",
-    values: [[" $ 7,822.71 "]]  // format: " $ X,XXX.XX " positive
+    values: [[" $ 83,820.02 "]]  // margin_debt, format " $ X,XXX.XX "; " $ -   " if no debt
 })
 ```
+
+> **Note on derived margin:** `margin_debt` is computed (gross market value − net equity) because SnapTrade does not expose the loan directly. It tracks Fidelity's "Net debit" within ~0.1%, the gap being intraday price timing. If the sync needs the exact broker figure, fall back to a Fidelity Balances export for that one number.
 
 ---
 
@@ -180,10 +175,10 @@ mcp__gdrive__sheets(operation: "updateCells", params: {
 
 **Verify**:
 - [ ] Formulas still functional (no new #N/A errors)
-- [ ] SPAXX reflects "Settled cash" from Balances CSV
-- [ ] Pending Activity reflects "Net debit" from Balances CSV
-- [ ] Margin Debt = ABS(Net debit)
-- [ ] Total account value approximately matches Fidelity total
+- [ ] SPAXX reflects SnapTrade `settled_cash`
+- [ ] Pending Activity reflects −`margin_debt`
+- [ ] Margin Debt reflects `margin_debt`
+- [ ] Total account value ≈ SnapTrade `account_equity`
 
 ---
 
@@ -197,11 +192,11 @@ Output update summary:
 ✅ Pending Activity: ${VALUE}
 ✅ Margin debt: ${VALUE}
 ✅ No formula errors detected
-✅ Portfolio value: ${VALUE} (matches Fidelity)
+✅ Account equity: ${VALUE} (SnapTrade)
 ```
 
 ---
 
 ## Done
 
-Portfolio sync complete. DataHub now matches Fidelity CSV.
+Portfolio sync complete. DataHub now matches live SnapTrade data.
