@@ -1,5 +1,5 @@
 ---
-name: FinanceReport
+name: finance-report
 description: Generate institutional-quality PDF analysis reports for stocks and ETFs. USE WHEN user mentions generate report, create pdf, stock analysis, ticker report, watchlist analysis, OR regenerate reports. Includes VGT-style headers, embedded charts, portfolio sizing, and Perplexity sentiment integration.
 ---
 

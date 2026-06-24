@@ -183,8 +183,8 @@
       "   - quantity.your_broker_column: 'Qty'",
       "   - average_cost_basis.your_broker_column: 'Avg Price'",
       "5. Save etrade-mapping.json",
-      "6. Run: bd create --title='Add E*TRADE CSV parser' --type=feature",
-      "7. Or manually import using mapping template"
+      "6. Create a GitHub issue for the E*TRADE CSV parser feature request, or"
+      "7. manually import using the mapping template"
     ]
   }
 }

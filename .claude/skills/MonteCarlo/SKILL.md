@@ -1,5 +1,5 @@
 ---
-name: MonteCarlo
+name: monte-carlo
 description: Run Monte Carlo simulations for Finance Guru portfolio strategy. USE WHEN user mentions monte carlo OR run simulation OR stress test portfolio OR probability analysis OR income projections OR margin safety analysis. Supports 4-layer portfolio (Growth, Income, Hedge, GOOGL) with auto-detection of current values from Fidelity CSV.
 ---
 

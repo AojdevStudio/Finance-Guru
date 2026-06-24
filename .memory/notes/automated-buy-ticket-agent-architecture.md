@@ -42,7 +42,7 @@ Current state: manual Fidelity CSV download → `notebooks/updates/`.
 
 To automate:
 
-- **SimpleFIN Bridge** → balances + transactions. Works today. Retrofits existing `apps/plaid-dashboard`.
+- **SimpleFIN Bridge** → balances + transactions. Works today. Lives in `apps/simplefin-sync`.
 - **Positions CSV** → still manual. Fidelity blocks programmatic positions export for retail.
   - **Workaround:** Playwright-automate Fidelity login and CSV download on a home box. Fragile, TOS-gray.
   - **Better:** Maintain positions state in the system itself (append trade confirmations as they execute), reconcile weekly via manual CSV.

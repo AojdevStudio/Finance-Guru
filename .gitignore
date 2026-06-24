@@ -27,11 +27,16 @@ yarn-error.log*
 .env.local
 *.env
 
+# Local SnapTrade account routing (contains personal brokerage account ids)
+config/snaptrade-accounts.yaml
+
 # Data files
 data/raw/*
 data/processed/*
 !data/sample/*
 *.csv
+# Synthetic golden fixture — a pinned test contract, not real broker data
+!tests/python/fixtures/fidelity_history_golden.csv
 *.xlsx
 *.xls
 .claude/hooks/node_modules
@@ -128,11 +133,14 @@ fin-guru/data/*
 .claude/get-shit-done/
 .claude/hooks/gsd-*
 
+# Private skills containing PII (live URLs, dispatcher endpoints, etc.)
+.claude/skills/apps-script-run/
+
 # Planning state (local project management)
 .planning/
 Plans/
 
-# Beads task tracker (local)
+# Local task tracker data
 .beads/
 
 # Local research/scratch notes (not project artifacts)

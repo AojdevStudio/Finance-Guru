@@ -2,6 +2,8 @@
 
 Ingest Fidelity portfolio CSVs from Downloads into `notebooks/updates/`. Handles duplicate file detection, regular vs dividend view classification, and Balances file updates.
 
+> **Post-SnapTrade-cutover note (issue 71):** Position + balance sync now reads **live from SnapTrade**, so the regular `Portfolio_Positions_*.csv` and `Balances_*.csv` are **optional** (useful only as a CSV fallback or for re-verification). The **Dividend view** (`Dividend_Positions_*.csv`, used by `dividend-tracking`) and **History** (`History_for_Account_*.csv`, used by `TransactionSyncing`) are still CSV-sourced — keep ingesting those.
+
 ## Critical Rules
 
 - **MOVE, never copy**: Always use `mv`, NEVER `cp`. Files must be removed from `~/Downloads/` after ingestion. Leaving copies behind causes confusion on re-runs.

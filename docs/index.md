@@ -183,7 +183,6 @@ family-office/
 │   ├── branch-protection.yml # Declared branch rules
 │   └── workflows/            # CI, release, quality-gates, rollback, error-to-issue
 ├── apps/                     # Bun monorepo workspaces (turbo.json)
-│   ├── plaid-dashboard/      # Next.js 15 + Hono + Drizzle + Plaid
 │   └── simplefin-sync/       # Bun/TS indie Plaid alternative
 ├── docs/                     # Public documentation (tracked in git)
 │   ├── index.md              # This file

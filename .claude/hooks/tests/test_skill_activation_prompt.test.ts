@@ -90,7 +90,7 @@ describe("skill-activation-prompt hook with Bun", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("SKILL ACTIVATION CHECK");
-    expect(result.stdout).toContain("PortfolioSyncing");
+    expect(result.stdout).toContain("portfolio-syncing");
   });
 
   it("should detect intent pattern matches", async () => {
@@ -98,7 +98,7 @@ describe("skill-activation-prompt hook with Bun", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("SKILL ACTIVATION CHECK");
-    expect(result.stdout).toContain("PortfolioSyncing");
+    expect(result.stdout).toContain("portfolio-syncing");
   });
 
   it("should group skills by priority - critical", async () => {
@@ -128,7 +128,7 @@ describe("skill-activation-prompt hook with Bun", () => {
     const result = await runHook(createTestInput("generate report for dividend tracker"));
 
     expect(result.exitCode).toBe(0);
-    // Should match both FinanceReport and dividend-tracking
+    // Should match both finance-report and dividend-tracking
     expect(result.stdout).toContain("SKILL ACTIVATION CHECK");
     // Count of skills should be > 1
     const skillMatches = (result.stdout.match(/→/g) || []).length;
@@ -148,7 +148,7 @@ describe("skill-activation-prompt hook with Bun", () => {
     const result = await runHook(createTestInput("SYNC PORTFOLIO"));
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("PortfolioSyncing");
+    expect(result.stdout).toContain("portfolio-syncing");
   });
 
   it("should match formula-protection skill", async () => {
@@ -166,11 +166,11 @@ describe("skill-activation-prompt hook with Bun", () => {
     expect(result.stdout).toContain("retirement-syncing");
   });
 
-  it("should match FinanceReport skill", async () => {
+  it("should match finance-report skill", async () => {
     const result = await runHook(createTestInput("generate analysis report for NVDA"));
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("FinanceReport");
+    expect(result.stdout).toContain("finance-report");
   });
 
   it("should handle prompts with special characters", async () => {

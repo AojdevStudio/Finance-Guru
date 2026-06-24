@@ -3,7 +3,9 @@
 aiohappyeyeballs==2.6.1
     # via aiohttp
 aiohttp==3.13.5
-    # via growthbook
+    # via
+    #   growthbook
+    #   snaptrade-python-sdk
 aiosignal==1.4.0
     # via aiohttp
 altair==5.5.0
@@ -42,6 +44,7 @@ certifi==2025.8.3
     #   httpx
     #   requests
     #   sentry-sdk
+    #   snaptrade-python-sdk
 cffi==2.0.0
     # via
     #   cryptography
@@ -67,7 +70,9 @@ contourpy==1.3.3
 coverage==7.13.1
     # via pytest-cov
 cryptography==46.0.7
-    # via growthbook
+    # via
+    #   growthbook
+    #   snaptrade-python-sdk
 curl-cffi==0.15.0
     # via yfinance
 cycler==0.12.1
@@ -94,7 +99,9 @@ filelock==3.28.0
 fonttools==4.61.0
     # via matplotlib
 frozendict==2.4.6
-    # via yfinance
+    # via
+    #   snaptrade-python-sdk
+    #   yfinance
 frozenlist==1.8.0
     # via
     #   aiohttp
@@ -297,6 +304,7 @@ python-dateutil==2.9.0.post0
     #   dateparser
     #   matplotlib
     #   pandas
+    #   snaptrade-python-sdk
 python-dotenv==1.1.1
     # via family-office
 python-json-logger==4.1.0
@@ -354,6 +362,8 @@ six==1.17.0
     # via python-dateutil
 smmap==5.0.2
     # via gitdb
+snaptrade-python-sdk==11.0.209
+    # via family-office
 sniffio==1.3.1
     # via anthropic
 sortedcontainers==2.4.0
@@ -404,6 +414,7 @@ typing-extensions==4.15.0
     #   pydantic-core
     #   referencing
     #   scrubadub
+    #   snaptrade-python-sdk
     #   streamlit
     #   textual
     #   typing-inspection
@@ -424,6 +435,7 @@ urllib3==2.6.3
     #   growthbook
     #   requests
     #   sentry-sdk
+    #   snaptrade-python-sdk
     #   types-requests
 vulture==2.16
 watchdog==6.0.0 ; sys_platform != 'darwin'

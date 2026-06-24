@@ -1,5 +1,5 @@
 ---
-name: PortfolioSyncing
+name: portfolio-syncing
 description: Import and sync broker CSV portfolio data to Google Sheets DataHub. Supports Fidelity (automated) with multi-broker planned. USE WHEN user mentions import broker data OR sync portfolio OR update positions OR CSV import OR portfolio-sync OR ingest positions OR bring in positions OR downloaded from Fidelity OR working with Portfolio_Positions CSVs. Handles file ingestion from Downloads, position updates, SPAXX/margin validation, safety checks, and formula protection.
 ---
 
@@ -49,10 +49,10 @@ User: "ingest positions" or "bring in positions"
 -> Reports files moved and suggests "portfolio-sync" next
 ```
 
-**Example 2: Sync after ingest**
+**Example 2: Sync (live from SnapTrade)**
 ```
 User: "portfolio-sync"
--> Reads Portfolio_Positions_*.csv and Balances_*.csv from notebooks/updates/
+-> Pulls live positions + balances via the SnapTrade CLI (no CSV read)
 -> Compares with Google Sheets DataHub
 -> Updates quantities, cost basis, SPAXX, margin debt
 -> Reports changes and validates formulas
@@ -70,10 +70,10 @@ User: "I just bought more JEPI, sync my portfolio"
 **Example 4: Handling duplicate downloads**
 ```
 User downloads both regular and dividend views from Fidelity
--> ~/Downloads/ contains: Portfolio_Positions_Mar-06-2026.csv
-                          Portfolio_Positions_Mar-06-2026 (1).csv
+-> ~/Downloads/ contains: Portfolio_Positions_REDACTED.csv
+                          Portfolio_Positions_REDACTED (1).csv
 -> Reads header of each to classify
--> Regular view (has "Average Cost Basis") -> notebooks/updates/Portfolio_Positions_Mar-06-2026.csv
+-> Regular view (has "Average Cost Basis") -> notebooks/updates/Portfolio_Positions_REDACTED.csv
 -> Dividend view (has "Ex-date") -> notebooks/updates/Dividend_Positions_Mar-06-2026.csv
 ```
 
@@ -200,19 +200,13 @@ If a new ticker doesn't clearly match any layer pattern, set to `"UNKNOWN - Manu
 
 ## Pre-Flight Checklist
 
-Before syncing (SyncPortfolio):
-- [ ] **Positions CSV** (`Portfolio_Positions_*.csv`) is latest by date in `notebooks/updates/`
-- [ ] **Balances CSV** (`Balances_for_Account_*.csv`) is available and current in `notebooks/updates/`
-- [ ] Both CSVs are from Fidelity (not M1 Finance or other broker)
+Before syncing (SyncPortfolio) — **positions + balances now come live from SnapTrade**:
+- [ ] SnapTrade account is enabled+routed in `config/snaptrade-accounts.yaml` (`role` set, `enabled: true`)
+- [ ] `SNAPTRADE_*` keys are present in `.env`
 - [ ] Google Sheets DataHub tab exists
 - [ ] No pending manual edits in sheet (user should save first)
-- [ ] Current portfolio value is known (for validation)
 
-**Files not in `notebooks/updates/` yet?** Run **IngestPositions** first to move them from `~/Downloads/`.
-
-**Both CSVs Required**: Positions CSV alone is insufficient. Balances CSV provides:
-- "Settled cash" → SPAXX value
-- "Net debit" → Pending Activity and Margin Debt values
+The CSV format reference above still applies to the **CSV fallback** (`--source csv` for margin, or re-verification) and to the **Dividend view** / **History** CSVs, which `dividend-tracking` and `TransactionSyncing` still consume.
 
 ---
 

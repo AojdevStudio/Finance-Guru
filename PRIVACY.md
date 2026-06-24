@@ -31,7 +31,7 @@ Finance Guru is a **private, single-user family-office system**. This document d
 ## What never leaves your machine
 
 - Raw Fidelity CSVs (gitignored)
-- SSNs, account numbers, and API keys (scrubbed by `src/utils/logging.py:ScrubPIIProcessor` before they reach any log)
+- SSNs, account numbers, and API keys (scrubbed by `src/utils/log.py:ScrubPIIProcessor` before they reach any log)
 - `.env` contents
 - `finance-guru-desktop/` runtime state (also gitignored)
 
@@ -53,7 +53,7 @@ uv run pip-audit || true
 
 ## PII scrubbing — how it works
 
-The structured logger (`src/utils/logging.py`) runs every string through `ScrubPIIProcessor` before output. Redacted patterns:
+The structured logger (`src/utils/log.py`) runs every string through `ScrubPIIProcessor` before output. Redacted patterns:
 
 - **SSN** (`NNN-NN-NNNN`) → `***-**-****`
 - **Credit cards** (13-19 digit sequences) → `****`

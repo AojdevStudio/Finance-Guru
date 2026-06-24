@@ -333,7 +333,7 @@ A comprehensive code review of the Finance Guru™ system has been completed usi
 ## Suggested Next Steps
 
 ### Option 1: Create Tracked Issues for Fixes
-Convert P0/P1 items into Beads issues for systematic tracking and resolution.
+Convert P0/P1 items into GitHub issues or repo-tracked follow-up docs for systematic tracking and resolution.
 
 ### Option 2: Minimal Refactor Plan
 Propose a focused refactor that fixes P0/P1 items without changing tool behavior.
@@ -381,7 +381,7 @@ You can resume this Codex session at any time by saying "codex resume" or reques
 **Report Generated**: 2026-01-16
 **Report Version**: 1.0
 **Reviewer**: OpenAI Codex (gpt-5.2)
-**Executed By**: RBP (Ralph-Beads-PAI) System
+**Executed By**: Finance Guru review workflow
 **Next Review**: After P0/P1 fixes implemented (Task 5.3)
 
 ---

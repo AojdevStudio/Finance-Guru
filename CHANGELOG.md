@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.devcontainer/` for reproducible dev environments (Codespaces + local)
   - `.github/dependabot.yml`, `labels.yml`, and `workflows/` — release-please, quality-gates (vulture, jscpd, deptry, import-linter, pyinstrument, flaky-retry), sync-labels, validate-agents-md, rollback, error-to-issue
   - `.github/branch-protection.yml` — declarative ruleset record
-  - `src/utils/logging.py` with structlog + PII scrubbing processor
+  - `src/utils/log.py` with structlog + PII scrubbing processor
   - `src/utils/feature_flags.py` — env-driven feature flags
   - `monitoring/alerts.yml` — declarative alert routing
   - Root `turbo.json` + updated `package.json` with size-limit bundle tracking
@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - _README and docs refresh_ — Desktop hero banner, accurate agent/skill counts (11 specialists, 19 skills), new Apps Workspace + Cross-Harness Skills sections, updated directory tree and version block in `docs/index.md`
 - _Issue templates_ — bug-report and feature-request now include `needs-triage` label; new `question.md` template with `docs` + `needs-triage` labels
 - _pytest config_ — addopts now runs tests in parallel (`-n auto`), retries once on failure, and prints the 10 slowest (`--durations=10`)
+- _Renamed `src/utils/logging.py` → `src/utils/log.py`_ — docs in `docs/reference/observability.md` and `PRIVACY.md` updated to match
+
+### Fixed
+- _`src/utils/*_cli.py` scripts crashing on direct invocation_ — `src/utils/logging.py` shadowed the stdlib `logging` module whenever `src/utils/` landed on `sys.path[0]` (which CPython does automatically when you run `python src/utils/foo.py`). Transitive imports of `urllib3`/`structlog`/`asyncio` then hit a partially-initialised `logging` module and raised `AttributeError: partially initialized module 'logging' has no attribute 'getLogger'`. Renamed the module to `src/utils/log.py` so it no longer collides with the stdlib name.
 
 ## [2.1.0] - 2026-04-16
 
@@ -237,7 +241,7 @@ Finance Guru™ v2.0.0 - Private AI-powered family office system built on BMAD-C
 
 ## Project Links
 
-- **Repository**: https://github.com/AojdevStudio/Finance-Guru
+- **Repository**: https://github.com/FinanceGuruDev/Finance-Guru
 - **Documentation**: [docs/index.md](docs/index.md)
 - **Setup Guide**: [docs/SETUP.md](docs/SETUP.md)
 - **Contributing**: [docs/contributing.md](docs/contributing.md)

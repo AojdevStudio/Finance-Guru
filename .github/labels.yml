@@ -50,10 +50,6 @@
   color: 3572A5
   description: Affects the Python analysis engine
 
-- name: plaid-dashboard
-  color: 1f6feb
-  description: Affects apps/plaid-dashboard
-
 - name: simplefin-sync
   color: 6e40c9
   description: Affects apps/simplefin-sync

@@ -1,0 +1,13 @@
+# Copy to config/snaptrade-accounts.yaml after running:
+# uv run python -m src.integrations.snaptrade.cli accounts --write-config
+#
+# Guardrail: keep enabled=false until the account is verified against a known-good
+# Fidelity CSV run. Future sync phases must refuse unassigned accounts.
+generated_at: "2026-05-22T00:00:00+00:00"
+accounts:
+  - snaptrade_account_id: "example-account-id"
+    name: "Example Brokerage Account"
+    institution: "Example Brokerage"
+    role: "unassigned" # taxable_cash | taxable_margin | retirement | watch_only
+    enabled: false
+    notes: "Set role and enabled=true only after CSV-vs-SnapTrade verification."

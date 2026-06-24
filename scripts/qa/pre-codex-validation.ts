@@ -251,7 +251,7 @@ if (critical.length === 0 && warnings.length <= 5) {
   console.log('✅ SYSTEM READY FOR CODEX REVIEW');
   console.log();
   console.log('Next step: Run Codex full review (Task 5.2)');
-  console.log('   → bd update family-office-spr --status=in_progress');
+  console.log('   → Create/update a GitHub issue or handoff doc for the review');
   process.exit(0);
 } else if (critical.length === 0) {
   console.log('⚠️  SYSTEM MOSTLY READY (warnings exist)');

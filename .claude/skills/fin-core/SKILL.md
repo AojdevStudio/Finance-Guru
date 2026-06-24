@@ -37,13 +37,13 @@ These files are automatically loaded into context at session start:
 
 ### 3. Portfolio Updates
 **Path**: `notebooks/updates/`
-**Contains**: Latest Fidelity account balances, positions, transaction history
+**Live source**: Positions + balances now sync **live from SnapTrade** (issue 71) — the position/balance CSVs are a fallback/re-verification source only, not the source of truth. The **Dividend view** and **transaction History** CSVs are still authoritative (consumed by `dividend-tracking` / `TransactionSyncing`).
 
-**File Patterns**:
-- Balances: `Balances_for_Account_{account_id}.csv` (exact match)
-- Positions: `Portfolio_Positions_MMM-DD-YYYY.csv` (e.g., `Portfolio_Positions_Nov-05-2025.csv`)
-- The hook automatically finds the **latest positions file by date** in the filename
-- Files older than 7 days trigger an update alert at session start
+**File Patterns** (fallback + dividend/history):
+- Balances: `Balances_for_Account_{account_id}.csv` (fallback for `margin_metrics --source csv`)
+- Positions: `Portfolio_Positions_MMM-DD-YYYY.csv` (fallback / re-verification)
+- Dividend: `Dividend_Positions_MMM-DD-YYYY.csv` · History: `History_for_Account_{account_id}.csv`
+- The 7-day staleness alert is meaningful only for the dividend/history CSVs now (positions/balances are live)
 
 ### 4. System Context
 **Path**: `fin-guru/data/system-context.md`

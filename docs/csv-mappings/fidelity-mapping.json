@@ -1,7 +1,7 @@
 {
   "broker": "Fidelity Investments",
   "status": "fully_supported",
-  "last_updated": "2026-01-16",
+  "last_updated": "2026-05-15",
   "positions_csv": {
     "file_pattern": "Portfolio_Positions_*.csv",
     "required_columns": {
@@ -167,6 +167,186 @@
         "fidelity_column": "Fees ($)",
         "data_type": "currency"
       }
+    }
+  },
+  "action_taxonomy": {
+    "_description": "Semantic classification of the Fidelity Action column. Schema (column names + data types) lives above; this block defines MEANING. Applies to transaction_history_csv rows.",
+    "_match_strategy": "Uppercase the Action string, then test each category's patterns in declared order. First match wins. Order matters — longer/more-specific patterns precede shorter ones (e.g. 'DIVIDEND RECEIVED SUBSTITUTE PAYMENT' before 'DIVIDEND RECEIVED').",
+    "categories": {
+      "INCOME_WAGES": {
+        "patterns": ["DIRECT DEPOSIT"],
+        "sign": "positive",
+        "true_income": true,
+        "income_subtype": "wages",
+        "notes": "Payor name is embedded after the keyword (e.g. 'DIRECT DEPOSIT REDACTED_EMPLOYER Inc.PAYROLL'). Extract substring between 'DIRECT DEPOSIT ' and trailing ' (Cash)'/' (Margin)' for employer attribution. Multi-employer households produce several distinct payors per month — preserve attribution, do not aggregate before storage."
+      },
+      "INCOME_DIVIDEND": {
+        "patterns": ["DIVIDEND RECEIVED SUBSTITUTE PAYMENT", "DIVIDEND RECEIVED"],
+        "sign": "positive",
+        "true_income": true,
+        "income_subtype": "investment",
+        "notes": "SUBSTITUTE PAYMENT = in-lieu dividend (security was loaned out at record date). Same cash effect as a normal dividend but taxed as ordinary income, not qualified. Check the longer pattern first."
+      },
+      "INCOME_CAPITAL_GAIN": {
+        "patterns": ["LONG-TERM CAP GAIN", "SHORT-TERM CAP GAIN"],
+        "sign": "positive",
+        "true_income": true,
+        "income_subtype": "investment",
+        "notes": "Mutual fund / CEF capital-gain distributions. Tag for tax treatment differentiation downstream."
+      },
+      "INCOME_INTEREST": {
+        "patterns": ["INTEREST EARNED"],
+        "sign": "positive",
+        "true_income": true,
+        "income_subtype": "investment",
+        "notes": "Money-market / cash sweep interest."
+      },
+      "REINVESTMENT": {
+        "patterns": ["REINVESTMENT"],
+        "sign": "negative",
+        "true_income": false,
+        "true_spending": false,
+        "notes": "Cash being converted into shares. Income was already booked under DIVIDEND RECEIVED on the matching row — do NOT double-count. Excluded from both income and spending."
+      },
+      "MARGIN_INTEREST": {
+        "patterns": ["MARGIN INTEREST"],
+        "sign": "negative",
+        "true_income": false,
+        "true_spending": true,
+        "expense_category": "Investment Interest",
+        "notes": "Cost of holding margin balance. Track monthly against dividend income to monitor coverage ratio."
+      },
+      "INTERNAL_TRANSFER": {
+        "patterns": ["JOURNALED", "ACAT"],
+        "sign": "either",
+        "true_income": false,
+        "true_spending": false,
+        "notes": "Movement between Fidelity sub-accounts (cash <-> margin) or between brokers. Net economic effect = $0. MUST be excluded from both income and spending totals."
+      },
+      "TRADE_BUY": {
+        "patterns": ["YOU BOUGHT"],
+        "sign": "negative",
+        "true_income": false,
+        "true_spending": false,
+        "notes": "Securities purchase. Cash outflow but asset stays in portfolio — not spending."
+      },
+      "TRADE_SELL": {
+        "patterns": ["YOU SOLD"],
+        "sign": "positive",
+        "true_income": false,
+        "true_spending": false,
+        "notes": "Securities sale. Cash inflow but not income — realized gain/loss is computed elsewhere from cost basis."
+      },
+      "DEBIT_CARD_PURCHASE": {
+        "patterns": ["DEBIT CARD PURCHASE"],
+        "sign": "negative",
+        "true_spending": true,
+        "route_to": "expense_tracker",
+        "notes": "Merchant name embedded in the Action string after the keyword. Description column is often blank or 'No Description' — parse merchant from Action. Run sub-category matcher (see scripts/data/transaction_processor.py EXPENSE_PATTERNS) for category assignment."
+      },
+      "DEBIT_CARD_RETURN": {
+        "patterns": ["DEBIT CARD RETURN"],
+        "sign": "positive",
+        "true_income": false,
+        "notes": "Refund. Offset against the original purchase rather than counted as income."
+      },
+      "CASH_WITHDRAWAL": {
+        "patterns": ["CASH ADVANCE", "ATM"],
+        "sign": "negative",
+        "true_spending": true,
+        "route_to": "expense_tracker",
+        "expense_category": "Cash Withdrawal",
+        "notes": "Cash advance from Fidelity margin line. Accrues margin interest (~11%+ APR) — flag for cash-flow analysis."
+      },
+      "CC_PAYMENT_PASSTHROUGH": {
+        "patterns": [
+          "DIRECT DEBIT APPLECARD",
+          "DIRECT DEBIT CHASE CREDIT",
+          "DIRECT DEBIT WF CREDIT CARD",
+          "DIRECT DEBIT GSBAPAYMENT"
+        ],
+        "sign": "negative",
+        "true_income": false,
+        "true_spending": false,
+        "notes": "Credit-card payoff. The spending was already captured at the merchant via the CC statement. Counting these as expenses double-counts spending. Only treat as 'spending' if you are NOT also importing CC statements."
+      },
+      "AUTO_LOAN_PAYMENT": {
+        "patterns": ["DIRECT DEBIT WELLS FARGO AUDRAFT"],
+        "sign": "negative",
+        "true_spending": true,
+        "expense_category": "Loan Payment",
+        "notes": "Wells Fargo 'AUDRAFT' = auto loan payment (not overdraft). Real recurring expense — keep separate from CC pass-throughs."
+      },
+      "DIRECT_DEBIT_BILL": {
+        "patterns": [
+          "DIRECT DEBIT AES STDNT LOAN",
+          "DIRECT DEBIT REGENT UNIVERS",
+          "DIRECT DEBIT BMOBNK",
+          "DIRECT DEBIT CPENERGY",
+          "DIRECT DEBIT BRAZORIA",
+          "DIRECT DEBIT SAFEPOINT",
+          "DIRECT DEBIT CLICKPAY",
+          "DIRECT DEBIT"
+        ],
+        "sign": "negative",
+        "true_spending": true,
+        "route_to": "expense_tracker",
+        "notes": "Recurring bill payments (loans, tuition, utilities, insurance, HOA). The bare 'DIRECT DEBIT' fallback catches unknown ACH withdrawals — flag those for manual review. Run sub-category matcher against the rest of the Action string."
+      },
+      "ELECTRONIC_FUNDS": {
+        "patterns": ["ELECTRONIC FUNDS"],
+        "sign": "either",
+        "true_income": "depends_on_sign",
+        "true_spending": "depends_on_sign",
+        "notes": "Generic ACH. Inspect sign and counterparty. Inflows from external bank = potential income; outflows to external bank = potential transfer-out, NOT spending. Default behavior: flag for manual review."
+      },
+      "CORPORATE_ACTION": {
+        "patterns": ["IN LIEU", "REVERSE SPLIT", "STOCK SPLIT", "SPINOFF", "MERGER"],
+        "sign": "either",
+        "true_income": false,
+        "true_spending": false,
+        "notes": "Adjusts share count or cost basis. No income or spending impact."
+      },
+      "FEE": {
+        "patterns": ["FEE", "COMMISSION"],
+        "sign": "negative",
+        "true_spending": true,
+        "expense_category": "Investment Fees",
+        "notes": "Brokerage / transaction fees. Real cost but bucketed separately from lifestyle spending."
+      }
+    },
+    "fallback_category": "UNCATEGORIZED",
+    "fallback_action": "flag_for_manual_review"
+  },
+  "income_calculation_rules": {
+    "_description": "Aggregation rules for computing 'true income' from classified transactions. Keepfolio dashboards MUST expose wages, investment_income, and total_income as separate metrics — never collapse them into a single number.",
+    "wages_total": "SUM(amount) WHERE category = INCOME_WAGES",
+    "investment_income_total": "SUM(amount) WHERE category IN (INCOME_DIVIDEND, INCOME_CAPITAL_GAIN, INCOME_INTEREST)",
+    "total_income": "wages_total + investment_income_total",
+    "exclusions": [
+      "REINVESTMENT — cash-to-shares conversion, already counted under DIVIDEND RECEIVED",
+      "INTERNAL_TRANSFER (JOURNALED, ACAT) — net zero economic effect",
+      "TRADE_SELL — proceeds are not income; realized gain/loss is computed from cost basis elsewhere",
+      "DEBIT_CARD_RETURN — refund, offset against the original purchase",
+      "CC_PAYMENT_PASSTHROUGH — debt settlement, not new income or spending"
+    ],
+    "employer_attribution": "For each INCOME_WAGES row, parse the substring between 'DIRECT DEPOSIT ' and the trailing ' (Cash)'/' (Margin)' marker as the employer label. Group by employer for multi-employer households ({user_name}'s profile has 4+ concurrent payors).",
+    "regression_fixture": {
+      "fixture_csv": "tests/python/fixtures/fidelity_history_golden.csv",
+      "expected_json": "tests/python/fixtures/fidelity_history_golden_expected.json",
+      "test_file": "tests/python/test_fidelity_taxonomy.py",
+      "row_count": 7,
+      "coverage": [
+        "DIRECT DEPOSIT (wages)",
+        "DIVIDEND RECEIVED (investment income)",
+        "DIVIDEND RECEIVED SUBSTITUTE PAYMENT (pattern-priority edge case)",
+        "REINVESTMENT (must not double-count)",
+        "JOURNALED (internal transfer)",
+        "DIRECT DEBIT APPLECARD (CC pass-through)",
+        "DEBIT CARD PURCHASE H-E-B (real spending + sub-category)"
+      ],
+      "run_command": "uv run pytest tests/python/test_fidelity_taxonomy.py --no-cov",
+      "notes": "The test contains a reference classifier implementation Keepfolio's TypeScript parser should mirror. Re-run on every parser or taxonomy change to prevent silent double-count regressions."
     }
   },
   "dividend_history_csv": {

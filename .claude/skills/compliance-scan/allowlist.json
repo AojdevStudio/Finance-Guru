@@ -1,0 +1,35 @@
+{
+  "_comment": "Known-accepted PII exceptions. Reserve for cases where the value is legitimately committed (e.g., a golden test fixture captured from real production). Every entry needs a reason and approval trail. Adding here suppresses ALL pattern scans on the matching path.",
+  "allow": [
+    {
+      "path": "tests/python/fixtures/fidelity_history_golden_expected.json",
+      "reason": "Golden test fixture captured from real Fidelity history import; real employer string is intentional and accepted",
+      "approved_by": "ossie",
+      "date": "2026-05-16"
+    },
+    {
+      "path": "tests/python/test_margin_metrics.py",
+      "reason": "Synthetic test fixture filenames (Balances_for_Account_Z123) — Z123 is a fake account label, not real account data",
+      "approved_by": "ossie",
+      "date": "2026-06-24"
+    },
+    {
+      "path": ".claude/skills/PortfolioSyncing/workflows/IngestPositions.md",
+      "reason": "Illustrative example dates (Portfolio_Positions_Mar-06-2026.csv) in workflow documentation; not real account data",
+      "approved_by": "ossie",
+      "date": "2026-06-24"
+    },
+    {
+      "path": "README.md",
+      "reason": "AojdevStudio is the canonical public repo owner (star-history link); this is a public repo by design, not PII to scrub",
+      "approved_by": "ossie",
+      "date": "2026-06-24"
+    },
+    {
+      "path": "monitoring/alerts.yml",
+      "reason": "repo: AojdevStudio/Finance-Guru is the real GitHub repo, required for issue-routing config to function",
+      "approved_by": "ossie",
+      "date": "2026-06-24"
+    }
+  ]
+}
