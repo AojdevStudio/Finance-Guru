@@ -35,6 +35,8 @@ data/raw/*
 data/processed/*
 !data/sample/*
 *.csv
+# Synthetic golden fixture — a pinned test contract, not real broker data
+!tests/python/fixtures/fidelity_history_golden.csv
 *.xlsx
 *.xls
 .claude/hooks/node_modules

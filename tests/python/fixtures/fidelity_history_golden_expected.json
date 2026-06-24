@@ -8,7 +8,7 @@
       "run_date": "05/05/2026",
       "amount": 5000.00,
       "expected_category": "INCOME_WAGES",
-      "expected_employer": "Avanade Inc.PAYROLL",
+      "expected_employer": "REDACTED_EMPLOYER Inc.PAYROLL",
       "counts_as_wages": true,
       "counts_as_investment_income": false,
       "counts_as_spending": false,
