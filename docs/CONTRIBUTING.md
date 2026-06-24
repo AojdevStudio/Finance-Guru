@@ -54,7 +54,6 @@ Everything else is issues-only. We will evaluate bug reports and feature request
 - Skills under `.claude/skills/`
 - Agents under `fin-guru/agents/` or `.claude/commands/fin-guru/agents/`
 - Hooks under `.claude/hooks/`
-- The `apps/plaid-dashboard/` Bun monorepo
 - `finance-guru-desktop/` (Electron POC, gitignored)
 
 These surfaces are either deeply coupled to the private user profile or scheduled for replacement in the Tauri pivot.

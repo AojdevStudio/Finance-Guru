@@ -15,7 +15,7 @@
 
 > *What's new in **v2.1.0** (2026-04-16) and on `main`:*
 > **Finance Guru Desktop v1** (Electron + Agent SDK) — command palette, modal args, Plotly charts, streaming chat with skill activation.
-> **Apps expansion** — `apps/plaid-dashboard/` (Next.js + Hono + Drizzle) and `apps/simplefin-sync/` (indie Plaid alternative) join the monorepo.
+> **Apps expansion** — `apps/simplefin-sync/` (Bun/TS indie SimpleFIN bridge, a Plaid alternative) joins the monorepo.
 > **Cross-harness skills** — 16 FG skills now symlinked into `.agents/skills/` and `.pi/skills/`, making them portable to pi-coding-agent and any Agent-Skills-standard harness with zero rewrites.
 > **Agent readiness L4** — repo lifted from L1 (47%) to L4 (89.5%) with devcontainer, structured logging, PII scrubbing, runbooks, release-please, rollback workflow, and more.
 > **Milestone 2 shipped** — Hedging & Portfolio Protection (Total Return, Rolling Tracker, Hedge Sizer, Hedge Comparison).
@@ -173,13 +173,12 @@ All hedging tools share 13 Pydantic models and read defaults from `user-profile.
 Beyond the CLI engine, `apps/` holds standalone services that share the Finance Guru backbone:
 
 
-| App                     | Stack                                          | Status                                                               |
-| ----------------------- | ---------------------------------------------- | -------------------------------------------------------------------- |
-| `apps/plaid-dashboard/` | Next.js 15 · Hono · Drizzle · Postgres · Plaid | Working dashboard — see its [README](apps/plaid-dashboard/README.md) |
-| `apps/simplefin-sync/`  | Bun · TypeScript                               | Scaffold — indie, $15/yr SimpleFIN bridge alternative to Plaid       |
+| App                    | Stack            | Status                                                        |
+| ---------------------- | ---------------- | ------------------------------------------------------------ |
+| `apps/simplefin-sync/` | Bun · TypeScript | Scaffold — indie, $15/yr SimpleFIN bridge alternative to Plaid |
 
 
-Both are Bun workspaces under `turbo.json`. Run `bun install` at the repo root, then use each app's own README for setup.
+It's a Bun workspace under `turbo.json`. Run `bun install` at the repo root, then use the app's own README for setup.
 
 ## Cross-Harness Skills
 
@@ -435,7 +434,6 @@ family-office/
 │   └── data/                 # Knowledge base & templates
 ├── .claude/skills/           # 19 Finance Guru skills (auto-activated)
 ├── apps/                     # Bun monorepo workspaces (turbo.json)
-│   ├── plaid-dashboard/      # Next.js 15 + Hono + Drizzle + Plaid
 │   └── simplefin-sync/       # Bun/TS indie Plaid alternative
 ├── finance-guru-desktop/     # Electron + Agent SDK preview (gitignored)
 ├── tests/                    # 365+ pytest tests

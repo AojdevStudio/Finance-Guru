@@ -27,7 +27,7 @@ A reproducible dev environment — Python 3.12 + uv + Node LTS + Bun + GitHub CL
 |------|---------|-------|
 | Python | 3.12 | `.venv` at `/workspaces/family-office/.venv` |
 | uv | latest | Package manager |
-| Node | LTS | For `apps/plaid-dashboard` (Next.js) |
+| Node | LTS | For Bun/TS tooling and Node-compatible toolchains |
 | Bun | latest | For `apps/simplefin-sync` and hooks |
 | GitHub CLI | latest | Pre-authenticated via Codespace token |
 

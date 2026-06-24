@@ -3,7 +3,7 @@
 #
 # This is a solo-maintainer family-office system. Alerts route to GitHub
 # Issues (via error-to-issue workflow) and Claude Code notifications.
-# For production deployments of apps/plaid-dashboard you would wire this
+# For a production multi-user deployment you would wire this
 # up to PagerDuty, Grafana OnCall, or similar.
 
 channels:
