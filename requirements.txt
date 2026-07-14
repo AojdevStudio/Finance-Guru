@@ -397,6 +397,7 @@ types-pyyaml==6.0.12.20260408
 types-requests==2.32.4.20260107
 typing-extensions==4.15.0
     # via
+    #   aiohttp
     #   aiosignal
     #   altair
     #   anthropic
