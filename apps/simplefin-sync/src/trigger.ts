@@ -184,13 +184,17 @@ export function detectionFromTransaction(
   transaction: SfinTransaction,
   threshold = DEFAULT_THRESHOLD,
 ): DepositDetection | null {
+  // SimpleFIN returns pending items when fetchAccounts({ pending: true }).
+  // Pending deposits can reverse or never settle — do not fire buy-ticket
+  // triggers until the transaction is posted (posted > 0, pending != true).
+  if (transaction.pending || transaction.posted === 0) return null;
   if (!isDepositOverThreshold(transaction, threshold)) return null;
   return {
     transactionKey: stableKey(account.id, transaction.id),
     sourceAccountKey: stableKey(account.id),
     amount: transaction.amount,
     posted: transaction.posted,
-    pending: transaction.pending ?? false,
+    pending: false,
   };
 }
 
