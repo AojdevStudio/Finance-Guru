@@ -133,9 +133,7 @@ def test_metrics_from_runtime_defaults_to_snaptrade(monkeypatch):
     assert metrics.margin_balance == 83820.02
 
 
-def test_read_snaptrade_balances_prefers_taxable_margin_account(
-    tmp_path, monkeypatch
-):
+def test_read_snaptrade_balances_prefers_taxable_margin_account(tmp_path, monkeypatch):
     """Margin metrics must use taxable_margin, not the first syncable account."""
     config_path = tmp_path / "snaptrade-accounts.yaml"
     config_path.write_text(
