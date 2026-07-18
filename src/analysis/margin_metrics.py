@@ -180,20 +180,32 @@ def _broker_balances_from_snaptrade(client: Any, account_id: str) -> FidelityBal
 def read_snaptrade_balances(
     config_path: str | Path = "config/snaptrade-accounts.yaml",
 ) -> FidelityBalances:
-    """Pull live balances for the first enabled+routed SnapTrade account."""
+    """Pull live balances for the enabled taxable_margin SnapTrade account.
+
+    Margin health must come from the margin brokerage account. Using the first
+    syncable account is unsafe when a cash/IRA account is listed first — that
+    path silently reports no_margin / wrong equity while real margin debt
+    exists on another account.
+    """
     from src.integrations.snaptrade.client import SnapTradeClientWrapper
-    from src.integrations.snaptrade.models import SnapTradeAccountsConfig
+    from src.integrations.snaptrade.models import AccountRole, SnapTradeAccountsConfig
 
     config = SnapTradeAccountsConfig.from_path(Path(config_path))
-    syncable = config.syncable
-    if not syncable:
+    margin_accounts = [
+        account
+        for account in config.syncable
+        if account.role == AccountRole.TAXABLE_MARGIN
+    ]
+    if not margin_accounts:
         msg = (
-            "No SnapTrade account is enabled+routed in "
+            "No enabled taxable_margin SnapTrade account in "
             f"{config_path}; cannot read margin balances"
         )
         raise ValueError(msg)
     client = SnapTradeClientWrapper.from_env()
-    return _broker_balances_from_snaptrade(client, syncable[0].snaptrade_account_id)
+    return _broker_balances_from_snaptrade(
+        client, margin_accounts[0].snaptrade_account_id
+    )
 
 
 def months_elapsed_since_start(today: date | None = None) -> int | None:

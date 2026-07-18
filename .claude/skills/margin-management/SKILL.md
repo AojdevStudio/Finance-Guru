@@ -36,9 +36,9 @@ Static private assumptions come from `.env` (see `.env.example`). Current portfo
 
 ### 1. Read Live Margin Balances (SnapTrade)
 
-Use `uv run python -m src.analysis.margin_metrics --pretty` to load `.env`, pull live balances from the enabled+routed SnapTrade account, and emit current JSON metrics. (Add `--source csv` to fall back to the latest `Balances_for_Account_*.csv` if SnapTrade is unavailable.)
+Use `uv run python -m src.analysis.margin_metrics --pretty` to load `.env`, pull live balances from the enabled `taxable_margin` SnapTrade account, and emit current JSON metrics. (Add `--source csv` to fall back to the latest `Balances_for_Account_*.csv` if SnapTrade is unavailable.)
 
-**Source**: SnapTrade account in `config/snaptrade-accounts.yaml` (`enabled: true`, `role` set). Requires `SNAPTRADE_*` keys in `.env`.
+**Source**: SnapTrade account in `config/snaptrade-accounts.yaml` with `enabled: true` and `role: taxable_margin`. Cash/IRA/watch accounts are ignored for margin health even if syncable. Requires `SNAPTRADE_*` keys in `.env`.
 
 **Key JSON fields the tool emits**:
 - `portfolio_value` → net account equity (SnapTrade `account_equity`) → Portfolio Value

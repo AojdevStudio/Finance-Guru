@@ -133,6 +133,84 @@ def test_metrics_from_runtime_defaults_to_snaptrade(monkeypatch):
     assert metrics.margin_balance == 83820.02
 
 
+def test_read_snaptrade_balances_prefers_taxable_margin_account(
+    tmp_path, monkeypatch
+):
+    """Margin metrics must use taxable_margin, not the first syncable account."""
+    config_path = tmp_path / "snaptrade-accounts.yaml"
+    config_path.write_text(
+        "accounts:\n"
+        "- snaptrade_account_id: acct-cash\n"
+        "  name: Cash\n"
+        "  role: taxable_cash\n"
+        "  enabled: true\n"
+        "- snaptrade_account_id: acct-margin\n"
+        "  name: Margin\n"
+        "  role: taxable_margin\n"
+        "  enabled: true\n"
+        "- snaptrade_account_id: acct-ira\n"
+        "  name: IRA\n"
+        "  role: retirement\n"
+        "  enabled: true\n",
+        encoding="utf-8",
+    )
+
+    class _SelectingClient(_FakeSnapClient):
+        def __init__(self):
+            self.requested: list[str] = []
+
+        def get_balances(self, account_id):
+            self.requested.append(account_id)
+            return super().get_balances(account_id)
+
+        def get_account_equity(self, account_id):
+            self.requested.append(account_id)
+            return 50_000.0 if account_id == "acct-cash" else 185294.88
+
+        def get_positions(self, account_id):
+            if account_id == "acct-cash":
+                return [{"price": 1.0, "quantity": 50_000.0}]
+            return super().get_positions(account_id)
+
+        def get_options(self, account_id):
+            if account_id == "acct-cash":
+                return []
+            return super().get_options(account_id)
+
+    client = _SelectingClient()
+    monkeypatch.setattr(
+        "src.integrations.snaptrade.client.SnapTradeClientWrapper.from_env",
+        classmethod(lambda cls: client),
+    )
+
+    balances = mm.read_snaptrade_balances(config_path)
+
+    assert balances.source_file == "snaptrade:acct-margin"
+    assert balances.total_account_value == 185294.88
+    assert "acct-cash" not in client.requested
+    assert "acct-margin" in client.requested
+
+
+def test_read_snaptrade_balances_requires_taxable_margin(tmp_path, monkeypatch):
+    """Fail closed when only non-margin accounts are enabled+routed."""
+    config_path = tmp_path / "snaptrade-accounts.yaml"
+    config_path.write_text(
+        "accounts:\n"
+        "- snaptrade_account_id: acct-cash\n"
+        "  name: Cash\n"
+        "  role: taxable_cash\n"
+        "  enabled: true\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "src.integrations.snaptrade.client.SnapTradeClientWrapper.from_env",
+        classmethod(lambda cls: _FakeSnapClient()),
+    )
+
+    with pytest.raises(ValueError, match="taxable_margin"):
+        mm.read_snaptrade_balances(config_path)
+
+
 def test_broker_balances_from_snaptrade_derives_net_debit():
     """SnapTrade adapter yields a Fidelity-shaped balance with derived net debit."""
     balances = _broker_balances_from_snaptrade(_FakeSnapClient(), "acct-1")
