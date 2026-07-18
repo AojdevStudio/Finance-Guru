@@ -1,11 +1,24 @@
 ---
 name: transaction-syncing
-description: Import and manage Fidelity transaction history CSVs. Two workflows - IngestTransactions (local rolling archive from Downloads) and SyncTransactions (Google Sheets push). USE WHEN user mentions "sync transactions", "import transactions", "ingest transactions", "transaction history", OR wants to import Fidelity History CSV.
+description: Refresh the local DB, then push investment activities and card/bank expenses to Google Sheets. Investment activities come from the DB transactions table (SnapTrade); debit-card and bank spending comes from the DB bank_transactions table (SimpleFIN), auto-categorized. Sync-first so nothing is stale. USE WHEN user mentions "sync transactions", "transaction history", "expense tracker", "categorize spending", OR "update expenses".
 ---
 
 # TransactionSyncing
 
-Import Fidelity transaction history CSV into Google Sheets using a hybrid architecture: master Transactions tab for full audit trail + auto-routing of debit card purchases to Expense Tracker for Budget Planner integration.
+Push financial activity into Google Sheets from the local DB (refreshed sync-first): the master Transactions tab from investment activities (`transactions` table), plus the Expense Tracker from card/bank spending (`bank_transactions` table), auto-categorized for Budget Planner integration.
+
+## Step 0: Refresh (sync-first, mandatory)
+
+Both halves read from the local DB, refreshed FIRST so nothing is stale. Follow the shared **[Sync-First + DB-Read](../_shared/SyncFirstDbRead.md)** pattern. This skill needs two sources:
+
+```bash
+uv run python -m src.integrations.snaptrade.sync_transactions_db          # investment activities -> transactions
+uv run python -m src.integrations.simplefin.sync_expenses_db --months 3   # card/bank spending -> bank_transactions
+# or refresh everything at once:
+uv run python -m src.integrations.refresh_all --months 3
+```
+
+Completion criterion: _the `transactions` and `bank_transactions` tables carry this run's `synced_at` before any Sheet write._
 
 ## Workflow Routing
 
@@ -55,20 +68,22 @@ User: "import fidelity transactions and update expense tracker"
 ### Data Flow
 
 ```
-Fidelity CSV (notebooks/transactions/)
-         |
-         v
-+-------------------+
-| Transactions Tab  |  <- Master source (ALL transactions)
-| (Full Fidelity)   |
-+-------------------+
-         |
-         | Filter: DEBIT CARD PURCHASE
-         v
-+-------------------+
-| Expense Tracker   |  <- Budget Planner integration
-| (Categorized)     |
-+-------------------+
+SnapTrade activities            SimpleFIN dump (bun run src/dump.ts)
+        |                                |
+        v                                v
+  sync_transactions_db            sync_expenses_db (categorize.py)
+        |                                |
+        v                                v
++------------------+           +--------------------+
+| transactions     |           | bank_transactions  |  <- categorized, upserted
+| table (DB)       |           | table (DB)         |
++------------------+           +--------------------+
+        |                                | direction == "debit"
+        v                                v
++------------------+           +--------------------+
+| Transactions Tab |           | Expense Tracker    |  <- Budget Planner integration
+| (Google Sheets)  |           | (Google Sheets)    |
++------------------+           +--------------------+
 ```
 
 ### Transaction Types Handled
@@ -85,36 +100,59 @@ Fidelity CSV (notebooks/transactions/)
 
 ### Smart Categorization
 
-See `CategoryRules.md` for the full pattern matching rules.
+Categorization is executable and runs inside the expense adapter, so the
+`category` column arrives pre-filled on every `bank_transactions` row. The rules
+live in code at `src/integrations/simplefin/categorize.py`
+(`categorize_expense(text, amount)`), which is the source of truth mirroring the
+human-readable `CategoryRules.md`. Keep the two in sync when adding patterns.
 
 **Sample patterns:**
 - `H-E-B`, `KROGER`, `COSTCO`, `WAL-MART` -> Groceries
 - `Tesla`, `SUPERCHA` -> Auto & Transport
 - `BENIHANA`, `GOLDEN CORRAL`, `PAPA JOHN` -> Dining Out
 - `CVS`, `PHARMACY` -> Health & Wellness
+- amount < $1.00 or `verification` text -> Exempt; no match -> Uncategorized
 
-## Input Source: SnapTrade activities (preferred) — CSV is fallback
+## Input Sources: the local DB (primary)
 
-As of SnapTrade Phase 2 (#72), the preferred input is **live normalized activities**, not a CSV:
+### Half A: Investment activities (`transactions` table)
+
+After Step 0's refresh, read investment activity from the DB:
 
 ```bash
-uv run python -m src.integrations.snaptrade.cli activities --output json
+sqlite3 family_office.db \
+  "SELECT date, type, symbol, description, amount, quantity, currency FROM transactions ORDER BY date;"
 ```
 
-This returns one record per activity with a stable shape — `type`, `date`,
-`symbol`, `amount`, `quantity`, `currency`, `description`, `account` — paged
-across the full history. Map it onto the master Transactions tab exactly as the
-CSV columns map (Fidelity action -> `type`, run date -> `date`, amount ->
-`amount`, etc.).
+Each row has a stable shape (`type`, `date`, `symbol`, `amount`, `quantity`,
+`currency`, `description`). Map it onto the master Transactions tab (type -> Action,
+date -> Date, amount -> Amount, etc.).
 
-**Dedupe is unchanged:** Google Sheets stays the single source of truth. Detect
-duplicates the same way — by `date` + `type` + `amount` against existing rows —
-and add only new ones. No local cache or state file is introduced; re-running is
-idempotent because the Sheet is the ledger.
+### Half B: Card / bank expenses (`bank_transactions` table)
 
-**Fallback:** the Fidelity CSV path below still works and remains the fallback
-until the human reconciliation gate (#72) confirms parity. CSV ingestion is not
-removed in this phase (deletion is Phase 3 / #73).
+Debit-card and bank spending has **no SnapTrade equivalent**, so it comes from
+SimpleFIN via the expense adapter, already normalized and categorized:
+
+```bash
+sqlite3 family_office.db \
+  "SELECT date, payee, description, amount, direction, category FROM bank_transactions ORDER BY date DESC;"
+```
+
+The adapter (`src/integrations/simplefin/sync_expenses_db.py`) pulls the SimpleFIN
+dump, categorizes each row via the executable rules in
+`src/integrations/simplefin/categorize.py` (the code source of truth mirroring
+`CategoryRules.md`), and upserts into `bank_transactions` keyed on
+`(account_id, txn_id)`. Route `direction == "debit"` rows to the Expense Tracker
+using the `category` column.
+
+**Dedupe:** Google Sheets stays the single source of truth for what has been
+posted. For Half A detect duplicates by `date` + `type` + `amount`; for Half B by
+`date` + `description` + `amount`. Add only new rows. The DB layer is already
+idempotent (activities via `dedupe_key`, expenses via the upsert key), so
+re-running is safe.
+
+**Fallback:** the Fidelity History CSV path below remains a manual reconciliation
+fallback only; it is no longer the primary path.
 
 ## Core Workflow
 

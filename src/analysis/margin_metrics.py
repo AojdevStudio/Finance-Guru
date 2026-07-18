@@ -1,8 +1,10 @@
-"""Runtime margin-health metrics from live broker balances plus local config.
+"""Runtime margin-health metrics from the local DB snapshot plus local config.
 
-Personal assumptions come from .env. Current portfolio facts come from SnapTrade
-(live, the default) or, as a fallback, the latest Fidelity
-``Balances_for_Account_*.csv`` export (``--source csv``).
+Personal assumptions come from .env. Current portfolio facts are read from the
+local ``family_office.db`` ``balances`` table (``--source db``, the default),
+which the sync-first refresh (``src.integrations.refresh_all``) keeps current.
+Fallbacks: ``--source snaptrade`` reads the SnapTrade API live, and
+``--source csv`` reads the latest Fidelity ``Balances_for_Account_*.csv`` export.
 """
 
 from __future__ import annotations
@@ -11,6 +13,7 @@ import argparse
 import csv
 import json
 import os
+import sqlite3
 from dataclasses import asdict, dataclass
 from datetime import date
 from glob import glob
@@ -196,6 +199,54 @@ def read_snaptrade_balances(
     return _broker_balances_from_snaptrade(client, syncable[0].snaptrade_account_id)
 
 
+def read_db_balances(database_url: str | None = None) -> FidelityBalances:
+    """Read the latest balances snapshot the refresh wrote to the local DB.
+
+    The sync-first refresh (``src.integrations.refresh_all``) writes a current
+    SnapTrade snapshot to the ``balances`` table, so reading that row makes the
+    local DB the single source of truth. Margin debt is the derived loan
+    (SnapTrade does not expose it), so accrued interest and day-change are None.
+    """
+    from src.integrations.snaptrade.sync_db import _db_path
+
+    db = _db_path(database_url or os.getenv("DATABASE_URL"))
+    if not db.exists():
+        msg = (
+            f"No local database at {db}; run the sync-first refresh "
+            "(uv run python -m src.integrations.refresh_all) before reading margin metrics"
+        )
+        raise FileNotFoundError(msg)
+    conn = sqlite3.connect(db)
+    try:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT account_equity, buying_power, margin_debt, synced_at "
+            "FROM balances ORDER BY synced_at DESC LIMIT 1"
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        msg = "No balances rows in the local DB; run the sync-first refresh first"
+        raise ValueError(msg)
+    equity = row["account_equity"]
+    if equity is None:
+        msg = "Local DB balance row is missing account_equity"
+        raise ValueError(msg)
+    margin_debt = row["margin_debt"] or 0.0
+    # Fidelity convention: net debit is negative; calculate_margin_metrics abs()-es it.
+    net_debit = -margin_debt if margin_debt > 0 else 0.0
+    return FidelityBalances(
+        source_file=f"db:{db}",
+        total_account_value=equity,
+        total_account_day_change=None,
+        margin_buying_power=row["buying_power"],
+        margin_buying_power_day_change=None,
+        net_debit=net_debit,
+        net_debit_day_change=None,
+        margin_interest_accrued_this_month=None,
+    )
+
+
 def months_elapsed_since_start(today: date | None = None) -> int | None:
     """Return elapsed strategy months from FG_STRATEGY_START_DATE."""
     raw = os.getenv("FG_STRATEGY_START_DATE")
@@ -264,22 +315,25 @@ def calculate_margin_metrics(
 
 def metrics_from_runtime(
     *,
-    source: str = "snaptrade",
+    source: str = "db",
     csv_path: str | Path | None = None,
     annual_rate: float | None = None,
     monthly_dividend_income: float | None = None,
     today: date | None = None,
 ) -> MarginMetrics:
-    """Load .env/config + live balances and return derived metrics.
+    """Load .env/config + current balances and return derived metrics.
 
-    Source is SnapTrade by default; ``source="csv"`` (or passing ``csv_path``)
-    reads the legacy Fidelity balances CSV instead.
+    Source is the local DB snapshot by default (the sync-first store);
+    ``source="snaptrade"`` reads the SnapTrade API live, and ``source="csv"``
+    (or passing ``csv_path``) reads the legacy Fidelity balances CSV instead.
     """
     load_dotenv()
     if csv_path is not None or source == "csv":
         balances = read_fidelity_balances(csv_path)
-    else:
+    elif source == "snaptrade":
         balances = read_snaptrade_balances()
+    else:
+        balances = read_db_balances()
     resolved_rate = annual_rate or parse_rate(
         os.getenv("FG_MARGIN_INTEREST_RATE_DECIMAL")
         or os.getenv("FG_MARGIN_INTEREST_RATE")
@@ -311,9 +365,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Calculate live margin health metrics")
     parser.add_argument(
         "--source",
-        choices=("snaptrade", "csv"),
-        default="snaptrade",
-        help="Balance source. Defaults to live SnapTrade; 'csv' reads Fidelity export.",
+        choices=("db", "snaptrade", "csv"),
+        default="db",
+        help=(
+            "Balance source. Defaults to the local DB snapshot (sync-first store); "
+            "'snaptrade' reads the API live; 'csv' reads a Fidelity export."
+        ),
     )
     parser.add_argument("--csv", help="Specific Fidelity balances CSV to read")
     parser.add_argument(

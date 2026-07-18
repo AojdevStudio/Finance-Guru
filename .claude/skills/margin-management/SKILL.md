@@ -1,6 +1,6 @@
 ---
 name: margin-management
-description: Update Margin Dashboard with Fidelity balance data and calculate margin-living strategy metrics. Monitors margin balance, interest costs, coverage ratios, and scaling thresholds. Triggers safety alerts for large draws and provides time-based scaling recommendations. Use when updating margin, balances, coverage ratio, or margin strategy analysis.
+description: Monitor the margin-living strategy from the live DB snapshot. Refreshes the local database first, then reads margin balance, interest costs, dividend coverage ratio, and portfolio-to-margin thresholds. Triggers safety alerts for large draws and gives time-based scaling recommendations. Use when updating margin, balances, coverage ratio, or margin strategy analysis.
 ---
 
 # Margin Management
@@ -8,6 +8,16 @@ description: Update Margin Dashboard with Fidelity balance data and calculate ma
 ## Purpose
 
 Monitor and manage margin-living strategy by tracking margin balances, interest costs, dividend coverage ratios, and portfolio-to-margin safety thresholds. Provides data-driven scaling recommendations based on strategy milestones.
+
+## Step 0: Refresh (sync-first, mandatory)
+
+This skill reads margin facts from the local DB, and the DB is refreshed FIRST so it can never be stale. Follow the shared **[Sync-First + DB-Read](../_shared/SyncFirstDbRead.md)** pattern. Minimum for this skill (positions + balances into the `balances` table):
+
+```bash
+uv run python -m src.integrations.snaptrade.sync_db   # or: refresh_all
+```
+
+Completion criterion: _the `balances` table carries this run's `synced_at` before any margin number is read._
 
 ## When to Use
 
@@ -21,7 +31,7 @@ Use this skill when:
 
 ## Personal Strategy Inputs
 
-Static private assumptions come from `.env` (see `.env.example`). Current portfolio facts come from **SnapTrade (live)** by default, then `src/analysis/margin_metrics.py` derives ratios/costs at runtime. Do not hardcode personal numbers in this skill. The legacy Fidelity balances CSV is a fallback only (`--source csv`).
+Static private assumptions come from `.env` (see `.env.example`). Current portfolio facts come from the **local DB `balances` snapshot** (refreshed sync-first in Step 0), then `src/analysis/margin_metrics.py` derives ratios/costs at runtime. Do not hardcode personal numbers in this skill. Fallbacks: `--source snaptrade` reads the API live, `--source csv` reads the legacy Fidelity balances CSV.
 
 ### Required `.env` values
 
@@ -34,17 +44,17 @@ Static private assumptions come from `.env` (see `.env.example`). Current portfo
 
 ## Core Workflow
 
-### 1. Read Live Margin Balances (SnapTrade)
+### 1. Read Margin Balances (local DB snapshot)
 
-Use `uv run python -m src.analysis.margin_metrics --pretty` to load `.env`, pull live balances from the enabled+routed SnapTrade account, and emit current JSON metrics. (Add `--source csv` to fall back to the latest `Balances_for_Account_*.csv` if SnapTrade is unavailable.)
+After Step 0's refresh, run `uv run python -m src.analysis.margin_metrics --pretty`. It loads `.env`, reads the latest `balances` row from `family_office.db` (the `db` source is the default), and emits current JSON metrics. Fallbacks if needed: `--source snaptrade` (live API) or `--source csv` (latest `Balances_for_Account_*.csv`).
 
-**Source**: SnapTrade account in `config/snaptrade-accounts.yaml` (`enabled: true`, `role` set). Requires `SNAPTRADE_*` keys in `.env`.
+**Source**: the `balances` table, written by the Step 0 sync from the enabled+routed SnapTrade account in `config/snaptrade-accounts.yaml` (`enabled: true`, `role` set). Requires `SNAPTRADE_*` keys in `.env` for the refresh.
 
 **Key JSON fields the tool emits**:
-- `portfolio_value` → net account equity (SnapTrade `account_equity`) → Portfolio Value
-- `margin_balance` → derived margin debt (gross market value − net equity) → Margin Balance
+- `portfolio_value` → net account equity (`account_equity`) → Portfolio Value
+- `margin_balance` → derived margin debt (gross market value minus net equity) → Margin Balance
 - `monthly_interest_cost` → Balance × Rate ÷ 12 (the primary interest figure)
-- `margin_interest_accrued_this_month` → **null under SnapTrade** (not exposed; only present via `--source csv`)
+- `margin_interest_accrued_this_month` → **null on the DB and SnapTrade paths** (the broker does not expose accrued interest; it is only present via `--source csv`)
 
 **Calculations**:
 - **Margin Balance**: Derived margin debt = {live.margin_balance} (tracks Fidelity "Net debit" within ~0.1%)

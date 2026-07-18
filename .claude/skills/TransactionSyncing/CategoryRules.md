@@ -1,6 +1,12 @@
 # CategoryRules - Expense Categorization Patterns
 
-Pattern matching rules for auto-categorizing debit card purchases from Fidelity transaction history.
+Pattern matching rules for auto-categorizing card and bank purchases.
+
+> **Executable source of truth:** these rules are implemented in code at
+> `src/integrations/simplefin/categorize.py` (`categorize_expense(text, amount)`),
+> which the SimpleFIN expense sync runs so every `bank_transactions` row arrives
+> pre-categorized. This document is the human-readable mirror. When you add or
+> change a pattern here, update `categorize.py` (and its test) to match.
 
 ## How to Add New Patterns
 

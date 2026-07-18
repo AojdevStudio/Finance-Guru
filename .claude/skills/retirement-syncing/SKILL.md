@@ -1,9 +1,28 @@
 ---
 name: retirement-syncing
-description: Sync retirement account data from Vanguard and Fidelity CSV exports to Google Sheets DataHub. Handles multiple accounts, aggregates holdings by ticker, and updates quantities in retirement section (rows 46-62). Triggers on sync retirement, update retirement, vanguard sync, 401k update, IRA sync, or working with notebooks/retirement-accounts/ files.
+description: Sync retirement holdings from Vanguard and Fidelity CSV exports to the Google Sheets DataHub. CSV-only by design — the Vanguard IRAs and Fidelity 401k are not connected in SnapTrade, so there is no live/DB path yet. Triggers on sync retirement, update retirement, vanguard sync, 401k update, IRA sync, or working with notebooks/retirement-accounts/ files.
 ---
 
 # Retirement Account Syncing
+
+## Data source: CSV-only (no live path yet)
+
+Unlike the other syncing skills, retirement accounts do **not** use the
+sync-first + DB-read pattern. The Vanguard IRAs / brokerage and the Fidelity
+401(k) are **not authorized in SnapTrade** (only the one taxable-margin Fidelity
+account is routed in `config/snaptrade-accounts.yaml`). So there is no live API
+snapshot to refresh into `family_office.db` for these accounts, and CSV exports
+remain the only source. This is a deliberate, documented exception to the shared
+**[Sync-First + DB-Read](../_shared/SyncFirstDbRead.md)** pattern.
+
+**Prerequisite for a live path (before this skill can become DB-backed):**
+1. Authorize the Vanguard and Fidelity retirement institutions in SnapTrade.
+2. Add each resulting account to `config/snaptrade-accounts.yaml` with a `role`
+   set and `enabled: true`.
+3. Extend the positions sync (or a retirement-specific sync) to write those
+   accounts into the DB, then rewrite this skill to Step 0 refresh + DB-read.
+
+Until all three are done, do not fabricate a live path: use the CSV workflow below.
 
 ## Purpose
 
@@ -22,8 +41,8 @@ Use this skill when:
 
 | File | Source | Contents |
 |------|--------|----------|
-| `OfxDownload.csv` | Vanguard IRAs | Account 39321600 & 35407271 holdings |
-| `OfxDownload (1).csv` | Vanguard Brokerage | Account 53527429 & 50580939 holdings |
+| `OfxDownload.csv` | Vanguard IRAs | Account `<ira-1>` & `<ira-2>` holdings |
+| `OfxDownload (1).csv` | Vanguard Brokerage | Account `<brokerage-1>` & `<brokerage-2>` holdings |
 | `Portfolio_Positions_*.csv` | Fidelity 401(k) | {employer_name} 401(k) Plan holdings |
 
 ## CSV Formats
@@ -31,7 +50,7 @@ Use this skill when:
 ### Vanguard OFX Format (OfxDownload.csv)
 ```csv
 Account Number,Investment Name,Symbol,Shares,Share Price,Total Value,
-39321600,VANGUARD S&P 500 INDEX ETF,VOO,18.1817,629.3,11441.74,
+<account-number>,VANGUARD S&P 500 INDEX ETF,VOO,18.1817,629.3,11441.74,
 ```
 
 **Key Fields:**
@@ -99,7 +118,7 @@ for file in [vanguard_1, vanguard_2, fidelity]:
 **Expected Aggregations:**
 - VOO: Sum across accounts (IRA + Brokerage)
 - VUG: Sum across accounts
-- PLTR: Sum across accounts (53527429 + 50580939)
+- PLTR: Sum across accounts (`<brokerage-1>` + `<brokerage-2>`)
 - SCHG: Sum across accounts
 - VMFXX: Sum across accounts (all money market)
 - VTSAX: Sum across accounts

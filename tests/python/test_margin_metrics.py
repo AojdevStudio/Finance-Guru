@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 from datetime import date
 
 import pytest
@@ -111,8 +112,30 @@ class _FakeSnapClient:
         return [{"price": 3.93, "quantity": 2.0}]  # 786.00 MV (x100)
 
 
-def test_metrics_from_runtime_defaults_to_snaptrade(monkeypatch):
-    """With no source/csv_path, runtime metrics pull from SnapTrade (the default)."""
+def test_metrics_from_runtime_defaults_to_db(monkeypatch):
+    """With no source/csv_path, runtime metrics read the local DB snapshot (default)."""
+    sentinel = FidelityBalances(
+        source_file="db:family_office.db",
+        total_account_value=185294.88,
+        total_account_day_change=None,
+        margin_buying_power=0.0,
+        margin_buying_power_day_change=None,
+        net_debit=-83820.02,
+        net_debit_day_change=None,
+        margin_interest_accrued_this_month=None,
+    )
+    monkeypatch.setattr(mm, "read_db_balances", lambda: sentinel)
+    monkeypatch.setenv("FG_MARGIN_INTEREST_RATE_DECIMAL", "0.12")
+    monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "$5,000")
+
+    metrics = metrics_from_runtime(today=date(2026, 1, 1))
+
+    assert metrics.source_file == "db:family_office.db"
+    assert metrics.margin_balance == 83820.02
+
+
+def test_metrics_from_runtime_snaptrade_source_reads_api(monkeypatch):
+    """source='snaptrade' pulls live from the SnapTrade API adapter."""
     sentinel = FidelityBalances(
         source_file="snaptrade:acct-1",
         total_account_value=185294.88,
@@ -127,10 +150,37 @@ def test_metrics_from_runtime_defaults_to_snaptrade(monkeypatch):
     monkeypatch.setenv("FG_MARGIN_INTEREST_RATE_DECIMAL", "0.12")
     monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "$5,000")
 
-    metrics = metrics_from_runtime(today=date(2026, 1, 1))
+    metrics = metrics_from_runtime(source="snaptrade", today=date(2026, 1, 1))
 
     assert metrics.source_file == "snaptrade:acct-1"
     assert metrics.margin_balance == 83820.02
+
+
+def test_read_db_balances_reads_latest_snapshot(tmp_path, monkeypatch):
+    """read_db_balances returns the newest balances row as Fidelity-shaped facts."""
+    db_path = tmp_path / "family_office.db"
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute(
+            "CREATE TABLE balances (account_id TEXT PRIMARY KEY, currency TEXT, "
+            "settled_cash REAL, buying_power REAL, account_equity REAL, "
+            "gross_market_value REAL, margin_debt REAL, synced_at TEXT NOT NULL)"
+        )
+        conn.execute(
+            "INSERT INTO balances VALUES ('acct-1','USD',0.0,1000.0,150000.00,"
+            "200000.00,50000.00,'2026-07-18T15:37:11+00:00')"
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+
+    balances = mm.read_db_balances()
+
+    assert balances.source_file == f"db:{db_path}"
+    assert balances.total_account_value == 150000.00
+    assert balances.net_debit == pytest.approx(-50000.00)
+    assert balances.margin_interest_accrued_this_month is None
 
 
 def test_broker_balances_from_snaptrade_derives_net_debit():

@@ -1,13 +1,24 @@
 ---
 name: dividend-tracking
-description: Sync dividend data from Fidelity CSV to Dividends sheet. Reads dividend.csv from notebooks/updates/, calculates actual dividends received (shares × amount per share), writes to input area (rows 2-46), then clicks Add Dividend button to process. Triggers on sync dividends, update dividends, dividend tracker, layer 2 income, or monthly dividend analysis.
+description: Refresh the local DB, then read DIVIDEND rows from family_office.db and post them to the Dividends sheet. Sync-first so dividend income is never stale; symbol resolution for null tickers is handled in the activities sync. Triggers on sync dividends, update dividends, dividend tracker, layer 2 income, or monthly dividend analysis.
 ---
 
 # Dividend Tracking
 
 ## Purpose
 
-Import Fidelity dividend CSV data into the Dividends sheet input area, then trigger the Apps Script to process records into the historical log.
+Read received-dividend records from the local DB `transactions` table (refreshed sync-first), post them to the Dividends sheet input area, then trigger the Apps Script to process records into the historical log.
+
+## Step 0: Refresh (sync-first, mandatory)
+
+Dividend records come from the DB, refreshed FIRST so income can never be stale. Follow the shared **[Sync-First + DB-Read](../_shared/SyncFirstDbRead.md)** pattern. Minimum for this skill (investment activities into the `transactions` table):
+
+```bash
+uv run python -m src.integrations.snaptrade.sync_transactions_db          # writes transactions
+uv run python -m src.integrations.snaptrade.sync_transactions_db --show   # confirm freshness
+```
+
+Completion criterion: _the `transactions` table carries this run's `synced_at` before any dividend is read._
 
 ## Workflow Routing
 
@@ -55,28 +66,28 @@ The Dividends tab has **TWO SECTIONS**:
 
 The Apps Script reads from the input area (A-D) and appends to the historical log (G onwards).
 
-## Input Source: SnapTrade activities (preferred) — CSV is fallback
+## Input Source: DB `transactions` table (primary)
 
-As of SnapTrade Phase 2 (#72), the preferred input is **live normalized activities**, not `dividend.csv`:
+After Step 0's refresh, read received dividends straight from the DB:
 
 ```bash
-uv run python -m src.integrations.snaptrade.cli activities --output json
+sqlite3 family_office.db \
+  "SELECT date, symbol, amount, description FROM transactions WHERE type = 'DIVIDEND' ORDER BY date;"
 ```
 
-Filter the returned records to `type == "DIVIDEND"`. Each record carries `date`,
-`symbol`, `amount`, `description`, and `account`. **Null-symbol dividends already
-have a ticker resolved** — the CLI parses it from the `description` (e.g. `... ETF
-(SCHD)`), mirroring the positions/options symbol fallback — so `symbol` is safe to
-write straight to Column A.
+Each row carries `date`, `symbol`, `amount`, and `description`. **Null-symbol
+dividends already have a ticker resolved** during the activities sync (parsed from
+the `description`, e.g. `... ETF (SCHD)`, mirroring the positions/options symbol
+fallback), so `symbol` is safe to write straight to Column A.
 
-**Dedupe is unchanged:** Google Sheets stays the single source of truth. The
-historical log (cols A-F / SUMIFS in G-U) is the ledger; only write input rows
-that are not already represented, and only for pay dates that have passed. No
-local cache or state file is introduced.
+**Dedupe is unchanged:** Google Sheets stays the single source of truth for what
+has been posted. The historical log (cols A-F / SUMIFS in G-U) is the ledger; only
+write input rows that are not already represented, and only for pay dates that
+have passed. The DB is the fact source; the Sheet is the posting ledger.
 
-**Fallback:** the `dividend.csv` path below still works and remains the fallback
-until the human reconciliation gate (#72) confirms parity. CSV ingestion is not
-removed in this phase (deletion is Phase 3 / #73).
+**Fallback:** the `dividend.csv` path below remains a manual reconciliation
+fallback only (used if the live activities sync is unavailable). It is no longer
+the primary path.
 
 ## Core Workflow
 
