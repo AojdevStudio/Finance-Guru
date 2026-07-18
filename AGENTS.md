@@ -390,3 +390,30 @@ The system is primarily workflow-based rather than code-based. Validation involv
 - If push fails, resolve and retry until it succeeds
 
 Use GitHub Issues or repo docs for follow-up tracking
+
+## Cursor Cloud specific instructions
+
+Durable, non-obvious notes for cloud agents. The startup update script already runs
+`uv sync --dev` and `bun install`, so dependencies are ready — do not re-install them.
+
+- **Toolchain paths**: `uv` lives at `~/.local/bin/uv` and `bun` at `~/.bun/bin/bun`. These
+  are on `PATH` for interactive shells (added to `~/.bashrc`) but NOT for fresh
+  non-interactive shells. If a command reports `uv: command not found`, run
+  `export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"` first (or call the binaries by full path).
+- **This is a CLI-first product — there is no long-running server to start.** The "app" is a
+  set of Python analysis CLIs plus a Textual TUI. Run analysis with
+  `uv run python src/analysis/risk_metrics_cli.py AAPL --days 252 --benchmark SPY` (fetches live
+  data via yfinance — needs network, no API key). Launch the interactive dashboard with
+  `uv run python src/cli/fin_guru.py` (quit with `q`). Full commands are documented above and in `docs/setup/SETUP.md`.
+- **Do NOT keep a scaffolded `.env` around when running tests.** `setup.sh` copies
+  `.env.example` → `.env`, which contains literal placeholder values (e.g.
+  `FG_DIVIDEND_MONTHLY_INCOME=your_monthly_dividend_income_here`). `python-dotenv` loads `.env`,
+  and those non-numeric placeholders make `src/analysis/margin_metrics.py` (and its tests) fail
+  with `could not convert string to float: 'your_..._here'`. CI runs without a `.env`, so tests
+  assume it is absent. If margin tests fail with that error, delete `.env` (it is gitignored) or
+  replace the placeholders with real numbers.
+- **Test suite runs in parallel with a coverage gate.** `pyproject.toml` sets
+  `addopts` to use `-n auto` (pytest-xdist), `--reruns 1`, and `--cov-fail-under=80`. Just run
+  `uv run pytest`. Use `uv run pytest -m "not integration"` to skip the 3 integration tests that
+  need real API keys. Quality gates: `uv run ruff check .`, `uv run ruff format --check .`,
+  `uv run mypy src/`.
