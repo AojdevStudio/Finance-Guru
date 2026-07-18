@@ -152,3 +152,16 @@ MEMORY/
 
 # Finance Guru Desktop (entire directory — developed on its own branch/repo)
 finance-guru-desktop/
+
+# Local portfolio DB (personal brokerage data — never commit)
+family_office.db
+family_office.db-journal
+family_office.db-wal
+family_office.db-shm
+
+# env backups
+.env.bak
+.env.*.bak
+
+# Generated financial reports (personal data)
+reports/

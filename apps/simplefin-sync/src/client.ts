@@ -19,7 +19,13 @@ interface ParsedAccessUrl {
 }
 
 export function parseAccessUrl(accessUrl: string): ParsedAccessUrl {
-  const url = new URL(accessUrl);
+  let url: URL;
+  try {
+    url = new URL(accessUrl);
+  } catch {
+    // Never echo the raw access URL — it embeds user:password credentials.
+    throw new Error("SIMPLEFIN_ACCESS_URL is not a valid URL");
+  }
   if (url.protocol !== "https:") {
     throw new Error(`Access URL must use HTTPS, got ${url.protocol}`);
   }

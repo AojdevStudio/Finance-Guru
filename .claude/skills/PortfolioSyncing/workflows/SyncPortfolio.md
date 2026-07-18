@@ -1,47 +1,54 @@
 # SyncPortfolio Workflow
 
-**Purpose:** Pull live positions + balances from SnapTrade, compare with the Google Sheets DataHub, and sync position data while preserving sacred formulas.
+**Purpose:** Refresh the local DB from SnapTrade (sync-first), read positions + balances from `family_office.db`, compare with the Google Sheets DataHub, and sync position data while preserving sacred formulas.
 
-> **Data source:** Positions and balances come from the **SnapTrade CLI** (live, read-only). The legacy Fidelity-CSV read path was retired after account-by-account verification (issue 71). Equity positions, options, settled cash, and margin debt were verified to match a known-good Fidelity export before cutover. CSV files are no longer read for position/balance sync.
+> **Data source:** Positions and balances come from the local `family_office.db` (`positions` + `balances` tables), which Step 1 refreshes from SnapTrade first. See the shared **[Sync-First + DB-Read](../../_shared/SyncFirstDbRead.md)** pattern. The legacy Fidelity-CSV read path was retired after account-by-account verification (issue 71) and remains a manual reconciliation fallback only.
 
 ---
 
-## Step 1: Pre-Flight Checks
+## Step 1: Refresh the DB (sync-first, mandatory)
 
-- [ ] SnapTrade account is **enabled and routed** in `config/snaptrade-accounts.yaml` (`role` ≠ `unassigned`, `enabled: true`). Disabled/unassigned accounts are refused by the CLI, not synced.
+Pre-flight:
+- [ ] SnapTrade account is **enabled and routed** in `config/snaptrade-accounts.yaml` (`role` ≠ `unassigned`, `enabled: true`). Disabled/unassigned accounts are refused, not synced.
 - [ ] SnapTrade credentials are present in `.env` (`SNAPTRADE_CLIENT_ID`, `SNAPTRADE_CONSUMER_KEY`, `SNAPTRADE_USER_ID`, `SNAPTRADE_USER_SECRET`).
 
+Refresh, so the DB carries this run's snapshot before any read:
+
+```bash
+uv run python -m src.integrations.snaptrade.sync_db          # writes positions + balances
+uv run python -m src.integrations.snaptrade.sync_db --show   # confirm this run's synced_at
+```
+
+**Completion criterion:** the `positions` and `balances` tables show this run's `synced_at`.
+
 ---
 
-## Step 2: Pull Live SnapTrade Data
+## Step 2: Read Positions + Balances from the DB
 
-### Positions
+Read the refreshed snapshot (via `--show`, or query `family_office.db` directly):
 
 ```bash
-uv run python -m src.integrations.snaptrade.cli positions --output json
+sqlite3 family_office.db \
+  "SELECT symbol, instrument, quantity, avg_cost FROM positions ORDER BY instrument, symbol;"
+sqlite3 family_office.db \
+  "SELECT account_equity, settled_cash, buying_power, margin_debt, gross_market_value FROM balances;"
 ```
 
-Per account, `accounts[].positions[]` carries:
+### Positions (`positions` table)
 - **`symbol`** → DataHub Column A (equities are plain tickers; options use Fidelity form `-QQQ260918P595`)
 - **`quantity`** → DataHub Column B
-- **`average_purchase_price`** → DataHub Column G (per-share; options already normalized ÷100)
+- **`avg_cost`** → DataHub Column G (per-share; options already normalized ÷100)
 - **`instrument`** → `"equity"` or `"option"`
 
-**Sync only `instrument == "equity"` to the position rows (DataHub rows 2-40).** SnapTrade returns one net position per symbol — there is no Margin/Cash split to combine. Options are **not** written as position rows (the DataHub does not track option rows); they are reflected only in the margin-debt math (Step 7).
+**Sync only `instrument == "equity"` to the position rows (DataHub rows 2-40).** One net position per symbol (no Margin/Cash split to combine). Options are **not** written as position rows (the DataHub does not track option rows); they are reflected only in the margin-debt math (Step 7).
 
-### Balances
-
-```bash
-uv run python -m src.integrations.snaptrade.cli balances --output json
-```
-
-Per account, `accounts[].balances` carries:
+### Balances (`balances` table)
 - **`settled_cash`** → SPAXX row (DataHub Column L)
-- **`margin_debt`** → Margin Debt and Pending Activity rows (derived: gross market value − net equity; SnapTrade does not expose the loan directly)
+- **`margin_debt`** → Margin Debt and Pending Activity rows (derived: gross market value minus net equity; SnapTrade does not expose the loan directly)
 - **`account_equity`** → net account value (for the Step 8 total check)
 - **`gross_market_value`** → total long market value (sanity check)
 
-**Margin Debt Logic**: `margin_debt > 0` means a margin loan exists. `margin_debt <= 0` means no debt — set the SPAXX/Pending Activity/Margin Debt rows to `$0` accordingly.
+**Margin Debt Logic**: `margin_debt > 0` means a margin loan exists. `margin_debt <= 0` means no debt: set the SPAXX/Pending Activity/Margin Debt rows to `$0` accordingly.
 
 ---
 

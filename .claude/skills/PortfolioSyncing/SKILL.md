@@ -1,11 +1,22 @@
 ---
 name: portfolio-syncing
-description: Import and sync broker CSV portfolio data to Google Sheets DataHub. Supports Fidelity (automated) with multi-broker planned. USE WHEN user mentions import broker data OR sync portfolio OR update positions OR CSV import OR portfolio-sync OR ingest positions OR bring in positions OR downloaded from Fidelity OR working with Portfolio_Positions CSVs. Handles file ingestion from Downloads, position updates, SPAXX/margin validation, safety checks, and formula protection.
+description: Refresh the local DB from SnapTrade, then sync positions and balances to the Google Sheets DataHub. Reads live positions, cost basis, SPAXX, and margin from family_office.db (never a stale CSV). USE WHEN user mentions sync portfolio OR update positions OR portfolio-sync OR refresh positions OR downloaded from Fidelity OR reconciling the DataHub. Handles position updates, SPAXX/margin validation, safety checks, and formula protection.
 ---
 
 # PortfolioSyncing
 
-Safely import broker CSV position exports into the Google Sheets DataHub tab, ensuring data integrity, validating changes, and protecting sacred formulas.
+Refresh the local DB from SnapTrade, then push current positions and balances into the Google Sheets DataHub tab, ensuring data integrity, validating changes, and protecting sacred formulas.
+
+## Step 0: Refresh (sync-first, mandatory)
+
+Positions and balances come from the local DB, refreshed FIRST so it can never be stale. Follow the shared **[Sync-First + DB-Read](../_shared/SyncFirstDbRead.md)** pattern. Minimum for this skill:
+
+```bash
+uv run python -m src.integrations.snaptrade.sync_db          # writes positions + balances
+uv run python -m src.integrations.snaptrade.sync_db --show   # read back the snapshot
+```
+
+Completion criterion: _the `positions` and `balances` tables carry this run's `synced_at` before any DataHub write._ Then read from the DB (below) and reconcile into Sheets.
 
 ## Multi-Broker Support
 
@@ -23,10 +34,10 @@ Safely import broker CSV position exports into the Google Sheets DataHub tab, en
 
 | Workflow | Trigger | File |
 |----------|---------|------|
-| **IngestPositions** | "ingest positions", "import positions", "bring in positions", user mentions downloading from Fidelity | `workflows/IngestPositions.md` |
-| **SyncPortfolio** | "sync portfolio", "portfolio-sync", "import fidelity" | `workflows/SyncPortfolio.md` |
+| **SyncPortfolio** (primary) | "sync portfolio", "portfolio-sync", "refresh positions" | `workflows/SyncPortfolio.md` |
+| **IngestPositions** (CSV fallback only) | user explicitly wants to archive Fidelity CSVs, or a live source is down | `workflows/IngestPositions.md` |
 
-**Typical flow**: IngestPositions (move from Downloads) -> SyncPortfolio (push to Google Sheets)
+**Primary flow**: Step 0 refresh (SnapTrade to DB) -> SyncPortfolio reads the DB -> push to Google Sheets. IngestPositions (move CSVs from Downloads) is a manual fallback, no longer on the primary path.
 
 **Notifications:**
 ```
@@ -38,24 +49,23 @@ Running the **SyncPortfolio** workflow from the **PortfolioSyncing** skill...
 
 ## Examples
 
-**Example 1: Full flow from Downloads**
-```
-User: "ingest positions" or "bring in positions"
--> Scans ~/Downloads/ for Portfolio_Positions_*.csv and Balances_*.csv
--> Classifies regular vs dividend view by reading headers
--> Moves regular view as-is (already date-tagged)
--> Renames dividend view to Dividend_Positions_MMM-DD-YYYY.csv
--> Moves Balances file (overwrites existing)
--> Reports files moved and suggests "portfolio-sync" next
-```
-
-**Example 2: Sync (live from SnapTrade)**
+**Example 1: Sync (primary, DB-backed sync-first)**
 ```
 User: "portfolio-sync"
--> Pulls live positions + balances via the SnapTrade CLI (no CSV read)
+-> Step 0: refresh SnapTrade positions + balances into family_office.db
+-> Reads the positions + balances tables from the DB (no CSV read)
 -> Compares with Google Sheets DataHub
 -> Updates quantities, cost basis, SPAXX, margin debt
 -> Reports changes and validates formulas
+```
+
+**Example 2: CSV archive (fallback only)**
+```
+User: "ingest positions" (explicit archive request, or a live source is down)
+-> Scans ~/Downloads/ for Portfolio_Positions_*.csv and Balances_*.csv
+-> Classifies regular vs dividend view by reading headers
+-> Archives them under notebooks/updates/ for reconciliation
+-> Not the primary path: SyncPortfolio reads the DB, not these files
 ```
 
 **Example 3: Update positions after trades**
