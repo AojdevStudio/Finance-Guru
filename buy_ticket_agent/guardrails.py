@@ -49,8 +49,11 @@ def _first_concentration_violation(
     portfolio: PortfolioState,
 ) -> str | None:
     portfolio_after = _post_deployment_portfolio_value(ticket, portfolio)
+    # Fail closed: a non-positive NAV makes the 30% hard cap uncomputable.
+    # Skipping here previously accepted 100% single-ticker tickets when
+    # portfolio_value was 0 (empty book or bad upstream NAV).
     if portfolio_after <= 0.0:
-        return None
+        return "concentration_uncomputable"
 
     for ticker, deployment in _deployment_by_ticker(ticket).items():
         existing = portfolio.current_positions.get(ticker, 0.0)

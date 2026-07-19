@@ -386,7 +386,11 @@ def _summarize_activity(raw_activity: Any) -> dict[str, Any]:
     raw = _to_plain(raw_activity)
     if not isinstance(raw, Mapping):
         return {}
+    activity_id = _first_present(raw, "id")
     return {
+        # Stable broker id — required for correct ledger dedupe (date+type+amount
+        # alone collides on same-day same-size buys of different tickers).
+        "id": str(activity_id) if activity_id is not None else None,
         "type": _first_present(raw, "type"),
         "date": _first_present(raw, "trade_date", "settlement_date"),
         "symbol": _activity_symbol(raw),
@@ -473,6 +477,33 @@ def _occ_to_fidelity_symbol(occ: str | None) -> str | None:
     return f"-{ticker}{yymmdd}{call_put}{strike_str}"
 
 
+def _marked_market_value(
+    holdings: list[dict[str, Any]],
+    *,
+    multiplier: float = 1.0,
+) -> float:
+    """Sum price × quantity × multiplier; refuse null marks on open holdings.
+
+    Treating a missing mark as $0 understates gross MV and therefore understates
+    derived margin debt. Fail closed so callers cannot write a silent low loan.
+    """
+    total = 0.0
+    for holding in holdings:
+        quantity = holding.get("quantity") or 0
+        if quantity == 0:
+            continue
+        price = holding.get("price")
+        if price is None:
+            symbol = holding.get("symbol") or "<unknown>"
+            msg = (
+                "cannot derive margin debt: holding "
+                f"{symbol!r} has quantity {quantity} but null price"
+            )
+            raise ValueError(msg)
+        total += float(price) * float(quantity) * multiplier
+    return total
+
+
 def derive_margin_debt(
     stocks: list[dict[str, Any]],
     options: list[dict[str, Any]],
@@ -486,11 +517,12 @@ def derive_margin_debt(
     reported net debit). Options use the x100 contract multiplier. margin_debt is
     a loan, so it is clamped to >= 0 (a net-cash account owes nothing). Returns
     (margin_debt, gross_market_value); margin_debt is None if equity is unknown.
+
+    Raises:
+        ValueError: if any open holding is missing a mark (would understate debt).
     """
-    stock_mv = sum((p.get("price") or 0) * (p.get("quantity") or 0) for p in stocks)
-    option_mv = sum(
-        (o.get("price") or 0) * (o.get("quantity") or 0) * 100 for o in options
-    )
+    stock_mv = _marked_market_value(stocks)
+    option_mv = _marked_market_value(options, multiplier=100.0)
     gross_mv = round(stock_mv + option_mv, 2)
     if equity is None:
         return None, gross_mv

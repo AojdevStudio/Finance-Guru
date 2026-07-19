@@ -64,6 +64,30 @@ def test_check_rejects_ticket_proposing_thirty_five_percent_concentration() -> N
     assert result.ticket.advisory_block == "concentration>30%"
 
 
+def test_check_rejects_ticket_when_post_deployment_nav_is_non_positive() -> None:
+    """Hard concentration must fail closed when NAV cannot be evaluated.
+
+    Trigger: portfolio_value=0 with cash-funded deployment (empty book or bad
+    upstream NAV). The previous early-return skipped the 30% cap and accepted a
+    100% single-ticker ticket that the same cash at NAV=cash would block.
+    """
+    ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=5000.0)
+    portfolio = PortfolioState(
+        portfolio_value=0.0,
+        cash_available=5000.0,
+        monthly_dividend_income=500.0,
+        monthly_margin_interest=200.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(ticket, portfolio)
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "concentration_uncomputable"
+    assert "concentration_uncomputable" in result.violations
+
+
 def test_check_rejects_cash_funded_deployment_above_concentration_limit() -> None:
     """Cash-funded deployments do not inflate the concentration denominator."""
     ticket = _ticket_with_allocation("SPY", weight=1.0, amount=33000.0)

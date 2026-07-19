@@ -495,6 +495,18 @@ def test_derive_margin_debt_math():
     assert debt4 == 300.0  # = loan, not loan - cash
 
 
+def test_derive_margin_debt_rejects_null_price_on_open_holding():
+    """Null marks must not silently zero a holding and understate the loan."""
+    from src.integrations.snaptrade.client import derive_margin_debt
+
+    stocks = [
+        {"symbol": "TSLA", "price": 100, "quantity": 10},
+        {"symbol": "NVDA", "price": None, "quantity": 20},
+    ]
+    with pytest.raises(ValueError, match="null price"):
+        derive_margin_debt(stocks, [], equity=500.0)
+
+
 def test_get_activities_pages_through_full_result_set():
     """Activities fetch follows offset/limit pagination until total is reached."""
     client = SnapTradeClientWrapper(_credentials(), sdk_client=FakeSDKClient())
@@ -531,6 +543,7 @@ def test_summarize_activity_emits_stable_shape():
     record = _summarize_activity(_ACTIVITY_FIXTURE[2])  # the TSLA buy
 
     assert record == {
+        "id": "a3",
         "type": "BUY",
         "date": "2026-01-03",
         "symbol": "TSLA",

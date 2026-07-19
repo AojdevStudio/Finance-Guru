@@ -101,16 +101,20 @@ As of SnapTrade Phase 2 (#72), the preferred input is **live normalized activiti
 uv run python -m src.integrations.snaptrade.cli activities --output json
 ```
 
-This returns one record per activity with a stable shape — `type`, `date`,
+This returns one record per activity with a stable shape — `id`, `type`, `date`,
 `symbol`, `amount`, `quantity`, `currency`, `description`, `account` — paged
 across the full history. Map it onto the master Transactions tab exactly as the
 CSV columns map (Fidelity action -> `type`, run date -> `date`, amount ->
-`amount`, etc.).
+`amount`, etc.). Persist the SnapTrade `id` in an auxiliary column (or Notes)
+when writing new rows so re-runs can match on it.
 
-**Dedupe is unchanged:** Google Sheets stays the single source of truth. Detect
-duplicates the same way — by `date` + `type` + `amount` against existing rows —
-and add only new ones. No local cache or state file is introduced; re-running is
-idempotent because the Sheet is the ledger.
+**Dedupe (SnapTrade path):** Google Sheets stays the single source of truth.
+Prefer the stable SnapTrade `id` when present. If `id` is missing (CSV
+fallback), key by `date` + `type` + `symbol` + `amount` — never `date` + `type`
++ `amount` alone, because SnapTrade collapses Fidelity's verbose actions to
+coarse types (`BUY`/`SELL`) and same-day same-size buys of different tickers
+would silently collide. No local cache or state file is introduced; re-running
+is idempotent because the Sheet is the ledger.
 
 **Fallback:** the Fidelity CSV path below still works and remains the fallback
 until the human reconciliation gate (#72) confirms parity. CSV ingestion is not

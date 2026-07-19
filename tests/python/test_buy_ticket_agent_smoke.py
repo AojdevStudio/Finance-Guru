@@ -511,3 +511,25 @@ def test_main_smoke_returns_nonzero_for_failed_result(tmp_path: Path) -> None:
 
     with patch("buy_ticket_agent.main.run_smoke_for_cli", return_value=result):
         assert main(["--smoke"]) == 1
+
+
+def test_main_smoke_exits_zero_when_notification_failed_after_draft(
+    tmp_path: Path,
+) -> None:
+    """Notification failure after draft write must not look like a hard failure.
+
+    SimpleFIN only marks a deposit seen on exit 0. A nonzero exit here retried
+    the smoke path and wrote duplicate drafts for one deposit.
+    """
+    result = SmokeResult(
+        run_id="run-1",
+        ticket_id="ticket-1",
+        status="notification_failed",
+        draft_path=str(tmp_path / "draft.json"),
+        log_path=str(tmp_path / "log.json"),
+        state_db=str(tmp_path / "state.db"),
+        notification=NotificationResult(status="failed", source="bws"),
+    )
+
+    with patch("buy_ticket_agent.main.run_smoke_for_cli", return_value=result):
+        assert main(["--smoke"]) == 0

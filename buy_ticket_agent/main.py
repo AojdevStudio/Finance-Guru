@@ -41,7 +41,12 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(json.dumps(asdict(result), indent=2, sort_keys=True))
-    return 0 if result.status == "completed" else 1
+    # Draft persistence is the durable success signal for SimpleFIN trigger
+    # dedupe. notification_failed still wrote the draft; exiting nonzero here
+    # caused the watcher to retry and create duplicate smoke drafts.
+    if result.status in {"completed", "notification_failed"}:
+        return 0
+    return 1
 
 
 if __name__ == "__main__":

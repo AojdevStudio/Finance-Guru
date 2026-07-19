@@ -58,19 +58,28 @@ mcp__gdrive__sheets(operation: "readSheet", params: {
 
 **Build deduplication set**:
 ```python
-existing_keys = set()
+existing_ids = set()   # SnapTrade activity ids (preferred)
+existing_keys = set()  # fallback composite keys
 for row in sheet_data:
-    key = f"{row['Date']}|{row['Action']}|{row['Amount']}"
+    activity_id = row.get("SnapTradeId") or row.get("Notes")
+    if activity_id:
+        existing_ids.add(str(activity_id))
+    # Include Symbol so same-day same-size BUY/SELL of different tickers
+    # do not collide after SnapTrade coarsens Fidelity action text.
+    key = f"{row['Date']}|{row['Action']}|{row.get('Symbol', '')}|{row['Amount']}"
     existing_keys.add(key)
 ```
 
 ## Step 4: Process CSV Transactions
 
-For each transaction in the CSV:
+For each transaction in the CSV (or SnapTrade activity):
 
 ### 4a. Generate Deduplication Key
 ```python
-key = f"{run_date}|{action}|{amount}"
+# Prefer stable SnapTrade id when syncing live activities.
+if activity_id and activity_id in existing_ids:
+    continue  # Skip duplicate
+key = f"{run_date}|{action}|{symbol}|{amount}"
 if key in existing_keys:
     continue  # Skip duplicate
 ```
