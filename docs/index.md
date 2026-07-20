@@ -48,7 +48,7 @@ Step-by-step operational procedures.
 |---------|---------|---------|
 | [Runbooks Index](runbooks/README.md) | — | Overview and cadence guide |
 | [Margin Dashboard Update](runbooks/margin-dashboard-update.md) | Weekly | Refresh coverage ratio, act on alerts |
-| [Portfolio Sync](runbooks/portfolio-sync.md) | Ad-hoc | Ingest broker CSVs → Google Sheets |
+| [Portfolio Sync](runbooks/portfolio-sync.md) | Ad-hoc | Sync live SnapTrade positions and balances → Google Sheets |
 | [Monthly Dividend Review](runbooks/monthly-dividend-review.md) | Monthly | Confirm Layer 2 income on target |
 | [Quarterly Review](runbooks/quarterly-review.md) | Quarterly | Full orchestrator + MonteCarlo + reports |
 
@@ -116,7 +116,7 @@ The `load-fin-core-config.ts` hook runs at session start and injects:
 2. **config.yaml** - Agent roster, tool list, workflow pipeline
 3. **user-profile.yaml** - Portfolio strategy, risk tolerance
 4. **system-context.md** - Repository structure, privacy rules
-5. **Latest portfolio data** - Fidelity balances and positions
+5. **Latest portfolio data** - Live SnapTrade positions and balances, with broker CSVs retained for supported fallback workflows
 
 ### Skills System
 
@@ -203,12 +203,13 @@ family-office/
 ├── src/
 │   ├── analysis/             # Risk, correlation, ITC, hedging, options CLIs
 │   ├── config/               # Config loader (YAML-default chain)
+│   ├── integrations/         # Read-only broker integrations, including SnapTrade
 │   ├── strategies/           # Optimizer, backtester
 │   ├── utils/                # Momentum, volatility, logging, feature flags
 │   └── models/               # Pydantic type definitions
 ├── tests/                    # 365+ pytest tests
 └── notebooks/
-    └── updates/              # Fidelity CSV exports (gitignored)
+    └── updates/              # Broker CSV fallback and retirement exports (gitignored)
 ```
 
 ## Getting Help
@@ -222,4 +223,4 @@ family-office/
 
 - **Finance Guru**: v2.1.0
 - **BMAD-CORE**: v6.0.0
-- **Last Updated**: 2026-04-17
+- **Last Updated**: 2026-07-20

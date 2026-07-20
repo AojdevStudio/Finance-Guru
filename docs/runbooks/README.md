@@ -1,12 +1,12 @@
 ---
 title: Finance Guru Runbooks
 description: Operational procedures the family office owner runs on a cadence
-last-reviewed: 2026-04-17
+last-reviewed: 2026-07-20
 ---
 
 # Runbooks
 
-Runbooks are _step-by-step procedures_ for recurring operational work — the things Ossie does every week, month, or quarter to keep the family office running. They exist so a procedure that worked once doesn't get forgotten, and so Claude Code can execute them from context without guessing.
+Runbooks are _step-by-step procedures_ for recurring operational work — the things the family office owner does every week, month, or quarter to keep the family office running. They exist so a procedure that worked once doesn't get forgotten, and so Claude Code can execute them from context without guessing.
 
 ## When to use a runbook
 
@@ -20,8 +20,8 @@ If it's a one-off investigation, skip the runbook and just take notes in `.claud
 
 | Runbook | Cadence | Summary |
 |---------|---------|---------|
-| [Margin Dashboard Update](margin-dashboard-update.md) | Weekly | Pull fresh Fidelity balances, refresh margin coverage ratio, act on alerts |
-| [Portfolio Sync](portfolio-sync.md) | Ad-hoc | Ingest broker CSVs, push to Google Sheets DataHub, validate formulas |
+| [Margin Dashboard Update](margin-dashboard-update.md) | Weekly | Pull live SnapTrade balances, refresh margin metrics, act on alerts |
+| [Portfolio Sync](portfolio-sync.md) | Ad-hoc | Sync SnapTrade positions and balances to Google Sheets, validate formulas |
 | [Monthly Dividend Review](monthly-dividend-review.md) | Monthly | Sync dividend.csv, confirm Layer 2 income vs target |
 | [Quarterly Review](quarterly-review.md) | Quarterly | Full orchestrator pass — MonteCarlo, FinanceReport PDFs, compliance review |
 

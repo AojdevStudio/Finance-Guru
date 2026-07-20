@@ -1,68 +1,100 @@
 ---
 title: Portfolio Sync
 cadence: ad-hoc
-owner: Ossie
-last-reviewed: 2026-04-17
+owner: Family Office Owner
+last-reviewed: 2026-07-20
 ---
 
 # Portfolio Sync
 
 ## Purpose
 
-Ingest a fresh Fidelity `Portfolio_Positions_*.csv` file, push it to the Google Sheets DataHub, and validate that all downstream calculations (allocation, dividend coverage, margin coverage) updated correctly.
+Pull current positions and balances from SnapTrade, sync approved changes to the Google Sheets DataHub, and validate downstream allocation and margin calculations.
+
+The SnapTrade CLI is read-only. The `PortfolioSyncing` skill retains the existing comparison, approval, formula-protection, and Google Sheets write workflow.
 
 ## When to run
 
-- _Any time_ a new Fidelity CSV export lands — typically after a trade or at month-end
+- _After_ a trade or other material account change
 - _Before_ invoking quantitative analysis on current positions
 - _Before_ generating FinanceReport PDFs (so reports reflect reality)
 
 ## Prerequisites
 
-- Fidelity positions CSV downloaded to `~/Downloads/` or dropped directly into `notebooks/updates/`
+- The four `SNAPTRADE_*` credentials from `.env.example` are set in local `.env`
+- `config/snaptrade-accounts.yaml` exists
+- Each account to sync has `enabled: true` and a `role` other than `unassigned`
 - `fin-core` skill auto-loaded
 - `gdrive` MCP server configured (required for DataHub writes)
 - You have the correct Google Sheet ID in your user profile
 
+For a new connection, generate the routing file conservatively:
+
+```bash
+uv run python -m src.integrations.snaptrade.cli accounts \
+  --probe \
+  --output json \
+  --write-config config/snaptrade-accounts.yaml
+```
+
+The generated accounts are disabled and unassigned. Verify each account against a known-good broker statement or CSV before assigning its role and setting `enabled: true`. Do not use `--force` unless replacing an existing routing file is intentional.
+
 ## Steps
 
-1. _Confirm filename pattern_ — Fidelity exports as `Portfolio_Positions_MMM-DD-YYYY.csv` (e.g., `Portfolio_Positions_Apr-17-2026.csv`). Do NOT rename.
-2. _Move to the updates directory_:
+1. _Check the routing gate_:
+
    ```bash
-   mv ~/Downloads/Portfolio_Positions_*.csv notebooks/updates/
+   uv run python -m src.integrations.snaptrade.cli positions --output text
+   uv run python -m src.integrations.snaptrade.cli balances --output text
    ```
-3. _Invoke the PortfolioSyncing skill_:
+
+   Confirm the expected number of accounts synced and review every refused account. These commands fetch data but do not write to Google Sheets.
+
+2. _Invoke the PortfolioSyncing skill_:
+
    ```
    /PortfolioSyncing
    ```
-4. _Review the ingestion report_ — the skill will echo:
-   - The filename it picked (latest by date in filename)
-   - Total positions detected
-   - SPAXX (money market) and margin balance rows validated
-   - Safety check: total market value within expected range
-5. _Approve the push_ when prompted — the skill asks before writing to Google Sheets
-6. _Spot-check the DataHub tab_:
-   - _Positions_ tab — row count matches the CSV
+
+3. _Review the proposed diff_:
+   - SnapTrade equity positions map to DataHub position rows
+   - Options are excluded from position rows but included in margin-debt math
+   - Settled cash maps to SPAXX
+   - Margin debt is derived as gross market value minus net account equity
+   - Safety checks flag missing tickers, large quantity or cost-basis changes, formula errors, and material cash or margin differences
+
+4. _Approve the push_ only after the proposed changes reconcile with the broker account.
+
+5. _Spot-check the DataHub tab_:
+   - _Positions_ tab — symbols and quantities match SnapTrade
    - _Allocation_ tab — percentages sum to 100% ± 0.01
    - _Margin Dashboard_ — coverage ratio refreshed
 
 ## Verification
 
-- `ls notebooks/updates/Portfolio_Positions_*.csv` shows the new file
+- The CLI output reports the expected `synced_account_count`
+- Expected accounts do not appear in the `refused` list
 - Google Sheets DataHub → _Positions_ tab: last-updated timestamp is today
 - No red formula error cells (the formula-protection skill will have blocked bad edits)
-- Allocation percentages reconcile to total market value
+- Total account value approximately reconciles to SnapTrade `account_equity`
+- SPAXX matches `settled_cash`; Margin Debt matches derived `margin_debt`
 - If positions changed materially, rerun _Margin Dashboard Update_ runbook
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| Skill picks the wrong CSV | Check filename date — the hook uses filename date, not mtime |
-| SPAXX row missing | Fidelity sometimes exports SPAXX as "SPAXX**" — the skill handles this; if not, verify the input area rows 2-46 |
+| `Missing required SnapTrade environment keys` | Add all four `SNAPTRADE_*` values to local `.env`; never commit that file |
+| `SnapTrade routing config not found` | Generate `config/snaptrade-accounts.yaml` with the `accounts --write-config` command above |
+| Account is refused | Set both a verified non-`unassigned` role and `enabled: true`; refusal is fail-closed behavior |
+| No account syncs | Inspect `synced_account_count` and `refused`; disabled or unassigned accounts do not trigger a network call |
+| Position or balance differs from the broker | Stop the Sheet update and compare the live output with a fresh broker statement or Fidelity CSV |
+| Exact margin debit differs slightly | SnapTrade does not expose the loan directly; derived debt can differ due to intraday pricing |
 | Formula error after sync | Invoke `formula-protection` skill; it will identify the modified cell and restore it |
 | Sheet tab doesn't update | Confirm `gdrive` MCP is connected — `/gdrive:status` or restart Claude Code session |
 | "Write would overwrite calculated cell" | Good — the formula-protection skill blocked a bad edit; review the attempted change |
+
+Legacy Fidelity positions and balances CSVs may be used for manual re-verification, but the active portfolio-sync path does not ingest them. Retirement accounts remain on their separate broker-CSV workflow until routed through SnapTrade.
 
 ## Related skills
 
@@ -71,3 +103,8 @@ Ingest a fresh Fidelity `Portfolio_Positions_*.csv` file, push it to the Google 
 - `dividend-tracking` — sync dividends alongside positions if both files are fresh
 - `TransactionSyncing` — transaction history is a separate ingestion path
 - `retirement-syncing` — for Vanguard / Fidelity retirement accounts
+
+## Related reference
+
+- [SnapTrade bridge ADR](../adr/0001-snaptrade-live-sync-for-legacy-finance-guru.md)
+- [Margin Dashboard Update](margin-dashboard-update.md)
