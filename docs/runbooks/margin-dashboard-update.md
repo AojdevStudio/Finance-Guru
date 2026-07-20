@@ -111,7 +111,7 @@ Record the fallback source in the dashboard notes.
 - `margin-management` — primary skill for this runbook
 - `formula-protection` — guards the sacred GOOGLEFINANCE formulas
 - `PortfolioSyncing` — refresh positions alongside balances if both are stale
-- `fin-guru-checklist` — weekly quality checklist includes margin dashboard freshness
+- `fin-guru-checklist` — applies the margin-strategy and general-quality checklists
 
 ## Related reference
 

@@ -173,7 +173,7 @@ family-office/
 │   │   ├── post-tool-use-tracker.sh   # PostToolUse
 │   │   └── stop-build-check-enhanced.sh # Stop
 │   ├── settings.json         # Hook configuration
-│   └── skills/               # Skill definitions (primary source — 19 FG skills)
+│   └── skills/               # Skill definitions (primary source — 17 FG skills)
 ├── .agents/skills/           # Cross-harness mirror (symlinks to .claude/skills)
 ├── .pi/skills/               # pi-coding-agent path (→ .agents/skills)
 ├── .devcontainer/            # Codespaces / VS Code dev container
@@ -217,7 +217,7 @@ family-office/
 1. **README.md** - Start here for setup and quick start
 2. **reference/api.md** - CLI tool usage and examples
 3. **reference/hooks.md** - Understanding the hooks system
-4. **fin-guru/INDEX.md** - Active strategies and analysis
+4. **[Runbooks Index](runbooks/README.md)** - Recurring operational workflows
 
 ## Version
 
