@@ -116,7 +116,7 @@ The `load-fin-core-config.ts` hook runs at session start and injects:
 2. **config.yaml** - Agent roster, tool list, workflow pipeline
 3. **user-profile.yaml** - Portfolio strategy, risk tolerance
 4. **system-context.md** - Repository structure, privacy rules
-5. **Latest portfolio data** - Live SnapTrade positions and balances, with broker CSVs retained for supported fallback workflows
+5. **Latest portfolio context** - Legacy Fidelity balances and positions CSVs when present; SnapTrade data is fetched on demand by sync workflows
 
 ### Skills System
 

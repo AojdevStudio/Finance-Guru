@@ -67,14 +67,15 @@ The generated accounts are disabled and unassigned. Verify each account against 
 
 5. _Spot-check the DataHub tab_:
    - _Positions_ tab — symbols and quantities match SnapTrade
-   - _Allocation_ tab — percentages sum to 100% ± 0.01
-   - _Margin Dashboard_ — coverage ratio refreshed
+   - SPAXX, Pending Activity, and Margin Debt rows match the approved balance update
+
+   Portfolio sync does not update the Margin Dashboard coverage ratio. Run [Margin Dashboard Update](margin-dashboard-update.md) after material balance changes.
 
 ## Verification
 
 - The CLI output reports the expected `synced_account_count`
 - Expected accounts do not appear in the `refused` list
-- Google Sheets DataHub → _Positions_ tab: last-updated timestamp is today
+- DataHub symbols, quantities, and average costs match the approved diff
 - No red formula error cells (the formula-protection skill will have blocked bad edits)
 - Total account value approximately reconciles to SnapTrade `account_equity`
 - SPAXX matches `settled_cash`; Margin Debt matches derived `margin_debt`
@@ -90,8 +91,8 @@ The generated accounts are disabled and unassigned. Verify each account against 
 | No account syncs | Inspect `synced_account_count` and `refused`; disabled or unassigned accounts do not trigger a network call |
 | Position or balance differs from the broker | Stop the Sheet update and compare the live output with a fresh broker statement or Fidelity CSV |
 | Exact margin debit differs slightly | SnapTrade does not expose the loan directly; derived debt can differ due to intraday pricing |
-| Formula error after sync | Invoke `formula-protection` skill; it will identify the modified cell and restore it |
-| Sheet tab doesn't update | Confirm `gdrive` MCP is connected — `/gdrive:status` or restart Claude Code session |
+| Formula error after sync | Invoke `formula-protection` to identify the protected cell; only apply a repair that the skill explicitly permits |
+| Sheet tab doesn't update | Confirm the `gdrive` MCP server is configured and available, then retry the approved write |
 | "Write would overwrite calculated cell" | Good — the formula-protection skill blocked a bad edit; review the attempted change |
 
 Legacy Fidelity positions and balances CSVs may be used for manual re-verification, but the active portfolio-sync path does not ingest them. Retirement accounts remain on their separate broker-CSV workflow until routed through SnapTrade.
@@ -100,7 +101,7 @@ Legacy Fidelity positions and balances CSVs may be used for manual re-verificati
 
 - `PortfolioSyncing` — primary skill
 - `formula-protection` — protects calculated cells from accidental overwrite
-- `dividend-tracking` — sync dividends alongside positions if both files are fresh
+- `dividend-tracking` — sync realized dividends through the separate activities workflow
 - `TransactionSyncing` — transaction history is a separate ingestion path
 - `retirement-syncing` — for Vanguard / Fidelity retirement accounts
 

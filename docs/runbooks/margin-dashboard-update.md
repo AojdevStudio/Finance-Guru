@@ -14,7 +14,7 @@ Keep the Margin Dashboard in the Google Sheets DataHub current with live SnapTra
 ## When to run
 
 - _Every Monday_ before 9:00 AM ET
-- _Any time_ after a large margin draw (≥5% of portfolio value)
+- _After_ any margin draw or account change that may exceed `FG_MARGIN_JUMP_ALERT_THRESHOLD`
 - _Before_ a planned margin-heavy trade
 
 ## Prerequisites
@@ -43,13 +43,15 @@ Keep the Margin Dashboard in the Google Sheets DataHub current with live SnapTra
 
 3. _Compare with the previous dashboard entry_. If the margin balance increased by more than `FG_MARGIN_JUMP_ALERT_THRESHOLD`, stop and confirm the draw before writing to Google Sheets.
 
-4. _Review the calculated health metrics_:
+4. _Review the CLI health metrics_:
    - `portfolio_margin_ratio` ≥4.0: `green`
    - 3.0–<4.0: `yellow`
    - 2.5–<3.0: `red`
    - <2.5: `critical`
    - No margin balance: `no_margin`
    - `coverage_ratio` is monthly dividend income divided by monthly interest cost; it is `null` when dividend income is unavailable or interest cost is zero
+
+   These bands describe the implemented CLI `alert_status`; they do not replace the stricter strategy gates. The `margin-management` skill pauses scaling below 3.5 and stops draws below 3.0.
 
 5. _Invoke the margin-management skill_ in Claude Code:
 
@@ -58,7 +60,7 @@ Keep the Margin Dashboard in the Google Sheets DataHub current with live SnapTra
    ```
 
 6. _Act on alerts_:
-   - If a _Large Draw Alert_ fires, read the triggering transaction and confirm intent
+   - If a _Margin Jump Alert_ fires, read the triggering transaction and confirm intent
    - If a _Scaling Threshold_ alert fires, review the time-based scaling recommendation
 
 7. _Approve the dashboard write_, then append one line to the weekly notes block with date, ratios, data source, and any action taken.
@@ -67,7 +69,8 @@ Keep the Margin Dashboard in the Google Sheets DataHub current with live SnapTra
 
 - Google Sheets DataHub → _Margin Dashboard_ tab shows today's date in the last-updated cell
 - Dashboard balance and calculated monthly interest cost match the CLI JSON
-- Coverage ratio cell is populated (not `#N/A` or empty)
+- Coverage ratio matches the CLI when available; if it is unavailable, record whether dividend income is missing or interest cost is zero
+- Coverage ratio does not contain a formula error such as `#N/A` or `#DIV/0!`
 - No formula errors in the calculated columns (the formula-protection skill will have flagged any)
 - If you took an action, the notes block has one new row
 
@@ -98,10 +101,10 @@ Record the fallback source in the dashboard notes.
 | `No SnapTrade account is enabled+routed` | Verify both the account role and `enabled: true`; the integration fails closed |
 | Wrong account appears in `source_file` | Reorder or disable routing entries so the intended margin account is the first syncable account |
 | SnapTrade does not return account equity | Do not calculate derived margin debt; retry later or use the CSV fallback |
-| CSV fallback says "balances file not found" | Re-check the exact `Balances_for_Account_*.csv` filename or pass `--csv` explicitly |
+| `No Fidelity balances CSV found matching ...` | Re-check the exact `Balances_for_Account_*.csv` filename or pass `--csv` explicitly |
 | Coverage ratio shows `#N/A` | A GOOGLEFINANCE formula is lagging; wait 60s and retry, or invoke `formula-protection` to repair |
-| Large Draw Alert for a draw you didn't make | Audit the transaction immediately; could be an unauthorized pull |
-| Yellow band persists for 3+ weeks | Review scaling plan with strategy-advisor — portfolio may have drifted from target |
+| Margin Jump Alert for a draw you didn't make | Audit the transaction immediately; could be an unauthorized pull |
+| Portfolio-to-margin ratio is below 3.5 | Pause scaling and review the strategy with strategy-advisor |
 
 ## Related skills
 
