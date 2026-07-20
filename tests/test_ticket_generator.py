@@ -185,6 +185,11 @@ def test_generate_calls_claude_with_prompt_cache_and_returns_valid_ticket() -> N
     input_schema = call["tools"][0]["input_schema"]
     assert "advisory_block" not in input_schema["properties"]
     assert "advisory_block" not in input_schema.get("required", [])
+    # ITC hard-cap inputs are system-managed from Layer 3, not LLM-authored.
+    assert "itc_applicability" not in input_schema["properties"]
+    assert "itc_risk_score" not in input_schema["properties"]
+    assert "itc_applicability" not in input_schema.get("required", [])
+    assert "itc_risk_score" not in input_schema.get("required", [])
     assert any(
         block.get("cache_control", {}).get("type") == "ephemeral"
         for block in call["system"]
@@ -224,3 +229,71 @@ def test_generate_clears_llm_authored_advisory_block_on_accepted_ticket() -> Non
     assert result.guardrails.status == "accepted"
     assert result.guardrails.advisory_block is None
     assert result.ticket.advisory_block is None
+
+
+def test_generate_blocks_when_llm_understates_layer3_itc_risk() -> None:
+    """LLM cannot bypass MAX_ITC_RISK by emitting a low itc_risk_score.
+
+    Concrete trigger: Layer 3 reports current_risk_score=0.85, but the model
+    emits itc_risk_score=0.42. Before this fix, check() trusted the LLM field
+    and accepted the ticket.
+    """
+    bundle = _layer3_bundle()
+    bundle["itc"] = {
+        **bundle["itc"],
+        "data": {"symbol": "TSLA", "current_risk_score": 0.85},
+    }
+    payload = {**_ticket_payload(), "itc_risk_score": 0.42}
+    client = FakeAnthropicClient(cache_reads=[0], tool_input=payload)
+
+    result = generate(bundle, _portfolio_state(), client=client)
+
+    assert result.ticket.itc_risk_score == 0.85
+    assert result.ticket.itc_applicability == "supported"
+    assert result.guardrails.status == "blocked"
+    assert result.guardrails.advisory_block == "itc_risk>=0.7"
+
+
+def test_generate_blocks_when_llm_marks_itc_not_run_despite_layer3_score() -> None:
+    """LLM cannot skip the ITC hard cap via itc_applicability='not-run'."""
+    bundle = _layer3_bundle()
+    bundle["itc"] = {
+        **bundle["itc"],
+        "data": {"symbol": "TSLA", "current_risk_score": 0.80},
+    }
+    payload = {
+        **_ticket_payload(),
+        "itc_applicability": "not-run",
+        "itc_risk_score": None,
+    }
+    client = FakeAnthropicClient(cache_reads=[0], tool_input=payload)
+
+    result = generate(bundle, _portfolio_state(), client=client)
+
+    assert result.ticket.itc_applicability == "supported"
+    assert result.ticket.itc_risk_score == 0.80
+    assert result.guardrails.status == "blocked"
+    assert result.guardrails.advisory_block == "itc_risk>=0.7"
+
+
+def test_generate_blocks_when_layer3_itc_failed_even_if_llm_supplies_score() -> None:
+    """Failed Layer 3 ITC fail-closes; LLM cannot invent a passing score."""
+    bundle = _layer3_bundle()
+    bundle["itc"] = {
+        **bundle["itc"],
+        "status": "failed",
+        "data": None,
+        "error": "ProcessFailed",
+    }
+    payload = {
+        **_ticket_payload(),
+        "itc_applicability": "supported",
+        "itc_risk_score": 0.20,
+    }
+    client = FakeAnthropicClient(cache_reads=[0], tool_input=payload)
+
+    result = generate(bundle, _portfolio_state(), client=client)
+
+    assert result.ticket.itc_risk_score is None
+    assert result.guardrails.status == "blocked"
+    assert result.guardrails.advisory_block == "itc_risk_score_missing"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,11 @@ from buy_ticket_agent.ticket_models import BuyTicket, PortfolioState
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 TICKET_TOOL_NAME = "emit_buy_ticket"
-SYSTEM_MANAGED_TICKET_FIELDS = frozenset({"advisory_block"})
+# ITC applicability/score are hard-cap inputs. The LLM must not author them —
+# Layer 3 is the only trusted source (see _itc_fields_from_bundle).
+SYSTEM_MANAGED_TICKET_FIELDS = frozenset(
+    {"advisory_block", "itc_applicability", "itc_risk_score"}
+)
 FRAMEWORK_DOC_PATHS = (
     "fin-guru/templates/buy-ticket-template.md",
     "fin-guru/data/definitions.md",
@@ -153,6 +158,35 @@ def _extract_tool_input(response: Any) -> dict[str, Any]:
     raise ValueError("Claude response did not include emit_buy_ticket tool use")
 
 
+def _itc_fields_from_bundle(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    """Derive ITC hard-cap fields from the Layer 3 bundle only.
+
+    Concentration and margin coverage already use trusted portfolio inputs.
+    ITC previously read LLM-authored ticket fields, so a model could emit
+    ``itc_applicability: "not-run"`` or a low score and silently bypass the
+    MAX_ITC_RISK hard cap even when Layer 3 reported risk >= 0.7.
+
+    Fail closed: missing/failed Layer 3 ITC becomes supported + null score so
+    ``check()`` raises ``itc_risk_score_missing`` rather than skipping.
+    """
+    itc = bundle.get("itc")
+    if not isinstance(itc, Mapping):
+        return {"itc_applicability": "supported", "itc_risk_score": None}
+
+    if itc.get("status") == "succeeded":
+        data = itc.get("data")
+        score = data.get("current_risk_score") if isinstance(data, Mapping) else None
+        # bool is a subclass of int — reject it explicitly.
+        if isinstance(score, bool) or not isinstance(score, int | float):
+            return {"itc_applicability": "supported", "itc_risk_score": None}
+        return {
+            "itc_applicability": "supported",
+            "itc_risk_score": float(score),
+        }
+
+    return {"itc_applicability": "supported", "itc_risk_score": None}
+
+
 def _usage_value(usage: Any, name: str) -> int:
     value = usage.get(name, 0) if isinstance(usage, dict) else getattr(usage, name, 0)
     return int(value or 0)
@@ -197,7 +231,10 @@ def generate(
             "disable_parallel_tool_use": True,
         },
     )
-    ticket = BuyTicket.model_validate(_extract_tool_input(response))
+    tool_input = dict(_extract_tool_input(response))
+    # Overwrite any LLM-supplied ITC fields with Layer 3 authority.
+    tool_input.update(_itc_fields_from_bundle(bundle))
+    ticket = BuyTicket.model_validate(tool_input)
     guardrail_result = check(ticket, parsed_portfolio)
     return TicketGenerationResult(
         ticket=guardrail_result.ticket,
