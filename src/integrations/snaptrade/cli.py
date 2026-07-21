@@ -37,6 +37,7 @@ from src.integrations.snaptrade.client import (
     SnapTradeAPIError,
     SnapTradeClientWrapper,
     derive_margin_debt,
+    select_balance_row,
 )
 from src.integrations.snaptrade.models import (
     SnapTradeAccountConfig,
@@ -214,17 +215,25 @@ def _account_balances(
     client: SnapTradeClientWrapper, account_id: str
 ) -> dict[str, Any]:
     raw = client.get_balances(account_id)
-    first = raw[0] if raw else {}
+    selected = select_balance_row(raw)
     equity = client.get_account_equity(account_id)
+    # Fail closed: SyncPortfolio treats missing/falsy margin_debt as "$0 loan".
+    # Emitting null here can wipe a real ~$80k debit on the DataHub sheet.
+    if equity is None:
+        msg = "SnapTrade did not return account equity"
+        raise ValueError(msg)
     margin_debt, gross_mv = derive_margin_debt(
         client.get_positions(account_id),
         client.get_options(account_id),
         equity,
     )
+    if margin_debt is None:
+        msg = "could not derive margin debt without account equity"
+        raise ValueError(msg)
     return {
-        "currency": first.get("currency"),
-        "settled_cash": first.get("cash"),  # -> SPAXX row
-        "buying_power": first.get("buying_power"),
+        "currency": selected.get("currency"),
+        "settled_cash": selected.get("cash"),  # -> SPAXX row
+        "buying_power": selected.get("buying_power"),
         "account_equity": equity,
         "gross_market_value": gross_mv,
         "margin_debt": margin_debt,  # derived; SnapTrade omits it directly

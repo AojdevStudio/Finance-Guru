@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Mapping
+from datetime import date, datetime
 from typing import Any, TypeVar, cast
 
 from src.integrations.snaptrade.models import SnapTradeAccount, SnapTradeCredentials
@@ -222,6 +223,12 @@ def _to_plain(value: Any) -> Any:
     """Convert generated SDK models into dict/list primitives."""
     if value is None or isinstance(value, str | int | float | bool):
         return value
+    # SnapTrade types trade_date/settlement_date as date-time. Emit calendar
+    # dates so ledger consumers can dedupe against YYYY-MM-DD sheet keys.
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
     if isinstance(value, list | tuple):
         return [_to_plain(item) for item in value]
     if isinstance(value, Mapping):
@@ -381,6 +388,34 @@ def _activity_page(body: Any) -> tuple[list[Any], int | None]:
     return [], None
 
 
+def _calendar_date_string(value: Any) -> str | None:
+    """Coerce SnapTrade date-time values to a YYYY-MM-DD ledger date.
+
+    The SDK types ``trade_date`` / ``settlement_date`` as datetime. Passing
+    ``str(datetime)`` or an ISO timestamp into TransactionSyncing breaks
+    date+type+amount dedupe against sheet calendar dates and can duplicate rows.
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        # Already a calendar date, or an ISO datetime / space-separated stamp.
+        if len(text) >= 10 and text[4] == "-" and text[7] == "-":
+            return text[:10]
+        normalized = text[:-1] + "+00:00" if text.endswith("Z") else text
+        try:
+            return datetime.fromisoformat(normalized).date().isoformat()
+        except ValueError:
+            return text
+    return None
+
+
 def _summarize_activity(raw_activity: Any) -> dict[str, Any]:
     """Normalize one SnapTrade activity to a stable dict the consumers ingest."""
     raw = _to_plain(raw_activity)
@@ -388,7 +423,9 @@ def _summarize_activity(raw_activity: Any) -> dict[str, Any]:
         return {}
     return {
         "type": _first_present(raw, "type"),
-        "date": _first_present(raw, "trade_date", "settlement_date"),
+        "date": _calendar_date_string(
+            _first_present(raw, "trade_date", "settlement_date")
+        ),
         "symbol": _activity_symbol(raw),
         "amount": _to_float(_first_present(raw, "amount")),
         "quantity": _to_float(_first_present(raw, "units", "quantity")),
@@ -471,6 +508,42 @@ def _occ_to_fidelity_symbol(occ: str | None) -> str | None:
         return occ
     strike_str = f"{strike:.0f}" if strike == int(strike) else f"{strike:g}"
     return f"-{ticker}{yymmdd}{call_put}{strike_str}"
+
+
+def select_balance_row(
+    balances: list[dict[str, Any]],
+    *,
+    preferred_currency: str = "USD",
+) -> dict[str, Any]:
+    """Pick the balance row for SPAXX / buying power (one row per currency).
+
+    SnapTrade returns one element per distinct currency. Taking ``balances[0]``
+    is unordered and can attribute CAD (or another FX row) cash/buying power to
+    the USD margin account sync.
+    """
+    if not balances:
+        msg = "SnapTrade returned no balance rows"
+        raise ValueError(msg)
+
+    preferred = preferred_currency.upper()
+    matches = [
+        row for row in balances if str(row.get("currency") or "").upper() == preferred
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        msg = f"SnapTrade returned multiple {preferred} balance rows"
+        raise ValueError(msg)
+    if len(balances) == 1:
+        # Sole currency for the account — accept even when it is not USD.
+        return balances[0]
+
+    currencies = sorted({str(row.get("currency") or "?") for row in balances})
+    msg = (
+        f"SnapTrade returned no {preferred} balance row "
+        f"(currencies present: {', '.join(currencies)})"
+    )
+    raise ValueError(msg)
 
 
 def derive_margin_debt(

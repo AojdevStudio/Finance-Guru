@@ -152,10 +152,10 @@ def _broker_balances_from_snaptrade(client: Any, account_id: str) -> FidelityBal
     Margin debt is derived (gross market value − net equity); SnapTrade does not
     expose the loan, accrued interest, or day-change directly, so those are None.
     """
-    from src.integrations.snaptrade.client import derive_margin_debt
+    from src.integrations.snaptrade.client import derive_margin_debt, select_balance_row
 
     raw = client.get_balances(account_id)
-    first = raw[0] if raw else {}
+    selected = select_balance_row(raw)
     equity = client.get_account_equity(account_id)
     if equity is None:
         msg = "SnapTrade did not return account equity"
@@ -169,7 +169,7 @@ def _broker_balances_from_snaptrade(client: Any, account_id: str) -> FidelityBal
         source_file=f"snaptrade:{account_id}",
         total_account_value=equity,
         total_account_day_change=None,
-        margin_buying_power=first.get("buying_power"),
+        margin_buying_power=selected.get("buying_power"),
         margin_buying_power_day_change=None,
         net_debit=net_debit,
         net_debit_day_change=None,

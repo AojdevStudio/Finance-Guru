@@ -143,3 +143,20 @@ def test_broker_balances_from_snaptrade_derives_net_debit():
     # net_debit is the negative (Fidelity convention)
     assert balances.net_debit == pytest.approx(-82294.02, abs=0.01)
     assert balances.margin_interest_accrued_this_month is None
+
+
+class _MultiCurrencySnapClient(_FakeSnapClient):
+    """CAD-first multi-currency balances; USD carries the real margin figures."""
+
+    def get_balances(self, account_id):
+        return [
+            {"currency": "CAD", "cash": 5.0, "buying_power": 5.0},
+            {"currency": "USD", "cash": 0.0, "buying_power": 42000.0},
+        ]
+
+
+def test_broker_balances_from_snaptrade_prefers_usd_buying_power():
+    """Margin buying power must come from the USD row, not balances[0]."""
+    balances = _broker_balances_from_snaptrade(_MultiCurrencySnapClient(), "acct-1")
+
+    assert balances.margin_buying_power == 42000.0

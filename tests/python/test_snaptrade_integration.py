@@ -495,6 +495,145 @@ def test_derive_margin_debt_math():
     assert debt4 == 300.0  # = loan, not loan - cash
 
 
+def test_select_balance_row_prefers_usd_over_earlier_fx_row():
+    """Multi-currency balances must not silently pick balances[0]."""
+    from src.integrations.snaptrade.client import select_balance_row
+
+    rows = [
+        {"currency": "CAD", "cash": 10.0, "buying_power": 10.0},
+        {"currency": "USD", "cash": 100.5, "buying_power": 1000.0},
+    ]
+    assert select_balance_row(rows)["cash"] == 100.5
+
+    with pytest.raises(ValueError, match="no USD"):
+        select_balance_row(
+            [
+                {"currency": "CAD", "cash": 1.0, "buying_power": 1.0},
+                {"currency": "EUR", "cash": 2.0, "buying_power": 2.0},
+            ]
+        )
+
+
+def test_summarize_activity_normalizes_datetime_trade_date():
+    """SDK date-time trade_date must become YYYY-MM-DD for ledger dedupe."""
+    from datetime import UTC, datetime
+
+    from src.integrations.snaptrade.client import _summarize_activity
+
+    record = _summarize_activity(
+        {
+            "id": "a9",
+            "type": "BUY",
+            "symbol": {"symbol": "NVDA"},
+            "units": 1,
+            "price": 100,
+            "amount": -100,
+            "currency": {"code": "USD"},
+            "description": "YOU BOUGHT NVDA",
+            # Live SnapTrade types trade_date as datetime (date-time format).
+            "trade_date": datetime(2026, 1, 5, 0, 0, 0, tzinfo=UTC),
+            "account": {"id": "acct-1"},
+        }
+    )
+
+    assert record["date"] == "2026-01-05"
+
+
+def test_summarize_activity_normalizes_iso_timestamp_string():
+    """ISO timestamp strings from to_dict() paths also collapse to calendar dates."""
+    from src.integrations.snaptrade.client import _summarize_activity
+
+    record = _summarize_activity(
+        {
+            "type": "DIVIDEND",
+            "symbol": {"symbol": "SCHD"},
+            "amount": 12.34,
+            "currency": {"code": "USD"},
+            "trade_date": "2026-01-05T00:00:00+00:00",
+            "account": {"id": "acct-1"},
+        }
+    )
+
+    assert record["date"] == "2026-01-05"
+
+
+def test_balances_command_fails_closed_when_equity_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    """Missing equity must not emit null margin_debt that SyncPortfolio writes as $0."""
+    config_path = tmp_path / "snaptrade-accounts.yaml"
+    _write_routing_config(config_path, role="taxable_margin", enabled=True)
+
+    class _NoEquityClient(_RoutingWrapper):
+        def get_account_equity(self, account_id: str):
+            return None
+
+    monkeypatch.setattr(
+        "src.integrations.snaptrade.cli.SnapTradeClientWrapper", _NoEquityClient
+    )
+
+    exit_code = main(["balances", "--config", str(config_path), "--output", "json"])
+
+    assert exit_code == 1
+    assert "equity" in capsys.readouterr().err.lower()
+
+
+def test_balances_command_prefers_usd_when_fx_row_is_first(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    """CAD-first multi-currency payloads must still sync USD SPAXX / buying power."""
+    config_path = tmp_path / "snaptrade-accounts.yaml"
+    _write_routing_config(config_path, role="taxable_margin", enabled=True)
+
+    class _MultiCurrencyInfo(FakeAccountInformation):
+        def get_user_account_balance(
+            self, account_id: str, user_id: str, user_secret: str
+        ):
+            assert account_id == "acct-1"
+            return FakeResponse(
+                [
+                    {
+                        "currency": {"code": "CAD"},
+                        "cash": 7.0,
+                        "buying_power": 7.0,
+                    },
+                    {
+                        "currency": {"code": "USD"},
+                        "cash": 100.5,
+                        "buying_power": 1000,
+                    },
+                ]
+            )
+
+    class _MultiCurrencySDK(FakeSDKClient):
+        def __init__(self):
+            super().__init__()
+            self.account_information = _MultiCurrencyInfo()
+
+    class _MultiCurrencyWrapper(SnapTradeClientWrapper):
+        def __init__(self, credentials=None, sdk_client=None):
+            super().__init__(
+                credentials or _credentials(),
+                sdk_client=sdk_client or _MultiCurrencySDK(),
+            )
+
+        @classmethod
+        def from_env(cls):
+            return cls(_credentials())
+
+    monkeypatch.setattr(
+        "src.integrations.snaptrade.cli.SnapTradeClientWrapper", _MultiCurrencyWrapper
+    )
+
+    exit_code = main(["balances", "--config", str(config_path), "--output", "json"])
+
+    assert exit_code == 0
+    bal = json.loads(capsys.readouterr().out)["accounts"][0]["balances"]
+    assert bal["currency"] == "USD"
+    assert bal["settled_cash"] == 100.5
+    assert bal["buying_power"] == 1000
+
+
 def test_get_activities_pages_through_full_result_set():
     """Activities fetch follows offset/limit pagination until total is reached."""
     client = SnapTradeClientWrapper(_credentials(), sdk_client=FakeSDKClient())
