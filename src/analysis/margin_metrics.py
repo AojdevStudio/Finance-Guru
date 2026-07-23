@@ -59,7 +59,12 @@ class MarginMetrics:
 
 
 def parse_money(value: str | None) -> float | None:
-    """Parse Fidelity/env money-like values into floats."""
+    """Parse Fidelity/env money-like values into floats.
+
+    Fidelity balances exports use accounting parentheses for debits
+    (``$(7822.71)`` / ``(7822.71)``). Those must parse as negatives —
+    ``float('(7822.71)')`` raises and would crash the CSV fallback path.
+    """
     if value is None:
         return None
     cleaned = (
@@ -71,11 +76,18 @@ def parse_money(value: str | None) -> float | None:
     )
     if not cleaned or cleaned in {"--", "N/A"}:
         return None
+    # Accounting-negative: (1,234.56) → -1234.56 (after $ /, stripping above).
+    negative = cleaned.startswith("(") and cleaned.endswith(")")
+    if negative:
+        cleaned = cleaned[1:-1].strip()
+        if not cleaned:
+            return None
     multiplier = 1.0
     if cleaned.lower().endswith("k"):
         multiplier = 1_000.0
         cleaned = cleaned[:-1]
-    return float(cleaned) * multiplier
+    amount = float(cleaned) * multiplier
+    return -amount if negative else amount
 
 
 def parse_rate(value: str | None) -> float:
