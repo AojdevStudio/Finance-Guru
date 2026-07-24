@@ -33,22 +33,23 @@ def _deployment_by_ticker(ticket: BuyTicket) -> dict[str, float]:
     return deployments
 
 
-def _post_deployment_portfolio_value(
-    ticket: BuyTicket,
-    portfolio: PortfolioState,
-) -> float:
-    externally_funded_deployment = max(
-        ticket.deployment_amount - portfolio.cash_available,
-        0.0,
-    )
-    return portfolio.portfolio_value + externally_funded_deployment
+def _post_deployment_portfolio_value(portfolio: PortfolioState) -> float:
+    """Return the NAV used as the concentration denominator.
+
+    Cash- and margin-funded buys inside the account do not change equity NAV
+    (cash→stock or +stock/+debt). Treating ``deployment - cash`` as external
+    capital previously inflated the denominator and let margin-funded tickets
+    clear the 30% hard cap (e.g. $33k on a $100k book with $0 cash → ~25%).
+    True external capital belongs in ``portfolio_value`` once deposited.
+    """
+    return portfolio.portfolio_value
 
 
 def _first_concentration_violation(
     ticket: BuyTicket,
     portfolio: PortfolioState,
 ) -> str | None:
-    portfolio_after = _post_deployment_portfolio_value(ticket, portfolio)
+    portfolio_after = _post_deployment_portfolio_value(portfolio)
     if portfolio_after <= 0.0:
         return None
 

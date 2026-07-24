@@ -82,6 +82,30 @@ def test_check_rejects_cash_funded_deployment_above_concentration_limit() -> Non
     assert result.advisory_block == "concentration>30%"
 
 
+def test_check_rejects_margin_funded_deployment_above_concentration_limit() -> None:
+    """Margin-funded buys must not inflate NAV and bypass the 30% hard cap.
+
+    Trigger: $100k equity, $0 SPAXX, ticket deploys $33k of a new ticker on
+    margin. Adding (deployment - cash) to the denominator previously yielded
+    33k/133k ≈ 24.8% and accepted a ticket that is 33% of equity.
+    """
+    ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=33000.0)
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=0.0,
+        monthly_dividend_income=500.0,
+        monthly_margin_interest=200.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(ticket, portfolio)
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "concentration>30%"
+    assert "concentration>30%" in result.violations
+
+
 def test_check_sums_duplicate_normalized_positions_before_concentration() -> None:
     """Differently formatted duplicate position keys cannot hide concentration."""
     ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=10000.0)
