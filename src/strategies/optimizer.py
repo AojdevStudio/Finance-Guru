@@ -235,11 +235,16 @@ class PortfolioOptimizer:
         cov_matrix = self._calculate_covariance_matrix(data)
         n_assets = len(data.tickers)
 
-        # Objective: minimize variance of risk contributions
+        # Objective: minimize variance of *relative* risk contributions.
+        # Absolute RC is w*(Σw)/σ and sums to portfolio σ; relative RC is
+        # w*(Σw)/(wᵀΣw) and sums to 1. Target 1/n only matches the relative form.
+        # Using absolute RC with target 1/n prefers 100% highest-vol (bug).
         def objective(weights):
-            portfolio_vol = np.sqrt(weights @ cov_matrix @ weights)
+            portfolio_var = float(weights @ cov_matrix @ weights)
+            if portfolio_var <= 1e-18:
+                return 1e6
             marginal_contrib = cov_matrix @ weights
-            risk_contrib = weights * marginal_contrib / portfolio_vol
+            risk_contrib = weights * marginal_contrib / portfolio_var
 
             # Minimize sum of squared deviations from equal risk
             target_contrib = 1.0 / n_assets
@@ -529,9 +534,16 @@ class PortfolioOptimizer:
             tau_cov_inv @ equilibrium_returns + P.T @ omega_inv @ Q
         )
 
-        # Step 4: Optimize using posterior returns (standard mean-variance)
+        # Step 4: Optimize using posterior returns (max Sharpe / tangency).
+        # Minimizing wᵀΣw alone ignores posterior_returns and collapses to
+        # min-variance, so investor views never affect weights.
         def objective(weights):
-            return weights @ cov_matrix @ weights
+            portfolio_return = weights @ posterior_returns
+            portfolio_vol = np.sqrt(weights @ cov_matrix @ weights)
+            if portfolio_vol <= 1e-12:
+                return 1e6
+            sharpe = (portfolio_return - self.config.risk_free_rate) / portfolio_vol
+            return -sharpe
 
         constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}]
 

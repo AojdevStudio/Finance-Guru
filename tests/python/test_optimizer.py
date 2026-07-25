@@ -111,6 +111,38 @@ class TestRiskParity:
         assert abs(sum(result.optimal_weights.values()) - 1.0) < 0.01
         assert all(w >= -0.01 for w in result.optimal_weights.values())
 
+    def test_risk_parity_overweights_lower_volatility(self):
+        """Relative RC target must favor inverse-vol, not 100% highest-vol.
+
+        Absolute risk contributions sum to portfolio σ; targeting 1/n against
+        those units makes the objective prefer concentrating in the highest-vol
+        asset. Two uncorrelated assets at ~10%/~40% vol should land near 80/20.
+        """
+        rng = np.random.RandomState(0)
+        n_days = 300
+        start = date(2024, 1, 1)
+        dates = [start + timedelta(days=i) for i in range(n_days)]
+        prices: dict[str, list[float]] = {}
+        for ticker, daily_vol in [
+            ("LOW", 0.10 / np.sqrt(252)),
+            ("HIGH", 0.40 / np.sqrt(252)),
+        ]:
+            rets = rng.normal(0.0002, daily_vol, n_days)
+            series = [100.0]
+            for r in rets[1:]:
+                series.append(series[-1] * (1 + r))
+            prices[ticker] = series
+
+        data = PortfolioDataInput(tickers=["LOW", "HIGH"], dates=dates, prices=prices)
+        result = PortfolioOptimizer(OptimizationConfig(method="risk_parity")).optimize(
+            data
+        )
+
+        assert result.optimal_weights["LOW"] > 0.65
+        assert result.optimal_weights["HIGH"] < 0.35
+        # Inverse-vol anchor (~0.8 / ~0.2); allow sampling noise.
+        assert result.optimal_weights["LOW"] == pytest.approx(0.80, abs=0.15)
+
 
 # ---------------------------------------------------------------------------
 # Min Variance optimization
@@ -179,6 +211,28 @@ class TestBlackLitterman:
         # OptimizationConfig should raise if BL without views
         with pytest.raises(ValueError, match="views"):
             OptimizationConfig(method="black_litterman", views=None)
+
+    def test_bl_views_change_weights_vs_min_variance(self):
+        """Posterior returns must drive weights; min-variance objective ignores views.
+
+        Two similar-vol assets plus a strongly bullish view on AAAA should tilt
+        weight toward AAAA relative to pure min-variance on the same sample.
+        """
+        data = _make_portfolio_data(
+            n_days=300, tickers=["AAAA", "BBBB"], seed=1
+        )
+        min_var = PortfolioOptimizer(
+            OptimizationConfig(method="min_variance")
+        ).optimize(data)
+        bl = PortfolioOptimizer(
+            OptimizationConfig(
+                method="black_litterman",
+                views={"AAAA": 0.80, "BBBB": 0.01},
+            )
+        ).optimize(data)
+
+        assert bl.optimal_weights["AAAA"] > min_var.optimal_weights["AAAA"]
+        assert bl.optimal_weights["AAAA"] > bl.optimal_weights["BBBB"]
 
 
 # ---------------------------------------------------------------------------
