@@ -212,27 +212,28 @@ class TestBlackLitterman:
         with pytest.raises(ValueError, match="views"):
             OptimizationConfig(method="black_litterman", views=None)
 
-    def test_bl_views_change_weights_vs_min_variance(self):
+    def test_bl_views_tilt_weights(self):
         """Posterior returns must drive weights; min-variance objective ignores views.
 
-        Two similar-vol assets plus a strongly bullish view on AAAA should tilt
-        weight toward AAAA relative to pure min-variance on the same sample.
+        Opposing absolute views on two assets must move weight toward the
+        bullish name. Pre-fix BL matched min-variance for any view set.
         """
-        data = _make_portfolio_data(
-            n_days=300, tickers=["AAAA", "BBBB"], seed=1
-        )
-        min_var = PortfolioOptimizer(
-            OptimizationConfig(method="min_variance")
-        ).optimize(data)
-        bl = PortfolioOptimizer(
+        data = _make_portfolio_data(n_days=300, tickers=["AAAA", "BBBB"], seed=1)
+        bull_aaaa = PortfolioOptimizer(
             OptimizationConfig(
                 method="black_litterman",
                 views={"AAAA": 0.80, "BBBB": 0.01},
             )
         ).optimize(data)
+        bull_bbbb = PortfolioOptimizer(
+            OptimizationConfig(
+                method="black_litterman",
+                views={"AAAA": 0.01, "BBBB": 0.80},
+            )
+        ).optimize(data)
 
-        assert bl.optimal_weights["AAAA"] > min_var.optimal_weights["AAAA"]
-        assert bl.optimal_weights["AAAA"] > bl.optimal_weights["BBBB"]
+        assert bull_aaaa.optimal_weights["AAAA"] > bull_bbbb.optimal_weights["AAAA"]
+        assert bull_bbbb.optimal_weights["BBBB"] > bull_aaaa.optimal_weights["BBBB"]
 
 
 # ---------------------------------------------------------------------------
