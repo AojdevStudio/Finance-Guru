@@ -84,8 +84,11 @@ def fetch_ticker_data(
 ) -> tuple[TotalReturnInput, list[float], list[DividendRecord], dict[date, float]]:
     """Fetch price and dividend data for total return calculation.
 
-    Uses yf.Ticker(symbol).history() for synchronized price+dividend data
-    (raw Close, NOT Adj Close). Optionally appends Finnhub real-time price.
+    Uses yf.Ticker(symbol).history(auto_adjust=False) for synchronized
+    price+dividend data (raw Close, NOT dividend-adjusted Close). yfinance
+    defaults auto_adjust=True, which would embed dividends into Close and
+    cause total_return = price_return + dividend_return to double-count.
+    Optionally appends Finnhub real-time price.
 
     Args:
         ticker: Stock ticker symbol (e.g., SCHD, JEPI).
@@ -105,12 +108,15 @@ def fetch_ticker_data(
     end_date = date.today()
 
     stock = yf.Ticker(ticker)
-    hist = stock.history(start=str(start_date), end=str(end_date))
+    # Must disable auto_adjust: default True rewrites Close as Adj Close while
+    # still returning the Dividends column, so adding dividend_return on top
+    # overstates total return by roughly the yield.
+    hist = stock.history(start=str(start_date), end=str(end_date), auto_adjust=False)
 
     if hist.empty:
         raise ValueError(f"No data found for ticker {ticker}")
 
-    # Extract prices and dates (raw Close, NOT Adj Close)
+    # Extract prices and dates (raw Close; dividends counted separately below)
     prices = hist["Close"].tolist()
     dates_list = [d.date() for d in hist.index]
 

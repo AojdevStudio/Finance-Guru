@@ -1154,6 +1154,45 @@ class TestFinnhubIntegration:
             mock_get_prices.assert_not_called()
 
 
+class TestFetchTickerDataAutoAdjust:
+    """yfinance must be called with auto_adjust=False for total return."""
+
+    def test_history_requests_raw_unadjusted_close(self):
+        """Regression: default auto_adjust=True double-counts dividends.
+
+        Trigger: SCHD (or any payer) via total_return_cli with yfinance>=1.3
+        where history(auto_adjust=True) is the library default. Adjusted Close
+        already embeds dividends; adding the Dividends column again overstates
+        total_return by ~the yield.
+        """
+        import pandas as pd
+
+        mock_hist = pd.DataFrame(
+            {
+                "Close": [100.0, 102.0, 104.0],
+                "Dividends": [0.0, 1.0, 0.0],
+            },
+            index=pd.to_datetime(["2025-01-02", "2025-04-01", "2025-07-01"]),
+        )
+
+        mock_yf = MagicMock()
+        mock_ticker = MagicMock()
+        mock_ticker.history.return_value = mock_hist
+        mock_yf.Ticker.return_value = mock_ticker
+
+        with patch.dict("sys.modules", {"yfinance": mock_yf}):
+            from src.analysis.total_return_cli import fetch_ticker_data
+
+            _inp, prices, divs, _ex = fetch_ticker_data("SCHD", days=252)
+
+        mock_ticker.history.assert_called_once()
+        kwargs = mock_ticker.history.call_args.kwargs
+        assert kwargs.get("auto_adjust") is False
+        assert prices == [100.0, 102.0, 104.0]
+        assert len(divs) == 1
+        assert divs[0].amount == 1.0
+
+
 class TestEnvVarOverrides:
     """Verify module-level path constants honor their env var overrides."""
 
