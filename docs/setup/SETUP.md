@@ -345,7 +345,8 @@ See [Google Drive MCP Docs](https://github.com/AojdevStudio/gdrive) for OAuth se
 
 ### API Keys (.env)
 
-Edit `.env` to add your API keys (all optional - yfinance works without keys):
+Edit `.env` to add credentials for the integrations you use. Market analysis works
+with no keys through yfinance; live broker sync requires SnapTrade credentials:
 
 ```bash
 # Open .env in your editor
@@ -355,6 +356,12 @@ nano .env
 **Recommended API Keys:**
 
 ```bash
+# SnapTrade (required only for live positions, balances, and activities)
+SNAPTRADE_CLIENT_ID=your_snaptrade_client_id_here
+SNAPTRADE_CONSUMER_KEY=your_snaptrade_consumer_key_here
+SNAPTRADE_USER_ID=your_snaptrade_user_id_here
+SNAPTRADE_USER_SECRET=your_snaptrade_user_secret_here
+
 # ITC Risk Models (external risk intelligence)
 ITC_API_KEY=your_itc_api_key_here
 
@@ -367,13 +374,19 @@ OPENAI_API_KEY=your_openai_key_here
 
 **Where to get keys:**
 
+- _SnapTrade_: Reuse the four-value bundle from the existing linked SnapTrade
+  connection; this repository does not register or connect brokerage users
 - **ITC Risk Models**: Contact ITC directly (proprietary API)
 - **Finnhub**: [finnhub.io](https://finnhub.io/) - Free tier: 60 calls/min
 - **OpenAI**: [platform.openai.com](https://platform.openai.com/)
 
-**Note**: Finance Guru uses `yfinance` for market data by default. API keys enhance functionality but are not required.
+**Note**: Finance Guru uses `yfinance` for market data by default. SnapTrade
+credentials are required only for live broker workflows.
 
 **For comprehensive API key setup instructions**, see the [API Key Acquisition Guide](api-keys.md).
+
+For account discovery, fail-closed routing, and cutover verification, see
+[SnapTrade Live Sync](../guides/snaptrade-live-sync.md).
 
 ### Hooks Verification
 
@@ -893,8 +906,10 @@ If all checks pass, you're ready to run onboarding!
 ## Next Steps
 
 1. ✅ **Complete onboarding**: Run `/fin-guru:agents:onboarding-specialist`
-2. ✅ **Import portfolio data**: Export CSV from Fidelity → `notebooks/updates/`
-3. ✅ **Sync to Google Sheets** (optional): Use `/portfolio-sync` skill
+2. ✅ _Configure portfolio data_: Set up
+   [SnapTrade Live Sync](../guides/snaptrade-live-sync.md); use broker CSVs only
+   for cutover verification or fallback
+3. ✅ _Sync to Google Sheets_ (optional): Use the `portfolio-sync` skill
 4. ✅ **Run first analysis**: Try "*quant Analyze TSLA risk profile"
 5. ✅ **Review documentation**: See [docs/index.md](../index.md)
 

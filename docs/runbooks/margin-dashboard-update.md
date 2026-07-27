@@ -2,14 +2,16 @@
 title: Margin Dashboard Update
 cadence: weekly
 owner: Ossie
-last-reviewed: 2026-04-17
+last-reviewed: 2026-07-27
 ---
 
 # Margin Dashboard Update
 
 ## Purpose
 
-Keep the Margin Dashboard in the Google Sheets DataHub current with fresh Fidelity balance data, so the coverage ratio and safety alerts reflect reality before the market opens each week.
+Refresh the Margin Dashboard from live SnapTrade balances so interest estimates,
+coverage ratios, and portfolio-to-margin alerts use current account equity and
+holdings.
 
 ## When to run
 
@@ -19,44 +21,123 @@ Keep the Margin Dashboard in the Google Sheets DataHub current with fresh Fideli
 
 ## Prerequisites
 
-- Latest Fidelity balance export saved to `notebooks/updates/Balances_for_Account_{account_id}.csv`
+- The four `SNAPTRADE_*` values are present in the project-root `.env`
+- The intended margin account is enabled and routed in
+  `config/snaptrade-accounts.yaml`
 - `fin-core` skill auto-loaded (happens at session start via hook)
-- You know your current margin target range (see `fin-guru/data/user-profile.yaml`)
+- `.env` contains `FG_MARGIN_INTEREST_RATE_DECIMAL` or
+  `FG_MARGIN_INTEREST_RATE`, plus `FG_MARGIN_JUMP_ALERT_THRESHOLD`
+- The previous Dashboard margin balance is available for jump detection
+- The Dividend Tracker is current if a coverage ratio is required; pass its current
+  monthly income with `--monthly-dividend-income` or configure
+  `FG_DIVIDEND_MONTHLY_INCOME`
+
+The margin metrics adapter reads the first enabled and routed account in the
+routing file. Put the intended margin account first; do not enable multiple
+accounts and assume the adapter aggregates them.
 
 ## Steps
 
-1. _Download the balance CSV_ from Fidelity:
-   - Accounts → Balances → Export → CSV
-   - Move the file into `notebooks/updates/` and confirm the filename matches the exact pattern `Balances_for_Account_{account_id}.csv`
-2. _Invoke the margin-management skill_ in Claude Code:
+1. _Establish the update date_:
+
+   ```bash
+   date
    ```
-   /margin-management
+
+2. _Calculate live metrics_:
+
+   ```bash
+   uv run python -m src.analysis.margin_metrics --pretty
    ```
-3. _Confirm the skill read the right file_ — it should echo the filename and account ID
-4. _Review the coverage ratio_ in the skill output:
-   - _Green_ (≥2.0x): no action needed
-   - _Yellow_ (1.5–2.0x): plan dividend / CC reinvestment to restore buffer
-   - _Red_ (<1.5x): halt new margin draws, check scaling threshold
-5. _Act on alerts_:
-   - If a _Large Draw Alert_ fires, read the triggering transaction and confirm intent
-   - If a _Scaling Threshold_ alert fires, review the time-based scaling recommendation
-6. _Update the Margin Dashboard notes_ — append one line to the weekly notes block with date, coverage ratio, and any action taken
+
+3. _Confirm the source_ — `source_file` must be
+   `snaptrade:<expected-account-id>`.
+
+4. _Review the live fields_:
+   - `portfolio_value`: SnapTrade net account equity
+   - `margin_balance`: gross long market value minus net account equity
+   - `margin_buying_power`: current buying power when the broker provides it
+   - `monthly_interest_cost`: margin balance × configured annual rate ÷ 12
+   - `coverage_ratio`: configured monthly dividend income ÷ monthly interest
+   - `portfolio_margin_ratio`: portfolio value ÷ margin balance
+
+5. _Compare with the previous Dashboard row_. SnapTrade does not provide the day
+   change through this bridge, so `margin_day_change` is `null`. Calculate the
+   change from the previous Sheet value and stop for confirmation when it exceeds
+   `FG_MARGIN_JUMP_ALERT_THRESHOLD`.
+
+6. _Invoke the `margin-management` skill_ and review its safety and scaling gates.
+   The CLI's `alert_status` describes the calculated portfolio-to-margin ratio:
+
+   | Status | CLI condition |
+   |--------|---------------|
+   | `no_margin` | No margin debt |
+   | `green` | Ratio ≥ 4.0 |
+   | `yellow` | 3.0 ≤ ratio < 4.0 |
+   | `red` | 2.5 ≤ ratio < 3.0 |
+   | `critical` | Ratio < 2.5 |
+
+   The skill may apply stricter action gates than these display bands.
+
+7. _Update the Margin Dashboard_ only after the comparison passes. Append the
+   date, margin balance, configured rate, calculated monthly cost, and operational
+   note without modifying protected formulas.
 
 ## Verification
 
-- Google Sheets DataHub → _Margin Dashboard_ tab shows today's date in the last-updated cell
-- Coverage ratio cell is populated (not `#N/A` or empty)
-- No formula errors in the calculated columns (the formula-protection skill will have flagged any)
+- `source_file` identifies the expected SnapTrade account
+- The Dashboard shows today's date in the last-updated cell
+- The written margin balance and monthly cost match the CLI JSON
+- Coverage ratio matches the supplied monthly dividend income, or remains `null`
+  when no income was supplied
+- No formula errors appear in calculated columns
 - If you took an action, the notes block has one new row
+
+## Live-data constraints
+
+- SnapTrade does not expose the margin loan directly. The bridge derives it from
+  holdings and account equity, including the 100-share multiplier for options.
+- `margin_interest_accrued_this_month` is `null` under SnapTrade. Use
+  `monthly_interest_cost` as the configured-rate estimate; do not label it as the
+  broker's accrued charge.
+- `margin_day_change` and buying-power day change are also unavailable live.
+- If account equity is absent, the command fails instead of estimating a margin
+  balance.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| Skill says "balances file not found" | Re-check filename against exact pattern `Balances_for_Account_{account_id}.csv` — extension must be `.csv`, not `.CSV` |
+| Missing environment-key error | Add every named `SNAPTRADE_*` key to `.env` |
+| No enabled and routed account | Verify both `enabled: true` and a non-`unassigned` role in the routing YAML |
+| Wrong account in `source_file` | Reorder or disable routes; the adapter uses the first syncable account |
+| `SnapTrade did not return account equity` | Disable the route and use a fresh broker CSV fallback while investigating |
+| Margin balance differs from broker | Compare equities, options, SPAXX, and net equity before updating the Sheet |
 | Coverage ratio shows `#N/A` | A GOOGLEFINANCE formula is lagging; wait 60s and retry, or invoke `formula-protection` to repair |
 | Large Draw Alert for a draw you didn't make | Audit the transaction immediately; could be an unauthorized pull |
 | Yellow band persists for 3+ weeks | Review scaling plan with strategy-advisor — portfolio may have drifted from target |
+
+## CSV fallback
+
+When SnapTrade is unavailable or fails reconciliation, read the latest Fidelity
+balances export:
+
+```bash
+uv run python -m src.analysis.margin_metrics --source csv --pretty
+```
+
+To select a specific file:
+
+```bash
+uv run python -m src.analysis.margin_metrics \
+  --source csv \
+  --csv notebooks/updates/Balances_for_Account_example.csv \
+  --pretty
+```
+
+The CSV path can populate accrued interest and day-change fields when those rows
+exist. See
+[Broker CSV Inputs and Fallbacks](../guides/required-csv-uploads.md).
 
 ## Related skills
 

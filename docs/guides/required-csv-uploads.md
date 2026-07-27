@@ -1,16 +1,23 @@
 ---
-title: "Required CSV Uploads"
-description: "Complete reference for all CSV files required by Finance Guru system"
+title: "Broker CSV Inputs and Fallbacks"
+description: "CSV formats retained for cutover verification, fallback, and retirement sync"
 category: guides
 ---
 
-# Required CSV Uploads
+# Broker CSV Inputs and Fallbacks
 
-Complete reference for all CSV files required by Finance Guru™ system.
+Reference for broker CSV files that Finance Guru™ retains for verification,
+fallback, and retirement workflows.
 
 ## Overview
 
-Finance Guru™ uses CSV exports from your broker to sync your portfolio data to Google Sheets. This guide documents all required CSV uploads, their formats, and where to place them.
+SnapTrade is the preferred live input for taxable positions, balances,
+transactions, and realized dividends. CSV exports remain important during account
+cutover, when the live API is unavailable, and for retirement accounts that have
+not moved to SnapTrade.
+
+Start with [SnapTrade Live Sync](snaptrade-live-sync.md) for live configuration.
+Use this guide when a workflow explicitly selects its CSV fallback.
 
 **Quick Navigation:**
 - [CSV Types Summary](#csv-types-summary)
@@ -23,26 +30,27 @@ Finance Guru™ uses CSV exports from your broker to sync your portfolio data to
 
 ## CSV Types Summary
 
-| CSV Type | Required? | Source | Update Frequency | Skills Using It |
-|----------|-----------|--------|------------------|-----------------|
-| **Portfolio Positions** | ✅ Yes | Broker | Weekly/After trades | PortfolioSyncing |
-| **Account Balances** | ✅ Yes | Broker | Weekly/After trades | PortfolioSyncing |
-| **Transaction History** | ⚠️ Optional | Broker | Monthly | TransactionSyncing |
-| **Dividend History** | ⚠️ Optional | Broker | Monthly | dividend-tracking |
-| **Retirement Accounts** | ⚠️ If applicable | Vanguard/Fidelity | Quarterly | retirement-syncing |
+| CSV Type | When needed | Live source | Skills Using It |
+|----------|-------------|-------------|-----------------|
+| Portfolio Positions | Initial reconciliation or fallback | SnapTrade `positions` | PortfolioSyncing |
+| Account Balances | Initial reconciliation or `margin_metrics --source csv` fallback | SnapTrade `balances` | PortfolioSyncing, margin-management |
+| Transaction History | Reconciliation or fallback until activity cutover completes | SnapTrade `activities` | TransactionSyncing |
+| Dividend History | Reconciliation or fallback until activity cutover completes | SnapTrade `activities` | dividend-tracking |
+| Retirement Accounts | Current workflow when applicable | Deferred | retirement-syncing |
 
 ---
 
 ## File Locations
 
-All CSV files must be placed in the `notebooks/` directory structure:
+Place only the CSVs required by the selected fallback workflow in this
+`notebooks/` directory structure:
 
 ```
 notebooks/
 ├── updates/                      # Active portfolio CSVs
-│   ├── Portfolio_Positions_*.csv   # Positions (REQUIRED)
-│   ├── Balances_*.csv              # Cash/margin (REQUIRED)
-│   └── dividend.csv                # Dividend data (optional)
+│   ├── Portfolio_Positions_*.csv   # Position verification/fallback
+│   ├── Balances_*.csv              # Cash/margin verification/fallback
+│   └── dividend.csv                # Dividend reconciliation/fallback
 ├── transactions/                 # Transaction history
 │   └── History_for_Account_*.csv
 └── retirement-accounts/          # Retirement CSVs
@@ -57,7 +65,7 @@ notebooks/
 
 ## CSV Formats
 
-### 1. Portfolio Positions CSV (REQUIRED)
+### 1. Portfolio Positions CSV (Fallback)
 
 **Purpose:** Updates stock/ETF holdings in Google Sheets DataHub
 
@@ -91,7 +99,7 @@ JEPI,72.942,$63.85,$46582.66,+$2468.50,20.36%,$56.48
 
 ---
 
-### 2. Account Balances CSV (REQUIRED)
+### 2. Account Balances CSV (Fallback)
 
 **Purpose:** Updates cash, margin debt, and account equity
 
@@ -211,7 +219,10 @@ Account Number,Investment Name,Symbol,Shares,Share Price,Total Value,
 
 ## Broker Export Instructions
 
-**Detailed export instructions for your broker:**
+Export broker files only when performing initial SnapTrade reconciliation or a
+fallback workflow.
+
+_Detailed export instructions for your broker:_
 
 👉 **See:** [Broker CSV Export Guide](broker-csv-export-guide.md)
 
@@ -219,55 +230,55 @@ Account Number,Investment Name,Symbol,Shares,Share Price,Total Value,
 - ✅ **Fidelity Investments** - Fully automated parsing
 - ⚠️ **Schwab, Vanguard, TD Ameritrade, E*TRADE** - Manual mapping required (coming soon)
 
-**Export checklist:**
+_Fallback export checklist:_
 1. Login to your broker
 2. Navigate to account summary/positions
-3. Export positions CSV
-4. Export balances CSV
-5. (Optional) Export transaction history
-6. Save files to appropriate `notebooks/` subdirectory
+3. Export only the data required by the current workflow
+4. Save files to the appropriate `notebooks/` subdirectory
+5. Re-enable the live route only after any discrepancy is understood
 
 ---
 
 ## Upload Workflow
 
-### Initial Setup (First Time)
+### Initial SnapTrade Cutover
 
-1. **Export broker CSVs** (see [Broker CSV Export Guide](broker-csv-export-guide.md))
-2. **Place files in `notebooks/updates/`:**
-   - Portfolio_Positions_*.csv
-   - Balances_*.csv
-3. **Run setup script:**
+1. Configure the live bridge using
+   [SnapTrade Live Sync](snaptrade-live-sync.md).
+2. Export a known-good positions and balances snapshot.
+3. Compare the live CLI output with the snapshot.
+4. Assign the account role and set `enabled: true` only after reconciliation.
+5. Keep the CSV path available as a fallback until the account is verified.
+
+### Regular Live Updates
+
+1. Run the relevant SnapTrade command or invoke the matching skill.
+2. Review refused accounts, missing values, and safety-gate diffs.
+3. Approve the Google Sheets write when the comparison is expected.
+4. Verify quantities, cash or margin balances, and protected formulas.
+
+### CSV Fallback
+
+1. Disable the affected live route if its data is unreliable.
+2. Download a fresh broker export.
+3. Place it in the directory shown in [File Locations](#file-locations).
+4. Select the workflow's documented CSV path, such as:
+
    ```bash
-   ./setup.sh
+   uv run python -m src.analysis.margin_metrics --source csv --pretty
    ```
-4. **Verify in Google Sheets:**
-   - Open Portfolio Tracker
-   - Check DataHub tab
-   - Confirm positions loaded
 
-### Regular Updates (Weekly/Monthly)
-
-1. **Download latest broker CSVs**
-2. **Replace old files in `notebooks/updates/`**
-3. **Sync via Claude Code:**
-   ```
-   portfolio-sync
-   ```
-4. **Verify updates:**
-   - Check quantities updated
-   - Verify cash/margin balances
-   - Confirm formulas intact
+5. Reconcile the live source before re-enabling the route.
 
 ### What Gets Synced
 
-| CSV Type | Sync Command | Target Sheet | Columns Updated |
-|----------|--------------|--------------|-----------------|
-| Positions | `portfolio-sync` | DataHub | A, B, G, S |
-| Balances | `portfolio-sync` | DataHub | L37-L39 |
-| Transactions | `sync transactions` | Transactions, Expense Tracker | All |
-| Dividends | `sync dividends` | Dividends | A2:D43 input area |
-| Retirement | `sync retirement` | DataHub | B46-B62 |
+| Data Type | Preferred Input | Skill | Target Sheet |
+|-----------|-----------------|-------|--------------|
+| Positions | SnapTrade `positions` | `portfolio-sync` | DataHub |
+| Balances | SnapTrade `balances` | `portfolio-sync` | DataHub |
+| Transactions | SnapTrade `activities` | `sync transactions` | Transactions, Expense Tracker |
+| Dividends | SnapTrade `activities` filtered to `DIVIDEND` | `sync dividends` | Dividends |
+| Retirement | Broker CSV | `sync retirement` | DataHub |
 
 ---
 
@@ -275,7 +286,8 @@ Account Number,Investment Name,Symbol,Shares,Share Price,Total Value,
 
 ### Safety Checks (Auto-Applied)
 
-Finance Guru automatically validates CSV data before importing:
+Finance Guru applies the same safety checks to normalized live data and CSV
+fallbacks before writing:
 
 **Position checks:**
 - ✅ Fewer tickers than current sheet → STOP (confirm sales)
@@ -303,13 +315,14 @@ After each sync, verify:
 
 ## Common Issues
 
-### Problem: CSV Import Fails
+### Problem: CSV Fallback Import Fails
 
 **Solution:**
-1. Ensure CSV is in correct `notebooks/` subdirectory
-2. Check file has header row
-3. Verify required columns present
-4. Remove trailing blank rows
+1. Confirm the workflow is intentionally using its CSV fallback
+2. Ensure the CSV is in the correct `notebooks/` subdirectory
+3. Check that the file has a header row
+4. Verify required columns are present
+5. Remove trailing blank rows
 
 ### Problem: Broker Not Supported
 
@@ -341,8 +354,9 @@ After each sync, verify:
 **Critical reminders:**
 
 - ✅ All `notebooks/` subdirectories are `.gitignore`'d
-- ✅ CSV files never leave your machine
-- ✅ Finance Guru runs 100% locally
+- ✅ CSV fallback files remain local
+- ✅ SnapTrade credentials remain in the local `.env`
+- ⚠️ Live sync sends read-only requests to the external SnapTrade API
 - ❌ **NEVER commit CSV files with real data**
 - ❌ **NEVER share CSVs publicly**
 
@@ -356,24 +370,25 @@ After each sync, verify:
 
 ## Quick Reference Table
 
-| CSV Type | Required | Location | Sync Command | Update Frequency |
-|----------|----------|----------|--------------|------------------|
-| Positions | ✅ | `notebooks/updates/` | `portfolio-sync` | After trades |
-| Balances | ✅ | `notebooks/updates/` | `portfolio-sync` | After trades |
-| Transactions | ⚠️ | `notebooks/transactions/` | `sync transactions` | Monthly |
-| Dividends | ⚠️ | `notebooks/updates/` | `sync dividends` | Monthly |
-| Retirement | ⚠️ | `notebooks/retirement-accounts/` | `sync retirement` | Quarterly |
+| CSV Type | Status | Location | Workflow |
+|----------|--------|----------|----------|
+| Positions | Verification/fallback | `notebooks/updates/` | `portfolio-sync` |
+| Balances | Verification/fallback | `notebooks/updates/` | `margin_metrics --source csv` |
+| Transactions | Reconciliation/fallback | `notebooks/transactions/` | `sync transactions` |
+| Dividends | Reconciliation/fallback | `notebooks/updates/` | `sync dividends` |
+| Retirement | Current when applicable | `notebooks/retirement-accounts/` | `sync retirement` |
 
 ---
 
 ## Related Documentation
 
 - **Broker Export Instructions:** [broker-csv-export-guide.md](broker-csv-export-guide.md)
+- **SnapTrade Live Sync:** [snaptrade-live-sync.md](snaptrade-live-sync.md)
 - **Portfolio Syncing Skill:** `.claude/skills/PortfolioSyncing/SKILL.md`
 - **Transaction Syncing Skill:** `.claude/skills/TransactionSyncing/SKILL.md`
 - **Dividend Tracking Skill:** `.claude/skills/dividend-tracking/SKILL.md`
 - **Retirement Syncing Skill:** `.claude/skills/retirement-syncing/SKILL.md`
-- **Troubleshooting Guide:** [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+- **Troubleshooting Guide:** [TROUBLESHOOTING.md](../setup/TROUBLESHOOTING.md)
 
 ---
 
@@ -389,6 +404,5 @@ Help improve CSV support:
 
 ---
 
-**Last Updated:** 2026-01-16
-**Supported Brokers:** 1/7 (Fidelity only - more coming soon)
-**CSV Types Documented:** 5/5 ✅
+_Last Updated:_ 2026-07-27
+_CSV Types Documented:_ 5

@@ -17,6 +17,7 @@ Finance Guru™ works out-of-the-box with **zero API keys** using `yfinance` for
 | API | Required? | Free Tier | Purpose |
 |-----|-----------|-----------|---------|
 | **None (yfinance)** | ✅ Default | ✅ Unlimited | End-of-day market data |
+| SnapTrade | Required for live broker sync | Account-dependent | Read-only positions, balances, and activities |
 | **Finnhub** | Optional | ✅ 60 calls/min | Real-time prices during market hours |
 | **ITC Risk Models** | Optional | ❌ Paid | External risk intelligence |
 | **OpenAI** | Optional | ❌ Paid | Alternative LLM for specific tasks |
@@ -126,6 +127,57 @@ uv run python src/utils/market_data.py TSLA PLTR NVDA AAPL GOOGL --realtime
 # Finance Guru automatically batches calls
 # No need to worry about rate limits for typical portfolios
 ```
+
+---
+
+## SnapTrade Live Sync
+
+_Status:_ Optional for market analysis; required for live broker and margin sync.
+
+SnapTrade provides read-only access to current positions, balances, options, and
+activities. Finance Guru reuses an existing linked SnapTrade user. This repository
+does not register users, launch a Connection Portal, or store credentials outside
+the local environment.
+
+### Obtain the credential bundle
+
+Retrieve these four values from the owner of the existing SnapTrade connection:
+
+- `SNAPTRADE_CLIENT_ID`
+- `SNAPTRADE_CONSUMER_KEY`
+- `SNAPTRADE_USER_ID`
+- `SNAPTRADE_USER_SECRET`
+
+Do not create placeholder credentials or assume the client-level keys identify the
+user; all four values are required by `SnapTradeCredentials.from_env()`.
+
+### Configure `.env`
+
+```dotenv
+SNAPTRADE_CLIENT_ID=your_snaptrade_client_id_here
+SNAPTRADE_CONSUMER_KEY=your_snaptrade_consumer_key_here
+SNAPTRADE_USER_ID=your_snaptrade_user_id_here
+SNAPTRADE_USER_SECRET=your_snaptrade_user_secret_here
+```
+
+### Test read-only access
+
+```bash
+uv run python -m src.integrations.snaptrade.cli accounts --output text
+```
+
+This command lists linked accounts but does not make them eligible for sync.
+Complete the fail-closed routing and reconciliation procedure in
+[SnapTrade Live Sync](../guides/snaptrade-live-sync.md) before enabling an account.
+
+_Security constraints:_
+
+- Keep the values only in `.env`; it is gitignored.
+- Do not print `.env` or paste CLI output into logs, issues, or pull requests.
+- The wrapper masks account numbers and does not serialize credentials, but live
+  output still contains sensitive account and portfolio metadata.
+- Credential rotation and brokerage reconnection happen in the system that owns
+  the existing SnapTrade connection, not in this repository.
 
 ---
 
@@ -519,6 +571,20 @@ cat .env | grep API_KEY
 # 4. Test key directly
 curl -X GET "https://finnhub.io/api/v1/quote?symbol=AAPL&token=YOUR_KEY"
 ```
+
+---
+
+### SnapTrade Credential or Routing Errors
+
+| Error | Action |
+|-------|--------|
+| `Missing required SnapTrade environment keys` | Add every named key to the project-root `.env` |
+| SnapTrade API authentication error | Replace the local bundle with credentials from the connection owner |
+| `SnapTrade routing config not found` | Generate the routing file as documented in the live-sync guide |
+| Zero synced accounts | Inspect `refused`; verified accounts need both `enabled: true` and a non-`unassigned` role |
+
+Do not rotate only one value unless the connection owner confirms that the new
+bundle is compatible.
 
 ---
 

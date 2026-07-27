@@ -15,7 +15,7 @@ Installation, configuration, and troubleshooting guides.
 | Document | Description |
 |----------|-------------|
 | [Setup Guide](setup/SETUP.md) | Complete installation and configuration guide |
-| [API Keys Guide](setup/api-keys.md) | How to obtain and configure API keys |
+| [API Keys Guide](setup/api-keys.md) | Market-data, MCP, and SnapTrade credentials |
 | [Troubleshooting](setup/TROUBLESHOOTING.md) | Comprehensive troubleshooting guide |
 
 ## Guides
@@ -25,7 +25,8 @@ User walkthroughs and how-to guides.
 | Document | Description |
 |----------|-------------|
 | [Broker CSV Export Guide](guides/broker-csv-export-guide.md) | How to export CSVs from Fidelity, Schwab, Vanguard, etc. |
-| [Required CSV Uploads](guides/required-csv-uploads.md) | Complete guide to broker CSV formats and upload workflow |
+| [SnapTrade Live Sync](guides/snaptrade-live-sync.md) | Configure the read-only broker bridge and account-routing gate |
+| [Broker CSV Inputs and Fallbacks](guides/required-csv-uploads.md) | CSV formats for cutover verification, fallback, and retirement |
 | [Just Commands Reference](guides/just-commands.md) | Justfile recipes for agent personas and context loading |
 
 ## Reference
@@ -47,8 +48,8 @@ Step-by-step operational procedures.
 | Runbook | Cadence | Summary |
 |---------|---------|---------|
 | [Runbooks Index](runbooks/README.md) | — | Overview and cadence guide |
-| [Margin Dashboard Update](runbooks/margin-dashboard-update.md) | Weekly | Refresh coverage ratio, act on alerts |
-| [Portfolio Sync](runbooks/portfolio-sync.md) | Ad-hoc | Ingest broker CSVs → Google Sheets |
+| [Margin Dashboard Update](runbooks/margin-dashboard-update.md) | Weekly | Refresh live SnapTrade margin metrics and alerts |
+| [Portfolio Sync](runbooks/portfolio-sync.md) | Ad-hoc | Sync live positions and balances → Google Sheets |
 | [Monthly Dividend Review](runbooks/monthly-dividend-review.md) | Monthly | Confirm Layer 2 income on target |
 | [Quarterly Review](runbooks/quarterly-review.md) | Quarterly | Full orchestrator + MonteCarlo + reports |
 
@@ -116,7 +117,9 @@ The `load-fin-core-config.ts` hook runs at session start and injects:
 2. **config.yaml** - Agent roster, tool list, workflow pipeline
 3. **user-profile.yaml** - Portfolio strategy, risk tolerance
 4. **system-context.md** - Repository structure, privacy rules
-5. **Latest portfolio data** - Fidelity balances and positions
+5. _Latest local fallback snapshots_ - Fidelity balances and positions, when
+   present; live SnapTrade data is fetched on demand and is not injected by this
+   hook
 
 ### Skills System
 
@@ -203,12 +206,13 @@ family-office/
 ├── src/
 │   ├── analysis/             # Risk, correlation, ITC, hedging, options CLIs
 │   ├── config/               # Config loader (YAML-default chain)
+│   ├── integrations/         # Read-only SnapTrade broker bridge
 │   ├── strategies/           # Optimizer, backtester
 │   ├── utils/                # Momentum, volatility, logging, feature flags
 │   └── models/               # Pydantic type definitions
 ├── tests/                    # 365+ pytest tests
 └── notebooks/
-    └── updates/              # Fidelity CSV exports (gitignored)
+    └── updates/              # Broker CSV verification/fallbacks (gitignored)
 ```
 
 ## Getting Help
@@ -222,4 +226,4 @@ family-office/
 
 - **Finance Guru**: v2.1.0
 - **BMAD-CORE**: v6.0.0
-- **Last Updated**: 2026-04-17
+- _Last Updated_: 2026-07-27
