@@ -23,7 +23,7 @@ import os
 import tempfile
 from datetime import date
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -93,6 +93,21 @@ def _div(
         amount=amount,
         shares_at_ex=shares_at_ex,
     )
+
+
+def _mock_yfinance_history(
+    close: list[float], dividends: list[float]
+) -> tuple[MagicMock, MagicMock]:
+    import pandas as pd
+
+    ticker = MagicMock()
+    ticker.history.return_value = pd.DataFrame(
+        {"Close": close, "Dividends": dividends},
+        index=pd.date_range("2025-01-02", periods=len(close)),
+    )
+    yfinance = MagicMock()
+    yfinance.Ticker.return_value = ticker
+    return yfinance, ticker
 
 
 # ---------------------------------------------------------------------------
@@ -1091,21 +1106,7 @@ class TestFinnhubIntegration:
         """fetch_ticker_data handles Finnhub exception gracefully."""
         # We test that fetch_ticker_data doesn't crash when get_prices raises.
         # We mock yfinance via the import inside fetch_ticker_data.
-        import pandas as pd
-
-        mock_hist = pd.DataFrame(
-            {
-                "Close": [100.0, 105.0, 110.0],
-                "Dividends": [0.0, 0.5, 0.0],
-            },
-            index=pd.to_datetime(["2025-01-02", "2025-03-15", "2025-07-01"]),
-        )
-
-        # Create a mock yfinance module
-        mock_yf = MagicMock()
-        mock_ticker = MagicMock()
-        mock_ticker.history.return_value = mock_hist
-        mock_yf.Ticker.return_value = mock_ticker
+        mock_yf, _ = _mock_yfinance_history([100.0, 105.0, 110.0], [0.0, 0.5, 0.0])
 
         with (
             patch.dict("sys.modules", {"yfinance": mock_yf}),
@@ -1127,21 +1128,7 @@ class TestFinnhubIntegration:
 
     def test_finnhub_not_called_without_realtime(self):
         """get_prices is not called when realtime=False."""
-        import pandas as pd
-
-        mock_hist = pd.DataFrame(
-            {
-                "Close": [100.0, 110.0],
-                "Dividends": [0.0, 0.0],
-            },
-            index=pd.to_datetime(["2025-01-02", "2025-07-01"]),
-        )
-
-        # Create a mock yfinance module
-        mock_yf = MagicMock()
-        mock_ticker = MagicMock()
-        mock_ticker.history.return_value = mock_hist
-        mock_yf.Ticker.return_value = mock_ticker
+        mock_yf, _ = _mock_yfinance_history([100.0, 110.0], [0.0, 0.0])
 
         with (
             patch.dict("sys.modules", {"yfinance": mock_yf}),
@@ -1158,39 +1145,15 @@ class TestFetchTickerDataAutoAdjust:
     """yfinance must be called with auto_adjust=False for total return."""
 
     def test_history_requests_raw_unadjusted_close(self):
-        """Regression: default auto_adjust=True double-counts dividends.
-
-        Trigger: SCHD (or any payer) via total_return_cli with yfinance>=1.3
-        where history(auto_adjust=True) is the library default. Adjusted Close
-        already embeds dividends; adding the Dividends column again overstates
-        total_return by ~the yield.
-        """
-        import pandas as pd
-
-        mock_hist = pd.DataFrame(
-            {
-                "Close": [100.0, 102.0, 104.0],
-                "Dividends": [0.0, 1.0, 0.0],
-            },
-            index=pd.to_datetime(["2025-01-02", "2025-04-01", "2025-07-01"]),
-        )
-
-        mock_yf = MagicMock()
-        mock_ticker = MagicMock()
-        mock_ticker.history.return_value = mock_hist
-        mock_yf.Ticker.return_value = mock_ticker
-
+        mock_yf, ticker = _mock_yfinance_history([100.0, 102.0, 104.0], [0.0, 1.0, 0.0])
         with patch.dict("sys.modules", {"yfinance": mock_yf}):
             from src.analysis.total_return_cli import fetch_ticker_data
 
             _inp, prices, divs, _ex = fetch_ticker_data("SCHD", days=252)
 
-        mock_ticker.history.assert_called_once()
-        kwargs = mock_ticker.history.call_args.kwargs
-        assert kwargs.get("auto_adjust") is False
+        ticker.history.assert_called_once_with(start=ANY, end=ANY, auto_adjust=False)
         assert prices == [100.0, 102.0, 104.0]
-        assert len(divs) == 1
-        assert divs[0].amount == 1.0
+        assert [dividend.amount for dividend in divs] == [1.0]
 
 
 class TestEnvVarOverrides:
