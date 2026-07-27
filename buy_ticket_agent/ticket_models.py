@@ -111,6 +111,9 @@ class PortfolioState(BaseModel):
     cash_available: float = Field(ge=0.0)
     monthly_dividend_income: float = Field(ge=0.0)
     monthly_margin_interest: float = Field(ge=0.0)
+    # Required to project post-ticket interest when deployment uses new margin.
+    # When omitted, margin-funded tickets fail closed on the coverage hard cap.
+    annual_margin_rate: float | None = Field(default=None, ge=0.0, le=1.0)
     current_positions: dict[str, float] = Field(default_factory=dict)
     context_date: str
 

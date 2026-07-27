@@ -141,6 +141,119 @@ def test_check_rejects_ticket_when_margin_coverage_is_below_two_times() -> None:
     assert result.ticket.advisory_block == "coverage<2x"
 
 
+def test_check_rejects_margin_funded_ticket_when_current_interest_is_zero() -> None:
+    """Zero current interest must not skip coverage when the ticket opens margin debt.
+
+    Concrete trigger: cash=$5k, deploy=$40k (new margin=$35k), dividends=$400/mo,
+    annual rate 12% → projected interest = 35000*0.12/12 = $350; coverage
+    400/350 ≈ 1.14x < 2x. The pre-ticket-only guard saw interest=$0 and accepted.
+    """
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=40000.0).model_copy(
+        update={
+            "cash_available": 5000.0,
+            "remaining_cash_buffer": -35000.0,
+            "itc_applicability": "not-run",
+            "itc_risk_score": None,
+        }
+    )
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=5000.0,
+        monthly_dividend_income=400.0,
+        monthly_margin_interest=0.0,
+        annual_margin_rate=0.12,
+        current_positions={},
+        context_date="2026-07-27",
+    )
+
+    result = check(ticket, portfolio)
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "coverage<2x"
+    assert "coverage<2x" in result.violations
+
+
+def test_check_rejects_margin_funded_ticket_when_rate_missing() -> None:
+    """New margin borrow without annual_margin_rate fails closed on coverage."""
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=40000.0).model_copy(
+        update={
+            "cash_available": 5000.0,
+            "remaining_cash_buffer": -35000.0,
+            "itc_applicability": "not-run",
+            "itc_risk_score": None,
+        }
+    )
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=5000.0,
+        monthly_dividend_income=5000.0,
+        monthly_margin_interest=0.0,
+        annual_margin_rate=None,
+        current_positions={},
+        context_date="2026-07-27",
+    )
+
+    result = check(ticket, portfolio)
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "coverage<2x"
+
+
+def test_check_accepts_margin_funded_ticket_when_post_ticket_coverage_holds() -> None:
+    """Margin-funded tickets still pass when projected coverage stays ≥ 2x."""
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=15000.0).model_copy(
+        update={
+            "cash_available": 5000.0,
+            "remaining_cash_buffer": -10000.0,
+            "itc_applicability": "not-run",
+            "itc_risk_score": None,
+        }
+    )
+    # new margin $10k @ 12% → $100/mo interest; dividends $500 → 5x coverage
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=5000.0,
+        monthly_dividend_income=500.0,
+        monthly_margin_interest=0.0,
+        annual_margin_rate=0.12,
+        current_positions={},
+        context_date="2026-07-27",
+    )
+
+    result = check(ticket, portfolio)
+
+    assert result.status == "accepted"
+    assert result.violations == []
+
+
+def test_check_rejects_ticket_when_added_margin_drops_existing_coverage() -> None:
+    """Existing healthy coverage must be re-checked after incremental margin debt."""
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=30000.0).model_copy(
+        update={
+            "cash_available": 0.0,
+            "remaining_cash_buffer": -30000.0,
+            "itc_applicability": "not-run",
+            "itc_risk_score": None,
+        }
+    )
+    # Pre-ticket: 500/200 = 2.5x (passes). Post: 200 + 30000*0.12/12 = 500;
+    # coverage 500/500 = 1.0x < 2x.
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=0.0,
+        monthly_dividend_income=500.0,
+        monthly_margin_interest=200.0,
+        annual_margin_rate=0.12,
+        current_positions={},
+        context_date="2026-07-27",
+    )
+
+    result = check(ticket, portfolio)
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "coverage<2x"
+
+
 def test_check_rejects_ticket_when_itc_risk_is_at_hard_limit() -> None:
     """ITC risk must stay below 0.7 after the LLM response."""
     ticket = _ticket_with_allocation("SPY", weight=0.20, amount=20000.0).model_copy(

@@ -60,10 +60,49 @@ def _first_concentration_violation(
     return None
 
 
-def _margin_coverage_violation(portfolio: PortfolioState) -> str | None:
-    if portfolio.monthly_margin_interest == 0.0:
+def _new_margin_borrow(ticket: BuyTicket, portfolio: PortfolioState) -> float:
+    """Dollar amount of deployment that must be funded by new margin debt."""
+    return max(ticket.deployment_amount - portfolio.cash_available, 0.0)
+
+
+def _post_deployment_monthly_margin_interest(
+    ticket: BuyTicket,
+    portfolio: PortfolioState,
+) -> float | None:
+    """Project monthly margin interest after the ticket deploys.
+
+    Returns ``None`` when new margin borrowing is required but
+    ``annual_margin_rate`` is unavailable — callers must fail closed because
+    post-ticket coverage cannot be proven.
+    """
+    new_borrow = _new_margin_borrow(ticket, portfolio)
+    if new_borrow <= 0.0:
+        return portfolio.monthly_margin_interest
+    if portfolio.annual_margin_rate is None:
         return None
-    coverage = portfolio.monthly_dividend_income / portfolio.monthly_margin_interest
+    return (
+        portfolio.monthly_margin_interest
+        + new_borrow * portfolio.annual_margin_rate / 12.0
+    )
+
+
+def _margin_coverage_violation(
+    ticket: BuyTicket,
+    portfolio: PortfolioState,
+) -> str | None:
+    """Enforce ≥2x dividend coverage against *post-ticket* margin interest.
+
+    Pre-ticket-only checks let zero-debt portfolios borrow arbitrarily on
+    margin (interest stays $0 in the snapshot) and let leveraged portfolios
+    add debt that would drop coverage below 2x. Both bypass the hard cap.
+    """
+    projected_interest = _post_deployment_monthly_margin_interest(ticket, portfolio)
+    if projected_interest is None:
+        # New margin borrow without a rate — cannot prove 2x coverage.
+        return "coverage<2x"
+    if projected_interest == 0.0:
+        return None
+    coverage = portfolio.monthly_dividend_income / projected_interest
     if coverage < MIN_MARGIN_COVERAGE:
         return "coverage<2x"
     return None
@@ -93,7 +132,7 @@ def check(
         violation
         for violation in (
             _first_concentration_violation(parsed_ticket, parsed_portfolio),
-            _margin_coverage_violation(parsed_portfolio),
+            _margin_coverage_violation(parsed_ticket, parsed_portfolio),
             _itc_risk_violation(parsed_ticket),
         )
         if violation is not None
