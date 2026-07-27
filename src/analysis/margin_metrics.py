@@ -59,23 +59,20 @@ class MarginMetrics:
 
 
 def parse_money(value: str | None) -> float | None:
-    """Parse Fidelity/env money-like values into floats."""
+    """Parse Fidelity/env money-like values, including accounting negatives."""
     if value is None:
         return None
-    cleaned = (
-        value.strip()
-        .replace("$", "")
-        .replace(",", "")
-        .replace("+", "")
-        .replace("%", "")
-    )
+    cleaned = value.strip().translate(str.maketrans("", "", "$,+%"))
     if not cleaned or cleaned in {"--", "N/A"}:
         return None
-    multiplier = 1.0
-    if cleaned.lower().endswith("k"):
-        multiplier = 1_000.0
-        cleaned = cleaned[:-1]
-    return float(cleaned) * multiplier
+    negative = cleaned.startswith("(") and cleaned.endswith(")")
+    cleaned = cleaned[1:-1].strip() if negative else cleaned
+    if not cleaned:
+        return None
+    multiplier = 1_000.0 if cleaned.lower().endswith("k") else 1.0
+    cleaned = cleaned[:-1] if multiplier == 1_000.0 else cleaned
+    amount = float(cleaned) * multiplier
+    return -amount if negative else amount
 
 
 def parse_rate(value: str | None) -> float:
