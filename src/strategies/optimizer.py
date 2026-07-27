@@ -534,9 +534,10 @@ class PortfolioOptimizer:
         )
 
         # Step 4: Maximize mean-variance utility using posterior excess returns.
-        def objective(weights):
+        def objective(weights: np.ndarray) -> float:
+            """Return negative posterior mean-variance utility."""
             variance_penalty = 0.5 * risk_aversion * (weights @ cov_matrix @ weights)
-            return variance_penalty - weights @ posterior_excess_returns
+            return float(variance_penalty - weights @ posterior_excess_returns)
 
         constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}]
 
