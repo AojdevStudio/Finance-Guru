@@ -34,6 +34,12 @@ def test_parse_money_supports_currency_commas_percent_and_k():
     assert parse_money("") is None
 
 
+def test_parse_money_supports_fidelity_accounting_parentheses():
+    assert parse_money("$(123.45)") == pytest.approx(-123.45)
+    assert parse_money("$(1,234.56)") == pytest.approx(-1234.56)
+    assert parse_money("-123.45") == pytest.approx(-123.45)
+
+
 def test_parse_rate_accepts_decimal_or_percent():
     assert parse_rate("0.12") == pytest.approx(0.12)
     assert parse_rate("12%") == pytest.approx(0.12)
@@ -49,6 +55,16 @@ def test_read_fidelity_balances_parses_current_facts(tmp_path):
     assert balances.margin_buying_power == 50000
     assert balances.net_debit == -10000
     assert balances.margin_interest_accrued_this_month == 12.34
+
+
+def test_read_fidelity_balances_parses_accounting_paren_net_debit(tmp_path):
+    csv_path = tmp_path / "Balances_for_Account_SYNTHETIC.csv"
+    csv_path.write_text(
+        "Account Feature,Value\nNet debit,$(123.45)\nTotal account value,$1000.00\n"
+    )
+    balances = read_fidelity_balances(csv_path)
+    assert balances.total_account_value == pytest.approx(1000)
+    assert balances.net_debit == pytest.approx(-123.45)
 
 
 def test_calculate_margin_metrics_derives_values_from_live_balances(tmp_path):
