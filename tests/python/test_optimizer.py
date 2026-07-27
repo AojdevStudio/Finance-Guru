@@ -114,7 +114,7 @@ class TestRiskParity:
     def test_risk_parity_equalizes_realized_contributions(self):
         rng = np.random.RandomState(0)
         tickers = ["LOW", "HIGH"]
-        returns = rng.normal(size=(400, 2)) * [0.01, 0.04]
+        returns = rng.normal(size=(400, 2)) * [1e-10, 4e-10]
         prices = 100 * np.cumprod(1 + returns, axis=0)
         data = PortfolioDataInput(
             tickers=tickers,
@@ -129,6 +129,16 @@ class TestRiskParity:
             weights * (covariance @ weights) / (weights @ covariance @ weights)
         )
         assert np.ptp(contributions) < 0.02
+
+    def test_risk_parity_rejects_zero_variance(self):
+        dates = [date(2024, 1, 1) + timedelta(days=i) for i in range(60)]
+        data = PortfolioDataInput(
+            tickers=["A", "B"],
+            dates=dates,
+            prices={"A": [100.0] * 60, "B": [200.0] * 60},
+        )
+        with pytest.raises(ValueError, match="non-zero asset variance"):
+            PortfolioOptimizer(OptimizationConfig(method="risk_parity")).optimize(data)
 
 
 # ---------------------------------------------------------------------------
