@@ -51,6 +51,20 @@ def _make_portfolio_data(n_days=60, tickers=None, seed=42):
     )
 
 
+def _make_two_volatility_assets():
+    """Build deterministic low/high-volatility assets."""
+    rng = np.random.RandomState(7)
+    dates = [date(2024, 1, 1) + timedelta(days=i) for i in range(300)]
+    prices = {}
+    for ticker, annual_vol in (("LOW", 0.10), ("HIGH", 0.40)):
+        returns = rng.normal(0.0002, annual_vol / np.sqrt(252), len(dates))
+        series = [100.0]
+        for value in returns[1:]:
+            series.append(series[-1] * (1 + value))
+        prices[ticker] = series
+    return PortfolioDataInput(tickers=["LOW", "HIGH"], dates=dates, prices=prices)
+
+
 @pytest.fixture
 def portfolio_data():
     return _make_portfolio_data()
@@ -208,6 +222,35 @@ class TestBlackLitterman:
         # OptimizationConfig should raise if BL without views
         with pytest.raises(ValueError, match="views"):
             OptimizationConfig(method="black_litterman", views=None)
+
+    def test_bl_realistic_views_reverse_the_tilt(self):
+        data = _make_two_volatility_assets()
+        low_bull = PortfolioOptimizer(
+            OptimizationConfig(
+                method="black_litterman", views={"LOW": 0.15, "HIGH": 0.05}
+            )
+        ).optimize(data)
+        high_bull = PortfolioOptimizer(
+            OptimizationConfig(
+                method="black_litterman", views={"LOW": 0.05, "HIGH": 0.15}
+            )
+        ).optimize(data)
+        assert low_bull.optimal_weights["LOW"] > high_bull.optimal_weights["LOW"]
+        assert high_bull.optimal_weights["HIGH"] > low_bull.optimal_weights["HIGH"]
+
+    def test_bl_equilibrium_views_recover_market_proxy(self):
+        data = _make_two_volatility_assets()
+        seed = OptimizationConfig(
+            method="black_litterman", views={"LOW": 0.05, "HIGH": 0.05}
+        )
+        optimizer = PortfolioOptimizer(seed)
+        covariance = optimizer._calculate_covariance_matrix(data)
+        equilibrium = 2.5 * covariance @ np.array([0.5, 0.5])
+        views = dict(zip(data.tickers, equilibrium + seed.risk_free_rate, strict=True))
+        result = PortfolioOptimizer(seed.model_copy(update={"views": views})).optimize(
+            data
+        )
+        assert result.optimal_weights["LOW"] == pytest.approx(0.5, abs=0.03)
 
 
 # ---------------------------------------------------------------------------
