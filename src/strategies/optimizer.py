@@ -234,8 +234,9 @@ class PortfolioOptimizer:
         returns = self._calculate_expected_returns(data)
         cov_matrix = self._calculate_covariance_matrix(data)
         n_assets = len(data.tickers)
-        if np.all(np.diag(cov_matrix) == 0):
-            raise ValueError("Risk Parity requires non-zero asset variance")
+        asset_variances = np.diag(cov_matrix)
+        if np.any(~np.isfinite(asset_variances) | (asset_variances <= 0)):
+            raise ValueError("Risk Parity requires positive finite asset variance")
 
         # Target 1/n requires relative risk contributions, which sum to one.
         def objective(weights):

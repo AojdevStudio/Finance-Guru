@@ -130,14 +130,14 @@ class TestRiskParity:
         )
         assert np.ptp(contributions) < 0.02
 
-    def test_risk_parity_rejects_zero_variance(self):
+    def test_risk_parity_rejects_constant_asset(self):
         dates = [date(2024, 1, 1) + timedelta(days=i) for i in range(60)]
         data = PortfolioDataInput(
             tickers=["A", "B"],
             dates=dates,
-            prices={"A": [100.0] * 60, "B": [200.0] * 60},
+            prices={"A": [100.0] * 60, "B": [100.0 + i % 2 for i in range(60)]},
         )
-        with pytest.raises(ValueError, match="non-zero asset variance"):
+        with pytest.raises(ValueError, match="positive finite asset variance"):
             PortfolioOptimizer(OptimizationConfig(method="risk_parity")).optimize(data)
 
 
