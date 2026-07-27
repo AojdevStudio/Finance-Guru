@@ -71,7 +71,6 @@ literal:unifiedental==>redacted_domain
 # === MEDIUM: GitHub Identity ===
 # GitHub username linking to personal identity (102 occurrences in file content)
 # All case variants: Title, UPPER, lower
-literal:AojdevStudio==>FinanceGuruDev
 literal:AOJDevStudio==>FinanceGuruDev
 literal:aojdevstudio==>financegurudev
 

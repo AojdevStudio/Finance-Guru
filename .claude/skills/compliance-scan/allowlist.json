@@ -18,18 +18,6 @@
       "reason": "Illustrative example dates (Portfolio_Positions_Mar-06-2026.csv) in workflow documentation; not real account data",
       "approved_by": "ossie",
       "date": "2026-06-24"
-    },
-    {
-      "path": "README.md",
-      "reason": "AojdevStudio is the canonical public repo owner (star-history link); this is a public repo by design, not PII to scrub",
-      "approved_by": "ossie",
-      "date": "2026-06-24"
-    },
-    {
-      "path": "monitoring/alerts.yml",
-      "reason": "repo: AojdevStudio/Finance-Guru is the real GitHub repo, required for issue-routing config to function",
-      "approved_by": "ossie",
-      "date": "2026-06-24"
     }
   ]
 }
