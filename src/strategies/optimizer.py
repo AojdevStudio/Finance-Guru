@@ -496,7 +496,7 @@ class PortfolioOptimizer:
         # Assume equal weights as proxy for market cap weights
         market_weights = np.array([1.0 / n_assets] * n_assets)
         risk_aversion = 2.5  # Typical value
-        equilibrium_returns = risk_aversion * cov_matrix @ market_weights
+        equilibrium_excess_returns = risk_aversion * cov_matrix @ market_weights
 
         # Step 2: Incorporate investor views
         # For simplicity, we'll use absolute views (each view is independent)
@@ -506,16 +506,19 @@ class PortfolioOptimizer:
         # Build view vector Q (what are the views)
         view_tickers = list(self.config.views.keys())
         P = np.zeros((len(view_tickers), n_assets))
-        Q = np.zeros(len(view_tickers))
+        view_excess_returns = np.zeros(len(view_tickers))
 
         for i, view_ticker in enumerate(view_tickers):
             ticker_idx = data.tickers.index(view_ticker)
             P[i, ticker_idx] = 1.0
-            Q[i] = self.config.views[view_ticker]
+            view_excess_returns[i] = (
+                self.config.views[view_ticker] - self.config.risk_free_rate
+            )
 
-        # View uncertainty (omega) - proportional to variance
-        # Higher variance = less confidence in view
-        Omega = np.diag([P[i] @ cov_matrix @ P[i].T for i in range(len(view_tickers))])
+        # Scale view uncertainty with tau so views and equilibrium share units.
+        Omega = tau * np.diag(
+            [P[i] @ cov_matrix @ P[i].T for i in range(len(view_tickers))]
+        )
 
         # Step 3: Compute posterior (blended) returns
         # Posterior = [(τΣ)^-1 + P^T Ω^-1 P]^-1 [(τΣ)^-1 π + P^T Ω^-1 Q]
@@ -525,13 +528,15 @@ class PortfolioOptimizer:
         posterior_precision = tau_cov_inv + P.T @ omega_inv @ P
         posterior_cov = np.linalg.inv(posterior_precision)
 
-        posterior_returns = posterior_cov @ (
-            tau_cov_inv @ equilibrium_returns + P.T @ omega_inv @ Q
+        posterior_excess_returns = posterior_cov @ (
+            tau_cov_inv @ equilibrium_excess_returns
+            + P.T @ omega_inv @ view_excess_returns
         )
 
-        # Step 4: Optimize using posterior returns (standard mean-variance)
+        # Step 4: Maximize mean-variance utility using posterior excess returns.
         def objective(weights):
-            return weights @ cov_matrix @ weights
+            variance_penalty = 0.5 * risk_aversion * (weights @ cov_matrix @ weights)
+            return variance_penalty - weights @ posterior_excess_returns
 
         constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}]
 
@@ -552,6 +557,7 @@ class PortfolioOptimizer:
             raise ValueError(f"Black-Litterman optimization failed: {result.message}")
 
         weights = self._validate_weights(result.x, data.tickers)
+        posterior_returns = posterior_excess_returns + self.config.risk_free_rate
         return self._create_output(weights, data, posterior_returns, cov_matrix)
 
     def generate_efficient_frontier(
