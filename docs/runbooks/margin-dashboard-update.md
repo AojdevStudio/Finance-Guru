@@ -70,7 +70,7 @@ accounts and assume the adapter aggregates them.
    The CLI's `alert_status` describes the calculated portfolio-to-margin ratio:
 
    | Status | CLI condition |
-   |--------|---------------|
+   | --- | --- |
    | `no_margin` | No margin debt |
    | `green` | Ratio ≥ 4.0 |
    | `yellow` | 3.0 ≤ ratio < 4.0 |
@@ -107,7 +107,7 @@ accounts and assume the adapter aggregates them.
 ## Troubleshooting
 
 | Symptom | Fix |
-|---------|-----|
+| --- | --- |
 | Missing environment-key error | Add every named `SNAPTRADE_*` key to `.env` |
 | No enabled and routed account | Verify both `enabled: true` and a non-`unassigned` role in the routing YAML |
 | Wrong account in `source_file` | Reorder or disable routes; the adapter uses the first syncable account |

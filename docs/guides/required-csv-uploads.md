@@ -31,7 +31,7 @@ Use this guide when a workflow explicitly selects its CSV fallback.
 ## CSV Types Summary
 
 | CSV Type | When needed | Live source | Skills Using It |
-|----------|-------------|-------------|-----------------|
+| --- | --- | --- | --- |
 | Portfolio Positions | Initial reconciliation or fallback | SnapTrade `positions` | PortfolioSyncing |
 | Account Balances | Initial reconciliation or `margin_metrics --source csv` fallback | SnapTrade `balances` | PortfolioSyncing, margin-management |
 | Transaction History | Reconciliation or fallback until activity cutover completes | SnapTrade `activities` | TransactionSyncing |
@@ -273,7 +273,7 @@ _Fallback export checklist:_
 ### What Gets Synced
 
 | Data Type | Preferred Input | Skill | Target Sheet |
-|-----------|-----------------|-------|--------------|
+| --- | --- | --- | --- |
 | Positions | SnapTrade `positions` | `portfolio-sync` | DataHub |
 | Balances | SnapTrade `balances` | `portfolio-sync` | DataHub |
 | Transactions | SnapTrade `activities` | `sync transactions` | Transactions, Expense Tracker |
@@ -345,7 +345,7 @@ After each sync, verify:
 **Solution:**
 1. **DO NOT PANIC** - your data is safe
 2. Contact support (file GitHub issue)
-4. Restore from Google Sheets version history if needed
+3. Restore from Google Sheets version history if needed
 
 ---
 
@@ -371,7 +371,7 @@ After each sync, verify:
 ## Quick Reference Table
 
 | CSV Type | Status | Location | Workflow |
-|----------|--------|----------|----------|
+| --- | --- | --- | --- |
 | Positions | Verification/fallback | `notebooks/updates/` | `portfolio-sync` |
 | Balances | Verification/fallback | `notebooks/updates/` | `margin_metrics --source csv` |
 | Transactions | Reconciliation/fallback | `notebooks/transactions/` | `sync transactions` |

@@ -577,7 +577,7 @@ curl -X GET "https://finnhub.io/api/v1/quote?symbol=AAPL&token=YOUR_KEY"
 ### SnapTrade Credential or Routing Errors
 
 | Error | Action |
-|-------|--------|
+| --- | --- |
 | `Missing required SnapTrade environment keys` | Add every named key to the project-root `.env` |
 | SnapTrade API authentication error | Replace the local bundle with credentials from the connection owner |
 | `SnapTrade routing config not found` | Generate the routing file as documented in the live-sync guide |

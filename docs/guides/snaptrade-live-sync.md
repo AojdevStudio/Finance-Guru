@@ -129,7 +129,7 @@ Use `--config path/to/config.yaml` when the routing file is not at
 ### Output contracts
 
 | Command | Normalized data |
-|---------|-----------------|
+| --- | --- |
 | `positions` | `symbol`, `quantity`, `average_purchase_price`, `price`, `instrument`; options also include `occ_symbol` |
 | `balances` | `currency`, `settled_cash`, `buying_power`, `account_equity`, `gross_market_value`, `margin_debt` |
 | `activities` | `type`, `date`, `symbol`, `amount`, `quantity`, `currency`, `description`, `account` |
@@ -140,7 +140,7 @@ successful account payloads, and refusal reasons.
 ## Data-source boundaries
 
 | Data | Preferred source | CSV status |
-|------|------------------|------------|
+| --- | --- | --- |
 | Taxable positions | SnapTrade `positions` | Cutover verification and fallback |
 | Taxable balances | SnapTrade `balances` | Fallback through `margin_metrics --source csv` |
 | Transactions | SnapTrade `activities` | Retained until activity reconciliation is complete |
@@ -176,7 +176,7 @@ demand by the CLI or a skill that invokes it.
 ## Troubleshooting
 
 | Symptom | Cause and action |
-|---------|------------------|
+| --- | --- |
 | `Missing required SnapTrade environment keys` | Add every named key to the project-root `.env`, then restart the command |
 | `SnapTrade routing config not found` | Generate `config/snaptrade-accounts.yaml` with the `accounts --write-config` command |
 | Zero synced accounts | Inspect `refused`; each account needs `enabled: true` and a non-`unassigned` role |

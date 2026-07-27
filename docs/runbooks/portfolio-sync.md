@@ -85,7 +85,7 @@ skill and remain protected by the formula-protection rules.
 ## Troubleshooting
 
 | Symptom | Fix |
-|---------|-----|
+| --- | --- |
 | Missing environment-key error | Add every named `SNAPTRADE_*` key to `.env`; do not place credentials in the routing YAML |
 | Routing config not found | Run the `accounts --write-config` command in the SnapTrade guide |
 | Zero accounts synced | Inspect `refused`; set both a valid role and `enabled: true` only after reconciliation |
