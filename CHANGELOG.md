@@ -1,3 +1,5 @@
+<!-- markdownlint-configure-file {"MD024": {"siblings_only": true}} -->
+
 # Changelog
 
 All notable changes to Finance Guru™ will be documented in this file.
@@ -7,32 +9,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-07-27
+
 ### Added
-- _SimpleFIN sync app_ scaffold — indie alternative to Plaid for bank account aggregation (`apps/simplefin-sync/`)
-- _Finance Guru vision doc_ — long-form pivot/strategy artifact
-- _Cross-harness skill portability_ — 16 Finance Guru skills symlinked into `.agents/skills/` and a top-level `.pi/skills` symlink, making every skill usable in `pi-coding-agent` and any Agent-Skills-standard harness with zero rewrites. Docs: `docs/reference/cross-harness-skills.md`.
-- _Agent readiness infrastructure_ — lifted from L1 (47.3%) to L4 (89.5%) via:
-  - `.devcontainer/` for reproducible dev environments (Codespaces + local)
-  - `.github/dependabot.yml`, `labels.yml`, and `workflows/` — release-please, quality-gates (vulture, jscpd, deptry, import-linter, pyinstrument, flaky-retry), sync-labels, validate-agents-md, rollback, error-to-issue
-  - `.github/branch-protection.yml` — declarative ruleset record
-  - `src/utils/log.py` with structlog + PII scrubbing processor
-  - `src/utils/feature_flags.py` — env-driven feature flags
-  - `monitoring/alerts.yml` — declarative alert routing
-  - Root `turbo.json` + updated `package.json` with size-limit bundle tracking
-  - `docs/runbooks/` — weekly/monthly/quarterly procedures (margin, portfolio, dividend, quarterly review)
-  - `docs/reference/observability.md` and `docs/reference/cross-harness-skills.md`
-  - `PRIVACY.md` and root `CONTRIBUTING.md` pointer
-  - `codecov.yml` and `requirements.txt` generation via `uv export`
-- _Dev dependency expansion_ — structlog, python-json-logger, scrubadub, growthbook, pytest-xdist, pytest-rerunfailures, vulture, import-linter, deptry, pyinstrument, sentry-sdk, opentelemetry (api + sdk), prometheus-client, pip-audit
+
+- Deterministic buy-ticket pipeline with event triggers, smoke coverage,
+  generation guardrails, notifications, state handling, and sanitized advisory
+  fields (#75-#79).
+- SnapTrade account discovery plus live positions, balances, and paginated
+  activity sync, replacing legacy CSV reads (#81).
+- Live margin metrics derived from current account balances.
+- Canonical Finance Guru definitions glossary with automated drift detection
+  (#70).
+- Compliance scanning skill with secret and PII detection, allowlisting, and
+  pre-push integration.
+- Reproducible development and operations infrastructure: dev container,
+  quality gates, feature flags, structured logging, observability guidance,
+  monitoring rules, and recurring runbooks.
 
 ### Changed
-- _README and docs refresh_ — Desktop hero banner, accurate agent/skill counts (11 specialists, 19 skills), new Apps Workspace + Cross-Harness Skills sections, updated directory tree and version block in `docs/index.md`
-- _Issue templates_ — bug-report and feature-request now include `needs-triage` label; new `question.md` template with `docs` + `needs-triage` labels
-- _pytest config_ — addopts now runs tests in parallel (`-n auto`), retries once on failure, and prints the 10 slowest (`--durations=10`)
-- _Renamed `src/utils/logging.py` → `src/utils/log.py`_ — docs in `docs/reference/observability.md` and `PRIVACY.md` updated to match
+
+- Aligned Finance Guru agents, skills, and buy-ticket routing around the
+  canonical definitions and guarded pipeline.
+- Moved personal strategy values to environment configuration.
+- Updated core dependencies, including pandas 3, yfinance 1.3, and current
+  GitHub Actions runtimes.
+- Reworked the repository README and contributor guidance to match the
+  checked-in system (#110).
+
+### Removed
+
+- Retired the Plaid dashboard in favor of the SnapTrade integration (#81).
+- Removed legacy Beads workflow dependencies and vendored generic agent skills.
 
 ### Fixed
-- _`src/utils/*_cli.py` scripts crashing on direct invocation_ — `src/utils/logging.py` shadowed the stdlib `logging` module whenever `src/utils/` landed on `sys.path[0]` (which CPython does automatically when you run `python src/utils/foo.py`). Transitive imports of `urllib3`/`structlog`/`asyncio` then hit a partially-initialised `logging` module and raised `AttributeError: partially initialized module 'logging' has no attribute 'getLogger'`. Renamed the module to `src/utils/log.py` so it no longer collides with the stdlib name.
+
+- Correctly parse Fidelity accounting-parenthesis negatives in margin CSV
+  fallbacks (#89).
+- Prevent dividend double-counting in total-return calculations (#92).
+- Use relative risk contributions in risk-parity optimization (#91).
+- Keep Black-Litterman views unit-consistent (#99).
+- Fail closed when the ITC CLI cannot return a score (#80).
+- Prevent `src/utils/*_cli.py` direct invocation from shadowing Python's
+  standard `logging` module.
+- Allow Cursor-authored changes to trigger Claude Code Review.
+- Keep release workflow runs non-failing when the release token is absent.
+
+### Security
+
+- Hardened PII and secret scanning and removed hardcoded personal strategy
+  values from version-controlled configuration.
 
 ## [2.1.0] - 2026-04-16
 
@@ -241,10 +267,10 @@ Finance Guru™ v2.0.0 - Private AI-powered family office system built on BMAD-C
 
 ## Project Links
 
-- **Repository**: https://github.com/FinanceGuruDev/Finance-Guru
-- **Documentation**: [docs/index.md](docs/index.md)
-- **Setup Guide**: [docs/SETUP.md](docs/SETUP.md)
-- **Contributing**: [docs/contributing.md](docs/contributing.md)
+- _Repository_: [AojdevStudio/Finance-Guru](https://github.com/AojdevStudio/Finance-Guru)
+- _Documentation_: [Documentation index](docs/index.md)
+- _Setup Guide_: [Setup guide](docs/setup/SETUP.md)
+- _Contributing_: [Contribution guide](docs/CONTRIBUTING.md)
 
 ## Version History
 
@@ -257,3 +283,8 @@ Finance Guru™ v2.0.0 - Private AI-powered family office system built on BMAD-C
 **Note**: This is a private family office system. All changes are for personal use unless explicitly stated otherwise.
 
 **Educational Disclaimer**: Finance Guru™ is for educational purposes only. Not investment advice. Consult licensed professionals before making investment decisions.
+
+
+## Links
+[Unreleased]: https://github.com/AojdevStudio/Finance-Guru/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/AojdevStudio/Finance-Guru/releases/tag/v2.2.0
