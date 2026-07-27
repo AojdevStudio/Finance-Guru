@@ -111,6 +111,35 @@ class TestRiskParity:
         assert abs(sum(result.optimal_weights.values()) - 1.0) < 0.01
         assert all(w >= -0.01 for w in result.optimal_weights.values())
 
+    def test_risk_parity_equalizes_realized_contributions(self):
+        rng = np.random.RandomState(0)
+        tickers = ["LOW", "HIGH"]
+        returns = rng.normal(size=(400, 2)) * [1e-10, 4e-10]
+        prices = 100 * np.cumprod(1 + returns, axis=0)
+        data = PortfolioDataInput(
+            tickers=tickers,
+            dates=[date(2024, 1, 1) + timedelta(days=i) for i in range(len(prices))],
+            prices={ticker: prices[:, i].tolist() for i, ticker in enumerate(tickers)},
+        )
+        optimizer = PortfolioOptimizer(OptimizationConfig(method="risk_parity"))
+        result = optimizer.optimize(data)
+        weights = np.array([result.optimal_weights[ticker] for ticker in tickers])
+        covariance = optimizer._calculate_covariance_matrix(data)
+        contributions = (
+            weights * (covariance @ weights) / (weights @ covariance @ weights)
+        )
+        assert np.ptp(contributions) < 0.02
+
+    def test_risk_parity_rejects_constant_asset(self):
+        dates = [date(2024, 1, 1) + timedelta(days=i) for i in range(60)]
+        data = PortfolioDataInput(
+            tickers=["A", "B"],
+            dates=dates,
+            prices={"A": [100.0] * 60, "B": [100.0 + i % 2 for i in range(60)]},
+        )
+        with pytest.raises(ValueError, match="positive finite asset variance"):
+            PortfolioOptimizer(OptimizationConfig(method="risk_parity")).optimize(data)
+
 
 # ---------------------------------------------------------------------------
 # Min Variance optimization

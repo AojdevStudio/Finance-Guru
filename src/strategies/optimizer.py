@@ -195,14 +195,14 @@ class PortfolioOptimizer:
         Each asset contributes EQUALLY to total portfolio risk.
 
         FORMULA:
-        Risk contribution_i = w_i × (Σw)_i / σ_portfolio
+        Relative risk contribution_i = w_i × (Σw)_i / σ²_portfolio
 
         Where:
             - w_i = weight of asset i
             - (Σw)_i = marginal contribution of asset i to portfolio variance
-            - σ_portfolio = portfolio standard deviation
+            - σ²_portfolio = wᵀΣw = portfolio variance
 
-        Goal: Make all risk contributions equal
+        Goal: Make all relative risk contributions equal to 1/n
 
         EDUCATIONAL NOTE:
         Risk Parity was popularized by Bridgewater's "All Weather" portfolio.
@@ -234,12 +234,17 @@ class PortfolioOptimizer:
         returns = self._calculate_expected_returns(data)
         cov_matrix = self._calculate_covariance_matrix(data)
         n_assets = len(data.tickers)
+        asset_variances = np.diag(cov_matrix)
+        if np.any(~np.isfinite(asset_variances) | (asset_variances <= 0)):
+            raise ValueError("Risk Parity requires positive finite asset variance")
 
-        # Objective: minimize variance of risk contributions
+        # Target 1/n requires relative risk contributions, which sum to one.
         def objective(weights):
-            portfolio_vol = np.sqrt(weights @ cov_matrix @ weights)
+            portfolio_var = float(weights @ cov_matrix @ weights)
+            if portfolio_var <= 0 or not np.isfinite(portfolio_var):
+                return float("inf")
             marginal_contrib = cov_matrix @ weights
-            risk_contrib = weights * marginal_contrib / portfolio_vol
+            risk_contrib = weights * marginal_contrib / portfolio_var
 
             # Minimize sum of squared deviations from equal risk
             target_contrib = 1.0 / n_assets
