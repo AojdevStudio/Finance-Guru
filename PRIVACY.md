@@ -1,6 +1,6 @@
 # Privacy Policy — Finance Guru™
 
-_Last reviewed: 2026-04-17_
+_Last reviewed: 2026-07-31_
 
 Finance Guru is a **private, single-user family-office system**. This document describes how data is handled inside this repository and its companion apps.
 
@@ -73,7 +73,8 @@ If you need to redact something else, extend `ScrubPIIProcessor` and add a unit 
 | yfinance (Yahoo) | Default | Tickers you query | <https://policies.yahoo.com/> |
 | Finnhub | Optional | Tickers + API key | <https://finnhub.io/privacy-policy> |
 | ITC Risk Models | Optional | Tickers + API key | Per ITC agreement |
-| Google (Sheets / Drive) | Optional | Sheet contents via gdrive MCP | <https://policies.google.com/privacy> |
+| SnapTrade | Default | Brokerage positions, balances, activities (read-only) | <https://snaptrade.com/privacy> |
+| SimpleFIN | Default | Bank and card balances and transactions (read-only) | <https://beta-bridge.simplefin.org/> |
 | GitHub | When pushing | Repository contents | <https://docs.github.com/privacy> |
 
 ## Jurisdiction

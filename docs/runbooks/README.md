@@ -28,14 +28,13 @@ The weekly margin, ad-hoc portfolio sync, and monthly dividend runbooks were rem
 
 | Cadence | When |
 |---------|------|
-| Daily | — (no daily runbooks yet; add one if spending analysis becomes routine) |
-| Weekly | Margin Dashboard Update — run Monday morning before the market opens |
-| Monthly | Dividend Review — first week of the month once all dividends have settled |
+| Weekly | Margin check — run the `margin-management` skill Monday morning before the market opens |
+| Monthly | Dividend review — run the `dividend-tracking` skill in the first week, once distributions have settled |
 | Quarterly | Full review — end of Q1 / Q2 / Q3 / Q4 after earnings season |
 
 ## How to add a new runbook
 
-1. Copy [margin-dashboard-update.md](margin-dashboard-update.md) as a template
+1. Copy [quarterly-review.md](quarterly-review.md) as a template
 2. Keep the frontmatter (title, cadence, owner, last-reviewed) and the seven sections: Purpose, When to run, Prerequisites, Steps, Verification, Troubleshooting, Related skills
 3. Stay under 200 lines — link out to `docs/reference/*` for deep background
 4. Add the new row to the table above
