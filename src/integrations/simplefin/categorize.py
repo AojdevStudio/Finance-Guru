@@ -1,6 +1,34 @@
 """Categorize SimpleFIN transactions using ordered merchant patterns."""
 
+# Order matters: the first matching category wins. Transfer and Travel come
+# first so an explicit remittance is not read as a merchant, and so
+# "American Express Travel" lands in Travel rather than Credit Card Payment.
 CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
+    "Transfer": (
+        "taptap send",
+        "amex send",
+        "cashed check",
+        "zelle",
+        "venmo",
+        "cash app",
+    ),
+    "Travel": (
+        "american express travel",
+        "amex travel",
+        "delta",
+        "southwest air",
+        "united airlines",
+        "american airlines",
+        "airline",
+        "enterprise",
+        "hertz",
+        "avis",
+        "hotel",
+        "airbnb",
+        "expedia",
+        "marriott",
+        "hilton",
+    ),
     "Groceries": (
         "h-e-b",
         "heb",

@@ -81,7 +81,7 @@ def test_db_path_parses_sqlite_url() -> None:
 
 def test_categorize_matches_and_prioritizes_transfers() -> None:
     """Merchant text maps to the right category; transfers win over merchant reads."""
-    from scripts.sync_spending_db import categorize
+    from src.integrations.simplefin.categorize import categorize_expense as categorize
 
     assert categorize("H-E-B #063 Pearland TX") == "Groceries"
     assert categorize("CVS/PHARMACY # MANVEL TX") == "Health & Wellness"
