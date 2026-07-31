@@ -18,7 +18,8 @@
 
 ## Wiki impact
 
-Select exactly one:
+Manually select exactly one option below. Markdown cannot enforce mutual
+exclusivity: do not select both options or leave both unchecked.
 
 - [ ] No Wiki update is required.
 - [ ] Wiki updated — affected pages and Wiki commit: <!-- list pages and link the Wiki commit -->

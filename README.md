@@ -174,8 +174,8 @@ underway. Read [Contributing](docs/CONTRIBUTING.md) before starting work.
 
 | Document | Purpose |
 | --- | --- |
-| [GitHub Wiki](https://github.com/AojdevStudio/Finance-Guru/wiki) | Canonical reader-facing setup, usage, architecture, and privacy guide |
-| [Repository documentation](docs/index.md) | Contributor, operational, and source-reference material |
+| [GitHub Wiki](https://github.com/AojdevStudio/Finance-Guru/wiki) | Planned canonical guide; publication and rendered inspection are pending |
+| [Repository documentation](docs/index.md) | Current reader-facing setup, usage, architecture, privacy, contributor, and operational material |
 | [CLI reference](docs/reference/api.md) | Commands, arguments, and output |
 | [API keys](docs/setup/api-keys.md) | Optional provider configuration |
 | [Troubleshooting](docs/setup/TROUBLESHOOTING.md) | Common installation and runtime failures |

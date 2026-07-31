@@ -6,10 +6,12 @@ category: root
 
 # Finance Guru repository documentation
 
-The [GitHub Wiki home](https://github.com/AojdevStudio/Finance-Guru/wiki/Home)
-is the canonical reader-facing guide. This `docs/` directory remains the
-repository source and contains material maintainers need to verify, operate,
-and evolve the project without duplicating the Wiki's user-guide pages.
+Until the [GitHub Wiki home](https://github.com/AojdevStudio/Finance-Guru/wiki/Home)
+is published, authenticated, and inspected in its rendered form, this `docs/`
+directory and the README are the canonical reader-facing documentation entry
+points. This directory also contains the source material maintainers need to
+verify, operate, and evolve the project without duplicating the planned Wiki's
+user-guide pages.
 
 ## Start here
 

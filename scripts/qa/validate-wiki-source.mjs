@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readdir, readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 
 const wikiDirectory = process.argv[2];
 
@@ -69,10 +69,19 @@ for (const [file, content] of contents) {
     errors.push(`${file}: expected exactly one H1, found ${h1Count}`);
   }
 
-  const inlineLinks = prose.matchAll(/(?<!!)\[[^\]]+\]\(([^\s)]+)(?:\s+[^)]*)?\)/g);
+  const inlineLinks = prose.matchAll(/(?<!!)\[[^\]]+\]\(([^)]*)\)/g);
   for (const link of inlineLinks) {
-    if (!link[1]) {
+    const destination = link[1].trim().split(/\s+/, 1)[0];
+    if (!destination) {
       errors.push(`${file}: malformed inline Markdown link`);
+      continue;
+    }
+
+    if (/^(?:https?:\/\/|mailto:|#)/i.test(destination)) continue;
+
+    const target = relative(wikiRoot, resolve(wikiRoot, destination.split("#", 1)[0]));
+    if (!contents.has(target)) {
+      errors.push(`${file}: unresolved inline Markdown link ${destination}`);
     }
   }
 
@@ -83,10 +92,10 @@ for (const [file, content] of contents) {
     }
   }
 
-  if (/\/Users\/|BEGIN (?:RSA |OPENSSH )?PRIVATE KEY/i.test(prose)) {
+  if (/\/Users\/|BEGIN (?:RSA |OPENSSH )?PRIVATE KEY/i.test(content)) {
     errors.push(`${file}: contains a possible private path or credential`);
   }
-  for (const credential of prose.matchAll(
+  for (const credential of content.matchAll(
     /(?:api[_-]?key|token|secret)\s*[:=]\s*([^\s`]+)/gi,
   )) {
     if (!isCredentialPlaceholder(credential[1])) {

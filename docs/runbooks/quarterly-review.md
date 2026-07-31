@@ -14,7 +14,7 @@ For a current review, first refresh the configured local sources, inspect the
 source statuses, then run only the analysis commands relevant to the question:
 
 ```bash
-uv run python -m src.integrations.refresh_all --show
+uv run python -m src.integrations.refresh_all
 ```
 
 Use [the CLI reference](../reference/api.md) for supported analysis entry

@@ -10,7 +10,9 @@ Keep credentials in a local `.env` file or process environment. `.env` and the
 local SQLite database are gitignored; that is a safeguard, not permission to
 print or commit their contents.
 
-Start from the checked-in sample only when you need private configuration:
+Before running a supported data sync, create the root environment file from the
+checked-in sample. It supplies the required local database location even when
+you do not configure an external provider:
 
 ```bash
 cp .env.example .env
@@ -20,7 +22,7 @@ cp .env.example .env
 
 | Variable | Purpose | Default behavior |
 | --- | --- | --- |
-| `DATABASE_URL` | SQLite connection URL used by the supported sync modules. | When unset, the sync modules use their configured local default. |
+| `DATABASE_URL` | SQLite connection URL used by the supported sync modules. | Required; the checked-in sample sets `sqlite:///family_office.db`. |
 
 The standard local database filename is `family_office.db`. Do not point a
 public example or CI job at a real database.
@@ -54,6 +56,16 @@ SimpleFIN credentials are consumed by the Bun workspace under
 
 The claim command refuses to overwrite an existing access URL. Treat both the
 setup token and access URL as credentials and redact them from error reports.
+
+Before claiming a setup token, initialize the workspace environment file, add
+the token there, and run the workspace command:
+
+```bash
+cd apps/simplefin-sync
+cp .env.example .env
+# Set SIMPLEFIN_SETUP_TOKEN in apps/simplefin-sync/.env before continuing.
+bun run claim
+```
 
 ## Required research MCP integrations
 
