@@ -21,7 +21,7 @@ Finance Guru™ v2.0.0 is a complete rewrite of personal financial analysis infr
 Transform Claude into 8 specialized financial agents:
 
 | Agent | Role | What They Do |
-|-------|------|--------------|
+| ------- | ------ | -------------- |
 | **Cassandra Holt** | Finance Orchestrator | Coordinates analysis across specialists |
 | **Market Researcher** | Intelligence | Scans markets, identifies opportunities |
 | **Quant Analyst** | Data Science | Runs calculations, builds models |
@@ -175,7 +175,7 @@ claude
 /fin-guru:agents:onboarding-specialist
 ```
 
-**Full setup guide**: [docs/SETUP.md](docs/SETUP.md)
+**Current setup guide**: [docs/setup/SETUP.md](docs/setup/SETUP.md)
 
 ### First Analysis
 
@@ -198,7 +198,7 @@ After onboarding, activate Finance Guru:
 ### Required MCP Servers
 
 | MCP Server | Purpose |
-|------------|---------|
+| ------------ | --------- |
 | **exa** | Market research, web intelligence |
 | **bright-data** | Web scraping, data extraction |
 | **sequential-thinking** | Complex financial reasoning |
@@ -206,7 +206,7 @@ After onboarding, activate Finance Guru:
 ### Optional MCP Servers
 
 | MCP Server | Purpose |
-|------------|---------|
+| ------------ | --------- |
 | **gdrive** | Google Sheets integration for portfolio tracking |
 | **perplexity** | AI-powered search with citations |
 | **financial-datasets** | Real-time market data feeds |
@@ -216,12 +216,12 @@ After onboarding, activate Finance Guru:
 
 All market data works via yfinance by default. These APIs are optional enhancements:
 
-| API | Purpose | Free Tier |
-|-----|---------|-----------|
-| **Finnhub** | Real-time intraday prices | 60 calls/min |
-| **ITC Risk Models** | External risk intelligence | Contact ITC |
+| API                 | Purpose                       | Free Tier    |
+| ------------------- | ----------------------------- | ------------ |
+| **Finnhub**         | Real-time intraday prices     | 60 calls/min |
+| **ITC Risk Models** | External risk intelligence    | Contact ITC  |
 
-See [docs/api-keys.md](docs/api-keys.md) for acquisition instructions.
+See [docs/setup/api-keys.md](docs/setup/api-keys.md) for acquisition instructions.
 
 ---
 
@@ -265,13 +265,13 @@ Your private data in `fin-guru-private/`, `notebooks/updates/`, and `.env` stays
 ## Documentation
 
 | Document | Description |
-|----------|-------------|
-| [docs/SETUP.md](docs/SETUP.md) | Complete setup guide (start here) |
-| [docs/api-keys.md](docs/api-keys.md) | API key acquisition guide |
-| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Comprehensive troubleshooting |
-| [docs/api.md](docs/api.md) | CLI tools reference |
-| [docs/hooks.md](docs/hooks.md) | Hooks system documentation |
-| [docs/contributing.md](docs/contributing.md) | Contribution guidelines |
+| ---------- | ------------- |
+| [docs/setup/SETUP.md](docs/setup/SETUP.md) | Current setup guide |
+| [docs/setup/api-keys.md](docs/setup/api-keys.md) | API key acquisition guide |
+| [docs/setup/TROUBLESHOOTING.md](docs/setup/TROUBLESHOOTING.md) | Comprehensive troubleshooting |
+| [docs/reference/api.md](docs/reference/api.md) | CLI tools reference |
+| [docs/reference/hooks.md](docs/reference/hooks.md) | Transitional hook status |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Contribution guidelines |
 | [CHANGELOG.md](CHANGELOG.md) | Detailed change history |
 
 ---
@@ -280,7 +280,7 @@ Your private data in `fin-guru-private/`, `notebooks/updates/`, and `.env` stays
 
 - **Issues**: Report bugs at [GitHub Issues](https://github.com/AojdevStudio/Finance-Guru/issues)
 - **Documentation**: Full docs at [docs/index.md](docs/index.md)
-- **Troubleshooting**: See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- **Troubleshooting**: See [TROUBLESHOOTING.md](docs/setup/TROUBLESHOOTING.md)
 
 ---
 

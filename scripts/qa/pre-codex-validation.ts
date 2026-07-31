@@ -88,8 +88,8 @@ console.log('📄 Checking core documentation...');
 checkFile('CLAUDE.md', 'CLAUDE.md exists', true);
 checkFile('README.md', 'README.md exists', true);
 checkFile('src/CLAUDE.md', 'src/CLAUDE.md exists (developer guidance)', true);
-checkFile('docs/SETUP.md', 'Setup documentation exists', true);
-checkFile('docs/TROUBLESHOOTING.md', 'Troubleshooting guide exists', false);
+checkFile('docs/setup/SETUP.md', 'Setup documentation exists', true);
+checkFile('docs/setup/TROUBLESHOOTING.md', 'Troubleshooting guide exists', false);
 
 // 2. System Architecture
 console.log('🏗️  Checking system architecture...');
@@ -99,24 +99,19 @@ checkDirectory('src/strategies', 'src/strategies/ exists', true);
 checkDirectory('src/utils', 'src/utils/ exists', true);
 checkDirectory('src/models', 'src/models/ exists', true);
 checkDirectory('fin-guru', 'fin-guru/ directory exists', true);
-checkDirectory('notebooks', 'notebooks/ directory exists', true);
 
-// 3. Live sync configuration (replaced the CSV-mapping checks on 2026-07-31,
-// when the Google Sheets DataHub and its CSV upload docs were retired)
-console.log('🏦 Checking live sync configuration...');
-checkFile('config/snaptrade-accounts.yaml', 'SnapTrade account routing config exists', true);
+// 3. Live sync implementation and optional private configuration. A fresh
+// clone does not contain account-routing data; it is created only by the
+// owner after linking a SnapTrade account.
+console.log('🏦 Checking live sync implementation...');
+checkFile('config/snaptrade-accounts.yaml', 'Optional SnapTrade routing config exists', false);
 checkDirectory('src/integrations/snaptrade', 'SnapTrade integration exists', true);
 checkDirectory('src/integrations/simplefin', 'SimpleFIN integration exists', true);
 checkDirectory('apps/simplefin-sync', 'SimpleFIN Bun app exists', true);
 
 // 5. Tools Documentation (Task 2.1)
 console.log('🔧 Checking tools documentation...');
-checkFile('docs/tools.md', 'Tools documentation (moved from python-tools.md)', false);
-
-// 6. Notebooks Folder Structure (Task 3.1)
-console.log('📓 Checking notebooks structure...');
-checkDirectory('notebooks/updates', 'notebooks/updates/ exists', true);
-checkDirectory('notebooks/tools-needed', 'notebooks/tools-needed/ exists', false);
+checkFile('docs/reference/tools.md', 'Tools documentation exists', false);
 
 // 7. Agent System
 console.log('🤖 Checking agent system...');
@@ -148,7 +143,7 @@ checkFile('.gitignore', '.gitignore exists', true);
 // 9. Test Infrastructure
 console.log('🧪 Checking test infrastructure...');
 checkDirectory('tests', 'tests/ directory exists', false);
-checkFile('docs/MANUAL_TEST_CHECKLIST.md', 'Manual test checklist exists', true);
+checkFile('docs/reports/MANUAL_TEST_CHECKLIST.md', 'Manual test checklist exists', true);
 
 // 10. Skills and Commands
 console.log('💡 Checking skills/commands...');
