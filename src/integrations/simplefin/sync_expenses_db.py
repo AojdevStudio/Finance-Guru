@@ -133,6 +133,14 @@ def resolve_direction(text: str | None, amount: float | None) -> str:
     Fidelity's CMA feed reports inbound payroll with the same negative sign it
     uses for outflows, so sign alone books every direct deposit as spending.
     Explicit wording wins; sign remains the fallback for feeds that get it right.
+
+    Args:
+        text: Transaction description or payee text, may be None.
+        amount: Parsed transaction amount, used only when no marker matches.
+
+    Returns:
+        ``"debit"`` for outflows, ``"credit"`` for inflows. Defaults to
+        ``"credit"`` when neither a marker nor a negative amount is present.
     """
     normalized = (text or "").lower()
     if any(marker in normalized for marker in _WITHDRAWAL_MARKERS):
