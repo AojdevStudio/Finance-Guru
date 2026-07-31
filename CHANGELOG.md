@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Migrated the data-syncing skills to a DB-backed, sync-first live path so
+  portfolio, transaction, dividend, and margin reads come from
+  `family_office.db` instead of exported spreadsheets (#114).
+
+### Removed
+
+- Retired the Google Sheets DataHub across docs and skills; `family_office.db`
+  is now the system of record (#114).
+- Dropped the `gdrive` MCP setup instructions from the setup documentation, and
+  removed the residual Google references from the privacy policy and the
+  runbook index (#114).
+
+### Fixed
+
+- Restored the Travel and Transfer categories in transaction categorization,
+  and unpinned the affected test from a private script (#114).
+
 ## [2.2.0] - 2026-07-27
 
 ### Added
