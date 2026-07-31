@@ -93,8 +93,6 @@ data_files:
     - compliance-policy.md
     - margin-strategy.md
     - tax-optimization.md
-    - spreadsheet-architecture.md
-    - spreadsheet-quick-ref.md
     - analytical-framework.md
     - brainstorming-techniques.md
     - elicitation-methods.md

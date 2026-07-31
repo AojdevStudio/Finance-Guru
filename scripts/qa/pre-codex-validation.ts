@@ -17,7 +17,7 @@
  * - 1: One or more checks failed
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
+import { existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 
 interface CheckResult {
@@ -77,31 +77,6 @@ function checkFileContent(path: string, searchString: string, description: strin
   });
 }
 
-function checkDirectoryContents(path: string, expectedFiles: string[], description: string): void {
-  const fullPath = join(projectRoot, path);
-  if (!existsSync(fullPath)) {
-    results.push({
-      name: description,
-      passed: false,
-      message: `✗ Directory not found: ${path}`,
-      severity: 'critical'
-    });
-    return;
-  }
-
-  const files = readdirSync(fullPath);
-  const missingFiles = expectedFiles.filter(f => !files.includes(f));
-
-  results.push({
-    name: description,
-    passed: missingFiles.length === 0,
-    message: missingFiles.length === 0
-      ? `✓ ${path}/ contains all expected files`
-      : `✗ ${path}/ missing: ${missingFiles.join(', ')}`,
-    severity: 'warning'
-  });
-}
-
 // Validation checks
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 console.log('🔍 Pre-Codex Validation - Finance Guru™');
@@ -126,25 +101,13 @@ checkDirectory('src/models', 'src/models/ exists', true);
 checkDirectory('fin-guru', 'fin-guru/ directory exists', true);
 checkDirectory('notebooks', 'notebooks/ directory exists', true);
 
-// 3. Multi-Broker Support (Task 4.2)
-console.log('🏦 Checking multi-broker support implementation...');
-checkDirectory('docs/csv-mappings', 'CSV mappings directory exists', true);
-checkFile('docs/csv-mappings/README.md', 'CSV mappings README exists', true);
-checkFile('docs/csv-mappings/generic-mapping-template.json', 'Generic mapping template exists', true);
-
-// Check for broker-specific templates
-const brokerTemplates = ['fidelity', 'schwab', 'vanguard', 'etrade', 'robinhood'];
-brokerTemplates.forEach(broker => {
-  checkFile(
-    `docs/csv-mappings/${broker}-mapping.json`,
-    `${broker.charAt(0).toUpperCase() + broker.slice(1)} mapping template`,
-    false
-  );
-});
-
-// 4. Required CSV Uploads Documentation (Task 4.3)
-console.log('📋 Checking CSV upload documentation...');
-checkFile('docs/required-csv-uploads.md', 'CSV uploads documentation exists', true);
+// 3. Live sync configuration (replaced the CSV-mapping checks on 2026-07-31,
+// when the Google Sheets DataHub and its CSV upload docs were retired)
+console.log('🏦 Checking live sync configuration...');
+checkFile('config/snaptrade-accounts.yaml', 'SnapTrade account routing config exists', true);
+checkDirectory('src/integrations/snaptrade', 'SnapTrade integration exists', true);
+checkDirectory('src/integrations/simplefin', 'SimpleFIN integration exists', true);
+checkDirectory('apps/simplefin-sync', 'SimpleFIN Bun app exists', true);
 
 // 5. Tools Documentation (Task 2.1)
 console.log('🔧 Checking tools documentation...');

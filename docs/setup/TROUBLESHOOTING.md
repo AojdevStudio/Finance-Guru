@@ -328,7 +328,7 @@ cat .claude/settings.json | grep -A 20 mcpServers
 # Should show configured servers like:
 # "mcpServers": {
 #   "exa": { ... },
-#   "gdrive": { ... }
+#   "financial-datasets": { ... }
 # }
 ```
 
@@ -339,7 +339,7 @@ mcpl verify
 
 # Should show connection status for each server
 # ✓ exa - Connected
-# ✓ gdrive - Connected
+# ✓ financial-datasets - Connected
 # ✗ finnhub - Connection failed
 ```
 

@@ -24,8 +24,6 @@ User walkthroughs and how-to guides.
 
 | Document | Description |
 |----------|-------------|
-| [Broker CSV Export Guide](guides/broker-csv-export-guide.md) | How to export CSVs from Fidelity, Schwab, Vanguard, etc. |
-| [Required CSV Uploads](guides/required-csv-uploads.md) | Complete guide to broker CSV formats and upload workflow |
 | [Just Commands Reference](guides/just-commands.md) | Justfile recipes for agent personas and context loading |
 
 ## Reference
@@ -47,9 +45,6 @@ Step-by-step operational procedures.
 | Runbook | Cadence | Summary |
 |---------|---------|---------|
 | [Runbooks Index](runbooks/README.md) | — | Overview and cadence guide |
-| [Margin Dashboard Update](runbooks/margin-dashboard-update.md) | Weekly | Refresh coverage ratio, act on alerts |
-| [Portfolio Sync](runbooks/portfolio-sync.md) | Ad-hoc | Ingest broker CSVs → Google Sheets |
-| [Monthly Dividend Review](runbooks/monthly-dividend-review.md) | Monthly | Confirm Layer 2 income on target |
 | [Quarterly Review](runbooks/quarterly-review.md) | Quarterly | Full orchestrator + MonteCarlo + reports |
 
 ## Reports
@@ -69,7 +64,6 @@ Additional resources and data files.
 
 | Resource | Description |
 |----------|-------------|
-| [CSV Mappings](csv-mappings/) | CSV column mapping configurations |
 | [Images](images/) | Architecture diagrams and screenshots |
 | [Solutions](solutions/) | Problem-specific solution documents |
 

@@ -1,6 +1,6 @@
 ---
 name: margin-management
-description: Update Margin Dashboard with Fidelity balance data and calculate margin-living strategy metrics. Monitors margin balance, interest costs, coverage ratios, and scaling thresholds. Triggers safety alerts for large draws and provides time-based scaling recommendations. Use when updating margin, balances, coverage ratio, or margin strategy analysis.
+description: Monitor the margin-living strategy from the live DB snapshot. Refreshes the local database first, then reads margin balance, interest costs, dividend coverage ratio, and portfolio-to-margin thresholds. Triggers safety alerts for large draws and gives time-based scaling recommendations. Use when updating margin, balances, coverage ratio, or margin strategy analysis.
 ---
 
 # Margin Management
@@ -8,6 +8,16 @@ description: Update Margin Dashboard with Fidelity balance data and calculate ma
 ## Purpose
 
 Monitor and manage margin-living strategy by tracking margin balances, interest costs, dividend coverage ratios, and portfolio-to-margin safety thresholds. Provides data-driven scaling recommendations based on strategy milestones.
+
+## Step 0: Refresh (sync-first, mandatory)
+
+This skill reads margin facts from the local DB, and the DB is refreshed FIRST so it can never be stale. Follow the shared **[Sync-First + DB-Read](../_shared/SyncFirstDbRead.md)** pattern. Minimum for this skill (positions + balances into the `balances` table):
+
+```bash
+uv run python -m src.integrations.snaptrade.sync_db   # or: refresh_all
+```
+
+Completion criterion: _the `balances` table carries this run's `synced_at` before any margin number is read._
 
 ## When to Use
 
@@ -21,7 +31,7 @@ Use this skill when:
 
 ## Personal Strategy Inputs
 
-Static private assumptions come from `.env` (see `.env.example`). Current portfolio facts come from **SnapTrade (live)** by default, then `src/analysis/margin_metrics.py` derives ratios/costs at runtime. Do not hardcode personal numbers in this skill. The legacy Fidelity balances CSV is a fallback only (`--source csv`).
+Static private assumptions come from `.env` (see `.env.example`). Current portfolio facts come from the **local DB `balances` snapshot** (refreshed sync-first in Step 0), then `src/analysis/margin_metrics.py` derives ratios/costs at runtime. Do not hardcode personal numbers in this skill. Fallbacks: `--source snaptrade` reads the API live, `--source csv` reads the legacy Fidelity balances CSV.
 
 ### Required `.env` values
 
@@ -34,17 +44,17 @@ Static private assumptions come from `.env` (see `.env.example`). Current portfo
 
 ## Core Workflow
 
-### 1. Read Live Margin Balances (SnapTrade)
+### 1. Read Margin Balances (local DB snapshot)
 
-Use `uv run python -m src.analysis.margin_metrics --pretty` to load `.env`, pull live balances from the enabled+routed SnapTrade account, and emit current JSON metrics. (Add `--source csv` to fall back to the latest `Balances_for_Account_*.csv` if SnapTrade is unavailable.)
+After Step 0's refresh, run `uv run python -m src.analysis.margin_metrics --pretty`. It loads `.env`, reads the latest `balances` row from `family_office.db` (the `db` source is the default), and emits current JSON metrics. Fallbacks if needed: `--source snaptrade` (live API) or `--source csv` (latest `Balances_for_Account_*.csv`).
 
-**Source**: SnapTrade account in `config/snaptrade-accounts.yaml` (`enabled: true`, `role` set). Requires `SNAPTRADE_*` keys in `.env`.
+**Source**: the `balances` table, written by the Step 0 sync from the enabled+routed SnapTrade account in `config/snaptrade-accounts.yaml` (`enabled: true`, `role` set). Requires `SNAPTRADE_*` keys in `.env` for the refresh.
 
 **Key JSON fields the tool emits**:
-- `portfolio_value` → net account equity (SnapTrade `account_equity`) → Portfolio Value
-- `margin_balance` → derived margin debt (gross market value − net equity) → Margin Balance
+- `portfolio_value` → net account equity (`account_equity`) → Portfolio Value
+- `margin_balance` → derived margin debt (gross market value minus net equity) → Margin Balance
 - `monthly_interest_cost` → Balance × Rate ÷ 12 (the primary interest figure)
-- `margin_interest_accrued_this_month` → **null under SnapTrade** (not exposed; only present via `--source csv`)
+- `margin_interest_accrued_this_month` → **null on the DB and SnapTrade paths** (the broker does not expose accrued interest; it is only present via `--source csv`)
 
 **Calculations**:
 - **Margin Balance**: Derived margin debt = {live.margin_balance} (tracks Fidelity "Net debit" within ~0.1%)
@@ -68,81 +78,45 @@ Current: {example.margin_current} (+{derived.margin_increase}) → 🚨 ALERT - 
 - Show diff: "Margin increased by {derived.margin_increase} - Confirm this was intentional"
 - Wait for user confirmation before proceeding
 
-### 3. Add Entry to Margin Dashboard
+### 3. Report the current snapshot
 
-**Insert new row with**:
-- **Date**: Current date (use `date +"%Y-%m-%d"`)
-- **Margin Balance**: From Balances CSV (Net debit absolute value)
-- **Interest Rate**: ${FG_MARGIN_INTEREST_RATE} (or updated rate from CSV if available)
-- **Monthly Interest Cost**: Calculate (Balance × Rate ÷ 12)
-- **Notes**: Auto-generate based on elapsed time since ${FG_STRATEGY_START_DATE}
+There is nowhere to write an entry: `balances` is a current-state table keyed on
+`account_id`, so each sync overwrites the prior row and no ledger accumulates.
+Report the snapshot in the response instead.
 
-**Example Entry**:
-```
-Date: {today}
-Margin Balance: {live.margin_balance}
-Interest Rate: ${FG_MARGIN_INTEREST_RATE}
-Monthly Interest Cost: {derived.monthly_interest_cost}
-Notes: Month 1 - Building foundation, on track per strategy
-```
+- _Date_: current date (use `date +"%Y-%m-%d"`)
+- _Margin Balance_: `margin_debt` from the `balances` row
+- _Interest Rate_: ${FG_MARGIN_INTEREST_RATE}
+- _Monthly Interest Cost_: Balance × Rate ÷ 12
+- _Elapsed_: months since ${FG_STRATEGY_START_DATE}, which selects the scaling tier below
 
-**Notes Generation Logic**:
-```python
-import os
-from datetime import datetime
-
-months_elapsed = (current_date - datetime.fromisoformat(os.getenv("FG_STRATEGY_START_DATE"))).days // 30
-
-if months_elapsed < 6:
-    note = f"Month {months_elapsed} - Building foundation, on track per strategy"
-elif months_elapsed < 12:
-    note = f"Month {months_elapsed} - Approaching Month 6 milestone"
-elif months_elapsed < 18:
-    note = f"Month {months_elapsed} - Approaching break-even milestone"
-else:
-    note = f"Month {months_elapsed} - Mature strategy, monitor scaling"
-```
-
-### 4. Update Summary Section
-
-**Recalculate Dashboard Metrics**:
-
-#### Current Margin Balance
-```
-= Latest entry from Margin Dashboard
-Example: {live.margin_balance}
-```
+### 4. Derived metrics
 
 #### Monthly Interest Cost
+
 ```
-= Latest calculated cost
-Example: {derived.monthly_interest_cost}/month
+margin_debt × ${FG_MARGIN_INTEREST_RATE} ÷ 12
 ```
 
 #### Annual Interest Cost
+
 ```
-= Monthly Interest Cost × 12
-Example: {derived.monthly_interest_cost} × 12 = {derived.annual_interest_cost}/year
+monthly_interest_cost × 12
 ```
 
-#### Dividend Income (from Dividend Tracker)
-```
-= Pull from Dividend Tracker "TOTAL EXPECTED DIVIDENDS"
-Example: {live.monthly_dividend_income}/month
-```
+#### Dividend Income
+
+Sum `type = 'DIVIDEND'` rows in `transactions` for the trailing month. See the
+`dividend-tracking` skill; do not recompute its aggregation differently here.
 
 #### Coverage Ratio
+
 ```
-= Dividend Income ÷ Monthly Interest Cost
-Formula: =IFERROR(Dividends / Interest, 0)
-Example: {live.monthly_dividend_income} ÷ {derived.monthly_interest_cost} = {derived.coverage_ratio} 🟢
+monthly_dividend_income ÷ monthly_interest_cost
 ```
 
-**Fix #DIV/0! if margin balance = $0**:
-```
-Before: =B10 / B11  (causes #DIV/0! when margin = 0)
-After: =IFERROR(B10 / B11, 0)  (returns 0 when no margin)
-```
+Guard the zero case: when `margin_debt` is 0 there is no interest to cover, so
+report coverage as not-applicable rather than dividing.
 
 ### 5. Calculate Strategy Metrics
 
@@ -238,16 +212,10 @@ Action: STOP draws, inject ${FG_BUSINESS_INJECTION_CRITICAL} business income, co
 
 ## Critical Rules
 
-### WRITABLE Columns (Margin Dashboard)
-- ✅ Date (Column A)
-- ✅ Margin Balance (Column B)
-- ✅ Interest Rate (Column C)
-- ✅ Monthly Interest Cost (Column D - calculated but writeable)
-- ✅ Notes (Column E)
+### This skill is read-only
 
-### SACRED Formulas (NEVER TOUCH)
-- ❌ Coverage Ratio (unless adding IFERROR wrapper)
-- ❌ Summary section totals (unless fixing #DIV/0!)
+`family_office.db` is written by the sync CLIs alone. Never hand-edit rows to
+make a metric look right; fix the sync that wrote the bad row instead.
 
 ### Margin Strategy Philosophy
 
@@ -311,74 +279,46 @@ Coverage: {projection.month15_coverage_ratio} 🟢
 Status: Break-even achieved, dividends > interest
 ```
 
-## Google Sheets Integration
+## Data Source
 
-**Spreadsheet ID**: Read from `fin-guru/data/user-profile.yaml` → `google_sheets.portfolio_tracker.spreadsheet_id`
+Margin balance, buying power, and maintenance requirement come from the `balances` table in `family_office.db`, refreshed sync-first (Step 0). The Margin Dashboard sheet was retired 2026-07-31.
 
-**Use the mcp__gdrive__sheets tool**:
-```javascript
-// STEP 1: Read Spreadsheet ID from user profile
-// Load fin-guru/data/user-profile.yaml
-// Extract: google_sheets.portfolio_tracker.spreadsheet_id
+The `balances` columns are `account_id`, `currency`, `settled_cash`,
+`buying_power`, `account_equity`, `gross_market_value`, `margin_debt`, and
+`synced_at`. There is no `maintenance_excess` column; maintenance headroom is
+derived, not stored.
 
-// STEP 2: Read Margin Dashboard
-mcp__gdrive__sheets(
-    operation: "spreadsheets.values.get",
-    params: {
-        spreadsheetId: SPREADSHEET_ID,  // from user-profile.yaml
-        range: "Margin Dashboard!A2:E50"
-    }
-)
-
-// STEP 3: Add new margin entry
-mcp__gdrive__sheets(
-    operation: "spreadsheets.values.update",
-    params: {
-        spreadsheetId: SPREADSHEET_ID,  // from user-profile.yaml
-        range: "Margin Dashboard!A2:E2",
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-            values: [[date, balance, rate, monthly_cost, notes]]
-        }
-    }
-)
+```bash
+sqlite3 family_office.db \
+  "SELECT synced_at, account_id, settled_cash, buying_power, account_equity, margin_debt
+   FROM balances ORDER BY synced_at DESC;"
 ```
 
-## Agent Permissions
+`balances` is keyed on `account_id`, so it holds one current row per account and
+no history. Read `synced_at` to confirm the row belongs to this run's refresh
+before deriving anything from it.
 
-**Margin Specialist** (Write-enabled):
-- Can add new entries to Margin Dashboard
-- Can update margin balance, rate, cost
-- Can generate scaling alerts
-- CANNOT modify summary formulas (without formula-protection skill)
-
-**Builder** (Write-enabled):
-- Can repair broken formulas (#DIV/0!)
-- Can update summary section calculations
-- Can add new metrics
-
-**All Other Agents** (Read-only):
-- Market Researcher, Quant Analyst, Strategy Advisor
-- Can read margin data for analysis
-- Cannot write to spreadsheet
-- Must defer to Margin Specialist or Builder
+Cash-management accounts sync through SimpleFIN into `bank_transactions`, deliberately outside the brokerage `balances` table, so they never distort the portfolio-to-margin ratio.
 
 ## Reference Files
 
 For complete strategy details, see:
-- **Margin Strategy**: `fin-guru-private/fin-guru/strategies/active/margin-living-master-strategy.md`
-- **Portfolio Strategy**: `fin-guru-private/fin-guru/strategies/active/portfolio-master-strategy.md`
-- **User Profile**: `fin-guru/data/user-profile.yaml`
-- **Spreadsheet Architecture**: `fin-guru/data/spreadsheet-architecture.md`
+- _Margin Strategy_: `fin-guru-private/fin-guru/strategies/active/margin-living-master-strategy.md`
+- _Portfolio Strategy_: `fin-guru-private/fin-guru/strategies/active/portfolio-master-strategy.md`
+- _User Profile_: `fin-guru/data/user-profile.yaml`
+- _Account routing_: `config/snaptrade-accounts.yaml`
 
 ## Pre-Flight Checklist
 
-Before updating Margin Dashboard:
+Before reporting margin metrics:
 - [ ] SnapTrade account is enabled+routed in `config/snaptrade-accounts.yaml` and `SNAPTRADE_*` keys are in `.env`
-- [ ] Margin Dashboard sheet exists in Google Sheets
-- [ ] Previous margin balance known (for jump detection)
-- [ ] Dividend Tracker is up-to-date (for coverage ratio)
+- [ ] `DATABASE_URL` is set in `.env`
+- [ ] The `balances` row carries this run's `synced_at`
 - [ ] Current date retrieved via `date` command
+
+---
+
+_Educational purposes only. Not investment advice. Margin borrowing carries risk of loss exceeding your deposit, and a margin call can force liquidation at unfavourable prices. Consult licensed financial and tax professionals before acting._
 
 ## Example Scenario
 

@@ -1,6 +1,6 @@
 """Regression test pinning the Fidelity action_taxonomy contract.
 
-Loads `docs/csv-mappings/fidelity-mapping.json` and applies its `action_taxonomy`
+Loads `config/fidelity-mapping.json` and applies its `action_taxonomy`
 block to a golden 7-row CSV fixture. Asserts both row-level categorization and
 aggregate totals match `fidelity_history_golden_expected.json`.
 
@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-MAPPING_PATH = REPO_ROOT / "docs" / "csv-mappings" / "fidelity-mapping.json"
+MAPPING_PATH = REPO_ROOT / "config" / "fidelity-mapping.json"
 FIXTURE_CSV = Path(__file__).parent / "fixtures" / "fidelity_history_golden.csv"
 FIXTURE_EXPECTED = (
     Path(__file__).parent / "fixtures" / "fidelity_history_golden_expected.json"

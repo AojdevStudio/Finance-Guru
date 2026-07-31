@@ -1,212 +1,91 @@
 ---
 name: portfolio-syncing
-description: Import and sync broker CSV portfolio data to Google Sheets DataHub. Supports Fidelity (automated) with multi-broker planned. USE WHEN user mentions import broker data OR sync portfolio OR update positions OR CSV import OR portfolio-sync OR ingest positions OR bring in positions OR downloaded from Fidelity OR working with Portfolio_Positions CSVs. Handles file ingestion from Downloads, position updates, SPAXX/margin validation, safety checks, and formula protection.
+description: Refresh positions and balances from SnapTrade into family_office.db, then validate the snapshot. Reads live positions, cost basis, SPAXX, and margin from the DB (never a stale CSV). USE WHEN user mentions sync portfolio OR update positions OR portfolio-sync OR refresh positions OR downloaded from Fidelity.
 ---
 
 # PortfolioSyncing
 
-Safely import broker CSV position exports into the Google Sheets DataHub tab, ensuring data integrity, validating changes, and protecting sacred formulas.
+Refresh positions and balances from SnapTrade into `family_office.db`, then validate the snapshot against safety thresholds before anyone reasons off it.
 
-## Multi-Broker Support
+`family_office.db` is the system of record. The Google Sheets DataHub was retired 2026-07-31; there is no spreadsheet to push to and no gdrive MCP configured.
 
-**Supported Brokers**:
-- ✅ **Fidelity** - Fully automated parsing
-- ⚠️ **Schwab, Vanguard, TD Ameritrade, E*TRADE, Robinhood** - Manual mapping required (coming soon)
+## Step 0: Refresh (sync-first, mandatory)
 
-**Broker Detection**: Finance Guru automatically detects your broker from `user-profile.yaml` (set during onboarding). CSV parsing is tailored to your broker's format.
+Positions and balances come from the local DB, refreshed FIRST so it can never be stale. Follow the shared **[Sync-First + DB-Read](../_shared/SyncFirstDbRead.md)** pattern.
 
-**See**: `docs/broker-csv-export-guide.md` for detailed export instructions per broker.
-
-## Workflow Routing
-
-**When executing a workflow, output the corresponding notification:**
-
-| Workflow | Trigger | File |
-|----------|---------|------|
-| **IngestPositions** | "ingest positions", "import positions", "bring in positions", user mentions downloading from Fidelity | `workflows/IngestPositions.md` |
-| **SyncPortfolio** | "sync portfolio", "portfolio-sync", "import fidelity" | `workflows/SyncPortfolio.md` |
-
-**Typical flow**: IngestPositions (move from Downloads) -> SyncPortfolio (push to Google Sheets)
-
-**Notifications:**
-```
-Running the **IngestPositions** workflow from the **PortfolioSyncing** skill...
-```
-```
-Running the **SyncPortfolio** workflow from the **PortfolioSyncing** skill...
+```bash
+uv run python -m src.integrations.snaptrade.sync_db          # writes positions + balances
+uv run python -m src.integrations.snaptrade.sync_db --show   # read back the snapshot
 ```
 
-## Examples
+Completion criterion: _the `positions` and `balances` tables carry this run's `synced_at`._ Everything downstream reads the DB, not a CSV.
 
-**Example 1: Full flow from Downloads**
-```
-User: "ingest positions" or "bring in positions"
--> Scans ~/Downloads/ for Portfolio_Positions_*.csv and Balances_*.csv
--> Classifies regular vs dividend view by reading headers
--> Moves regular view as-is (already date-tagged)
--> Renames dividend view to Dividend_Positions_MMM-DD-YYYY.csv
--> Moves Balances file (overwrites existing)
--> Reports files moved and suggests "portfolio-sync" next
+To refresh positions, transactions, and bank expenses together:
+
+```bash
+uv run python -m src.integrations.refresh_all
 ```
 
-**Example 2: Sync (live from SnapTrade)**
-```
-User: "portfolio-sync"
--> Pulls live positions + balances via the SnapTrade CLI (no CSV read)
--> Compares with Google Sheets DataHub
--> Updates quantities, cost basis, SPAXX, margin debt
--> Reports changes and validates formulas
-```
+## Account Routing
 
-**Example 3: Update positions after trades**
-```
-User: "I just bought more JEPI, sync my portfolio"
--> Invokes SyncPortfolio workflow
--> Detects quantity change in JEPI
--> If >10% change, asks for confirmation
--> Updates DataHub with new position data
-```
-
-**Example 4: Handling duplicate downloads**
-```
-User downloads both regular and dividend views from Fidelity
--> ~/Downloads/ contains: Portfolio_Positions_REDACTED.csv
-                          Portfolio_Positions_REDACTED (1).csv
--> Reads header of each to classify
--> Regular view (has "Average Cost Basis") -> notebooks/updates/Portfolio_Positions_REDACTED.csv
--> Dividend view (has "Ex-date") -> notebooks/updates/Dividend_Positions_Mar-06-2026.csv
-```
-
-## CSV Format Reference
-
-### Fidelity Positions CSV (Regular View)
-
-**Header row** (17 columns):
-```csv
-Account Number,Account Name,Investment Type,Symbol,Description,Quantity,Last Price,Last Price Change,Current Value,Today's Gain/Loss Dollar,Today's Gain/Loss Percent,Total Gain/Loss Dollar,Total Gain/Loss Percent,Percent Of Account,Cost Basis Total,Average Cost Basis,Type
-```
-
-**Key fields for sync**: Symbol (col 4), Quantity (col 6), Average Cost Basis (col 16), Type (col 17 — "Margin" or "Cash")
-
-### Fidelity Positions CSV (Dividend View)
-
-**Header row** (19 columns):
-```csv
-Account Number,Account Name,Investment Type,Symbol,Description,Quantity,Last Price,Last Price Change,Current Value,Percent Of Account,Ex-date,Amount per share,Pay date,Dist. yield,Distribution yield as of,SEC yield,SEC yield as of,Est. annual income,Type
-```
-
-**Quick classifier**: If header contains `Ex-date` -> dividend view. If header contains `Average Cost Basis` -> regular view.
-
-### Fidelity Balances CSV
-
-Key-value format (not columnar). Extract:
-- **"Settled cash"** → SPAXX row (Column L: Current Value)
-- **"Account equity percentage"** → If 100%, margin debt = $0
-- **"Net debit"** → Actual margin balance (negative value = margin debt)
-- **"Margin interest accrued this month"** → If > $1, there IS margin debt
-
-**Cash Position Logic**:
-- Do NOT use `SPAXX` value from Positions CSV (shows only settled money market)
-- Use **"Settled cash"** from Balances CSV for the SPAXX row
-- If "Settled cash" = 0, then SPAXX = $0 (all funds are invested or in margin)
-- "Cash market value" is NOT cash — it's the value of positions in your Cash account (vs Margin account)
-
-## Critical Rules
-
-### WRITABLE Columns (from CSV)
-- ✅ Column A: Ticker
-- ✅ Column B: Quantity
-- ✅ Column G: Avg Cost Basis
-
-### SACRED Columns (NEVER TOUCH)
-- ❌ Column C: Last Price (GOOGLEFINANCE formulas)
-- ❌ Columns D-F: $ Change, % Change, Volume (formulas)
-- ❌ Columns H-M: Gains/Losses calculations (formulas)
-- ❌ Columns N-S: Ranges, dividends, layer (formulas/manual)
-
-### Update Pattern: Individual Cell Updates ONLY
-
-**Golden Rule**: **NEVER** include columns C-F in your update range. **NEVER** pass empty strings to any cell.
-
-Empty strings (`""`) in columns C-F **DELETE** the GOOGLEFINANCE and calculation formulas. Always update columns A, B, G individually:
-
-```javascript
-// ✅ RIGHT - Update ONLY writable columns, one at a time
-mcp__gdrive__sheets(operation: "updateCells", params: {
-    spreadsheetId: SPREADSHEET_ID,
-    range: "DataHub!B13:B13",  // ✅ Single column, specific row
-    values: [["72.942"]]
-})
-```
-
-```javascript
-// ❌ WRONG - Multi-column range with empty strings kills formulas
-mcp__gdrive__sheets(operation: "updateCells", params: {
-    range: "DataHub!A13:G13",
-    values: [["JEPI", "72.942", "", "", "", "", "$56.48"]]  // ❌ Empty strings delete formulas
-})
-```
-
-| Action | Correct | Wrong |
-|--------|---------|-------|
-| **Update quantity** | `range: "DataHub!B13:B13"` | `range: "DataHub!A13:G13"` with empty strings |
-| **Update cost basis** | `range: "DataHub!G13:G13"` | Including columns C-F in range |
-| **Add new ticker** | 3 separate calls (A, B, G) | Single call with empty strings in C-F |
-
-### Layer Classification for New Tickers
-
-When adding new tickers, classify into the correct portfolio layer in Column S.
-
-**Do NOT hardcode layer assignments.** Instead, read the current layer definitions from:
-- **Primary**: `fin-guru/data/spreadsheet-architecture.md` → "Pattern-Based Layer Classification" section
-- **Fallback**: Read existing Column S values from DataHub to learn current classification patterns
-
-If a new ticker doesn't clearly match any layer pattern, set to `"UNKNOWN - Manual Review Required"` and alert the user for classification.
+`config/snaptrade-accounts.yaml` declares each account's `role` and `enabled` flag. An account with no declared role refuses to sync rather than guessing. Cash-management accounts belong to SimpleFIN (`TransactionSyncing`), not here, so brokerage margin math stays clean.
 
 ## Safety Gates
 
+> ⚠️ **Capture the "before" state first, or these gates cannot fire.** `sync_db`
+> is a current-state store: it deletes each account's prior position rows and
+> overwrites its single `balances` row (which is keyed on `account_id`). No
+> history survives the refresh, so read the existing snapshot **before** running
+> Step 0 and hold it in the session to diff against. There is no
+> `position_history` table to fall back on.
+
+```bash
+# BEFORE Step 0 — capture the prior generation
+sqlite3 family_office.db \
+  "SELECT symbol, quantity, average_purchase_price FROM positions ORDER BY symbol;"
+sqlite3 family_office.db "SELECT * FROM balances;"
+```
+
 **STOP conditions** (require user confirmation):
-1. CSV has fewer tickers than sheet (possible sales)
+
+1. Fewer tickers than the previous snapshot (possible sales)
 2. Any quantity change > 10%
 3. Any cost basis change > 20%
-4. 3+ formula errors detected
-5. Margin balance jumped > $5,000 (unintentional draw)
-6. **SPAXX discrepancy > $100** (cash mismatch between sheet and CSV)
+4. Margin balance jumped > $5,000 (unintentional draw)
+5. SPAXX discrepancy > $100 against the balances row
 
-**FLAG conditions** (alert user but proceed):
-- SPAXX differs from "Settled cash" by $1-$100 (minor discrepancy)
-- Pending Activity differs from "Net debit" by >$100
+**FLAG conditions** (alert but proceed): SPAXX off by $1-$100; pending activity off by more than $100.
 
-**When STOPPED**: Show clear diff table, ask user to confirm, proceed only after explicit approval.
+**When STOPPED**: show a clear diff table, ask the user to confirm, proceed only after explicit approval.
 
-**When FLAGGED**: Show the discrepancy, proceed with update but highlight in summary.
+## Cash Position Logic
 
-## Google Sheets Integration
+- Do NOT use the `SPAXX` position value; it shows only settled money market.
+- Use **"Settled cash"** from the balances row for the SPAXX figure.
+- If settled cash is 0, SPAXX is $0 (all funds invested or in margin).
+- "Cash market value" is NOT cash; it is the value of positions held in the Cash account rather than the Margin account.
 
-**Spreadsheet ID**: Read from `fin-guru/data/user-profile.yaml` → `google_sheets.portfolio_tracker.spreadsheet_id`
+## Layer Classification for New Tickers
 
-## Agent Permissions
+Dividend funds → Layer 2, growth → Layer 1, hedges → Layer 3. If a new ticker does not clearly match a pattern, mark it `UNKNOWN - Manual Review Required` and ask the user rather than guessing.
 
-**Builder** (Write-enabled): Can update columns A, B, G; can add new rows; can apply layer classification; CANNOT modify formulas.
+## CSV Fallback
 
-**All Other Agents** (Read-only): Market Researcher, Quant Analyst, Strategy Advisor — can read all data, cannot write, must defer to Builder for updates.
+CSV import is a fallback and re-verification path only, not the primary flow. The `IngestPositions` workflow archives `Portfolio_Positions_*.csv` and `Balances_*.csv` from `~/Downloads` into `notebooks/updates/`. Use it when a live source is down or the user explicitly wants an archive.
 
-## Reference Files
-
-- **Full Architecture**: `fin-guru/data/spreadsheet-architecture.md`
-- **Quick Reference**: `fin-guru/data/spreadsheet-quick-ref.md`
-- **User Profile**: `fin-guru/data/user-profile.yaml`
-- **Formula Protection**: See the `formula-protection` skill for sacred formula rules
+Classifier for Fidelity position exports: a header containing `Ex-date` is the dividend view; a header containing `Average Cost Basis` is the regular view. The dividend view and transaction history CSVs are still consumed by `dividend-tracking` and `TransactionSyncing`.
 
 ## Pre-Flight Checklist
 
-Before syncing (SyncPortfolio) — **positions + balances now come live from SnapTrade**:
-- [ ] SnapTrade account is enabled+routed in `config/snaptrade-accounts.yaml` (`role` set, `enabled: true`)
+- [ ] SnapTrade account is enabled and routed in `config/snaptrade-accounts.yaml`
 - [ ] `SNAPTRADE_*` keys are present in `.env`
-- [ ] Google Sheets DataHub tab exists
-- [ ] No pending manual edits in sheet (user should save first)
+- [ ] `DATABASE_URL` is set in `.env`
 
-The CSV format reference above still applies to the **CSV fallback** (`--source csv` for margin, or re-verification) and to the **Dividend view** / **History** CSVs, which `dividend-tracking` and `TransactionSyncing` still consume.
+## Reference Files
+
+- **User Profile**: `fin-guru/data/user-profile.yaml`
+- **Account routing**: `config/snaptrade-accounts.yaml`
+- **Sync-first pattern**: `.claude/skills/_shared/SyncFirstDbRead.md`
 
 ---
 

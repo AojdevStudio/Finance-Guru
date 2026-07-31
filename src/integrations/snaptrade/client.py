@@ -103,8 +103,8 @@ class SnapTradeClientWrapper:
 
         Pages through SnapTrade's offset/limit activities endpoint until the
         reported total is consumed, so the result is the full history rather
-        than the first page. Google Sheets stays the dedupe source of truth;
-        this adds no local cache.
+        than the first page. This client is stateless; deduplication happens in
+        the DB layer via ``dedupe_key`` on upsert.
         """
         activities: list[dict[str, Any]] = []
         offset = 0

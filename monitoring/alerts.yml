@@ -47,14 +47,14 @@ alerts:
     severity: critical
     source: margin-management-skill
     action: notify[claude-voice, github-issues]
-    runbook: docs/runbooks/margin-dashboard-update.md
+    runbook: .claude/skills/margin-management/SKILL.md
 
   - name: layer_2_income_below_target
     description: Monthly dividend income below Layer 2 target for two months
     severity: medium
     source: dividend-tracking-skill
     action: notify[claude-voice]
-    runbook: docs/runbooks/monthly-dividend-review.md
+    runbook: .claude/skills/dividend-tracking/SKILL.md
 
   - name: vulnerability_high_severity
     description: pip-audit or Dependabot found a high-severity vulnerability

@@ -89,7 +89,7 @@
     <step n="1" name="Identify Scope">
       Determine which portfolio positions have ITC coverage.
       Use: uv run python src/analysis/itc_risk_cli.py --list-supported
-      Cross-reference with current holdings from DataHub.
+      Cross-reference with current holdings from the positions table in family_office.db.
     </step>
 
     <step n="2" name="Retrieve Risk Scores">
