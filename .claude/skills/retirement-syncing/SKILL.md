@@ -170,7 +170,8 @@ Rows 46-62 are reserved for retirement holdings.
 
 ---
 
-**Skill Type**: Domain (workflow guidance)
-**Enforcement**: SUGGEST
-**Priority**: Medium
-**Line Count**: < 200
+_Educational purposes only. Not investment advice. Retirement holdings reported here are parsed from broker CSV exports and are only as current as the export; verify against your plan provider before acting. Consult licensed financial and tax professionals._
+
+_Skill Type_: Domain (workflow guidance)
+_Enforcement_: SUGGEST
+_Priority_: Medium

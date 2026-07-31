@@ -32,7 +32,19 @@ uv run python -m src.integrations.refresh_all
 
 ## Safety Gates
 
-Compare this run's snapshot against the prior `synced_at` generation.
+> ⚠️ **Capture the "before" state first, or these gates cannot fire.** `sync_db`
+> is a current-state store: it deletes each account's prior position rows and
+> overwrites its single `balances` row (which is keyed on `account_id`). No
+> history survives the refresh, so read the existing snapshot **before** running
+> Step 0 and hold it in the session to diff against. There is no
+> `position_history` table to fall back on.
+
+```bash
+# BEFORE Step 0 — capture the prior generation
+sqlite3 family_office.db \
+  "SELECT symbol, quantity, average_purchase_price FROM positions ORDER BY symbol;"
+sqlite3 family_office.db "SELECT * FROM balances;"
+```
 
 **STOP conditions** (require user confirmation):
 

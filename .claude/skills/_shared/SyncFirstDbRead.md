@@ -11,12 +11,12 @@ The local SQLite database `family_office.db` (`DATABASE_URL=sqlite:///family_off
 is the store of record for financial facts. Stale snapshots are the failure this
 pattern eliminates (the retired CSVs were routinely 3+ weeks old). So:
 
-1. **Step 0: Refresh (mandatory, every run).** Trigger a fresh sync into the DB
+1. _Step 0: Refresh (mandatory, every run)._ Trigger a fresh sync into the DB
    BEFORE reading anything.
-2. **Then read from the DB.** All facts come from the tables below, never from a
+2. _Then read from the DB._ All facts come from the tables below, never from a
    downloaded CSV on the primary path.
 
-**Completion criterion (checkable):** _"DB refreshed this run before any read."_
+_Completion criterion (checkable):_ _"DB refreshed this run before any read."_
 If a skill reports numbers without having refreshed the DB in the same run, the
 run is not complete.
 

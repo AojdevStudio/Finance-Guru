@@ -25,9 +25,9 @@ Finance Guru is a **private, single-user family-office system**. This document d
 
 ## What leaves your machine
 
-1. **Broker and bank reads** — SnapTrade and SimpleFIN are queried outbound to pull your own accounts. Both are read-only; nothing is written back to a broker.
-2. **Market-data queries** — yfinance, Finnhub, and ITC Risk Models APIs see which tickers you query, but not your position sizes.
-3. **Claude Code session** — the LLM provider (Anthropic) sees conversation content including any data you paste into the session. Treat Claude Code like a privileged assistant — don't paste data you wouldn't email your accountant.
+1. _Broker and bank reads_ — SnapTrade and SimpleFIN are queried outbound to pull your own accounts. Both are read-only; nothing is written back to a broker.
+2. _Market-data queries_ — yfinance, Finnhub, and ITC Risk Models APIs see which tickers you query, but not your position sizes.
+3. _Claude Code session_ — the LLM provider (Anthropic) sees conversation content including any data you paste into the session. Treat Claude Code like a privileged assistant — don't paste data you wouldn't email your accountant.
 
 > The Google Sheets DataHub was retired 2026-07-31. Portfolio data no longer leaves the machine for Google Drive, and no `gdrive` MCP server is configured.
 

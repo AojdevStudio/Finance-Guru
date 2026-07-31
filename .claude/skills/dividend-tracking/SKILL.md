@@ -74,6 +74,8 @@ Dividend income against margin interest is the coverage ratio that drives the sc
 
 ---
 
-**Skill Type**: Domain (workflow guidance)
-**Enforcement**: SUGGEST
-**Priority**: High
+_Educational purposes only. Not investment advice. Dividend distributions are not guaranteed, past yield does not predict future income, and options-based income funds carry risk of principal loss. Consult licensed financial and tax professionals before acting._
+
+_Skill Type_: Domain (workflow guidance)
+_Enforcement_: SUGGEST
+_Priority_: High

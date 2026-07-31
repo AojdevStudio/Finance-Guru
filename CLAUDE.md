@@ -18,7 +18,7 @@ Risk Metrics: `src/analysis/risk_metrics_cli.py`;Momentum: `src/utils/momentum_c
 All tools support `--help` for full flag reference. All follow 3-layer pattern: Pydantic→Calculator→CLI.
 
 [System of Record]
-`family_office.db` (SQLite, gitignored) is the single source of truth for positions, balances, transactions, and bank_transactions. Data flows in from SnapTrade (brokerage) and SimpleFIN (bank/card). **The Google Sheets DataHub is retired — do not write to Sheets, do not reference a spreadsheet ID, and do not reintroduce a gdrive MCP dependency.** Refresh with `uv run python -m src.integrations.refresh_all`.
+`family_office.db` (SQLite, gitignored) is the single source of truth for positions, balances, transactions, and bank_transactions. Data flows in from SnapTrade (brokerage) and SimpleFIN (bank/card). _The Google Sheets DataHub is retired: do not write to Sheets, do not reference a spreadsheet ID, and do not reintroduce a gdrive MCP dependency._ Refresh with `uv run python -m src.integrations.refresh_all`.
 
 [Output & Validation]
 Output dirs: `fin-guru-private/fin-guru/analysis/` (analysis), `fin-guru-private/fin-guru/tickets/` (buy tickets);Format: Markdown+YAML frontmatter with date stamp,disclaimer,citations;Naming: `{topic}-{YYYY-MM-DD}.md` (analysis), `buy-ticket-{YYYY-MM-DD}-{descriptor}.md` (tickets), `{strategy}-master-strategy.md` (strategies)
