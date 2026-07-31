@@ -1,6 +1,13 @@
 ---
-status: accepted
+status: superseded
+superseded-on: 2026-07-31
 ---
+
+> **SUPERSEDED 2026-07-31.** Two decisions below are no longer true. The Google
+> Sheets DataHub is retired: there is no gdrive MCP server configured in this repo
+> and no code writes to a spreadsheet. `family_office.db` (SQLite) is now the single
+> source of truth, so "there is no local state store" is also false. The ADR is kept
+> because it records why the bridge was built; do not follow its Sheets guidance.
 
 # Add SnapTrade live sync to the legacy CSV/Sheets Finance Guru
 

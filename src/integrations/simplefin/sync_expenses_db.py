@@ -123,6 +123,25 @@ def _iso_date(posted_ts: Any) -> str | None:
     return datetime.fromtimestamp(timestamp, UTC).date().isoformat()
 
 
+_WITHDRAWAL_MARKERS = ("direct debit",)
+_DEPOSIT_MARKERS = ("direct deposit", "direct dep")
+
+
+def resolve_direction(text: str | None, amount: float | None) -> str:
+    """Resolve credit/debit, preferring explicit feed wording over amount sign.
+
+    Fidelity's CMA feed reports inbound payroll with the same negative sign it
+    uses for outflows, so sign alone books every direct deposit as spending.
+    Explicit wording wins; sign remains the fallback for feeds that get it right.
+    """
+    normalized = (text or "").lower()
+    if any(marker in normalized for marker in _WITHDRAWAL_MARKERS):
+        return "debit"
+    if any(marker in normalized for marker in _DEPOSIT_MARKERS):
+        return "credit"
+    return "debit" if amount is not None and amount < 0 else "credit"
+
+
 def normalize_transaction(
     account: dict[str, Any], txn: dict[str, Any], now: str
 ) -> tuple[Any, ...]:
@@ -142,6 +161,11 @@ def normalize_transaction(
     except (TypeError, ValueError):
         posted_ts = None
     amount = _to_float(txn.get("amount"))
+    text = txn.get("description") or txn.get("payee")
+    direction = resolve_direction(text, amount)
+    # Keep sign consistent with direction so SUM(amount) reflects real cash flow.
+    if amount is not None:
+        amount = abs(amount) if direction == "credit" else -abs(amount)
     return (
         account["id"],
         account.get("name"),
@@ -152,8 +176,8 @@ def normalize_transaction(
         txn.get("payee"),
         txn.get("description"),
         amount,
-        "debit" if amount is not None and amount < 0 else "credit",
-        categorize_expense(txn.get("description") or txn.get("payee"), amount),
+        direction,
+        categorize_expense(text, amount),
         now,
     )
 

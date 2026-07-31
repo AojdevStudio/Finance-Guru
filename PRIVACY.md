@@ -8,25 +8,28 @@ Finance Guru is a **private, single-user family-office system**. This document d
 
 - All financial data stays on the owner's machine
 - No telemetry, no remote analytics, no third-party data sharing
-- Nothing personally identifying is committed to git — enforced by `.gitignore` and `formula-protection` skill
-- When data _does_ leave the laptop (Google Sheets DataHub, Fidelity APIs, ITC Risk Models), it goes directly to the owner's own accounts — no intermediary
+- Nothing personally identifying is committed to git — enforced by `.gitignore` and the `compliance-scan` skill
+- When data _does_ leave the laptop (SnapTrade, SimpleFIN, Fidelity APIs, ITC Risk Models), it goes directly to the owner's own accounts — no intermediary
 
 ## What data Finance Guru handles
 
 | Category | Source | Storage | Exposure |
 |----------|--------|---------|----------|
-| Portfolio positions | Fidelity CSV export | `notebooks/updates/` (gitignored) | Local only + owner's Google Sheet |
-| Account balances | Fidelity CSV export | `notebooks/updates/` (gitignored) | Local only + owner's Google Sheet |
-| Transaction history | Fidelity CSV export | `notebooks/updates/` (gitignored) | Local only + owner's Google Sheet |
-| Dividend events | Fidelity CSV export | `notebooks/updates/` (gitignored) | Local only + owner's Google Sheet |
+| Portfolio positions | SnapTrade (CSV fallback) | `family_office.db` (gitignored) | Local only |
+| Account balances | SnapTrade (CSV fallback) | `family_office.db` (gitignored) | Local only |
+| Transaction history | SnapTrade | `family_office.db` (gitignored) | Local only |
+| Bank / card spending | SimpleFIN | `family_office.db` (gitignored) | Local only |
+| Dividend events | SnapTrade activities | `family_office.db` (gitignored) | Local only |
 | User profile (risk tolerance, goals) | Interactive onboarding | `fin-guru/data/user-profile.yaml` (gitignored) | Local only |
 | Market data | yfinance / Finnhub / ITC | In-memory during analysis | Per-provider terms |
 
 ## What leaves your machine
 
-1. **Google Sheets writes** — when you invoke `PortfolioSyncing`, `dividend-tracking`, `TransactionSyncing`, or `retirement-syncing` skills, data flows _from your laptop to your Google Drive_ via the `gdrive` MCP server. It's your own Sheet in your own Google account.
+1. **Broker and bank reads** — SnapTrade and SimpleFIN are queried outbound to pull your own accounts. Both are read-only; nothing is written back to a broker.
 2. **Market-data queries** — yfinance, Finnhub, and ITC Risk Models APIs see which tickers you query, but not your position sizes.
 3. **Claude Code session** — the LLM provider (Anthropic) sees conversation content including any data you paste into the session. Treat Claude Code like a privileged assistant — don't paste data you wouldn't email your accountant.
+
+> The Google Sheets DataHub was retired 2026-07-31. Portfolio data no longer leaves the machine for Google Drive, and no `gdrive` MCP server is configured.
 
 ## What never leaves your machine
 

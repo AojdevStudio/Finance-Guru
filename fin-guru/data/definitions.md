@@ -32,7 +32,7 @@ _Single source of truth for every named formula, threshold, classifier, and rule
 16. [Pre-flight gates](#16-pre-flight-gates)
 17. [Decision triggers (green/yellow/red)](#17-decision-triggers-greenyellowred)
 18. [Monte Carlo simulation](#18-monte-carlo-simulation)
-19. [Spreadsheet safety](#19-spreadsheet-safety)
+19. [Data store safety](#19-data-store-safety)
 20. [Tax rules](#20-tax-rules)
 21. [Milestones & 28-month roadmap](#21-milestones--28-month-roadmap)
 22. [Compliance & disclosure](#22-compliance--disclosure)
@@ -789,47 +789,32 @@ The Monte Carlo run emits a headline table of the form below. The numbers shown 
 
 ---
 
-## 19. Spreadsheet safety
+## 19. Data store safety
 
-`.claude/skills/formula-protection/SKILL.md`, `PortfolioSyncing/SKILL.md`, `dividend-tracking/SKILL.md`.
+`.claude/skills/PortfolioSyncing/SKILL.md`, `TransactionSyncing/SKILL.md`, `dividend-tracking/SKILL.md`.
 
-### 19.1 Sacred (never modify)
+The Google Sheets DataHub and its spreadsheet-formula guardrails were retired 2026-07-31. `family_office.db` is the system of record.
 
-| Sheet | Cell pattern | Why |
+### 19.1 Tables
+
+| Table | Written by | Key |
 |---|---|---|
-| DataHub | Col C `=GOOGLEFINANCE(A2,"price")` | Live price |
-| DataHub | Cols D–E (`=C2−G2`, `=D2/G2`) | $/% change |
-| DataHub | Cols H–M | Gains/losses |
-| Dividend Tracker | Col F `=D2 · E2` | Shares × DPS |
-| Dividend Tracker | Total row `=SUM(F2:F50)` | Expected dividends |
-| Margin Dashboard | `=IFERROR(B10/B11, 0)` | Coverage ratio |
+| `positions` / `balances` | `snaptrade.sync_db` | account + symbol, per `synced_at` |
+| `transactions` | `snaptrade.sync_transactions_db` | `dedupe_key` |
+| `bank_transactions` | `simplefin.sync_expenses_db` | `(account_id, txn_id)` |
 
-### 19.2 Allowed surgical edits
+### 19.2 Invariants
 
-- Wrap a broken formula in `IFERROR(...)` to mask `#N/A`, `#DIV/0!`, `#REF!`.
-- Repair sheet renames (`Sheet1!A1` → `'DataHub'!A1`).
-- Expand range when new rows are added (`SUM(F2:F50)` → `SUM(F2:F100)`).
-- Fix obvious typos (`B100` referring to a row that doesn't exist).
+- Every sync is an idempotent upsert; re-running is always safe.
+- An account with no declared `role` in `config/snaptrade-accounts.yaml` refuses to sync rather than guessing.
+- `bank_transactions.amount` is signed to match `direction`: credits positive, debits negative. Direction comes from `resolve_direction()`, which prefers explicit feed wording over sign.
+- Cash-management accounts sync through SimpleFIN only, so they never enter the brokerage `balances` table or distort the portfolio-to-margin ratio.
 
 ### 19.3 Forbidden
 
-- Changing formula logic (e.g., `SUM` → `AVERAGE`).
-- Replacing a formula with a static value.
-- Deleting any formula.
-- Modifying `GOOGLEFINANCE` parameters.
-
-### 19.4 Writable columns by sheet
-
-| Sheet | Writable | Locked |
-|---|---|---|
-| DataHub | A (Ticker), B (Quantity), G (Avg Cost) — from CSV | C–F (live price/change), H–M (gains), N–S (mixed) |
-| Margin Dashboard | A–E (Date, Balance, Rate, Cost, Notes) | Coverage ratio, summary totals |
-| Dividend Tracker | A–D rows 2–43 (Input area, max 42 records) | Row 1 header, rows 44+, cols G–U (historical log) |
-| Retirement section (rows 46–62) | B (Quantity) only | A (Ticker), C–S (formulas) |
-
-### 19.5 Apps Script integration (Dividend Tracker)
-
-After writing input rows, click the "Add Dividend" button to trigger processing. Preferred path: `/InterceptBrowser` (authenticated session bypasses Google bot detection). Fallback: Apps Script macro `addDividendFast` directly. Last resort: ask user to click manually.
+- Hand-editing `family_office.db` instead of fixing the sync that wrote the bad row.
+- Reintroducing a Google Sheets or `gdrive` MCP write path.
+- Reasoning off a snapshot without confirming this run's `synced_at`.
 
 ---
 
@@ -1009,7 +994,7 @@ Where to look for canonical authority on each topic. The first row of each clust
 - Compliance policy → `compliance-policy.md`
 - Analytical framework → `analytical-framework.md`
 - Hedging strategies → `hedging-strategies.md`, `options-insurance-framework.md`
-- Spreadsheet contracts → `spreadsheet-architecture.md`, `spreadsheet-quick-ref.md`
+- Account routing → `config/snaptrade-accounts.yaml`
 - User profile (deployment & milestones) → `user-profile.yaml`
 - System context → `system-context.md`
 
@@ -1022,7 +1007,7 @@ Where to look for canonical authority on each topic. The first row of each clust
 - Portfolio CSV sync → `PortfolioSyncing/SKILL.md`
 - Transaction sync + categorization → `TransactionSyncing/SKILL.md` + `CategoryRules.md`
 - Retirement aggregation → `retirement-syncing/SKILL.md`
-- Formula protection → `formula-protection/SKILL.md`
+- Expense categorization → `TransactionSyncing/CategoryRules.md`
 - Reports → `FinanceReport/SKILL.md`
 
 ### Private strategies (`fin-guru-private/fin-guru/strategies/`)

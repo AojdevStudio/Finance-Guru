@@ -1,11 +1,13 @@
 ---
 name: transaction-syncing
-description: Refresh the local DB, then push investment activities and card/bank expenses to Google Sheets. Investment activities come from the DB transactions table (SnapTrade); debit-card and bank spending comes from the DB bank_transactions table (SimpleFIN), auto-categorized. Sync-first so nothing is stale. USE WHEN user mentions "sync transactions", "transaction history", "expense tracker", "categorize spending", OR "update expenses".
+description: Refresh investment activities and card/bank expenses into family_office.db, then review spending. Investment activities come from the DB transactions table (SnapTrade); debit-card and bank spending comes from the DB bank_transactions table (SimpleFIN), auto-categorized. Sync-first so nothing is stale. USE WHEN user mentions "sync transactions", "transaction history", "expense tracker", "categorize spending", OR "update expenses".
 ---
 
 # TransactionSyncing
 
-Push financial activity into Google Sheets from the local DB (refreshed sync-first): the master Transactions tab from investment activities (`transactions` table), plus the Expense Tracker from card/bank spending (`bank_transactions` table), auto-categorized for Budget Planner integration.
+Refresh financial activity into `family_office.db`: investment activities (`transactions` table) and card/bank spending (`bank_transactions` table), auto-categorized for budget review.
+
+`family_office.db` is the system of record. The Google Sheets export was retired 2026-07-31.
 
 ## Step 0: Refresh (sync-first, mandatory)
 
@@ -18,22 +20,19 @@ uv run python -m src.integrations.simplefin.sync_expenses_db --months 3   # card
 uv run python -m src.integrations.refresh_all --months 3
 ```
 
-Completion criterion: _the `transactions` and `bank_transactions` tables carry this run's `synced_at` before any Sheet write._
+Completion criterion: _the `transactions` and `bank_transactions` tables carry this run's `synced_at`._
+
+## Direction and sign
+
+`bank_transactions.direction` is resolved by `resolve_direction()` in `src/integrations/simplefin/sync_expenses_db.py`. Explicit feed wording wins over amount sign, because Fidelity's CMA reports inbound payroll with the same negative sign it uses for outflows. `amount` is signed to match direction, so `SUM(amount)` is real cash flow: credits positive, debits negative.
 
 ## Workflow Routing
 
-**When executing this workflow, output this notification:**
-
-```
-Running the **SyncTransactions** workflow from the **TransactionSyncing** skill...
-```
-
 | Workflow | Trigger | File |
 |----------|---------|------|
-| **IngestTransactions** | "ingest transactions", "import history", "bring in transactions", user points to Downloads CSV | `workflows/IngestTransactions.md` |
-| **SyncTransactions** | "sync transactions", "push to sheets", "transaction sync" | `workflows/SyncTransactions.md` |
+| **IngestTransactions** | "ingest transactions", "import history", user points to a Downloads CSV | `workflows/IngestTransactions.md` |
 
-**Typical flow**: IngestTransactions (local archive) -> SyncTransactions (Google Sheets)
+CSV ingest is an archive and fallback path. The primary flow is the Step 0 refresh above.
 
 ## Examples
 
@@ -78,25 +77,21 @@ SnapTrade activities            SimpleFIN dump (bun run src/dump.ts)
 | transactions     |           | bank_transactions  |  <- categorized, upserted
 | table (DB)       |           | table (DB)         |
 +------------------+           +--------------------+
-        |                                | direction == "debit"
-        v                                v
-+------------------+           +--------------------+
-| Transactions Tab |           | Expense Tracker    |  <- Budget Planner integration
-| (Google Sheets)  |           | (Google Sheets)    |
-+------------------+           +--------------------+
 ```
+
+`family_office.db` is the terminus. Query the tables directly for review; there is no downstream export.
 
 ### Transaction Types Handled
 
-| Fidelity Action | Destination | Category |
-|-----------------|-------------|----------|
-| DIVIDEND RECEIVED | Transactions only | DIVIDEND |
-| REINVESTMENT | Transactions only | REINVESTMENT |
-| DEBIT CARD PURCHASE | Transactions + Expense Tracker | Auto-categorized |
-| MARGIN INTEREST | Transactions only | MARGIN_INTEREST |
-| DIRECT DEPOSIT | Transactions only | INCOME |
-| LONG-TERM CAP GAIN | Transactions only | CAP_GAIN |
-| JOURNALED | Transactions only | INTERNAL_TRANSFER |
+| Fidelity Action | Table | Category |
+|-----------------|-------|----------|
+| DIVIDEND RECEIVED | transactions | DIVIDEND |
+| REINVESTMENT | transactions | REINVESTMENT |
+| DEBIT CARD PURCHASE | bank_transactions | Auto-categorized |
+| MARGIN INTEREST | transactions | MARGIN_INTEREST |
+| DIRECT DEPOSIT | bank_transactions (credit) | INCOME |
+| LONG-TERM CAP GAIN | transactions | CAP_GAIN |
+| JOURNALED | transactions | INTERNAL_TRANSFER |
 
 ### Smart Categorization
 
@@ -145,11 +140,9 @@ dump, categorizes each row via the executable rules in
 `(account_id, txn_id)`. Route `direction == "debit"` rows to the Expense Tracker
 using the `category` column.
 
-**Dedupe:** Google Sheets stays the single source of truth for what has been
-posted. For Half A detect duplicates by `date` + `type` + `amount`; for Half B by
-`date` + `description` + `amount`. Add only new rows. The DB layer is already
-idempotent (activities via `dedupe_key`, expenses via the upsert key), so
-re-running is safe.
+**Dedupe:** the DB layer is idempotent (activities via `dedupe_key`, expenses via
+the `(account_id, txn_id)` upsert key), so re-running a sync is always safe and
+needs no external ledger to compare against.
 
 **Fallback:** the Fidelity History CSV path below remains a manual reconciliation
 fallback only; it is no longer the primary path.
@@ -167,59 +160,20 @@ Commission ($), Fees ($), Accrued Interest ($), Amount ($),
 Cash Balance ($), Settlement Date
 ```
 
-### 2. Create/Update Transactions Tab
+### 2. Reconcile against the DB
 
-**Google Sheets Structure**:
+Compare CSV rows against the `transactions` table to spot anything the live sync
+missed. Match on Date + Action + Amount. This is a reconciliation check, not an
+import path: the live sync owns the data.
 
-| Column | Header | Source |
-|--------|--------|--------|
-| A | Date | Run Date |
-| B | Action | Action (cleaned) |
-| C | Symbol | Symbol |
-| D | Description | Description |
-| E | Type | Type (Cash/Margin) |
-| F | Amount | Amount ($) |
-| G | Category | Auto-assigned |
-| H | Balance | Cash Balance ($) |
-| I | Settlement | Settlement Date |
-
-### 3. Deduplicate
-
-**Match criteria**: Date + Action + Amount
-
-```
-For each CSV row:
-  key = f"{run_date}|{action}|{amount}"
-  if key exists in sheet:
-    SKIP (already imported)
-  else:
-    ADD to Transactions tab
-```
-
-### 4. Route Expenses to Expense Tracker
-
-**Filter**: Action contains "DEBIT CARD PURCHASE"
-
-**Expense Tracker Format**:
-| Date | Description | Category | Amount | Month |
-|------|-------------|----------|--------|-------|
-
-**Category Assignment**: See `CategoryRules.md`
-
-### 5. Generate Summary
+### 3. Generate Summary
 
 ```
 SYNC SUMMARY - [Date]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-TRANSACTIONS TAB:
-  New entries: 45
-  Skipped (duplicates): 12
-
-EXPENSE TRACKER:
-  Expenses routed: 18
-  Auto-categorized: 15
-  Needs review: 3
+transactions:       45 inserted, 12 updated
+bank_transactions:  18 inserted, 3 uncategorized
 
 BY TYPE:
   Dividends: $342.50
@@ -229,69 +183,20 @@ BY TYPE:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-## Google Sheets Integration
-
-**Spreadsheet ID**: Read from `fin-guru/data/user-profile.yaml` -> `google_sheets.portfolio_tracker.spreadsheet_id`
-
-### Creating Transactions Tab (if needed)
-
-```javascript
-// Check if Transactions tab exists
-mcp__gdrive__sheets(operation: "listSheets", params: {
-    spreadsheetId: SPREADSHEET_ID
-})
-
-// Create if missing
-mcp__gdrive__sheets(operation: "createSheet", params: {
-    spreadsheetId: SPREADSHEET_ID,
-    title: "Transactions"
-})
-
-// Add headers
-mcp__gdrive__sheets(operation: "updateCells", params: {
-    spreadsheetId: SPREADSHEET_ID,
-    range: "Transactions!A1:I1",
-    values: [["Date", "Action", "Symbol", "Description", "Type", "Amount", "Category", "Balance", "Settlement"]]
-})
-```
-
-### Adding to Expense Tracker
-
-```javascript
-// Append expense row
-mcp__gdrive__sheets(operation: "appendRows", params: {
-    spreadsheetId: SPREADSHEET_ID,
-    sheetName: "Expense Tracker",
-    values: [[date, description, category, amount, month]]
-})
-```
-
-## Critical Rules
-
-### WRITABLE Destinations
-- Transactions tab: All columns (new tab, we control format)
-- Expense Tracker: Append new rows only (preserve existing)
-
-### NEVER MODIFY
-- Budget Planner formulas
-- Existing Expense Tracker entries
-
-### Deduplication Key
-- Transactions tab: `Date|Action|Amount`
-- Expense Tracker: `Date|Description|Amount`
+Uncategorized rows are the follow-up: add the pattern to
+`src/integrations/simplefin/categorize.py` and mirror it in `CategoryRules.md`.
 
 ## Reference Files
 
 - **CategoryRules.md**: Pattern matching rules for expense categorization
-- **fin-guru/data/user-profile.yaml**: Spreadsheet ID
-- **scripts/google-sheets/portfolio-optimizer/**: Apps Script reference
+- **src/integrations/simplefin/categorize.py**: executable source of truth for categories
+- **src/integrations/simplefin/sync_expenses_db.py**: direction resolution and upsert
 
 ## Pre-Flight Checklist
 
 Before syncing transactions:
-- [ ] Transaction History CSV exists in `notebooks/transactions/`
-- [ ] CSV is from Fidelity (not other broker)
-- [ ] Expense Tracker tab exists in Google Sheets
+- [ ] `DATABASE_URL` and `SIMPLEFIN_ACCESS_URL` are set in `.env`
+- [ ] SnapTrade account is enabled and routed in `config/snaptrade-accounts.yaml`
 - [ ] Current date retrieved via `date` command
 
 ---

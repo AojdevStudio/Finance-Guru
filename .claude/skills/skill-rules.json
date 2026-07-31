@@ -6,7 +6,7 @@
             "type": "domain",
             "enforcement": "block",
             "priority": "critical",
-            "description": "Import and sync Fidelity CSV portfolio data to Google Sheets DataHub. USE WHEN user mentions import fidelity OR sync portfolio OR update positions OR CSV import OR portfolio-sync. Handles position updates, SPAXX/margin validation, safety checks, and formula protection.",
+            "description": "Refresh SnapTrade positions and balances into family_office.db, then validate the snapshot. USE WHEN user mentions sync portfolio OR update positions OR refresh positions OR portfolio-sync. Handles position updates, SPAXX/margin validation, and safety checks.",
             "promptTriggers": {
                 "keywords": [
                     "import fidelity",
@@ -107,45 +107,11 @@
                 ]
             }
         },
-        "formula-protection": {
-            "type": "guardrail",
-            "enforcement": "block",
-            "priority": "critical",
-            "description": "Prevent accidental modification of sacred spreadsheet formulas. Blocks edits to GOOGLEFINANCE, calculated columns. Allows only IFERROR wrappers and safe repairs.",
-            "promptTriggers": {
-                "keywords": [
-                    "update formula",
-                    "modify formula",
-                    "change formula",
-                    "fix formula",
-                    "edit cell",
-                    "update column c",
-                    "update column d",
-                    "update column e",
-                    "googlefinance",
-                    "formula error",
-                    "#n/a",
-                    "#div/0!",
-                    "#ref!"
-                ],
-                "intentPatterns": [
-                    "(update|modify|change|edit|fix).*?(formula|column [C-F]|column [H-S])",
-                    "(change|update).*?(last price|current value|total g/l)",
-                    "fix.*?(#N/A|#DIV/0!|#REF!|formula error)",
-                    "(edit|modify|update).*?(spreadsheet formula|google sheets formula)"
-                ]
-            },
-            "fileTriggers": {
-                "pathPatterns": [
-                    "fin-guru/data/spreadsheet-*.md"
-                ]
-            }
-        },
         "retirement-syncing": {
             "type": "domain",
             "enforcement": "suggest",
             "priority": "high",
-            "description": "Sync retirement account data from Vanguard and Fidelity CSV exports to Google Sheets DataHub retirement section. Aggregates holdings by ticker and updates quantities.",
+            "description": "Parse and report retirement account holdings from Vanguard and Fidelity CSV exports. Aggregates holdings by ticker. No persistent destination until these accounts are connected in SnapTrade.",
             "promptTriggers": {
                 "keywords": [
                     "sync retirement",
@@ -211,7 +177,7 @@
             "type": "domain",
             "enforcement": "suggest",
             "priority": "high",
-            "description": "Import Fidelity transaction history CSV into Google Sheets with smart categorization. Handles dividends, purchases, sales, and fee transactions.",
+            "description": "Refresh investment activities and bank/card expenses into family_office.db with smart categorization. Handles dividends, purchases, sales, fees, and direction resolution for deposits.",
             "promptTriggers": {
                 "keywords": [
                     "sync transactions",

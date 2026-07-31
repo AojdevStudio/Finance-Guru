@@ -1,6 +1,6 @@
 {
   "_description": "Golden expected output for fidelity_history_golden.csv. Pinned contract for any Fidelity transaction parser (Python or Keepfolio TS). If totals diverge, the parser has regressed.",
-  "_taxonomy_reference": "docs/csv-mappings/fidelity-mapping.json action_taxonomy block",
+  "_taxonomy_reference": "config/fidelity-mapping.json action_taxonomy block",
   "row_count": 7,
   "rows": [
     {

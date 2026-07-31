@@ -1,6 +1,6 @@
 ---
 name: retirement-syncing
-description: Sync retirement holdings from Vanguard and Fidelity CSV exports to the Google Sheets DataHub. CSV-only by design — the Vanguard IRAs and Fidelity 401k are not connected in SnapTrade, so there is no live/DB path yet. Triggers on sync retirement, update retirement, vanguard sync, 401k update, IRA sync, or working with notebooks/retirement-accounts/ files.
+description: Parse and report retirement holdings from Vanguard and Fidelity CSV exports. CSV-only by design — the Vanguard IRAs and Fidelity 401k are not connected in SnapTrade, so there is no live/DB path yet and no persistent destination. Triggers on sync retirement, update retirement, vanguard sync, 401k update, IRA sync, or working with notebooks/retirement-accounts/ files.
 ---
 
 # Retirement Account Syncing
@@ -26,7 +26,9 @@ Until all three are done, do not fabricate a live path: use the CSV workflow bel
 
 ## Purpose
 
-Safely import Vanguard and Fidelity retirement account CSV exports into the Google Sheets DataHub retirement section, updating only quantities (Column B).
+Parse Vanguard and Fidelity retirement account CSV exports and report current holdings and quantities.
+
+> ⚠️ **This skill currently has no persistent destination.** The Google Sheets DataHub it used to write to was retired 2026-07-31, and `family_office.db` has no retirement table because these accounts are not in SnapTrade. Until the three prerequisites above are met, this skill parses and reports only. Do not claim holdings were "synced" anywhere.
 
 ## When to Use
 
@@ -67,27 +69,13 @@ Account Number,Account Name,Symbol,Description,Quantity,Last Price,...
 - Column 3: Symbol
 - Column 5: Quantity
 
-## DataHub Target Location
+## Known retirement tickers
 
-**Spreadsheet ID**: Read from `fin-guru/data/user-profile.yaml`
+Holdings seen across the Vanguard IRAs, Vanguard brokerage, and Fidelity 401(k):
+VOO, VUG, VTSAX, SCHG, PLTR, NVDA, TSLA, VB, ARKK, VMFXX, FGCKX, FXAIX.
 
-**Retirement Section**: Rows 46-62 (after the "RETIREMENT ACCOUNTS (VANGUARD)" header at row 45)
-
-| Row | Ticker | Description |
-|-----|--------|-------------|
-| 46 | VOO | Vanguard S&P 500 ETF |
-| 47 | VUG | Vanguard Growth ETF |
-| 48 | VTSAX | Vanguard Total Stock Market |
-| 49 | SCHG | Schwab US Large-Cap Growth |
-| 50 | PLTR | Palantir |
-| 51 | NVDA | NVIDIA |
-| 52 | TSLA | Tesla |
-| 53 | VB | Vanguard Small-Cap ETF |
-| 54 | ARKK | ARK Innovation |
-| 55 | VMFXX | Vanguard Money Market |
-| 56 | FGCKX | Fidelity Growth Company K |
-| 57 | FXAIX | Fidelity 500 Index |
-| 58-62 | Reserved | Future holdings |
+Mary's Goucher 403(b) and Principal 401(k) allocations are tracked separately in
+`fin-guru/data/user-profile.yaml` and the strategy docs, not through this skill.
 
 ## Core Workflow
 
@@ -123,76 +111,21 @@ for file in [vanguard_1, vanguard_2, fidelity]:
 - VMFXX: Sum across accounts (all money market)
 - VTSAX: Sum across accounts
 
-### 3. Update DataHub Column B Only
+### 3. Report the aggregated holdings
 
-**WRITABLE**: Column B (Quantity) only
-
-**DO NOT TOUCH**:
-- Column A (Ticker) - already set
-- Column C onwards - formulas
-
-```javascript
-// Update VOO quantity (Row 46)
-mcp__gdrive__sheets(operation: "updateCells", params: {
-    spreadsheetId: SPREADSHEET_ID,
-    range: "DataHub!B46:B46",
-    values: [["214.7947"]]  // Aggregated quantity
-})
-```
-
-### 4. Update Pattern
-
-Loop through each retirement ticker and update Column B:
-
-| Ticker | Range | Aggregation |
-|--------|-------|-------------|
-| VOO | B46 | 18.1817 + 196.613 = 214.7947 |
-| VUG | B47 | 10.9488 + 2.1164 = 13.0652 |
-| VTSAX | B48 | 126.336 + 102.126 = 228.462 |
-| SCHG | B49 | 100 + 6 = 106 |
-| PLTR | B50 | 25 + 42 = 67 |
-| NVDA | B51 | 150 |
-| TSLA | B52 | 58 |
-| VB | B53 | 20 |
-| ARKK | B54 | 16.13 |
-| VMFXX | B55 | 2.94 + 0.57 + 179.92 + 428.42 = 611.85 |
-| FGCKX | B56 | 4.447 |
-| FXAIX | B57 | 3.705 |
+Present ticker and total quantity as a table in the response. There is no
+destination to write to, so the report IS the deliverable.
 
 ## Safety Checks
 
-**Before updating:**
+**Before reporting:**
 - Verify all 3 CSV files exist in `notebooks/retirement-accounts/`
-- Confirm row mapping matches expected tickers
-- Log any new tickers not in current sheet
+- Note the export date of each CSV; flag anything older than 30 days
+- Call out any ticker not previously seen in the known-tickers list
 
-**Large Change Warning (>20%):**
-- If any quantity changes more than 20%, show diff and ask for confirmation
-
-## Example Execution
-
-```javascript
-// Step 1: Read CSVs and aggregate
-const holdings = aggregateFromCSVs();
-
-// Step 2: Update each ticker's quantity
-const updates = [
-    { range: "DataHub!B46:B46", values: [[holdings.VOO.toFixed(4)]] },
-    { range: "DataHub!B47:B47", values: [[holdings.VUG.toFixed(4)]] },
-    { range: "DataHub!B48:B48", values: [[holdings.VTSAX.toFixed(3)]] },
-    // ... etc
-];
-
-for (const update of updates) {
-    mcp__gdrive__sheets(operation: "updateCells", params: {
-        spreadsheetId: SPREADSHEET_ID,
-        ...update
-    });
-}
-
-// Step 3: Log summary
-console.log("Updated 12 retirement positions");
-```
+**Large Change Warning (>20%):** if any quantity moved more than 20% since the
+last reported figures, show the diff and confirm with the user before treating
+the numbers as accurate.
 
 ## Post-Update Validation
 

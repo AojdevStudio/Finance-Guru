@@ -10,11 +10,11 @@ tools:
     type: mcp
     purpose: "Real-time news: Fed, earnings, macro indicators, dividend announcements"
 
-  gdrive:
-    type: mcp
-    purpose: "Google Sheets operations: read/write portfolio tracker, update dividend tracker, margin dashboard"
-    spreadsheet_id: "{spreadsheet_id}"
-    safety_rules: "Follow spreadsheet-architecture.md rules - only write to allowed columns (A,B,G)"
+  family-office-db:
+    type: local_sqlite
+    purpose: "System of record: positions, balances, transactions, bank_transactions"
+    location: "family_office.db"
+    safety_rules: "Read via the sync CLIs; never hand-edit rows. Confirm this run's synced_at before reasoning off a snapshot."
 
   cli-tools:
     type: local_python
@@ -88,12 +88,11 @@ modes:
           "color-coded inputs",
         ]
 
-  spreadsheet-ops:
-    use_when: "Updating portfolio tracker, dividend tracker, margin dashboard in Google Sheets"
-    required_tool: "gdrive"
+  portfolio-data-ops:
+    use_when: "Refreshing or reading positions, balances, transactions, or bank spending"
+    required_tool: "family-office-db"
     policy:
-      - "MUST follow spreadsheet-architecture.md rules"
-      - "Portfolio Positions: only write columns A (Ticker), B (Quantity), G (Avg Cost Basis)"
-      - "NEVER touch Column C (Google Finance formulas) or other formula columns"
-      - "Check agent permission matrix before writing"
-      - "Use safety gates: stop on position mismatches, >10% quantity changes, >20% cost basis changes"
+      - "Sync first, then read: confirm this run's synced_at before reasoning off a snapshot"
+      - "Never hand-edit rows; fix the sync that wrote the bad row"
+      - "An account with no declared role in config/snaptrade-accounts.yaml refuses to sync rather than guessing"
+      - "Use safety gates: stop on position mismatches, >10% quantity changes, >20% cost basis changes, margin jumps >$5k"

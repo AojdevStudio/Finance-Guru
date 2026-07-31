@@ -321,38 +321,16 @@ Coverage: {projection.month15_coverage_ratio} 🟢
 Status: Break-even achieved, dividends > interest
 ```
 
-## Google Sheets Integration
+## Data Source
 
-**Spreadsheet ID**: Read from `fin-guru/data/user-profile.yaml` → `google_sheets.portfolio_tracker.spreadsheet_id`
+Margin balance, buying power, and maintenance requirement come from the `balances` table in `family_office.db`, refreshed sync-first (Step 0). The Margin Dashboard sheet was retired 2026-07-31.
 
-**Use the mcp__gdrive__sheets tool**:
-```javascript
-// STEP 1: Read Spreadsheet ID from user profile
-// Load fin-guru/data/user-profile.yaml
-// Extract: google_sheets.portfolio_tracker.spreadsheet_id
-
-// STEP 2: Read Margin Dashboard
-mcp__gdrive__sheets(
-    operation: "spreadsheets.values.get",
-    params: {
-        spreadsheetId: SPREADSHEET_ID,  // from user-profile.yaml
-        range: "Margin Dashboard!A2:E50"
-    }
-)
-
-// STEP 3: Add new margin entry
-mcp__gdrive__sheets(
-    operation: "spreadsheets.values.update",
-    params: {
-        spreadsheetId: SPREADSHEET_ID,  // from user-profile.yaml
-        range: "Margin Dashboard!A2:E2",
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-            values: [[date, balance, rate, monthly_cost, notes]]
-        }
-    }
-)
+```bash
+sqlite3 family_office.db \
+  "SELECT synced_at, account_id, cash, buying_power, maintenance_excess FROM balances ORDER BY synced_at DESC LIMIT 5;"
 ```
+
+Cash-management accounts sync through SimpleFIN into `bank_transactions`, deliberately outside the brokerage `balances` table, so they never distort the portfolio-to-margin ratio.
 
 ## Agent Permissions
 
