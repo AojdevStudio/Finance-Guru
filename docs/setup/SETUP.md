@@ -222,7 +222,6 @@ mcpl reads configuration from these locations (in order):
 
 | Server | Purpose | When to Use |
 |--------|---------|------------|
-| **gdrive** | Google Sheets portfolio sync | If you use Google Sheets DataHub |
 | **perplexity** | AI-powered research | For deep market analysis |
 | **financial-datasets** | Real-time market data | Alternative to yfinance |
 | **context7** | Documentation lookup | For framework reference |
@@ -309,39 +308,6 @@ Sequential Thinking provides multi-step reasoning for complex financial analysis
 2. Test: `mcpl list sequential-thinking --refresh`
 
 **Note**: This server provides tools for breaking down complex financial problems into sequential steps.
-
-#### MCP Google Drive Setup (Optional)
-
-**Only needed if syncing portfolio data to Google Sheets.**
-
-```bash
-# Clone and install gdrive MCP
-git clone https://github.com/AojdevStudio/gdrive.git
-cd gdrive
-bun install
-bun run build
-
-# Add to Claude Code settings
-{
-  "mcpServers": {
-    "gdrive": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-v", "/path/to/gdrive:/app",
-        "gdrive-mcp"
-      ],
-      "env": {
-        "GOOGLE_APPLICATION_CREDENTIALS": "/app/credentials.json"
-      }
-    }
-  }
-}
-```
-
-See [Google Drive MCP Docs](https://github.com/AojdevStudio/gdrive) for OAuth setup.
 
 ### API Keys (.env)
 
@@ -893,9 +859,8 @@ If all checks pass, you're ready to run onboarding!
 ## Next Steps
 
 1. ✅ **Complete onboarding**: Run `/fin-guru:agents:onboarding-specialist`
-2. ✅ **Import portfolio data**: Export CSV from Fidelity → `notebooks/updates/`
-3. ✅ **Sync to Google Sheets** (optional): Use `/portfolio-sync` skill
-4. ✅ **Run first analysis**: Try "*quant Analyze TSLA risk profile"
+2. ✅ **Sync portfolio data**: Use the `portfolio-syncing` skill to refresh SnapTrade positions and balances into `family_office.db`
+3. ✅ **Run first analysis**: Try "*quant Analyze TSLA risk profile"
 5. ✅ **Review documentation**: See [docs/index.md](../index.md)
 
 ---

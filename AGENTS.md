@@ -42,7 +42,6 @@ Finance Guru requires these MCP servers:
 - **bright-data** - Web scraping (search engines, markdown extraction)
 - **sequential-thinking** - Complex multi-step reasoning
 - **financial-datasets** - SEC filings, financial statements
-- **gdrive** - Google Drive integration (sheets, docs)
 - **web-search** - Real-time market information
 
 ## Temporal Awareness
