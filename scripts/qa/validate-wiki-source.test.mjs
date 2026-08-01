@@ -34,7 +34,15 @@ function validate(directory) {
   }
 }
 
-const accepted = await fixture(`# Home
+const fixtures = [];
+try {
+  const createFixture = async (home) => {
+    const directory = await fixture(home);
+    fixtures.push(directory);
+    return directory;
+  };
+
+  const accepted = await createFixture(`# Home
 
 API_KEY=your-api-key
 
@@ -44,18 +52,17 @@ API_KEY=your-api-key
 API_KEY=your-api-key
 \`\`\`
 `);
-const rejectedCredential = await fixture("# Home\n\nAPI_KEY=real-secret-value\n");
-const rejectedFencedCredential = await fixture(
-  "# Home\n\n\`\`\`dotenv\nAPI_KEY=real-secret-value\n\`\`\`\n",
-);
-const rejectedFence = await fixture("# Home\n\n~~~~\nnot closed\n");
-const rejectedEmptyInlineLink = await fixture("# Home\n\n[missing destination]()\n");
-const rejectedMissingInlineLink = await fixture("# Home\n\n[missing page](Missing-Page.md)\n");
-const acceptedExternalAndAnchorLinks = await fixture(
-  "# Home\n\n[GitHub](https://github.com/AojdevStudio/Finance-Guru) [section](#details)\n",
-);
+  const rejectedCredential = await createFixture("# Home\n\nAPI_KEY=real-secret-value\n");
+  const rejectedFencedCredential = await createFixture(
+    "# Home\n\n\`\`\`dotenv\nAPI_KEY=real-secret-value\n\`\`\`\n",
+  );
+  const rejectedFence = await createFixture("# Home\n\n~~~~\nnot closed\n");
+  const rejectedEmptyInlineLink = await createFixture("# Home\n\n[missing destination]()\n");
+  const rejectedMissingInlineLink = await createFixture("# Home\n\n[missing page](Missing-Page.md)\n");
+  const acceptedExternalAndAnchorLinks = await createFixture(
+    "# Home\n\n[GitHub](https://github.com/AojdevStudio/Finance-Guru) [section](#details)\n",
+  );
 
-try {
   assert.equal(validate(accepted).status, 0, "placeholder and code examples should pass");
   const credentialResult = validate(rejectedCredential);
   assert.notEqual(credentialResult.status, 0, "real credential values must fail");
@@ -79,15 +86,7 @@ try {
   );
 } finally {
   await Promise.all(
-    [
-      accepted,
-      rejectedCredential,
-      rejectedFencedCredential,
-      rejectedFence,
-      rejectedEmptyInlineLink,
-      rejectedMissingInlineLink,
-      acceptedExternalAndAnchorLinks,
-    ].map((dir) => rm(dir, { recursive: true, force: true })),
+    fixtures.map((dir) => rm(dir, { recursive: true, force: true })),
   );
 }
 
