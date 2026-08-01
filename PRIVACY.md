@@ -14,7 +14,7 @@ Finance Guru is a **private, single-user family-office system**. This document d
 ## What data Finance Guru handles
 
 | Category | Source | Storage | Exposure |
-|----------|--------|---------|----------|
+| ---------- | -------- | --------- | ---------- |
 | Portfolio positions | SnapTrade (CSV fallback) | `family_office.db` (gitignored) | Local only |
 | Account balances | SnapTrade (CSV fallback) | `family_office.db` (gitignored) | Local only |
 | Transaction history | SnapTrade | `family_office.db` (gitignored) | Local only |
@@ -68,7 +68,7 @@ If you need to redact something else, extend `ScrubPIIProcessor` and add a unit 
 ## Third-party services and their privacy posture
 
 | Service | Required? | What it sees | Terms |
-|---------|-----------|--------------|-------|
+| --------- | ----------- | -------------- | ------- |
 | Anthropic Claude | Yes | Conversation content | <https://www.anthropic.com/legal/privacy> |
 | yfinance (Yahoo) | Default | Tickers you query | <https://policies.yahoo.com/> |
 | Finnhub | Optional | Tickers + API key | <https://finnhub.io/privacy-policy> |

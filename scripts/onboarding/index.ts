@@ -101,9 +101,9 @@ function displayComplete(): void {
   console.log('  → Run: bun run scripts/onboarding/index.ts --resume');
   console.log('');
   console.log('Documentation:');
-  console.log('  → Setup guide: docs/SETUP.md');
-  console.log('  → Tools & APIs: docs/api.md');
-  console.log('  → Troubleshooting: docs/TROUBLESHOOTING.md');
+  console.log('  → Setup guide: docs/setup/SETUP.md');
+  console.log('  → Tools & APIs: docs/reference/api.md');
+  console.log('  → Troubleshooting: docs/setup/TROUBLESHOOTING.md');
   console.log('');
   console.log('Ready to get started? Open Claude Code and say:');
   console.log('  "Hi, I\'m [Your Name]. Let\'s review my portfolio."');

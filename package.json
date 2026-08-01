@@ -10,6 +10,9 @@
     "apps/*"
   ],
   "scripts": {
+    "docs:check-links": "bun run scripts/qa/validate-doc-links.mjs",
+    "wiki:check-source": "bun run scripts/qa/validate-wiki-source.mjs",
+    "wiki:test-source": "bun run scripts/qa/validate-wiki-source.test.mjs",
     "test": "uv run pytest tests/python/ -v",
     "typecheck": "echo 'Python project - typecheck skipped'",
     "build": "turbo run build",

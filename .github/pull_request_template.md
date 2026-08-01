@@ -15,3 +15,11 @@
 - [ ] No secrets or PII committed
 - [ ] Documentation updated (if applicable)
 - [ ] Test coverage maintained or improved
+
+## Wiki impact
+
+Manually select exactly one option below. Markdown cannot enforce mutual
+exclusivity: do not select both options or leave both unchecked.
+
+- [ ] No Wiki update is required.
+- [ ] Wiki updated — affected pages and Wiki commit: <!-- list pages and link the Wiki commit -->
