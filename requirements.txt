@@ -2,7 +2,7 @@
 #    uv export --format requirements.txt --no-hashes --no-emit-project --frozen
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.5
+aiohttp==3.14.3
     # via
     #   growthbook
     #   snaptrade-python-sdk
@@ -69,7 +69,7 @@ contourpy==1.3.3
     # via matplotlib
 coverage==7.13.1
     # via pytest-cov
-cryptography==46.0.7
+cryptography==50.0.0
     # via
     #   growthbook
     #   snaptrade-python-sdk
@@ -119,7 +119,7 @@ httpcore==1.0.9
     # via httpx
 httpx==0.28.1
     # via anthropic
-idna==3.10
+idna==3.18
     # via
     #   anyio
     #   httpx
@@ -165,7 +165,7 @@ mdit-py-plugins==0.5.0
     # via textual
 mdurl==0.1.2
     # via markdown-it-py
-msgpack==1.1.2
+msgpack==1.2.1
     # via cachecontrol
 multidict==6.7.1
     # via
@@ -229,13 +229,13 @@ peewee==3.18.2
     # via yfinance
 phonenumbers==9.0.28
     # via scrubadub
-pillow==12.1.1
+pillow==12.3.0
     # via
     #   family-office
     #   matplotlib
     #   reportlab
     #   streamlit
-pip==26.0.1
+pip==26.2.1
     # via pip-api
 pip-api==0.0.34
     # via pip-audit
@@ -267,7 +267,7 @@ protobuf==6.33.5
     #   yfinance
 py-serializable==2.1.0
     # via cyclonedx-python-lib
-pyarrow==21.0.0
+pyarrow==25.0.1
     # via streamlit
 pycparser==2.23 ; implementation_name != 'PyPy'
     # via cffi
@@ -289,7 +289,7 @@ pyparsing==3.2.5
     # via
     #   matplotlib
     #   pip-requirements-parser
-pytest==9.0.2
+pytest==9.1.1
     # via
     #   pytest-cov
     #   pytest-mock
@@ -305,7 +305,7 @@ python-dateutil==2.9.0.post0
     #   matplotlib
     #   pandas
     #   snaptrade-python-sdk
-python-dotenv==1.1.1
+python-dotenv==1.2.2
     # via family-office
 python-json-logger==4.1.0
 python-stdnum==2.2
@@ -328,7 +328,7 @@ regex==2026.4.4
     #   nltk
 reportlab==4.4.5
     # via family-office
-requests==2.32.5
+requests==2.34.2
     # via
     #   cachecontrol
     #   family-office
@@ -389,7 +389,7 @@ tomli==2.4.1
     #   pip-audit
 tomli-w==1.2.0
     # via pip-audit
-tornado==6.5.2
+tornado==6.5.8
     # via streamlit
 tqdm==4.67.3
     # via nltk
@@ -397,6 +397,7 @@ types-pyyaml==6.0.12.20260408
 types-requests==2.32.4.20260107
 typing-extensions==4.15.0
     # via
+    #   aiohttp
     #   aiosignal
     #   altair
     #   anthropic
@@ -429,7 +430,7 @@ tzlocal==5.3.1
     # via dateparser
 uc-micro-py==1.0.3
     # via linkify-it-py
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   family-office
     #   growthbook
