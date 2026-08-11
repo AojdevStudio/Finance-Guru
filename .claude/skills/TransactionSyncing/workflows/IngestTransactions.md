@@ -5,17 +5,17 @@ Ingest Fidelity transaction history CSV from Downloads into the local rolling ar
 ## Triggers
 
 - "ingest transactions", "import history", "bring in transactions"
-- User points to `~/Downloads/History_for_Account_Z05724592.csv`
+- User points to `~/Downloads/History_for_Account_{account_id}.csv`
 - User mentions downloading transaction history from Fidelity
 
 ## Step 1: Locate Source File
 
-**Default location**: `~/Downloads/History_for_Account_Z05724592.csv`
+**Default location**: `~/Downloads/History_for_Account_{account_id}.csv`
 **Alternative**: User may specify a different path.
 
 ```bash
 # Verify file exists
-ls -la ~/Downloads/History_for_Account_Z05724592.csv
+ls -la ~/Downloads/History_for_Account_{account_id}.csv
 ```
 
 If not found, ask user for the file location.
@@ -51,17 +51,17 @@ awk -F',' 'NR>2 && $1 ~ /^[0-9]/ {count++} END {print count}' "$SOURCE_FILE"
 
 **Destination**: `notebooks/transactions/`
 
-**Naming convention**: `History_for_Account_Z05724592_{YYYY-MM-DD}_{period}.csv`
+**Naming convention**: `History_for_Account_{account_id}_{YYYY-MM-DD}_{period}.csv`
 
 Where:
 - `{YYYY-MM-DD}` = the download/run date (latest date in file, or today's date)
 - `{period}` = `30d`, `60d`, or `{N}d`
 
-**Example**: `History_for_Account_Z05724592_2026-03-06_60d.csv`
+**Example**: `History_for_Account_{account_id}_2026-03-06_60d.csv`
 
 ```bash
-cp ~/Downloads/History_for_Account_Z05724592.csv \
-   notebooks/transactions/History_for_Account_Z05724592_2026-03-06_60d.csv
+cp ~/Downloads/History_for_Account_{account_id}.csv \
+   notebooks/transactions/History_for_Account_{account_id}_2026-03-06_60d.csv
 ```
 
 ## Step 4: Merge into Accounts_History.csv
@@ -117,11 +117,11 @@ If `Accounts_History.csv` doesn't exist:
 
 ## Step 5: Update notebooks/updates/ Copy
 
-After merging, also update `notebooks/updates/History_for_Account_Z05724592.csv` with the latest download so other skills (dividend-tracking, etc.) can reference it:
+After merging, also update `notebooks/updates/History_for_Account_{account_id}.csv` with the latest download so other skills (dividend-tracking, etc.) can reference it:
 
 ```bash
-cp ~/Downloads/History_for_Account_Z05724592.csv \
-   notebooks/updates/History_for_Account_Z05724592.csv
+cp ~/Downloads/History_for_Account_{account_id}.csv \
+   notebooks/updates/History_for_Account_{account_id}.csv
 ```
 
 ## Step 6: Extract Dividend Summary
@@ -145,9 +145,9 @@ This data supplements (not replaces) the dividends.csv forward-looking projectio
 TRANSACTION INGESTION COMPLETE - {date}
 ---
 
-SOURCE: ~/Downloads/History_for_Account_Z05724592.csv
+SOURCE: ~/Downloads/History_for_Account_{account_id}.csv
 PERIOD: {earliest_date} to {latest_date} ({N}d)
-ARCHIVED AS: History_for_Account_Z05724592_{date}_{period}.csv
+ARCHIVED AS: History_for_Account_{account_id}_{date}_{period}.csv
 
 MERGE RESULTS:
   New rows added to Accounts_History: XX
@@ -182,7 +182,7 @@ This may indicate a missing export period. Consider downloading that range.
 
 ### File not found
 ```
-Source file not found at ~/Downloads/History_for_Account_Z05724592.csv
+Source file not found at ~/Downloads/History_for_Account_{account_id}.csv
 Please download your transaction history from Fidelity (last 30 or 60 days).
 ```
 
@@ -195,7 +195,7 @@ Please verify this is a Fidelity History export.
 ```
 
 ### Duplicate archive name
-If `History_for_Account_Z05724592_{date}_{period}.csv` already exists:
+If `History_for_Account_{account_id}_{date}_{period}.csv` already exists:
 - Compare file sizes. If identical, skip copy.
 - If different, append a counter: `..._2026-03-06_60d_2.csv`
 

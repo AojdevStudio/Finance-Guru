@@ -260,7 +260,28 @@ def load_pii_replacement_patterns(
     """
     path = repo_root / "scripts" / "qa" / "pii-replacements.txt"
     if not path.exists():
-        return []
+        # Loud, not silent. This file is gitignored, so any fresh clone or
+        # worktree lacks it — and returning [] here made the scanner report
+        # "PASS — no findings" with zero patterns loaded. A security gate that
+        # reports clean because it is blind is worse than no gate: it is the
+        # exact failure that let PII sit on the public remote for six months.
+        # Template fallback keeps a fresh clone scanning on the shipped rules.
+        template = path.with_name("pii-replacements.template.txt")
+        if template.exists():
+            print(
+                f"compliance-scan: WARNING — {path.name} missing; falling back to "
+                f"{template.name}. Repo-specific values will NOT be detected.",
+                file=sys.stderr,
+            )
+            path = template
+        else:
+            print(
+                f"compliance-scan: ERROR — no PII pattern source at {path} and no "
+                "template fallback. Refusing to report a pass with zero patterns "
+                "loaded.",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
 
     rules: list[tuple[str, re.Pattern[str], str]] = []
     for raw in path.read_text().splitlines():

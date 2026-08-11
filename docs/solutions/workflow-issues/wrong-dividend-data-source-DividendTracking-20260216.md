@@ -49,7 +49,7 @@ Use the transaction history CSV (`History_for_Account_*.csv`) instead, filtering
 # Problem: These are PROJECTED rates, not actual payments
 JEPI, 120.91, $0.4939  # This is a per-share rate estimate
 
-# CORRECT SOURCE: History_for_Account_Z05724592.csv
+# CORRECT SOURCE: History_for_Account_REDACTED_ACCOUNT.csv
 # Contains: Run Date, Action, Symbol, Amount (actual dollars received)
 # Solution: Filter for "DIVIDEND RECEIVED" action type
 01/05/2026, DIVIDEND RECEIVED, JEPI, $46.86  # This is the ACTUAL payment

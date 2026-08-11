@@ -32,7 +32,7 @@ A HIGH hit means data that identifies the owner, exposes infrastructure, or brea
 
 | Rule | Example | Why high | Fix |
 |------|---------|----------|-----|
-| `fidelity-account` | `Z00000000` (matches `Z0\d{7,}`) | Account number ID | Replace with `{account_id}` template variable |
+| `fidelity-account` | `Z0NNNNNNN` (shape of `Z0\d{7,}`) | Account number ID | Replace with `{account_id}` template variable |
 | `ssn` | `NNN-NN-NNNN` | Identity / financial | Move to env, never commit |
 | `apps-script-dispatcher` | `https://script.google.com/macros/s/.../exec` | Live deploy URL — anyone with it can invoke the script | Move URL to `.env`; reference via env var |
 | `google-script-deployment-id` | `AKfyc...` (~55 chars) | Apps Script deploy ID | Same as above — env var only |
