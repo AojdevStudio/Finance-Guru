@@ -58,17 +58,24 @@ fi
 # be unpushable, and an unpushable hook just teaches everyone --no-verify. This
 # reports and gets out of the way. Clear the backlog with:
 #   .claude/skills/compliance-scan/scripts/scan.py --scope tree
-if TREE_OUT="$("$SCAN" --scope tree --skip-existing-tests --format json 2>/dev/null)"; then
-    :
-else
-    COUNT="$(printf '%s' "$TREE_OUT" | grep -o '"severity"' | wc -l | tr -d ' ')"
-    if [[ "${COUNT:-0}" -gt 0 ]]; then
-        echo "" >&2
-        echo "compliance-scan: NOTE — $COUNT standing finding(s) already in the tree." >&2
-        echo "  This push is clean; the repo is not. Audit with:" >&2
-        echo "    $SCAN --scope tree" >&2
-        echo "  (not blocking)" >&2
-    fi
+# MEDIUM and INFO findings are report-only, so the scanner exits 0 while still
+# returning them. Inspect the JSON on every exit status, not just failure, or
+# the hook stays blind to the exact class it exists to surface. Status 2 means
+# the scanner itself errored (e.g. no pattern source); say so, still don't block.
+TREE_STATUS=0
+TREE_OUT="$("$SCAN" --scope tree --skip-existing-tests --format json 2>/dev/null)" || TREE_STATUS=$?
+COUNT="$(printf '%s' "$TREE_OUT" | grep -o '"severity"' | wc -l | tr -d ' ')" || COUNT=0
+if [[ "${COUNT:-0}" -gt 0 ]]; then
+    echo "" >&2
+    echo "compliance-scan: NOTE — $COUNT standing finding(s) already in the tree." >&2
+    echo "  This push is clean; the repo is not. Audit with:" >&2
+    echo "    $SCAN --scope tree" >&2
+    echo "  (not blocking)" >&2
+elif [[ "$TREE_STATUS" -ne 0 ]]; then
+    echo "" >&2
+    echo "compliance-scan: WARNING — tree scan failed with status $TREE_STATUS." >&2
+    echo "  Audit with: $SCAN --scope tree" >&2
+    echo "  (not blocking)" >&2
 fi
 HOOK
 

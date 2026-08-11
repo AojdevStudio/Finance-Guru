@@ -19,7 +19,7 @@ EXTRACT:
 - Fixed expenses: $4,500
 - Variable expenses: $10,000
 - Monthly savings: $5,000
-- Mortgage: REDACTED_AMOUNT balance, $1,712.68/month
+- Mortgage: REDACTED_AMOUNT balance, REDACTED_AMOUNT/month
 - Other debt: 2 car loans, student loans (8%), credit cards
 - Risk profile: Aggressive
 ```
@@ -59,8 +59,8 @@ user_profile:
     investment_capacity: 10500
 
   debt_profile:
-    mortgage_balance: REDACTED_AMOUNT
-    mortgage_payment: REDACTED_AMOUNT
+    mortgage_balance: 250000.42
+    mortgage_payment: 1500.33
     other_debt:
       - type: "student_loans"
         rate: 0.08
