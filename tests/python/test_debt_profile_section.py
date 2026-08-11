@@ -172,15 +172,15 @@ class TestDebtProfileSection:
                 "-e",
                 """
             import { validateCurrency } from './scripts/onboarding/modules/input-validator.ts';
-            console.log(validateCurrency('365139.76'));
-            console.log(validateCurrency('$1,712.68'));
+            console.log(validateCurrency('250000.42'));
+            console.log(validateCurrency('$1,500.33'));
             """,
             ],
             capture_output=True,
             text=True,
         )
         assert result.returncode == 0
-        assert "365139.76" in result.stdout
+        assert "250000.42" in result.stdout
 
     def test_percentage_validation_integration(self):
         """Test that percentage validation is properly integrated"""

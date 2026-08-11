@@ -55,8 +55,8 @@ class TestPreferencesSection:
                     "investment_capacity": 10500,
                 },
                 "debt": {
-                    "mortgage_balance": 365139.76,
-                    "mortgage_payment": 1712.68,
+                    "mortgage_balance": 250000.42,
+                    "mortgage_payment": 1500.33,
                     "other_debt": [],
                 },
             },

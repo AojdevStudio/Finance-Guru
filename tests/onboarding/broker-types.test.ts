@@ -134,7 +134,7 @@ describe('Broker Interfaces', () => {
       netDebit: -7822.71,
       accountEquityPercentage: 96.58,
       marginInterestAccrued: 0,
-      totalAccountValue: 228809.41
+      totalAccountValue: 100000.55
     };
 
     expect(balances.settledCash).toBe(0);
@@ -152,7 +152,7 @@ describe('Broker Interfaces', () => {
         netDebit: -7822.71,
         accountEquityPercentage: 96.58,
         marginInterestAccrued: 0,
-        totalAccountValue: 228809.41
+        totalAccountValue: 100000.55
       },
       broker: 'fidelity' as BrokerType,
       exportDate: new Date()
@@ -160,6 +160,6 @@ describe('Broker Interfaces', () => {
 
     expect(data.broker).toBe('fidelity');
     expect(data.positions.length).toBe(1);
-    expect(data.balances.totalAccountValue).toBe(228809.41);
+    expect(data.balances.totalAccountValue).toBe(100000.55);
   });
 });

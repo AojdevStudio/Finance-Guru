@@ -8,10 +8,10 @@ Some tests pass the actual production values around just to exercise a code path
 
 ```python
 # tests/python/test_margin_metrics.py — current
-csv_path = tmp_path / "Balances_for_Account_Z05724592.csv"
+csv_path = tmp_path / "Balances_for_Account_Z01234567.csv"
 ```
 
-The test doesn't care that the account is `Z05724592`. It cares that the filename matches `Balances_for_Account_<id>.csv`. But committing the literal puts the real account number on GitHub forever.
+The test doesn't care that the account is `Z01234567`. It cares that the filename matches `Balances_for_Account_<id>.csv`. But committing the literal puts the real account number on GitHub forever.
 
 ## The pattern (Python)
 
@@ -62,10 +62,10 @@ tests/python/fixtures/private/
 
 ```yaml
 # tests/python/fixtures/private/values.yaml — NOT committed
-account_id: "Z05724592"
-balance_filename: "Balances_for_Account_Z05724592.csv"
+account_id: "Z01234567"
+balance_filename: "Balances_for_Account_Z01234567.csv"
 positions_filename: "Portfolio_Positions_Nov-05-2025.csv"
-history_filename: "History_for_Account_Z05724592.csv"
+history_filename: "History_for_Account_Z01234567.csv"
 total_account_value: 228809.41
 ```
 
@@ -119,7 +119,7 @@ ACCOUNT_ID="${TEST_ACCOUNT_ID:-Z00000000}"
 ```bash
 # tests/integration/private/values.env — NOT committed
 export TEST_POSITIONS_FILENAME="Portfolio_Positions_Nov-05-2025.csv"
-export TEST_ACCOUNT_ID="Z05724592"
+export TEST_ACCOUNT_ID="Z01234567"
 ```
 
 ## Migration checklist
