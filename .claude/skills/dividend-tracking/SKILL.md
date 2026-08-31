@@ -20,7 +20,27 @@ uv run python -m src.integrations.snaptrade.sync_transactions_db          # writ
 uv run python -m src.integrations.snaptrade.sync_transactions_db --show   # confirm freshness
 ```
 
-Completion criterion: _the `transactions` table carries this run's `synced_at` before any dividend is read._
+Completion criterion: _the sync command reports success before any dividend is read._
+
+**Do not gate on `MAX(synced_at)` advancing.** The activities sync is idempotent
+via `dedupe_key` and only stamps rows it actually writes, so a run that finds no
+new activity leaves the timestamp untouched. Verified 2026-08-04: the sync
+reported `2690 fetched, 0 new, 2690 duplicates skipped` and `MAX(synced_at)`
+stayed at the prior run's value. That is a healthy no-op, not a stale table.
+
+Read the command's own output line instead:
+
+- `N new` greater than 0, timestamp advances → new activity ingested.
+- `0 new, N duplicates skipped` → already complete, timestamp correctly unchanged.
+- Command errors or reports nothing → genuine failure, stop.
+
+Completeness is guaranteed by the dedupe key, not by the stamp.
+
+**Month-end lag:** distributions post over several days, so the current month is
+incomplete until roughly the 3rd or 4th of the following month. On 2026-07-31,
+July read 30 payments at month-end; the month actually closed at **42 payments,
+about 17% higher**. Never compare a partial current month against completed prior months, and
+never call a month-over-month decline until the month has closed.
 
 ## Reading dividends
 

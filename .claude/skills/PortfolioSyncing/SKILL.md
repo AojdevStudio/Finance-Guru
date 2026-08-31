@@ -65,6 +65,40 @@ sqlite3 family_office.db "SELECT * FROM balances;"
 - If settled cash is 0, SPAXX is $0 (all funds invested or in margin).
 - "Cash market value" is NOT cash; it is the value of positions held in the Cash account rather than the Margin account.
 
+## Price Freshness: SnapTrade marks lag one session
+
+**A successful sync does not mean current prices.** SnapTrade publishes `price` on
+each position from the prior session's close, so `account_equity` and
+`gross_market_value` are stale by one trading day even when `synced_at` is the
+current timestamp. Verified 2026-08-04: two syncs, at 17:46 and 17:53 CT (well
+after the 15:00 CT close), both returned Aug 3 closes on all six spot-checked
+tickers. PLTR read 23% below its actual Aug 4 close.
+
+What this means in practice:
+
+- **Structurally reliable**: holdings, quantities, cost basis, settled cash,
+  margin debt. Use the DB for all of these.
+- **Lagging**: `price`, `account_equity`, `gross_market_value`, and every ratio
+  derived from them (equity-to-debt, gross-to-debt, position weights).
+
+**On any day with a material move, mark to market before reasoning off the
+snapshot.** On 2026-08-04 the as-synced equity understated the real figure by about 8%,
+and equity-to-debt read 2.206x when it was actually 2.392x.
+That is the difference between "still in breach" and "approaching the gate".
+
+Check freshness by comparing a couple of DB prices to the live close:
+
+```bash
+uv run python -c "
+import sqlite3, yfinance as yf
+c = sqlite3.connect('family_office.db')
+for s in ['PLTR','VOO']:
+    p = c.execute('SELECT price FROM positions WHERE symbol=?', (s,)).fetchone()[0]
+    live = yf.download(s, period='2d', progress=False, auto_adjust=False, multi_level_index=False)['Close'].iloc[-1]
+    print(f'{s}: DB {p:.2f} vs live close {float(live):.2f}')
+"
+```
+
 ## Layer Classification for New Tickers
 
 Dividend funds → Layer 2, growth → Layer 1, hedges → Layer 3. If a new ticker does not clearly match a pattern, mark it `UNKNOWN - Manual Review Required` and ask the user rather than guessing.

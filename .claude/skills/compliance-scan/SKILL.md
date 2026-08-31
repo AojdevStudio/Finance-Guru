@@ -16,7 +16,7 @@ Trigger on any of these phrases — and proactively before any push that touches
 - "PRIVACY.md compliance", "audit privacy", "any leaks?"
 - After adding a new credential, deploy URL, dispatcher URL, webhook, or API key
 
-## What it checks (six layers)
+## What it checks (seven layers)
 
 | # | Layer | Owner |
 |---|-------|-------|
@@ -26,6 +26,15 @@ Trigger on any of these phrases — and proactively before any push that touches
 | 4 | HIGH PII patterns (account numbers, dispatcher URLs, SSNs, owner email) — sourced from `scripts/qa/pii-replacements.txt` plus built-ins | `scripts/scan.py` |
 | 5 | Untracked files in sensitive paths (`.claude/skills/`, `notebooks/`, `fin-guru-private/`, `.env*`) | `scripts/scan.py` |
 | 6 | PRIVACY.md "never leaves your machine" alignment with `.gitignore` | `scripts/scan.py` |
+| 7 | Household financial figures in tracked docs (precise currency amounts) | `scripts/scan.py` |
+
+## What counts as private
+
+`references/DataClassification.md` is the authority on which values may enter a
+tracked file. Read it before adding a number, a name, or a fixture to any
+committed file. The short version: this repo is public, code and docs describe
+behaviour rather than carrying values, and evidence belongs in a document as a
+percentage or ratio rather than an amount.
 
 ## Severity gate
 
@@ -34,7 +43,7 @@ Default policy:
 | Severity | Examples | Behaviour |
 |----------|----------|-----------|
 | CRITICAL | API tokens, private keys, AWS access keys | **fail** — exit 1, block push |
-| HIGH | Account numbers, dispatcher URLs, SSNs, owner email | **fail** — exit 1, block push |
+| HIGH | Account numbers, dispatcher URLs, SSNs, owner email, household financial figures | **fail** — exit 1, block push |
 | MEDIUM | Owner first/last name in non-allowed file | report — does not fail |
 | INFO | Untracked file in sensitive path, PRIVACY/.gitignore drift | report — does not fail |
 

@@ -354,15 +354,98 @@ def staged_files(repo_root: Path) -> list[str]:
     return [line for line in out.splitlines() if line]
 
 
-def push_files(repo_root: Path) -> list[str]:
+def push_baseline(repo_root: Path) -> str:
+    """Return the ref this push is measured against.
+
+    ``run_git`` echoes its argument back when git cannot resolve it, so a plain
+    truthiness check on the result silently accepts the literal "@{upstream}".
+    The range then matches nothing and every scope built on it scans zero files.
+    A branch with no tracking ref is exactly a first push, so the gate was open
+    precisely when it mattered most. Verified 2026-08-31.
+    """
     upstream = run_git(["rev-parse", "--abbrev-ref", "@{upstream}"], repo_root).strip()
-    if not upstream:
-        upstream = "origin/main"
+    if upstream and upstream != "@{upstream}":
+        resolved = run_git(["rev-parse", "--verify", "--quiet", upstream], repo_root)
+        if resolved.strip():
+            return upstream
+    if run_git(["rev-parse", "--verify", "--quiet", "origin/main"], repo_root).strip():
+        return "origin/main"
+    raise SystemExit(
+        "compliance-scan: no resolvable push baseline (no upstream, no "
+        "origin/main); refusing to pass a scan that covered zero commits"
+    )
+
+
+def push_files(repo_root: Path) -> list[str]:
+    upstream = push_baseline(repo_root)
     out = run_git(
         ["diff", "--name-only", "--diff-filter=ACMR", f"{upstream}..HEAD"],
         repo_root,
     )
     return [line for line in out.splitlines() if line]
+
+
+def scan_history(
+    repo_root: Path,
+    allowed_amounts: frozenset[str],
+    pii_rules: list,
+) -> list[Finding]:
+    """Scan every commit being pushed, not just the resulting file content.
+
+    The other scopes read a file as it stands, so a branch that adds a secret in
+    one commit and removes it in the next passes clean while both commits still
+    publish it. A diff that DELETES a balance discloses that balance exactly as
+    loudly as the one that added it.
+    """
+    upstream = push_baseline(repo_root)
+    allowlist = load_allowlist(repo_root)
+
+    findings: list[Finding] = []
+    for sha in run_git(["rev-list", f"{upstream}..HEAD"], repo_root).splitlines():
+        sha = sha.strip()
+        if not sha:
+            continue
+        names = run_git(
+            ["show", "--format=", "--name-only", "--diff-filter=ACMRD", sha], repo_root
+        ).splitlines()
+        for path in (n for n in names if n):
+            if should_skip(path, allowlist) and not path.endswith(
+                _FINANCIAL_DOC_SUFFIXES
+            ):
+                continue
+            diff = run_git(
+                ["show", "--format=", "--unified=0", sha, "--", path], repo_root
+            )
+            # Added lines only. A removed line's content reached the file from
+            # somewhere: either a commit inside this range, whose added line is
+            # scanned here, or the baseline, where it is already public and
+            # deleting it discloses nothing new. Scanning removals as well only
+            # flags the scrub commit that fixes a leak.
+            changed = [
+                line[1:]
+                for line in diff.splitlines()
+                if line.startswith("+") and not line.startswith("+++")
+            ]
+            if not changed:
+                continue
+            text = "\n".join(changed)
+            literals = (
+                []
+                if should_skip(path, allowlist)
+                else scan_content_layer3_4(path, text, pii_rules)
+            )
+            for finding in (
+                scan_layer7_financial_figures(path, text, allowed_amounts) + literals
+            ):
+                finding.line = None
+                finding.rule = f"{finding.rule} (commit {sha[:7]})"
+                finding.remediation = (
+                    "Present in a commit being pushed. Removing it in a later "
+                    "commit does not help, the diff still publishes it. Rebuild "
+                    "the branch from origin so no commit ever contained it."
+                )
+                findings.append(finding)
+    return findings
 
 
 def tree_files(repo_root: Path) -> list[str]:
@@ -435,6 +518,18 @@ def load_allowlist(repo_root: Path) -> list[str]:
     return [e["path"] for e in entries if isinstance(e, dict) and "path" in e]
 
 
+def load_allowed_amounts(repo_root: Path) -> frozenset[str]:
+    """Return currency amounts layer 7 ignores (public reference data)."""
+    path = repo_root / ALLOWLIST_FILE
+    if not path.exists():
+        return frozenset()
+    try:
+        data = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return frozenset()
+    return frozenset(str(a) for a in data.get("allowed_amounts", []))
+
+
 _ALLOWLIST_CACHE: list[str] | None = None
 
 
@@ -493,6 +588,90 @@ def _redact_snippet(line: str, match: re.Match[str]) -> str:
     head = line[max(0, start - 40) : start]
     tail = line[end : end + 40]
     return f"{head}[{masked}]{tail}".strip()
+
+
+# --------------------------------------------------------------------------- #
+# Layer 7: household financial figures in tracked documentation                #
+# --------------------------------------------------------------------------- #
+# Layers 3-4 match known literals, so they can only catch a value someone already
+# wrote down. A balance, income, or spend total is private because of what it
+# MEANS, not because it matches a string, which is why a real account-equity
+# figure passed a clean scan on 2026-08-31 and reached a public PR.
+#
+# The separating signal is precision. Documentation writes round scenario values
+# ($50,000 portfolio, $500 contribution); real money lands on arbitrary amounts
+# or carries cents. Flag the precise ones and let the allowlist carry genuine
+# public reference data such as IRS bracket edges.
+
+_CURRENCY_RE = re.compile(
+    r"\$\s?([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,}|[0-9]{1,3}(?=\.[0-9]{2}))(\.[0-9]{2})?"
+)
+
+# Code comments leak as readily as prose. A "why" comment citing the balance
+# that motivated a check publishes that balance.
+_FINANCIAL_DOC_SUFFIXES = (".md", ".py")
+
+_FINANCIAL_DOC_PREFIXES = (
+    ".claude/skills/",
+    ".claude/commands/",
+    ".dev/",
+    ".memory/",
+    "docs/",
+)
+
+_CURRENCY_MIN = 1000.0
+
+
+def scan_layer7_financial_figures(
+    path: str, text: str, allowed_amounts: frozenset[str]
+) -> list[Finding]:
+    """Flag precise currency amounts in tracked narrative documentation."""
+    if not path.endswith(_FINANCIAL_DOC_SUFFIXES):
+        return []
+    if not path.startswith(_FINANCIAL_DOC_PREFIXES):
+        return []
+
+    findings: list[Finding] = []
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        for match in _CURRENCY_RE.finditer(line):
+            raw = match.group(1)
+            cents = match.group(2)
+            full = f"{raw}{cents or ''}"
+            if full in allowed_amounts or raw in allowed_amounts:
+                continue
+            try:
+                whole = float(raw.replace(",", ""))
+            except ValueError:
+                continue
+            has_real_cents = cents is not None and cents != ".00"
+            if has_real_cents:
+                # Cents are never invented, so a smaller floor applies: real
+                # margin interest and card charges land well under $1,000.
+                if whole + float(cents) < 100:
+                    continue
+            else:
+                if whole < _CURRENCY_MIN:
+                    continue
+                if whole % 1000 == 0:
+                    continue
+            findings.append(
+                Finding(
+                    severity=Severity.HIGH,
+                    layer="financial-figures",
+                    rule="household-financial-figure",
+                    path=path,
+                    line=lineno,
+                    snippet=_redact_snippet(line, match),
+                    remediation=(
+                        "Replace the absolute amount with a percentage, ratio, or "
+                        "count, which documents the same behaviour without "
+                        "publishing a balance. If the figure is genuinely public "
+                        "reference data, add it to allowed_amounts in "
+                        ".claude/skills/compliance-scan/allowlist.json."
+                    ),
+                )
+            )
+    return findings
 
 
 def scan_layer5_untracked(repo_root: Path) -> list[Finding]:
@@ -763,7 +942,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--scope",
-        choices=("staged", "push", "tree"),
+        choices=("staged", "push", "tree", "history"),
         default="staged",
         help="What to scan. staged = git diff --cached; push = upstream..HEAD; tree = full working tree.",
     )
@@ -800,6 +979,7 @@ def main() -> int:
 
     repo_root = repo_root_or_die()
     pii_rules = load_pii_replacement_patterns(repo_root)
+    allowed_amounts = load_allowed_amounts(repo_root)
     allowlist = load_allowlist(repo_root)
 
     # Choose file list
@@ -807,6 +987,8 @@ def main() -> int:
         files = staged_files(repo_root)
     elif args.scope == "push":
         files = push_files(repo_root)
+    elif args.scope == "history":
+        files = []
     else:
         files = tree_files(repo_root)
 
@@ -814,12 +996,20 @@ def main() -> int:
 
     # Layer 3 + 4: content scan
     for path in files:
-        if should_skip(path, allowlist):
-            continue
         text = file_content_for_scope(path, args.scope, repo_root)
         if text is None:
             continue
+        # Layer 7 ignores SCANNER_SELF_PATHS. That exemption keeps the literal
+        # layers from matching the scanner's own pattern catalogs, a problem
+        # layer 7 does not have, and its absence let real figures sit in this
+        # file's comments and in the policy document that forbids them.
+        findings.extend(scan_layer7_financial_figures(path, text, allowed_amounts))
+        if should_skip(path, allowlist):
+            continue
         findings.extend(scan_content_layer3_4(path, text, pii_rules))
+
+    if args.scope == "history":
+        findings.extend(scan_history(repo_root, allowed_amounts, pii_rules))
 
     # Layer 5: untracked sensitive paths (only meaningful for tree scope)
     if args.scope == "tree":
