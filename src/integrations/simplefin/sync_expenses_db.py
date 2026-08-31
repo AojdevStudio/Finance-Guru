@@ -123,16 +123,27 @@ def _iso_date(posted_ts: Any) -> str | None:
     return datetime.fromtimestamp(timestamp, UTC).date().isoformat()
 
 
-_WITHDRAWAL_MARKERS = ("direct debit",)
-_DEPOSIT_MARKERS = ("direct deposit", "direct dep")
+_WITHDRAWAL_MARKERS = (
+    "direct debit",
+    "debit card purchase",
+    "cash advance",
+    "transferred to",
+)
+_DEPOSIT_MARKERS = ("direct deposit", "direct dep", "transferred from")
 
 
 def resolve_direction(text: str | None, amount: float | None) -> str:
     """Resolve credit/debit, preferring explicit feed wording over amount sign.
 
-    Fidelity's CMA feed reports inbound payroll with the same negative sign it
-    uses for outflows, so sign alone books every direct deposit as spending.
+    Fidelity's sign is unreliable in BOTH directions, so sign alone is not
+    trustworthy for that feed: inbound payroll arrives negative, while debit-card
+    purchases and cash advances arrive positive. Verified 2026-08-31 against the
+    authoritative SnapTrade ``transactions`` rows for the same transactions.
     Explicit wording wins; sign remains the fallback for feeds that get it right.
+
+    Note ``transferred to`` (outflow) and ``transferred from`` (inflow) are both
+    listed: the two legs of an internal Fidelity transfer share an amount sign,
+    so only the wording distinguishes them.
 
     Args:
         text: Transaction description or payee text, may be None.
@@ -170,6 +181,14 @@ def normalize_transaction(
         posted_ts = None
     amount = _to_float(txn.get("amount"))
     text = txn.get("description") or txn.get("payee")
+    # Categorize against BOTH fields. `description` is the raw bank memo
+    # ("DIRECT DEBIT AMEX EPAYMENT ACH PMT"), while `payee` is SimpleFIN's
+    # normalized merchant name ("American Express Credit Card"). Matching only
+    # description missed every payee-shaped pattern and left 67% of debit volume
+    # Uncategorized (found 2026-08-04).
+    category_text = " ".join(
+        part for part in (txn.get("payee"), txn.get("description")) if part
+    )
     direction = resolve_direction(text, amount)
     # Keep sign consistent with direction so SUM(amount) reflects real cash flow.
     if amount is not None:
@@ -185,7 +204,7 @@ def normalize_transaction(
         txn.get("description"),
         amount,
         direction,
-        categorize_expense(text, amount),
+        categorize_expense(category_text, amount, account.get("name")),
         now,
     )
 
