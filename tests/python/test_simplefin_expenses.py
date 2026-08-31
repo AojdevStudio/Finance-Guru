@@ -54,11 +54,11 @@ def test_categorize_expense_patterns_and_exemptions() -> None:
 def test_resolve_direction_prefers_feed_wording_over_sign() -> None:
     # Fidelity's CMA reports inbound payroll negative; wording must win.
     assert (
-        resolve_direction("DIRECT DEPOSIT APEX SYSTEMSDIR DEP (Cash)", -1428.61)
+        resolve_direction("DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)", -1428.61)
         == "credit"
     )
     assert (
-        resolve_direction("DIRECT DEPOSIT Actalent SerPAYROLL (Cash)", -2273.03)
+        resolve_direction("DIRECT DEPOSIT Ridgeline SerPAYROLL (Cash)", -2273.03)
         == "credit"
     )
     assert (
@@ -79,7 +79,7 @@ def test_normalize_transaction_signs_amount_to_match_direction() -> None:
         "id": "TXN-payroll",
         "posted": 1704067200,
         "payee": None,
-        "description": "DIRECT DEPOSIT APEX SYSTEMSDIR DEP (Cash)",
+        "description": "DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)",
         "amount": "-1428.61",
     }
     row = normalize_transaction(account, deposit, "2026-07-31T00:00:00Z")
@@ -200,23 +200,26 @@ def test_retirement_account_activity_is_not_household_spending() -> None:
 def test_inbound_direct_deposits_are_payroll_regardless_of_employer_memo() -> None:
     """Employers vary the memo suffix; the deposit is payroll either way.
 
-    Verified 2026-08-31: Christian Brothers, Goucher and one Actalent variant say
-    "PAYROLL" and tagged correctly, while APEX Systems ("DIR DEP") and Actalent's
-    "ACH" variant fell through to Uncategorized, leaving $41,763.89 of income
-    untagged. The verification micro-deposits must stay Exempt.
+    Verified 2026-08-31 against a real feed: payers whose memo ends in "PAYROLL"
+    tagged correctly, while payers ending in "DIR DEP" or a plain "ACH" variant
+    fell through to Uncategorized, leaving a large share of income untagged. The
+    verification micro-deposits must stay Exempt.
+
+    Employer names and amounts below are placeholders; the memo SHAPE is what is
+    under test, and real payer names do not belong in a public repository.
     """
     cma = "Cash Management (Joint WROS) (4752)"
     assert (
-        categorize_expense("DIRECT DEPOSIT APEX SYSTEMSDIR DEP (Cash)", 2207.38, cma)
+        categorize_expense("DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)", 2207.38, cma)
         == "Payroll"
     )
     assert (
-        categorize_expense("DIRECT DEPOSIT Actalent SerACH (Cash)", 2273.03, cma)
+        categorize_expense("DIRECT DEPOSIT Ridgeline SerACH (Cash)", 2273.03, cma)
         == "Payroll"
     )
     # Already-working variants must not regress.
     assert (
-        categorize_expense("DIRECT DEPOSIT GOUCHER COLLPAYROLL (Cash)", 2431.51, cma)
+        categorize_expense("DIRECT DEPOSIT NORTHFIELD COLLPAYROLL (Cash)", 2431.51, cma)
         == "Payroll"
     )
     # Sub-dollar bank verification deposits stay Exempt, not payroll.
