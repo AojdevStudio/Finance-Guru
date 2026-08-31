@@ -611,7 +611,7 @@ if not self.api_key:
 ```
 📚 UNDERSTANDING RISK BANDS:
    Risk bands show how risk changes with price movement.
-   Example: TSLA at $450 = 0.49 risk, at $1526 = 0.99 risk
+   Example: TSLA at $450 = 0.49 risk, at $1,000 = 0.99 risk
 
    Use this to:
    - Set alerts when approaching high-risk zones

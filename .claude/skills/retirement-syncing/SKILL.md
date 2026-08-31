@@ -138,11 +138,11 @@ the numbers as accurate.
 **Log Summary:**
 ```
 Updated 12 retirement positions:
-- VOO: 214.7947 shares
-- VUG: 13.0652 shares
-- VTSAX: 228.462 shares
+- VOO: NNN.NNNN shares
+- VUG: NN.NNNN shares
+- VTSAX: NNN.NNN shares
 ...
-Total Retirement Value: ~$387,806
+Total Retirement Value: sum of updated position values
 ```
 
 ## Critical Rules

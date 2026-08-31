@@ -128,7 +128,7 @@ Present key metrics to the user:
 | MSTR | Bitcoin proxy |
 | PARR | New growth position |
 
-### Layer 2 (Income) - Build with W2, $11,517/month
+### Layer 2 (Income) - Build with recurring W2 monthly deployment
 | Bucket | Tickers | Allocation |
 |--------|---------|------------|
 | JPMorgan Income | JEPI, JEPQ | 27% |

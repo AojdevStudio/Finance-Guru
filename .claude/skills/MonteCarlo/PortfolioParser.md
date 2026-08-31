@@ -125,7 +125,7 @@ Alternatively, check the "Pending activity" row in positions CSV which shows the
 ## Example Output
 
 ```python
->>> parse_portfolio('notebooks/updates/Portfolio_Positions_Jan-02-2026.csv')
+>>> parse_portfolio('notebooks/updates/Portfolio_Positions_REDACTED.csv')
 {
     'layer1': 170073.42,
     'layer2': 61725.18,
@@ -140,9 +140,9 @@ Alternatively, check the "Pending activity" row in positions CSV which shows the
 ### Duplicate Positions
 Same ticker in margin AND cash accounts:
 ```
-JEPI (Margin): $4,212.85
-JEPI (Cash): $2,059.83
-Total JEPI: $6,272.68
+JEPI (Margin): ~67% of the combined position
+JEPI (Cash): ~33% of the combined position
+Total JEPI: margin + cash summed
 ```
 
 The parsing algorithm sums both positions automatically.

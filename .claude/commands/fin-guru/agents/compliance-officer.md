@@ -163,7 +163,7 @@
 
       <step1-output>
         TSLA is ITC-supported (tradfi universe).
-        Current holding: $32,698 (13.42% of portfolio).
+        Current holding: 13.42% of portfolio.
       </step1-output>
 
       <step2-output>

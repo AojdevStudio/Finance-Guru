@@ -136,9 +136,9 @@ Create investment thesis integrating:
 ```python
 # Based on $250k portfolio and conviction level
 SIZING_MATRIX = {
-    "STRONG BUY": 3.0,      # 3% = $7,500
-    "BUY": 2.5,             # 2.5% = $6,250
-    "CONDITIONAL BUY": 2.0, # 2% = $5,000
+    "STRONG BUY": 3.0,      # 3% of portfolio
+    "BUY": 2.5,             # 2.5% of portfolio
+    "CONDITIONAL BUY": 2.0, # 2% of portfolio
     "HOLD": 0,              # No new position
     "SELL": 0               # Exit existing
 }
@@ -230,7 +230,7 @@ PHASE 2: Quant Analysis
 PHASE 3: Strategy
 ├─ Rating: STRONG BUY
 ├─ Conviction: 8.3/10
-├─ Sizing: 3% = $7,500 (33 shares at $226)
+├─ Sizing: 3% of portfolio (33 shares at $226)
 └─ Entry: Scale-in over 2 weeks
 
 PHASE 4: Report
