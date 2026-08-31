@@ -102,7 +102,7 @@ Fidelity has no retail API. Options:
 | Schwab   | ⚠️ Individual approval    | 7-9%          | Slow onboarding                |
 | Alpaca   | ✅ Clean REST              | Stocks only   | Wrong universe for Layer 2     |
 
-**Honest take:** True execution automation requires moving the trading account to IBKR. Keep Fidelity as operating/banking. IBKR's 2.5-4.5% rate alone saves several hundred basis points a year on the current margin balance vs Fidelity 6-8%.
+**Honest take:** True execution automation requires moving the trading account to IBKR. Keep Fidelity as operating/banking. IBKR's 2.5-4.5% rate is potentially 150-550 basis points below Fidelity's 6-8%; annual dollar savings depend on the balance and applicable rates.
 
 ---
 
