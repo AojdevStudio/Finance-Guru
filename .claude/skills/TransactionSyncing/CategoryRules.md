@@ -408,3 +408,62 @@ When the user wants to add new categories or patterns:
 
 **Last Updated**: 2026-01-02
 **Maintainer**: Finance Guru TransactionSyncing skill
+
+---
+
+## Ordering rules (2026-08-04)
+
+`CATEGORY_PATTERNS` is an ordered dict and **the first match wins**, so placement
+is behavior, not style. Three orderings are load-bearing:
+
+1. **Travel before Credit Card Payment** so "American Express Travel" is a trip,
+   not a card payment.
+2. **Credit Card Payment before Bills & Utilities.** A card autopay memo reads
+   "Chase Credit Cautopay", which contains the substring `autopay`. With Bills &
+   Utilities first, every card payment was mis-filed as a utility bill.
+3. **`credit card payment` belongs to Credit Card Payment, not Loan Payment.**
+   It used to sit in Loan Payment, which is matched earlier, so card payments
+   never reached their own category.
+
+## Match against payee AND description
+
+The sync joins both fields before categorizing. `description` is the raw bank
+memo (`DIRECT DEBIT AMEX EPAYMENT ACH PMT`); `payee` is SimpleFIN's normalized
+merchant name (`American Express Credit Card`). Matching description alone left
+67% of debit volume Uncategorized. **When adding a pattern, cover the
+abbreviated memo form too**, for example `vehreg` alongside
+`vehicle registration`, and `amex epayment` alongside `amex payment`.
+
+## Non-spend categories
+
+`NON_SPEND_CATEGORIES` in `categorize.py` holds `Transfer`,
+`Credit Card Payment`, `Crypto Deposit`, and `Exempt`. These move money rather
+than consume it and **must be excluded from spend totals**. Including them
+double-counts: once when a purchase hits the card, again when the card bill is
+paid. On 2026-08-04 that inflated a 30-day review roughly 3x.
+
+## Categories added 2026-08-04
+
+### Giving
+Church and ministry contributions.
+
+**Patterns**: `anglicanchurch`, `church`, `tithe`, `offering`, `ministry`, `missions`
+
+### Fees & Interest
+Card interest and bank charges, kept out of merchant spend.
+
+**Patterns**: `interest charge`, `finance charge`, `annual fee`, `late fee`, `overdraft`, `service charge`, `maintenance fee`
+
+### Additions to existing categories
+
+- **Transfer**: `transferred to`, `transfer to`, `transfer withdrawal`, `webxtransfer`, `wire transfer`
+- **Credit Card Payment**: `credit card payment`, `american express credit card`, `chase credit ca`, `wf credit card`, `apple credit card`, `amex epayment`, `credit card`
+- **Loan Payment**: `mortg`, `mtgpmt`, `aes stdnt` (bank memos abbreviate)
+- **Auto & Transport**: `vehicle registration`, `vehreg`, `dmv`
+- **Business Expense**: `anthropic`, `claude.ai`, `cursor`, `github`, `vercel`
+
+## Deliberately left Uncategorized
+
+`Paid Check` and `Target` are ambiguous by nature: a written check or a Target
+run can be groceries, household, or shopping. Guessing is worse than a visible
+gap. Review these by hand.

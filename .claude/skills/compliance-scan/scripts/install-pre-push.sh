@@ -41,6 +41,14 @@ if [[ ! -x "$SCAN" ]]; then
     exit 0
 fi
 
+if ! "$SCAN" --scope history --skip-existing-tests; then
+    echo "" >&2
+    echo "compliance-scan: BLOCKED push, a commit in this range discloses private data." >&2
+    echo "  Removing it in a later commit does not help. The diff still publishes it." >&2
+    echo "  Rebuild the branch from origin/main so no commit ever contained it." >&2
+    exit 1
+fi
+
 if ! "$SCAN" --scope push --skip-existing-tests; then
     echo "" >&2
     echo "compliance-scan: BLOCKED push due to findings above." >&2

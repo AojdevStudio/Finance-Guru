@@ -9,7 +9,7 @@
     },
     {
       "path": "tests/python/test_margin_metrics.py",
-      "reason": "Synthetic test fixture filenames (Balances_for_Account_Z123) — Z123 is a fake account label, not real account data",
+      "reason": "Synthetic test fixture filenames (Balances_for_Account_Z123) \u2014 Z123 is a fake account label, not real account data",
       "approved_by": "ossie",
       "date": "2026-06-24"
     },
@@ -19,5 +19,15 @@
       "approved_by": "ossie",
       "date": "2026-06-24"
     }
+  ],
+  "allowed_amounts_comment": "Currency amounts layer 7 may ignore: genuine public reference data and obviously-synthetic doc values. A household balance, income, or spend total NEVER belongs here; rewrite it as a percentage or ratio instead.",
+  "allowed_amounts": [
+    "23,200",
+    "94,300",
+    "201,050",
+    "383,900",
+    "487,450",
+    "731,200",
+    "1,234.56"
   ]
 }
