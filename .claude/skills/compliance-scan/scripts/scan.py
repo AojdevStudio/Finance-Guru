@@ -368,7 +368,12 @@ def push_baseline(repo_root: Path) -> str:
         resolved = run_git(["rev-parse", "--verify", "--quiet", upstream], repo_root)
         if resolved.strip():
             return upstream
-    return "origin/main"
+    if run_git(["rev-parse", "--verify", "--quiet", "origin/main"], repo_root).strip():
+        return "origin/main"
+    raise SystemExit(
+        "compliance-scan: no resolvable push baseline (no upstream, no "
+        "origin/main); refusing to pass a scan that covered zero commits"
+    )
 
 
 def push_files(repo_root: Path) -> list[str]:
@@ -393,6 +398,7 @@ def scan_history(
     loudly as the one that added it.
     """
     upstream = push_baseline(repo_root)
+    allowlist = load_allowlist(repo_root)
 
     findings: list[Finding] = []
     for sha in run_git(["rev-list", f"{upstream}..HEAD"], repo_root).splitlines():
@@ -403,7 +409,9 @@ def scan_history(
             ["show", "--format=", "--name-only", "--diff-filter=ACMRD", sha], repo_root
         ).splitlines()
         for path in (n for n in names if n):
-            if should_skip(path):
+            if should_skip(path, allowlist) and not path.endswith(
+                _FINANCIAL_DOC_SUFFIXES
+            ):
                 continue
             diff = run_git(
                 ["show", "--format=", "--unified=0", sha, "--", path], repo_root
@@ -421,9 +429,14 @@ def scan_history(
             if not changed:
                 continue
             text = "\n".join(changed)
-            for finding in scan_layer7_financial_figures(
-                path, text, allowed_amounts
-            ) + scan_content_layer3_4(path, text, pii_rules):
+            literals = (
+                []
+                if should_skip(path, allowlist)
+                else scan_content_layer3_4(path, text, pii_rules)
+            )
+            for finding in (
+                scan_layer7_financial_figures(path, text, allowed_amounts) + literals
+            ):
                 finding.line = None
                 finding.rule = f"{finding.rule} (commit {sha[:7]})"
                 finding.remediation = (
@@ -590,7 +603,13 @@ def _redact_snippet(line: str, match: re.Match[str]) -> str:
 # or carries cents. Flag the precise ones and let the allowlist carry genuine
 # public reference data such as IRS bracket edges.
 
-_CURRENCY_RE = re.compile(r"\$\s?([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,})(\.[0-9]{2})?")
+_CURRENCY_RE = re.compile(
+    r"\$\s?([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,}|[0-9]{1,3}(?=\.[0-9]{2}))(\.[0-9]{2})?"
+)
+
+# Code comments leak as readily as prose. A "why" comment citing the balance
+# that motivated a check publishes that balance.
+_FINANCIAL_DOC_SUFFIXES = (".md", ".py")
 
 _FINANCIAL_DOC_PREFIXES = (
     ".claude/skills/",
@@ -603,21 +622,11 @@ _FINANCIAL_DOC_PREFIXES = (
 _CURRENCY_MIN = 1000.0
 
 
-def _is_scenario_amount(whole: float, cents: str | None) -> bool:
-    """Return True for a round figure a human invented for an example.
-
-    Cents are never invented, and a scenario is written in whole thousands.
-    """
-    if cents and cents != ".00":
-        return False
-    return whole % 1000 == 0
-
-
 def scan_layer7_financial_figures(
     path: str, text: str, allowed_amounts: frozenset[str]
 ) -> list[Finding]:
     """Flag precise currency amounts in tracked narrative documentation."""
-    if not path.endswith(".md"):
+    if not path.endswith(_FINANCIAL_DOC_SUFFIXES):
         return []
     if not path.startswith(_FINANCIAL_DOC_PREFIXES):
         return []
@@ -634,10 +643,17 @@ def scan_layer7_financial_figures(
                 whole = float(raw.replace(",", ""))
             except ValueError:
                 continue
-            if whole < _CURRENCY_MIN:
-                continue
-            if _is_scenario_amount(whole, cents):
-                continue
+            has_real_cents = cents is not None and cents != ".00"
+            if has_real_cents:
+                # Cents are never invented, so a smaller floor applies: real
+                # margin interest and card charges land well under $1,000.
+                if whole + float(cents) < 100:
+                    continue
+            else:
+                if whole < _CURRENCY_MIN:
+                    continue
+                if whole % 1000 == 0:
+                    continue
             findings.append(
                 Finding(
                     severity=Severity.HIGH,
@@ -980,13 +996,17 @@ def main() -> int:
 
     # Layer 3 + 4: content scan
     for path in files:
-        if should_skip(path, allowlist):
-            continue
         text = file_content_for_scope(path, args.scope, repo_root)
         if text is None:
             continue
-        findings.extend(scan_content_layer3_4(path, text, pii_rules))
+        # Layer 7 ignores SCANNER_SELF_PATHS. That exemption keeps the literal
+        # layers from matching the scanner's own pattern catalogs, a problem
+        # layer 7 does not have, and its absence let real figures sit in this
+        # file's comments and in the policy document that forbids them.
         findings.extend(scan_layer7_financial_figures(path, text, allowed_amounts))
+        if should_skip(path, allowlist):
+            continue
+        findings.extend(scan_content_layer3_4(path, text, pii_rules))
 
     if args.scope == "history":
         findings.extend(scan_history(repo_root, allowed_amounts, pii_rules))

@@ -72,7 +72,7 @@ each position from the prior session's close, so `account_equity` and
 `gross_market_value` are stale by one trading day even when `synced_at` is the
 current timestamp. Verified 2026-08-04: two syncs, at 17:46 and 17:53 CT (well
 after the 15:00 CT close), both returned Aug 3 closes on all six spot-checked
-tickers. PLTR read $125.65 against an actual Aug 4 close of $162.66.
+tickers. PLTR read 23% below its actual Aug 4 close.
 
 What this means in practice:
 
@@ -94,7 +94,7 @@ import sqlite3, yfinance as yf
 c = sqlite3.connect('family_office.db')
 for s in ['PLTR','VOO']:
     p = c.execute('SELECT price FROM positions WHERE symbol=?', (s,)).fetchone()[0]
-    live = yf.download(s, period='2d', progress=False)['Close'].iloc[-1]
+    live = yf.download(s, period='2d', progress=False, auto_adjust=False, multi_level_index=False)['Close'].iloc[-1]
     print(f'{s}: DB {p:.2f} vs live close {float(live):.2f}')
 "
 ```

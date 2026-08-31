@@ -41,7 +41,14 @@ if [[ ! -x "$SCAN" ]]; then
     exit 0
 fi
 
-if ! "$SCAN" --scope history --skip-existing-tests; then
+# argparse exits 2 for an unknown scope: a worktree on an older base has a
+# scanner that predates --scope history. Degrade to the push scope that base
+# already had, never misreport a version gap as a disclosure.
+HISTORY_RC=0
+"$SCAN" --scope history --skip-existing-tests || HISTORY_RC=$?
+if [[ "$HISTORY_RC" -eq 2 ]]; then
+    echo "compliance-scan: this checkout's scanner lacks --scope history; push scope only." >&2
+elif [[ "$HISTORY_RC" -ne 0 ]]; then
     echo "" >&2
     echo "compliance-scan: BLOCKED push, a commit in this range discloses private data." >&2
     echo "  Removing it in a later commit does not help. The diff still publishes it." >&2

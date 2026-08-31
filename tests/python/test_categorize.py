@@ -18,11 +18,11 @@ from src.integrations.simplefin.categorize import (
 class TestBusinessPayroll:
     """A written check means employee payroll on a business account and
     something unknown on a household one. Confirmed by the account owner
-    2026-08-04: the two $2,400 checks on Business Basic Checking (5468) are
+    2026-08-04: the two $2,400 checks on Business Basic Checking (1111) are
     employee payroll, and were landing in Transfer and Uncategorized."""
 
-    BIZ = "Business Basic Checking (5468)"
-    PERSONAL = "360 Checking (6851)"
+    BIZ = "Business Basic Checking (1111)"
+    PERSONAL = "360 Checking (2222)"
 
     @pytest.mark.parametrize("memo", ["Paid Check", "Cashed Check", "Check paid"])
     def test_check_on_business_account_is_payroll(self, memo: str) -> None:
@@ -44,11 +44,11 @@ class TestBusinessPayroll:
     @pytest.mark.parametrize(
         ("name", "expected"),
         [
-            ("Business Basic Checking (5468)", True),
+            ("Business Basic Checking (1111)", True),
             ("Example Consulting Group LLC", True),
             ("Placeholder LLC Operating", True),
-            ("360 Checking (6851)", False),
-            ("Platinum Card® (1006)", False),
+            ("360 Checking (2222)", False),
+            ("Platinum Card® (3333)", False),
             (None, False),
         ],
     )
@@ -77,7 +77,7 @@ class TestBusinessPayroll:
     ) -> None:
         """An empty or whitespace-only setting must not turn every account business."""
         monkeypatch.setenv("FG_BUSINESS_ACCOUNT_HINTS", " , ,")
-        assert is_business_account("360 Checking (6851)") is False
+        assert is_business_account("360 Checking (2222)") is False
 
     def test_payroll_is_a_business_category(self) -> None:
         assert "Payroll" in BUSINESS_CATEGORIES
@@ -200,7 +200,7 @@ class TestRawBankMemos:
                 "DIRECT DEBIT AMEX EPAYMENT ACH PMT (Cash)",
                 "Credit Card Payment",
             ),
-            ("Transfer", "TRANSFER WITHDRAWAL To ....6851", "Transfer"),
+            ("Transfer", "TRANSFER WITHDRAWAL To ....2222", "Transfer"),
             (
                 "State of Texas Vehicle Registration",
                 "BRAZORIA VEHREG 1302ANGLETON TX",

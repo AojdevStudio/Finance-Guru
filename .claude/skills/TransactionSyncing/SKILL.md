@@ -27,8 +27,10 @@ Read the command output instead (`N inserted, M updated, K skipped`).
 
 ## ⚠️ The two feeds do not run at the same speed
 
-**`bank_transactions` (SimpleFIN) is current. `transactions` (SnapTrade) lags by
-days.** Verified 2026-08-04: the `positions` table showed PLTR and TSLA puts
+**`bank_transactions` (SimpleFIN) is generally fresher than `transactions`
+(SnapTrade), which lags by days, but freshness is per account: a connected card
+can go silent for months (see Stale connections below), so check the account's
+own `MAX(date)` before trusting its cash leg.** Verified 2026-08-04: the `positions` table showed PLTR and TSLA puts
 opened on 2026-08-03, while `transactions` had no row for either buy and its
 latest activity date was still 2026-07-31. SnapTrade updated holdings before it
 published the activity that created them.
@@ -58,7 +60,7 @@ was in the other two streams.
 |---|---|---|
 | 1. Bank and card accounts (SimpleFIN) | `bank_transactions` | 59% |
 | 2. **Brokerage direct debits (SnapTrade)** | **`transactions`** | **36%** |
-| 3. Cards paid but not connected | neither, infer from the bill | $748.69 |
+| 3. Cards paid but not connected | neither, infer from the bill | 5% |
 
 Stream 2 is the one that gets forgotten. The Fidelity brokerage pays the
 mortgage, insurance, utilities, phone, tuition, and has a debit card used for
@@ -115,7 +117,7 @@ for r in c.execute(\"SELECT account_name, MAX(date), COUNT(*) FROM bank_transact
 
 Two failure modes, both found 2026-08-04:
 
-1. **Paid but not connected.** An Apple Card bill of $748.69 cleared on
+1. **Paid but not connected.** An Apple Card bill cleared on
    2026-08-03 with zero Apple purchases anywhere in the feed. That understated
    July household spending by roughly 8%. **Backfill from the bill amount and say
    so**, or connect the account.
@@ -277,7 +279,7 @@ transactions:       45 inserted, 12 updated
 bank_transactions:  18 inserted, 3 uncategorized
 
 BY TYPE:
-  Dividends: $342.50
+  Dividends: $250.00
   Margin Interest: -$18.43
   Debit Card: -$1,234.56
   Direct Deposit: +$2,000.00

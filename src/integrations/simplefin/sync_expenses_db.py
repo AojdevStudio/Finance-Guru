@@ -128,6 +128,7 @@ _WITHDRAWAL_MARKERS = (
     "debit card purchase",
     "cash advance",
     "transferred to",
+    "transfer withdrawal",
 )
 _DEPOSIT_MARKERS = ("direct deposit", "direct dep", "transferred from")
 
@@ -349,6 +350,14 @@ def main(argv: list[str] | None = None) -> int:
         f"{summary['inserted']} inserted, {summary['updated']} updated, "
         f"{summary['skipped_missing_id']} skipped."
     )
+    partial = int(summary.get("partial_errors", 0))
+    if partial:
+        print(
+            f"partial: {partial} account error(s); bank_transactions may be "
+            "incomplete for those accounts",
+            file=sys.stderr,
+        )
+        return 1
     return 0
 
 

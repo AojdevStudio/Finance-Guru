@@ -267,7 +267,6 @@ Debt payments
 - `mortgage`
 - `car payment`
 - `student loan`
-- `credit card payment`
 
 **Examples**:
 - "WELLS FARGO AUDRAFT" -> Loan Payment
@@ -406,7 +405,7 @@ When the user wants to add new categories or patterns:
 
 ---
 
-**Last Updated**: 2026-01-02
+**Last Updated**: 2026-08-31
 **Maintainer**: Finance Guru TransactionSyncing skill
 
 ---
@@ -437,7 +436,7 @@ abbreviated memo form too**, for example `vehreg` alongside
 ## Non-spend categories
 
 `NON_SPEND_CATEGORIES` in `categorize.py` holds `Transfer`,
-`Credit Card Payment`, `Crypto Deposit`, and `Exempt`. These move money rather
+`Credit Card Payment`, `Crypto Deposit`, `Exempt`, and `Retirement`. These move money rather
 than consume it and **must be excluded from spend totals**. Including them
 double-counts: once when a purchase hits the card, again when the card bill is
 paid. On 2026-08-04 that inflated a 30-day review roughly 3x.

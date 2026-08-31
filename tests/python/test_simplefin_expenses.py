@@ -168,6 +168,10 @@ def test_resolve_direction_handles_fidelity_card_and_transfer_wording() -> None:
     assert (
         resolve_direction("TRANSFERRED TO VS ZXX-XXX592-1 (Cash)", -650.00) == "debit"
     )
+    # An outbound transfer's own wording is a debit even when signed positive.
+    assert (
+        resolve_direction("TRANSFER WITHDRAWAL To ....2222 (Cash)", 650.00) == "debit"
+    )
     # "direct debit" must still win over the newer, less specific markers.
     assert (
         resolve_direction("DIRECT DEBIT CHASE CREDIT CAUTOPAYBUS (Cash)", -477.33)
@@ -192,7 +196,7 @@ def test_retirement_account_activity_is_not_household_spending() -> None:
     assert "Retirement" in NON_SPEND_CATEGORIES
     # A contribution on a normal account is still ordinary spending, not Retirement.
     assert (
-        categorize_expense("CONTRIBUTION TO CHURCH", -100.00, "Platinum Card® (1006)")
+        categorize_expense("CONTRIBUTION TO CHURCH", -100.00, "Platinum Card® (3333)")
         != "Retirement"
     )
 
@@ -208,7 +212,7 @@ def test_inbound_direct_deposits_are_payroll_regardless_of_employer_memo() -> No
     Employer names and amounts below are placeholders; the memo SHAPE is what is
     under test, and real payer names do not belong in a public repository.
     """
-    cma = "Cash Management (Joint WROS) (4752)"
+    cma = "Cash Management (Joint WROS) (0001)"
     assert (
         categorize_expense("DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)", 2207.38, cma)
         == "Payroll"
