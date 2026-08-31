@@ -104,7 +104,7 @@ src/ui/
 #### Main Screen (Primary View)
 ```
 ┌─ Finance Guru™ Dashboard ─────────────────────────────────────────┐
-│ Portfolio: $222,214.99 | Day: -$4,091 (-1.80%) | Nov 17 2025 3:33p│ <- PortfolioHeader
+│ Portfolio: $XXX,XXX.XX | Day: -1.80% | Nov 17 2025 3:33p         │ <- PortfolioHeader
 ├───────────────────────────────────────────────────────────────────┤
 │ [1] Layer 1  [2] Layer 2  [3] Layer 3  [4] Momentum  [5] Vol     │ <- QuickNav
 │ [6] Risk     [7] Golden Cross  [8] Portfolio  [R] Refresh [Q] Quit│

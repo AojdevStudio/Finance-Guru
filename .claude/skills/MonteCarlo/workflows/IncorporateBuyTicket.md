@@ -39,7 +39,7 @@ Example buy ticket format:
 ```markdown
 ---
 document_type: buy-ticket
-deployment_amount: "$5,054.09"
+deployment_amount: "$5,000.00"
 cash_available: "$6,000.00"
 price_snapshot_as_of: "2026-01-31T09:45:00-05:00"
 ---
@@ -117,20 +117,20 @@ Note in the output that this simulation includes the buy ticket:
 1. Find ticket: `fin-guru-private/fin-guru/tickets/buy-ticket-2025-12-31-w2-payroll.md`
 
 2. Parse allocations:
-   - JEPI: $500
-   - JEPQ: $500
-   - CLM: $500
-   - SQQQ: $800
+   - JEPI: 10% of ticket total
+   - JEPQ: 10% of ticket total
+   - CLM: 10% of ticket total
+   - SQQQ: 16% of ticket total
    - etc.
 
 3. Categorize:
-   - Layer 2: $4,254.09
-   - Layer 3: $800
-   - Total: $5,054.09
+   - Layer 2: ~84% of ticket total
+   - Layer 3: ~16% of ticket total
+   - Total: ticket total = 100%
 
 4. Adjust starting values:
-   - Layer 2: $61,725 + $4,254 = $65,979
-   - Layer 3: $13,199 + $800 = $13,999
+   - Layer 2: starting balance increased ~7% after the deployment
+   - Layer 3: starting balance increased ~6% after the deployment
 
 5. Run simulation with adjusted values
 

@@ -14,13 +14,13 @@
       "quantity": {
         "fidelity_column": "Quantity",
         "data_type": "number",
-        "example": "74",
+        "example": "100",
         "notes": "Number of shares owned"
       },
       "average_cost_basis": {
         "fidelity_column": "Average Cost Basis",
         "data_type": "currency",
-        "example": "$234.19",
+        "example": "$150.00",
         "notes": "Average purchase price per share"
       }
     },
@@ -28,17 +28,17 @@
       "last_price": {
         "fidelity_column": "Last Price",
         "data_type": "currency",
-        "example": "$448.96"
+        "example": "$200.00"
       },
       "current_value": {
         "fidelity_column": "Current Value",
         "data_type": "currency",
-        "example": "$33223.04"
+        "example": "$20000.00"
       },
       "total_gain_loss_dollar": {
         "fidelity_column": "Total Gain/Loss Dollar",
         "data_type": "currency",
-        "example": "+$15892.97"
+        "example": "+$5000.00"
       },
       "total_gain_loss_percent": {
         "fidelity_column": "Total Gain/Loss Percent",
@@ -76,7 +76,7 @@
       "net_debit": {
         "fidelity_key": "Net debit",
         "data_type": "currency",
-        "example": "$(7822.71)",
+        "example": "$(5000.00)",
         "notes": "Margin debt (negative value)"
       },
       "account_equity_percentage": {
@@ -88,7 +88,7 @@
       "total_account_value": {
         "fidelity_key": "Total account value",
         "data_type": "currency",
-        "example": "252103.3",
+        "example": "200000.00",
         "notes": "Total portfolio value"
       }
     },
@@ -110,7 +110,7 @@
     "format_notes": "Two-column format: first column is field name, second column is value. Commas as delimiters.",
     "example_rows": [
       ",Balance,Day change",
-      "Total account value,252103.3,-818.25",
+      "Total account value,200000.00,-500.00",
       "Account equity percentage,97.87%,"
     ]
   },
@@ -137,12 +137,12 @@
       "description": {
         "fidelity_column": "Description",
         "data_type": "string",
-        "example": "H-E-B #458"
+        "example": "H-E-B #100"
       },
       "amount": {
         "fidelity_column": "Amount ($)",
         "data_type": "currency",
-        "example": "$51.63"
+        "example": "$50.00"
       },
       "cash_balance": {
         "fidelity_column": "Cash Balance ($)",
@@ -360,12 +360,12 @@
       "quantity": {
         "fidelity_column": "Quantity",
         "data_type": "number",
-        "example": "72.942"
+        "example": "100.000"
       },
       "amount_per_share": {
         "fidelity_column": "Amount per share",
         "data_type": "currency",
-        "example": "$0.7080"
+        "example": "$0.5000"
       },
       "pay_date": {
         "fidelity_column": "Pay date",
@@ -381,7 +381,7 @@
     }
   },
   "parsing_notes": {
-    "currency_format": "US format with $ prefix, commas for thousands, periods for decimals. Negative values use parentheses: $(7822.71)",
+    "currency_format": "US format with $ prefix, commas for thousands, periods for decimals. Negative values use parentheses: $(5000.00)",
     "percentage_format": "Decimal followed by % symbol: 97.87%",
     "date_format": "MM/DD/YYYY",
     "special_characters": "UTF-8 BOM at start of file (\\ufeff)",

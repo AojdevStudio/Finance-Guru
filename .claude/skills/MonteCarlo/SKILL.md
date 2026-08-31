@@ -55,7 +55,7 @@ User: "What's my margin call probability?"
 ### Portfolio Metrics
 - **Total portfolio value** - Median, P5, P95 at month 28
 - **Layer 1 (Growth)** - PLTR, TSLA, VOO, etc. (no new deployment)
-- **Layer 2 (Income)** - Dividend funds ($11,517/month deployment)
+- **Layer 2 (Income)** - Dividend funds (recurring W2-funded monthly deployment)
 - **Layer 3 (Hedge)** - SQQQ ($800/month deployment)
 - **GOOGL position** - Scale-in ($1,000/month deployment)
 

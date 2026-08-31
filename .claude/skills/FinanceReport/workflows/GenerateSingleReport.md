@@ -50,7 +50,7 @@ uv run python src/utils/market_data.py {TICKER}
 
 Based on user profile ($250k default):
 - Recommended allocation: 2-3% for moderate conviction
-- Dollar amount: $5,000 - $7,500
+- Dollar amount: 2-3% of portfolio value
 - Share count: Calculate from current price
 
 ### Step 5: Generate PDF Report
@@ -124,7 +124,7 @@ User: "Generate a report for NVDA"
    → 25 Buy, 8 Hold, 2 Sell, Target: $165
 
 4. Calculate sizing for $250k portfolio
-   → 2.5% = $6,250 = ~45 shares at $138
+   → 2.5% of portfolio = ~45 shares at $138
 
 5. Generate PDF
    → fin-guru-private/fin-guru/analysis/reports/NVDA-analysis-2025-12-18.pdf (32KB)

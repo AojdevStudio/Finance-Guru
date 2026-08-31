@@ -112,7 +112,7 @@ Shows BOTH percentage AND dollar amount:
 ```
 Recommended Allocation: 2-3%
 For $250,000 portfolio:
-  - Dollar amount: $5,000 - $7,500
+  - Dollar amount: 2-3% of the $250,000 example portfolio
   - Share count: ~25-38 shares at $200
 ```
 
