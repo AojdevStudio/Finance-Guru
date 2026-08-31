@@ -27,6 +27,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Restored the Travel and Transfer categories in transaction categorization,
   and unpinned the affected test from a private script (#114).
+- SimpleFIN expense categorization now matches on the normalized `payee` as
+  well as the raw `description`, which had left 67% of 30-day debit volume
+  uncategorized, and credit card payments no longer fall through to
+  `Loan Payment`.
+- Transaction direction no longer trusts the Fidelity CMA amount sign, which is
+  wrong in both directions; debit-card purchases, cash advances, and the two
+  legs of an internal transfer are now resolved from the feed wording.
+
+### Security
+
+- Scrubbed PII from HEAD and stopped the compliance scanner passing blind
+  (#123), and untracked the QA PII replacement files (#122).
+- Business-account detection no longer hard-codes entity names in source; extra
+  hints are supplied at runtime through `FG_BUSINESS_ACCOUNT_HINTS`.
 
 ## [2.2.0] - 2026-07-27
 
