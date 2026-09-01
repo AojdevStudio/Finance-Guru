@@ -167,5 +167,5 @@ family_office.db-shm
 reports/
 
 # Instance notes and meeting records (household data; live in the instance directory)
-.memory/
-.dev/meeting-notes/
+/.memory/
+/.dev/meeting-notes/
