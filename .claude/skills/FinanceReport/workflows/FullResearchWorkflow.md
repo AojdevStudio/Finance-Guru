@@ -61,7 +61,7 @@ mcp__perplexity__search(
 
 ### 2.1 Risk Metrics (252-Day)
 ```bash
-uv run python src/analysis/risk_metrics_cli.py {TICKER} --days 252 --benchmark SPY
+uv run python -m src.analysis.risk_metrics_cli {TICKER} --days 252 --benchmark SPY
 ```
 
 **Metrics Extracted:**
@@ -75,7 +75,7 @@ uv run python src/analysis/risk_metrics_cli.py {TICKER} --days 252 --benchmark S
 
 ### 2.2 Momentum Indicators (90-Day)
 ```bash
-uv run python src/utils/momentum_cli.py {TICKER} --days 90
+uv run python -m src.utils.momentum_cli {TICKER} --days 90
 ```
 
 **Metrics Extracted:**
@@ -87,7 +87,7 @@ uv run python src/utils/momentum_cli.py {TICKER} --days 90
 
 ### 2.3 Volatility Assessment
 ```bash
-uv run python src/utils/volatility_cli.py {TICKER} --days 90
+uv run python -m src.utils.volatility_cli {TICKER} --days 90
 ```
 
 **Metrics Extracted:**
@@ -99,7 +99,7 @@ uv run python src/utils/volatility_cli.py {TICKER} --days 90
 ### 2.4 Portfolio Correlation (Optional)
 ```bash
 # Against existing holdings
-uv run python src/analysis/correlation_cli.py {TICKER} PLTR TSLA NVDA VOO --days 252
+uv run python -m src.analysis.correlation_cli {TICKER} PLTR TSLA NVDA VOO --days 252
 ```
 
 ## Phase 3: Strategy Formulation
@@ -234,5 +234,5 @@ PHASE 3: Strategy
 └─ Entry: Scale-in over 2 weeks
 
 PHASE 4: Report
-└─ Output: fin-guru-private/fin-guru/analysis/reports/AMZN-analysis-2025-12-18.pdf (35KB)
+└─ Output: reports/AMZN-analysis-2025-12-18.pdf (35KB)
 ```

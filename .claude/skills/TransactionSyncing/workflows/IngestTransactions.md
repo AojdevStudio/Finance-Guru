@@ -49,7 +49,7 @@ awk -F',' 'NR>2 && $1 ~ /^[0-9]/ {count++} END {print count}' "$SOURCE_FILE"
 
 ## Step 3: Copy with Date-Stamped Name
 
-**Destination**: `notebooks/transactions/`
+**Destination**: `imports/transactions/`
 
 **Naming convention**: `History_for_Account_{account_id}_{YYYY-MM-DD}_{period}.csv`
 
@@ -61,12 +61,12 @@ Where:
 
 ```bash
 cp ~/Downloads/History_for_Account_{account_id}.csv \
-   notebooks/transactions/History_for_Account_{account_id}_2026-03-06_60d.csv
+   imports/transactions/History_for_Account_{account_id}_2026-03-06_60d.csv
 ```
 
 ## Step 4: Merge into Accounts_History.csv
 
-**Master archive**: `notebooks/transactions/Accounts_History.csv`
+**Master archive**: `imports/transactions/Accounts_History.csv`
 
 ### Schema Normalization
 
@@ -115,13 +115,13 @@ If `Accounts_History.csv` doesn't exist:
 - Strip blank rows and footer disclaimer
 - Add proper header row
 
-## Step 5: Update notebooks/updates/ Copy
+## Step 5: Update imports/ Copy
 
-After merging, also update `notebooks/updates/History_for_Account_{account_id}.csv` with the latest download so other skills (dividend-tracking, etc.) can reference it:
+After merging, also update `imports/transactions/History_for_Account_{account_id}.csv` with the latest download so other skills (dividend-tracking, etc.) can reference it:
 
 ```bash
 cp ~/Downloads/History_for_Account_{account_id}.csv \
-   notebooks/updates/History_for_Account_{account_id}.csv
+   imports/transactions/History_for_Account_{account_id}.csv
 ```
 
 ## Step 6: Extract Dividend Summary
@@ -203,5 +203,5 @@ If `History_for_Account_{account_id}_{date}_{period}.csv` already exists:
 
 **Workflow Type**: Local file management
 **Estimated Duration**: 10-20 seconds
-**Dependencies**: CSV file access, notebooks/transactions/ directory
+**Dependencies**: CSV file access, imports/transactions/ directory
 **Chains to**: SyncTransactions (optional, for Google Sheets push)

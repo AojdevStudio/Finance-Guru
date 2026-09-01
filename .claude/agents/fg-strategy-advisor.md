@@ -71,7 +71,7 @@ Advisory-only ITC Risk overlay for supported tickers. Use it to enrich timing an
 ### Pre-Trade Workflow
 
 1. For supported tickers, run a non-blocking ITC check when creating buy tickets
-2. Run: `uv run python src/analysis/itc_risk_cli.py TICKER --universe [tradfi|crypto]` and choose the matching asset universe
+2. Run: `uv run python -m src.analysis.itc_risk_cli TICKER --universe [tradfi|crypto]` and choose the matching asset universe
 3. Continue without blocking if ITC data is unavailable
 4. Add a timing/risk advisory only when the ITC signal is materially elevated
 5. Document the ITC result in strategic recommendations when it was used

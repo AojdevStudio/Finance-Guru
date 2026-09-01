@@ -46,7 +46,7 @@ steps:
     instructions:
       - "Record which specialist owns each output."
       - "Track dependencies between research notes, quant outputs, strategy recommendations, and generated documents."
-      - "For buy tickets, preserve the canonical ticket contract and storage location under fin-guru-private/fin-guru/tickets/."
+      - "For buy tickets, preserve the canonical ticket contract and storage location under tickets/."
 
   - id: "coordinate-complete"
     name: "Coordination Complete"

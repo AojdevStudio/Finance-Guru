@@ -3,13 +3,13 @@ Provides real-time and end-of-day stock price data for Finance Guru system.
 
 USAGE:
     # End-of-day data (yfinance - free, always works)
-    uv run python src/utils/market_data.py TSLA
+    uv run python -m src.utils.market_data TSLA
 
     # Real-time data (Finnhub - 60 calls/min, unlimited!)
-    uv run python src/utils/market_data.py TSLA --realtime
+    uv run python -m src.utils.market_data TSLA --realtime
 
     # Multiple tickers (60/min rate limit - entire portfolio in seconds!)
-    uv run python src/utils/market_data.py TSLA PLTR NVDA --realtime
+    uv run python -m src.utils.market_data TSLA PLTR NVDA --realtime
 """
 
 import argparse
@@ -193,19 +193,19 @@ if __name__ == "__main__":
         epilog="""
 Examples:
   # Single ticker, end-of-day data (yfinance)
-  uv run python src/utils/market_data.py TSLA
+  uv run python -m src.utils.market_data TSLA
 
   # Multiple tickers, end-of-day data
-  uv run python src/utils/market_data.py TSLA PLTR NVDA
+  uv run python -m src.utils.market_data TSLA PLTR NVDA
 
   # Real-time data (Finnhub - FREE, 60 calls/min!)
-  uv run python src/utils/market_data.py TSLA --realtime
+  uv run python -m src.utils.market_data TSLA --realtime
 
   # Multiple tickers, real-time (60/min - scan entire portfolio fast!)
-  uv run python src/utils/market_data.py TSLA PLTR NVDA --realtime
+  uv run python -m src.utils.market_data TSLA PLTR NVDA --realtime
 
   # Entire portfolio scan (15-20 tickers in ~20 seconds!)
-  uv run python src/utils/market_data.py PLTR TSLA COIN NVDA AAPL GOOGL VOO JEPI JEPQ --realtime
+  uv run python -m src.utils.market_data PLTR TSLA COIN NVDA AAPL GOOGL VOO JEPI JEPQ --realtime
         """,
     )
 

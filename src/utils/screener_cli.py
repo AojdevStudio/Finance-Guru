@@ -13,18 +13,18 @@ This is Layer 3 of our 3-layer architecture:
 
 AGENT USAGE:
     # Screen single ticker
-    uv run python src/utils/screener_cli.py TSLA --days 252
+    uv run python -m src.utils.screener_cli TSLA --days 252
 
     # Screen multiple tickers (portfolio mode)
-    uv run python src/utils/screener_cli.py TSLA PLTR NVDA AAPL --days 252
+    uv run python -m src.utils.screener_cli TSLA PLTR NVDA AAPL --days 252
 
     # Custom criteria
-    uv run python src/utils/screener_cli.py TSLA PLTR --days 252 \\
+    uv run python -m src.utils.screener_cli TSLA PLTR --days 252 \\
         --patterns golden_cross rsi_oversold breakout \\
         --rsi-oversold 35
 
     # JSON output
-    uv run python src/utils/screener_cli.py TSLA PLTR --days 252 --output json
+    uv run python -m src.utils.screener_cli TSLA PLTR --days 252 --output json
 
 EDUCATIONAL NOTE:
 Use this to find trading opportunities automatically.

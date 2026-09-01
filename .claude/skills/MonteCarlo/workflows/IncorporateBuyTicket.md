@@ -13,16 +13,16 @@ Use this workflow when the user wants to:
 
 ### Step 1: Find the Buy Ticket
 
-Search for buy tickets in `fin-guru-private/fin-guru/tickets/`:
+Search for buy tickets in `tickets/`:
 
 ```bash
-ls -la fin-guru-private/fin-guru/tickets/buy-ticket-*.md
+ls -la tickets/buy-ticket-*.md
 ```
 
 If user specifies a date (e.g., "12-31"), find the matching ticket:
 
 ```bash
-ls fin-guru-private/fin-guru/tickets/buy-ticket-*12-31*.md 2>/dev/null || ls fin-guru-private/fin-guru/tickets/buy-ticket-2025-12-31*.md 2>/dev/null
+ls tickets/buy-ticket-*12-31*.md 2>/dev/null || ls tickets/buy-ticket-2025-12-31*.md 2>/dev/null
 ```
 
 ### Step 2: Parse the Buy Ticket
@@ -80,7 +80,7 @@ adjusted_layer1 = current_layer1 + sum(layer1_allocations)
 
 ### Step 5: Update Simulation
 
-Update `fin-guru-private/strategies/dividend_margin_monte_carlo.py` with adjusted values:
+Update `strategies/dividend_margin_monte_carlo.py` with adjusted values:
 
 ```python
 # Initialize with ADJUSTED values (includes buy ticket from {ticket_date})
@@ -114,7 +114,7 @@ Note in the output that this simulation includes the buy ticket:
 
 **Workflow Execution:**
 
-1. Find ticket: `fin-guru-private/fin-guru/tickets/buy-ticket-2025-12-31-w2-payroll.md`
+1. Find ticket: `tickets/buy-ticket-2025-12-31-w2-payroll.md`
 
 2. Parse allocations:
    - JEPI: 10% of ticket total

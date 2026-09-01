@@ -20,16 +20,16 @@ Monte Carlo simulation engine for Finance Guru's 4-layer dividend income + margi
 ```
 User: "Run the monte carlo simulation with current portfolio"
 -> Invokes RunSimulation workflow
--> Auto-detects portfolio values from notebooks/updates/Portfolio_Positions_*.csv
+-> Auto-detects portfolio values from imports/Portfolio_Positions_*.csv
 -> Runs 10,000 scenarios with v3.0 4-layer model
--> Outputs JSON summary + full CSV + Excel to fin-guru-private/fin-guru/analysis/
+-> Outputs JSON summary + full CSV + Excel to analysis/
 ```
 
 **Example 2: Incorporate a buy ticket into simulation**
 ```
 User: "Run monte carlo with my new buy ticket from 12-31"
 -> Invokes IncorporateBuyTicket workflow
--> Reads buy ticket from fin-guru-private/fin-guru/tickets/buy-ticket-2025-12-31-*.md
+-> Reads buy ticket from tickets/buy-ticket-2025-12-31-*.md
 -> Parses YAML frontmatter + Execution Summary table from the canonical ticket format
 -> Adjusts starting portfolio values based on ticket allocations
 -> Runs simulation with updated positions
@@ -66,14 +66,14 @@ User: "What's my margin call probability?"
 
 ## Output Files
 
-All outputs saved to `fin-guru-private/fin-guru/analysis/`:
+All outputs saved to `analysis/`:
 - `monte-carlo-v3-{date}.json` - Summary statistics
 - `monte-carlo-v3-full-results-{date}.csv` - All 10,000 scenarios
 - `monte-carlo-v3-analysis-{date}.xlsx` - Excel workbook with charts
 
 ## Configuration
 
-Simulation parameters are set in `fin-guru-private/strategies/dividend_margin_monte_carlo.py`:
+Simulation parameters are set in `strategies/dividend_margin_monte_carlo.py`:
 - Starting portfolio values (auto-detected or manual)
 - Monthly deployment amounts
 - Bucket allocations and yields

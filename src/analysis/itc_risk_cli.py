@@ -13,22 +13,22 @@ This is Layer 3 of our 3-layer architecture:
 
 AGENT USAGE:
     # Single ticker analysis (tradfi)
-    uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi
+    uv run python -m src.analysis.itc_risk_cli TSLA --universe tradfi
 
     # Crypto asset
-    uv run python src/analysis/itc_risk_cli.py BTC --universe crypto
+    uv run python -m src.analysis.itc_risk_cli BTC --universe crypto
 
     # Batch processing (multiple tickers)
-    uv run python src/analysis/itc_risk_cli.py TSLA AAPL MSTR --universe tradfi
+    uv run python -m src.analysis.itc_risk_cli TSLA AAPL MSTR --universe tradfi
 
     # JSON output (for programmatic parsing)
-    uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi --output json
+    uv run python -m src.analysis.itc_risk_cli TSLA --universe tradfi --output json
 
     # Full risk band table
-    uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi --full-table
+    uv run python -m src.analysis.itc_risk_cli TSLA --universe tradfi --full-table
 
     # List supported tickers
-    uv run python src/analysis/itc_risk_cli.py --list-supported tradfi
+    uv run python -m src.analysis.itc_risk_cli --list-supported tradfi
 
 EDUCATIONAL NOTE:
 This CLI makes it easy for agents to query ITC Risk without writing Python code.

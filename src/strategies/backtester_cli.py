@@ -8,13 +8,13 @@ ARCHITECTURE: Layer 3 of 3-layer type-safe architecture
 
 USAGE:
     # Backtest a simple RSI strategy
-    uv run python src/strategies/backtester_cli.py TSLA \\
+    uv run python -m src.strategies.backtester_cli TSLA \\
         --days 252 \\
         --strategy rsi \\
         --capital 100000
 
     # Custom backtest with transaction costs
-    uv run python src/strategies/backtester_cli.py TSLA \\
+    uv run python -m src.strategies.backtester_cli TSLA \\
         --days 252 \\
         --strategy rsi \\
         --capital 100000 \\
@@ -22,7 +22,7 @@ USAGE:
         --slippage 0.001
 
     # JSON output for programmatic analysis
-    uv run python src/strategies/backtester_cli.py TSLA \\
+    uv run python -m src.strategies.backtester_cli TSLA \\
         --days 252 \\
         --strategy rsi \\
         --output json
@@ -474,20 +474,20 @@ def main():
         epilog="""
 Examples:
   # Test RSI strategy
-  uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy rsi
+  uv run python -m src.strategies.backtester_cli TSLA --days 252 --strategy rsi
 
   # Test with custom capital and costs
-  uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy rsi \\
+  uv run python -m src.strategies.backtester_cli TSLA --days 252 --strategy rsi \\
       --capital 500000 --commission 5.0 --slippage 0.001
 
   # Test SMA crossover strategy
-  uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy sma_cross
+  uv run python -m src.strategies.backtester_cli TSLA --days 252 --strategy sma_cross
 
   # Buy-and-hold benchmark
-  uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy buy_hold
+  uv run python -m src.strategies.backtester_cli TSLA --days 252 --strategy buy_hold
 
   # JSON output for analysis
-  uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy rsi --output json
+  uv run python -m src.strategies.backtester_cli TSLA --days 252 --strategy rsi --output json
 
 Agent Use Cases:
   - Strategy Advisor: Validate investment hypotheses

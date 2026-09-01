@@ -99,21 +99,21 @@
   </supported-tickers>
 
   <comparison-workflow>
-    <step n="1">Run internal risk metrics: uv run python src/analysis/risk_metrics_cli.py TICKER --days 90</step>
-    <step n="2">Run ITC risk check: uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi</step>
+    <step n="1">Run internal risk metrics: uv run python -m src.analysis.risk_metrics_cli TICKER --days 90</step>
+    <step n="2">Run ITC risk check: uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi</step>
     <step n="3">Compare VaR/Sharpe with ITC risk score</step>
     <step n="4">Flag divergences and create analysis report</step>
   </comparison-workflow>
 
   <commands>
     <command purpose="ITC risk analysis">
-      uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi
+      uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi
     </command>
     <command purpose="JSON output for quantitative parsing">
-      uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi --output json
+      uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi --output json
     </command>
     <command purpose="Batch risk comparison">
-      uv run python src/analysis/itc_risk_cli.py TSLA AAPL MSTR --universe tradfi
+      uv run python -m src.analysis.itc_risk_cli TSLA AAPL MSTR --universe tradfi
     </command>
   </commands>
 

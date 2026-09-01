@@ -13,17 +13,17 @@ This is Layer 3 of our 3-layer architecture:
 
 AGENT USAGE:
     # Compare hedge strategies across common market drop scenarios
-    uv run python src/analysis/hedge_comparison_cli.py --scenarios -5,-10,-20,-40
+    uv run python -m src.analysis.hedge_comparison_cli --scenarios -5,-10,-20,-40
 
     # JSON output for programmatic parsing
-    uv run python src/analysis/hedge_comparison_cli.py --scenarios -5,-10,-20,-40 --output json
+    uv run python -m src.analysis.hedge_comparison_cli --scenarios -5,-10,-20,-40 --output json
 
     # Custom QQQ spot and put parameters
-    uv run python src/analysis/hedge_comparison_cli.py --scenarios -5,-10,-20,-40 \\
+    uv run python -m src.analysis.hedge_comparison_cli --scenarios -5,-10,-20,-40 \\
         --spot 500 --strike 450 --premium 8 --days 60
 
     # Adjust SQQQ allocation and volatility assumptions
-    uv run python src/analysis/hedge_comparison_cli.py --scenarios -5,-10,-20,-40 \\
+    uv run python -m src.analysis.hedge_comparison_cli --scenarios -5,-10,-20,-40 \\
         --sqqq-allocation 25000 --daily-vol 0.02 --baseline-iv 0.25
 
 EDUCATIONAL NOTE:

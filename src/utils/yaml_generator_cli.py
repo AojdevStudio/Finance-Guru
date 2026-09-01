@@ -13,16 +13,16 @@ This is Layer 3 of our 3-layer architecture:
 
 USAGE:
     # Generate configs from JSON input file
-    uv run python src/utils/yaml_generator_cli.py --input user_data.json
+    uv run python -m src.utils.yaml_generator_cli --input user_data.json
 
     # Generate configs and save to custom directory
-    uv run python src/utils/yaml_generator_cli.py --input user_data.json --output /path/to/dir
+    uv run python -m src.utils.yaml_generator_cli --input user_data.json --output /path/to/dir
 
     # Generate specific config file only
-    uv run python src/utils/yaml_generator_cli.py --input data.json --type user-profile
+    uv run python -m src.utils.yaml_generator_cli --input data.json --type user-profile
 
     # Validate user data without generating files
-    uv run python src/utils/yaml_generator_cli.py --input data.json --validate-only
+    uv run python -m src.utils.yaml_generator_cli --input data.json --validate-only
 
 AGENT USE CASES:
     - Builder: Generate configuration files during onboarding
@@ -140,16 +140,16 @@ def main() -> None:
         epilog="""
 Examples:
   # Generate all config files
-  uv run python src/utils/yaml_generator_cli.py --input user_data.json
+  uv run python -m src.utils.yaml_generator_cli --input user_data.json
 
   # Save to custom directory
-  uv run python src/utils/yaml_generator_cli.py --input data.json --output /tmp/test
+  uv run python -m src.utils.yaml_generator_cli --input data.json --output /tmp/test
 
   # Generate only user-profile.yaml
-  uv run python src/utils/yaml_generator_cli.py --input data.json --type user-profile
+  uv run python -m src.utils.yaml_generator_cli --input data.json --type user-profile
 
   # Validate without generating files
-  uv run python src/utils/yaml_generator_cli.py --input data.json --validate-only
+  uv run python -m src.utils.yaml_generator_cli --input data.json --validate-only
         """,
     )
 

@@ -53,7 +53,7 @@ ITC is an advisory-only overlay for supported tickers on income buy tickets. Use
 ### Pre-Trade Workflow
 
 1. For supported tickers, run a non-blocking ITC check when creating income buy tickets
-2. Run: `uv run python src/analysis/itc_risk_cli.py TICKER --universe [tradfi|crypto]` and choose the matching asset universe
+2. Run: `uv run python -m src.analysis.itc_risk_cli TICKER --universe [tradfi|crypto]` and choose the matching asset universe
 3. Continue without blocking if ITC data is unavailable
 4. Add a timing/risk advisory only when the ITC signal is materially elevated
 5. Document the ITC result in strategy notes when it was used

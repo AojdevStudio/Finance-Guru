@@ -13,19 +13,19 @@ This is Layer 3 of our 3-layer architecture:
 
 AGENT USAGE:
     # Basic sizing with portfolio value and underlyings
-    uv run python src/analysis/hedge_sizer_cli.py --portfolio 200000 --underlyings QQQ,SPY
+    uv run python -m src.analysis.hedge_sizer_cli --portfolio 200000 --underlyings QQQ,SPY
 
     # Custom ratio (dollars per contract)
-    uv run python src/analysis/hedge_sizer_cli.py --portfolio 200000 --underlyings QQQ,SPY --ratio 40000
+    uv run python -m src.analysis.hedge_sizer_cli --portfolio 200000 --underlyings QQQ,SPY --ratio 40000
 
     # Skip budget validation (no API calls)
-    uv run python src/analysis/hedge_sizer_cli.py --portfolio 200000 --underlyings QQQ --skip-budget
+    uv run python -m src.analysis.hedge_sizer_cli --portfolio 200000 --underlyings QQQ --skip-budget
 
     # JSON output for programmatic parsing
-    uv run python src/analysis/hedge_sizer_cli.py --portfolio 200000 --underlyings QQQ --output json
+    uv run python -m src.analysis.hedge_sizer_cli --portfolio 200000 --underlyings QQQ --output json
 
     # Auto-read portfolio value from Fidelity CSV
-    uv run python src/analysis/hedge_sizer_cli.py --underlyings QQQ,SPY --skip-budget
+    uv run python -m src.analysis.hedge_sizer_cli --underlyings QQQ,SPY --skip-budget
 
 EDUCATIONAL NOTE:
 Hedge sizing determines how many put option contracts to buy for portfolio

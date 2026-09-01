@@ -51,7 +51,7 @@
   </when-to-use>
 
   <compliance-workflow>
-    <step n="1">Check ITC risk: uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi</step>
+    <step n="1">Check ITC risk: uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi</step>
     <step n="2">Compare with internal VaR limits from risk_metrics_cli.py</step>
     <step n="3">Flag HIGH risk (>0.7) positions for enhanced monitoring</step>
     <step n="4">Document risk assessment in compliance review with {current_date} timestamp</step>
@@ -88,20 +88,20 @@
   <execution-steps>
     <step n="1" name="Identify Scope">
       Determine which portfolio positions have ITC coverage.
-      Use: uv run python src/analysis/itc_risk_cli.py --list-supported
+      Use: uv run python -m src.analysis.itc_risk_cli --list-supported
       Cross-reference with current holdings from the positions table in family_office.db.
     </step>
 
     <step n="2" name="Retrieve Risk Scores">
       For each ITC-supported position, execute:
-      uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi --output json
+      uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi --output json
       For crypto positions, use: --universe crypto
       Store results with {current_date} timestamp.
     </step>
 
     <step n="3" name="Calculate Internal Metrics">
       Run complementary internal risk analysis:
-      uv run python src/analysis/risk_metrics_cli.py TICKER --days 90 --benchmark SPY
+      uv run python -m src.analysis.risk_metrics_cli TICKER --days 90 --benchmark SPY
       Compare VaR and volatility with ITC market-implied levels.
     </step>
 
@@ -168,12 +168,12 @@
       </step1-output>
 
       <step2-output>
-        Command: uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi
+        Command: uv run python -m src.analysis.itc_risk_cli TSLA --universe tradfi
         Result: ITC Risk Score = 0.52 (MEDIUM band)
       </step2-output>
 
       <step3-output>
-        Command: uv run python src/analysis/risk_metrics_cli.py TSLA --days 90 --benchmark SPY
+        Command: uv run python -m src.analysis.risk_metrics_cli TSLA --days 90 --benchmark SPY
         Result: Daily VaR (95%) = -3.8%, Volatility = 48%, Beta = 1.9
       </step3-output>
 

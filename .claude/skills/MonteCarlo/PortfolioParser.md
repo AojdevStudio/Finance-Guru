@@ -125,7 +125,7 @@ Alternatively, check the "Pending activity" row in positions CSV which shows the
 ## Example Output
 
 ```python
->>> parse_portfolio('notebooks/updates/Portfolio_Positions_REDACTED.csv')
+>>> parse_portfolio('imports/Portfolio_Positions_REDACTED.csv')
 {
     'layer1': 170073.42,
     'layer2': 61725.18,
@@ -155,6 +155,6 @@ If user adds a new ticker not in classification:
 
 ### Missing CSV
 If positions CSV not found:
-1. Check `notebooks/updates/` for latest file
+1. Check `imports/` for latest file
 2. Ask user to download fresh export from Fidelity
 3. Use last known values as fallback

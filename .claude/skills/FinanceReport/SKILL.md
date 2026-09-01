@@ -30,7 +30,7 @@ User: "Generate a report for NVDA"
 -> Runs quant tools (risk_metrics, momentum, volatility)
 -> Fetches sentiment via Perplexity MCP
 -> Builds 8-10 page PDF with VGT-style header
--> Saves to fin-guru-private/fin-guru/analysis/reports/NVDA-analysis-2025-12-18.pdf
+-> Saves to reports/NVDA-analysis-2025-12-18.pdf
 ```
 
 **Example 2: Regenerate all watchlist reports**
@@ -150,8 +150,7 @@ uv run python .claude/skills/FinanceReport/tools/ChartKit.py \
 ```bash
 uv run python .claude/skills/FinanceReport/tools/ReportGenerator.py \
   --ticker TSLA \
-  --portfolio-value 250000 \
-  --output-dir fin-guru-private/fin-guru/analysis/reports/
+  --portfolio-value 250000
 ```
 
 ## Integration Points
@@ -172,7 +171,7 @@ mcp__perplexity__reason(query=f"Analyze {ticker} investment thesis for 2026")
 - `src/analysis/correlation_cli.py` - Portfolio correlation matrix
 
 ### User Profile
-Reads portfolio value from `fin-guru/data/user-profile.yaml` for sizing:
+Reads portfolio value from `user-profile.yaml` for sizing:
 - `investment_portfolio.total_value` = Current portfolio value
 - Calculates exact dollar amounts for recommendations
 

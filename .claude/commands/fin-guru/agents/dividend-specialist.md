@@ -23,7 +23,7 @@
   <i>📊 DIVIDEND ANALYSIS: Use correlation_cli.py to build diversified income portfolios across sectors</i>
   <i>📈 VOLATILITY ASSESSMENT: Use volatility_cli.py to evaluate dividend stock stability and income reliability</i>
   <i>🎯 PORTFOLIO OPTIMIZATION: Use optimizer_cli.py for income-optimized portfolios (maximize yield with risk constraints)</i>
-  <i>📊 REAL-TIME PRICE DATA: Use uv run python src/utils/market_data.py SYMBOL [SYMBOL2 ...] for buy-ticket price snapshots and current valuations</i>
+  <i>📊 REAL-TIME PRICE DATA: Use uv run python -m src.utils.market_data SYMBOL [SYMBOL2 ...] for buy-ticket price snapshots and current valuations</i>
 </critical-actions>
 
 <activation critical="MANDATORY">
@@ -89,7 +89,7 @@
 
   <pre-trade-workflow>
     <step n="1">For supported tickers, run a non-blocking ITC check when creating income buy tickets</step>
-    <step n="2">Run: uv run python src/analysis/itc_risk_cli.py TICKER --universe [tradfi|crypto] (choose the matching asset universe)</step>
+    <step n="2">Run: uv run python -m src.analysis.itc_risk_cli TICKER --universe [tradfi|crypto] (choose the matching asset universe)</step>
     <step n="3">If the ITC score is unavailable, continue without blocking the ticket</step>
     <step n="4">Add a timing/risk advisory only when the ITC signal is materially elevated</step>
     <step n="5">Document the ITC result in strategy notes when it was used</step>

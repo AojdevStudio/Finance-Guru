@@ -20,13 +20,13 @@ Run Finance Guru CLI tools to collect metrics:
 
 ```bash
 # Risk metrics (252-day lookback)
-uv run python src/analysis/risk_metrics_cli.py {TICKER} --days 252 --output json > /tmp/{TICKER}_risk.json
+uv run python -m src.analysis.risk_metrics_cli {TICKER} --days 252 --output json > /tmp/{TICKER}_risk.json
 
 # Momentum indicators (90-day)
-uv run python src/utils/momentum_cli.py {TICKER} --days 90 --output json > /tmp/{TICKER}_momentum.json
+uv run python -m src.utils.momentum_cli {TICKER} --days 90 --output json > /tmp/{TICKER}_momentum.json
 
 # Volatility assessment
-uv run python src/utils/volatility_cli.py {TICKER} --days 90 --output json > /tmp/{TICKER}_volatility.json
+uv run python -m src.utils.volatility_cli {TICKER} --days 90 --output json > /tmp/{TICKER}_volatility.json
 ```
 
 ### Step 2: Fetch Market Sentiment (Perplexity MCP)
@@ -43,7 +43,7 @@ mcp__perplexity__reason(query=f"What are the key catalysts and risks for {TICKER
 
 ```bash
 # Using yfinance via market_data utility
-uv run python src/utils/market_data.py {TICKER}
+uv run python -m src.utils.market_data {TICKER}
 ```
 
 ### Step 4: Calculate Portfolio Sizing
@@ -59,7 +59,7 @@ Based on user profile ($250k default):
 uv run python .claude/skills/FinanceReport/tools/ReportGenerator.py \
   --ticker {TICKER} \
   --portfolio-value 250000 \
-  --output-dir fin-guru-private/fin-guru/analysis/reports/
+  --output-dir reports/
 ```
 
 Or programmatically build sections:
@@ -99,7 +99,7 @@ output_path = report.build()
 
 ## Output
 
-PDF saved to: `fin-guru-private/fin-guru/analysis/reports/{TICKER}-analysis-{YYYY-MM-DD}.pdf`
+PDF saved to: `reports/{TICKER}-analysis-{YYYY-MM-DD}.pdf`
 
 ## Error Handling
 
@@ -127,5 +127,5 @@ User: "Generate a report for NVDA"
    → 2.5% of portfolio = ~45 shares at $138
 
 5. Generate PDF
-   → fin-guru-private/fin-guru/analysis/reports/NVDA-analysis-2025-12-18.pdf (32KB)
+   → reports/NVDA-analysis-2025-12-18.pdf (32KB)
 ```

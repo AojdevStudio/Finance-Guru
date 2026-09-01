@@ -8,23 +8,23 @@ ARCHITECTURE: Layer 3 of 3-layer type-safe architecture
 
 USAGE:
     # Maximum Sharpe ratio optimization
-    uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method max_sharpe
+    uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method max_sharpe
 
     # Risk parity allocation (all-weather portfolio)
-    uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method risk_parity
+    uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method risk_parity
 
     # Minimum variance (defensive)
-    uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method min_variance
+    uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method min_variance
 
     # With position limits (max 30% per position)
-    uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method max_sharpe --max-position 0.30
+    uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method max_sharpe --max-position 0.30
 
     # Black-Litterman with views
-    uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA --days 252 --method black_litterman \
+    uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA --days 252 --method black_litterman \
         --view TSLA:0.15 --view PLTR:0.20
 
     # JSON output
-    uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method max_sharpe --output json
+    uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method max_sharpe --output json
 
 AGENT USE CASES:
 - Strategy Advisor: Generate optimal allocation for $500k capital deployment
@@ -337,23 +337,23 @@ def main():
         epilog="""
 Examples:
   # Maximum Sharpe ratio (best risk-adjusted returns)
-  uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method max_sharpe
+  uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method max_sharpe
 
   # Risk parity (all-weather portfolio)
-  uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method risk_parity
+  uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method risk_parity
 
   # Minimum variance (defensive)
-  uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method min_variance
+  uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method min_variance
 
   # With position limits (max 30% per stock)
-  uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method max_sharpe --max-position 0.30
+  uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method max_sharpe --max-position 0.30
 
   # Black-Litterman with views
-  uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA --days 252 --method black_litterman \
+  uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA --days 252 --method black_litterman \
       --view TSLA:0.15 --view PLTR:0.20
 
   # JSON output
-  uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method max_sharpe --output json
+  uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method max_sharpe --output json
 
 Agent Use Cases:
   - Strategy Advisor: Generate deployment plan for $500k capital

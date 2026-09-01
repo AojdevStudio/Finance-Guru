@@ -284,7 +284,7 @@ class TestScenarioUnsupportedTicker:
 
         error_message = str(exc_info.value)
         assert "NVDA not supported" in error_message
-        assert "risk_metrics_cli.py" in error_message  # Points to alternative
+        assert "risk_metrics_cli" in error_message  # Points to alternative
 
     def test_pltr_is_not_supported(self):
         """PLTR must NOT be in the ITC supported tradfi list."""

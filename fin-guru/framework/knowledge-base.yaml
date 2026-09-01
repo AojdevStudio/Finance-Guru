@@ -11,18 +11,18 @@ knowledge_base:
 ## File Policy
 
 file_policy:
-  base_repository: "fin-guru-private/fin-guru"
+  base_repository: "{data-root}"
 
   directories:
-    strategies: "fin-guru-private/fin-guru/strategies"
+    strategies: "strategies"
     models: "src/models/"
-    reports: "fin-guru-private/fin-guru/reports"
-    analysis: "fin-guru-private/fin-guru/analysis"
-    tickets: "fin-guru-private/fin-guru/tickets"
+    reports: "reports"
+    analysis: "analysis"
+    tickets: "tickets"
 
   rules:
-    - "Always save artifacts to fin-guru-private/fin-guru/; never write outside"
-    - "Default save path for new artifacts: fin-guru-private/fin-guru/reports/"
+    - "Always save artifacts to analysis/; never write outside"
+    - "Default save path for new artifacts: reports/"
     - "Use descriptive filenames with timestamps for reports"
     - "Follow naming conventions: {topic}-{YYYY-MM-DD}.md"
     - "Note: logs/ directory contains Claude Code hooks, not Finance Guru audit trails"
@@ -30,12 +30,12 @@ file_policy:
 ## Directory Structure
 
 directory_structure:
-  fin-guru-private/fin-guru:
+  "{data-root}":
     - strategies/: "# Strategic planning documents (master strategies, active plans)"
     - reports/: "# Monthly market reviews, intelligence reports"
     - analysis/: "# Deep research, Monte Carlo simulations, modeling"
     - tickets/: "# Buy/sell execution tickets (date-stamped)"
-    - archive/: "# Historical documents for reference only"
+    - notes/: "# Instance notes, guides, and meeting records"
 
   src/:
     - models/: "# Pydantic models for type-safe Python tools"
@@ -43,8 +43,8 @@ directory_structure:
     - strategies/: "# Backtester, optimizer, portfolio construction"
     - utils/: "# Momentum, volatility, moving averages, market data"
 
-  notebooks/:
-    - updates/: "# Fidelity CSV exports (balances, positions)"
+  "{data-root}/imports":
+    - "# Broker CSV exports (balances, positions, transactions)"
 
   research/finance/:
     - "# User assessment data and research materials"

@@ -8,16 +8,16 @@ ARCHITECTURE: Layer 3 of 3-layer type-safe architecture
 
 USAGE:
     # Basic correlation analysis (2+ tickers required)
-    uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 90
+    uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA --days 90
 
     # Rolling correlation analysis
-    uv run python src/analysis/correlation_cli.py TSLA SPY --days 252 --rolling 60
+    uv run python -m src.analysis.correlation_cli TSLA SPY --days 252 --rolling 60
 
     # JSON output for programmatic use
-    uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 90 --output json
+    uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA --days 90 --output json
 
     # Quick pairwise correlation check
-    uv run python src/analysis/correlation_cli.py TSLA SPY --days 90
+    uv run python -m src.analysis.correlation_cli TSLA SPY --days 90
 
 AGENT USE CASES:
 - Strategy Advisor: Portfolio diversification assessment and rebalancing signals
@@ -306,16 +306,16 @@ def main():
         epilog="""
 Examples:
   # Basic portfolio correlation
-  uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 90
+  uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA --days 90
 
   # Pairwise correlation check
-  uv run python src/analysis/correlation_cli.py TSLA SPY --days 90
+  uv run python -m src.analysis.correlation_cli TSLA SPY --days 90
 
   # Rolling correlation (time-varying)
-  uv run python src/analysis/correlation_cli.py TSLA SPY --days 252 --rolling 60
+  uv run python -m src.analysis.correlation_cli TSLA SPY --days 252 --rolling 60
 
   # JSON output
-  uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 90 --output json
+  uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA --days 90 --output json
 
 Agent Use Cases:
   - Strategy Advisor: Diversification assessment, rebalancing signals

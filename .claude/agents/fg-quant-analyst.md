@@ -61,8 +61,8 @@ Supported crypto: BTC, ETH, BNB, SOL, XRP, ADA, DOGE, LINK, AVAX, DOT, SHIB, LTC
 
 ### Comparison Workflow
 
-1. Run internal risk metrics: `uv run python src/analysis/risk_metrics_cli.py TICKER --days 90`
-2. Run ITC risk check: `uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi`
+1. Run internal risk metrics: `uv run python -m src.analysis.risk_metrics_cli TICKER --days 90`
+2. Run ITC risk check: `uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi`
 3. Compare VaR/Sharpe with ITC risk score
 4. Flag divergences and create analysis report
 

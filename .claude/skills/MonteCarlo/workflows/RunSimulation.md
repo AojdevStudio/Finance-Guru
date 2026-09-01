@@ -4,7 +4,7 @@ Execute the Monte Carlo v3.0 simulation with auto-detected portfolio values.
 
 ## Prerequisites
 
-- Latest Fidelity positions CSV in `notebooks/updates/Portfolio_Positions_*.csv`
+- Latest Fidelity positions CSV in `imports/Portfolio_Positions_*.csv`
 - Python environment configured with `uv`
 
 ## Workflow Steps
@@ -19,10 +19,10 @@ Store as `{simulation_date}` for output file naming.
 
 ### Step 2: Auto-Detect Portfolio Values
 
-Read the latest Fidelity positions CSV from `notebooks/updates/`:
+Read the latest Fidelity positions CSV from `imports/`:
 
 ```bash
-ls -t notebooks/updates/Portfolio_Positions_*.csv | head -1
+ls -t imports/Portfolio_Positions_*.csv | head -1
 ```
 
 Parse the CSV to extract current values for each layer:
@@ -44,7 +44,7 @@ Parse the CSV to extract current values for each layer:
 
 ### Step 3: Update Simulation Starting Values
 
-Edit `fin-guru-private/strategies/dividend_margin_monte_carlo.py` to update the starting values in `run_single_scenario()`:
+Edit `strategies/dividend_margin_monte_carlo.py` to update the starting values in `run_single_scenario()`:
 
 ```python
 # Initialize portfolio components with ACTUAL {simulation_date} values
@@ -58,13 +58,13 @@ margin_balance = {margin_value}     # Starting margin debt
 ### Step 4: Run Simulation
 
 ```bash
-uv run python fin-guru-private/strategies/dividend_margin_monte_carlo.py
+uv run python strategies/dividend_margin_monte_carlo.py
 ```
 
 This produces:
 - Console output with summary statistics
-- `fin-guru-private/fin-guru/analysis/monte-carlo-v3-{date}.json`
-- `fin-guru-private/fin-guru/analysis/monte-carlo-v3-full-results-{date}.csv`
+- `analysis/monte-carlo-v3-{date}.json`
+- `analysis/monte-carlo-v3-full-results-{date}.csv`
 
 ### Step 5: Generate Excel Workbook
 
@@ -75,7 +75,7 @@ uv run python scripts/simulations/monte_carlo_excel_export.py
 ```
 
 This produces:
-- `fin-guru-private/fin-guru/analysis/monte-carlo-v3-analysis-{date}.xlsx`
+- `analysis/monte-carlo-v3-analysis-{date}.xlsx`
 
 ### Step 6: Report Results
 
@@ -105,9 +105,9 @@ Present key metrics to the user:
 
 ## Output Files
 
-- JSON summary: `fin-guru-private/fin-guru/analysis/monte-carlo-v3-{simulation_date}.json`
-- Full scenarios: `fin-guru-private/fin-guru/analysis/monte-carlo-v3-full-results-{simulation_date}.csv`
-- Excel analysis: `fin-guru-private/fin-guru/analysis/monte-carlo-v3-analysis-{simulation_date}.xlsx`
+- JSON summary: `analysis/monte-carlo-v3-{simulation_date}.json`
+- Full scenarios: `analysis/monte-carlo-v3-full-results-{simulation_date}.csv`
+- Excel analysis: `analysis/monte-carlo-v3-analysis-{simulation_date}.xlsx`
 
 ## Layer Classification Reference
 

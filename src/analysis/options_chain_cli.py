@@ -14,19 +14,19 @@ This is Layer 3 of our 3-layer architecture:
 
 AGENT USAGE:
     # Scan for QQQ puts, 10-20% OTM, 60-90 days out, $4407 budget
-    uv run python src/analysis/options_chain_cli.py QQQ --type put \\
+    uv run python -m src.analysis.options_chain_cli QQQ --type put \\
         --otm-min 10 --otm-max 20 --days-min 60 --days-max 90 \\
         --budget 4407 --contracts 4
 
     # List available expiration dates
-    uv run python src/analysis/options_chain_cli.py QQQ --list-expiries
+    uv run python -m src.analysis.options_chain_cli QQQ --list-expiries
 
     # JSON output
-    uv run python src/analysis/options_chain_cli.py QQQ --type put \\
+    uv run python -m src.analysis.options_chain_cli QQQ --type put \\
         --otm-min 10 --otm-max 20 --output json
 
     # Save to file
-    uv run python src/analysis/options_chain_cli.py QQQ --type put \\
+    uv run python -m src.analysis.options_chain_cli QQQ --type put \\
         --otm-min 5 --otm-max 15 --output json \\
         --save-to analysis/qqq-puts-2026-02-02.json
 

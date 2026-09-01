@@ -96,26 +96,26 @@
 
   <workflow>
     <step n="1">Check if ticker is ITC-supported before analysis</step>
-    <step n="2">Run ITC risk check: uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi --output json</step>
+    <step n="2">Run ITC risk check: uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi --output json</step>
     <step n="3">Include ITC risk score in research summary</step>
     <step n="4">Flag if ITC risk > 0.7 (high risk zone)</step>
   </workflow>
 
   <commands>
     <command purpose="Single ticker analysis">
-      uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi
+      uv run python -m src.analysis.itc_risk_cli TSLA --universe tradfi
     </command>
     <command purpose="Batch processing">
-      uv run python src/analysis/itc_risk_cli.py TSLA AAPL MSTR --universe tradfi
+      uv run python -m src.analysis.itc_risk_cli TSLA AAPL MSTR --universe tradfi
     </command>
     <command purpose="JSON output for parsing">
-      uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi --output json
+      uv run python -m src.analysis.itc_risk_cli TSLA --universe tradfi --output json
     </command>
     <command purpose="Full risk band table">
-      uv run python src/analysis/itc_risk_cli.py TSLA --universe tradfi --full-table
+      uv run python -m src.analysis.itc_risk_cli TSLA --universe tradfi --full-table
     </command>
     <command purpose="List supported tickers">
-      uv run python src/analysis/itc_risk_cli.py --list-supported tradfi
+      uv run python -m src.analysis.itc_risk_cli --list-supported tradfi
     </command>
   </commands>
 

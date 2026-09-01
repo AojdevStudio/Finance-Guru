@@ -13,28 +13,28 @@ This is Layer 3 of our 3-layer architecture:
 
 AGENT USAGE:
     # Single MA calculation
-    uv run python src/utils/moving_averages_cli.py TSLA --days 200 --ma-type SMA --period 50
+    uv run python -m src.utils.moving_averages_cli TSLA --days 200 --ma-type SMA --period 50
 
     # Real-time MA with Finnhub (RECOMMENDED for live trend analysis!)
-    uv run python src/utils/moving_averages_cli.py TSLA --days 200 --ma-type SMA --period 50 --realtime
+    uv run python -m src.utils.moving_averages_cli TSLA --days 200 --ma-type SMA --period 50 --realtime
 
     # Crossover detection (50/200 Golden Cross) - real-time!
-    uv run python src/utils/moving_averages_cli.py TSLA --days 252 --fast 50 --slow 200 --realtime
+    uv run python -m src.utils.moving_averages_cli TSLA --days 252 --fast 50 --slow 200 --realtime
 
     # Multiple MA types comparison
-    uv run python src/utils/moving_averages_cli.py TSLA --days 200 \\
+    uv run python -m src.utils.moving_averages_cli TSLA --days 200 \\
         --ma-type SMA --period 50 \\
         --secondary-ma-type EMA --secondary-period 50
 
     # EMA crossover with real-time data
-    uv run python src/utils/moving_averages_cli.py TSLA --days 252 \\
+    uv run python -m src.utils.moving_averages_cli TSLA --days 252 \\
         --ma-type EMA --fast 12 --slow 26 --realtime
 
     # JSON output
-    uv run python src/utils/moving_averages_cli.py TSLA --days 200 --ma-type SMA --period 50 --output json
+    uv run python -m src.utils.moving_averages_cli TSLA --days 200 --ma-type SMA --period 50 --output json
 
     # Save to file
-    uv run python src/utils/moving_averages_cli.py TSLA --days 252 --fast 50 --slow 200 \\
+    uv run python -m src.utils.moving_averages_cli TSLA --days 252 --fast 50 --slow 200 \\
         --output json \\
         --save-to analysis/tsla-golden-cross-2025-10-13.json
 

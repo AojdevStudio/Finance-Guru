@@ -5,7 +5,7 @@ converts collected data into Pydantic models, and generates all configuration
 files (user-profile.yaml, config.yaml, system-context.md, CLAUDE.md, .env,
 mcp.json) to their correct output locations.
 
-Callable via: uv run python src/cli/onboarding_wizard.py
+Callable via: uv run python -m src.cli.onboarding_wizard
 
 ARCHITECTURE NOTE:
 This is Layer 3 of the onboarding architecture:

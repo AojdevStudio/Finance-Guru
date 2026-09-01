@@ -9,17 +9,45 @@
  * - Outputs correctly formatted system-reminder content
  */
 
-import { describe, it, expect } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
 import { spawn } from "child_process";
 
 const HOOK_PATH = join(import.meta.dir, "../load-fin-core-config.ts");
+const TEST_INSTANCE_ROOT = mkdtempSync(join(tmpdir(), "finance-guru-hook-test-"));
+
+beforeAll(() => {
+  mkdirSync(join(TEST_INSTANCE_ROOT, "imports"));
+  writeFileSync(
+    join(TEST_INSTANCE_ROOT, "config.yaml"),
+    'module_name: "Finance Guru™"\nversion: "2.0.0"\n',
+  );
+  writeFileSync(join(TEST_INSTANCE_ROOT, "user-profile.yaml"), "profile: test-fixture\n");
+  writeFileSync(join(TEST_INSTANCE_ROOT, "system-context.md"), "# Test system context\n");
+});
+
+afterAll(() => {
+  rmSync(TEST_INSTANCE_ROOT, { recursive: true, force: true });
+});
 
 // Helper to run hook with input
-async function runHook(input: { session_id: string; event: string }): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+async function runHook(
+  input: { session_id: string; event: string },
+  useWorkingDirectory = false,
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   return new Promise((resolve, reject) => {
+    const env = { ...process.env };
+    if (useWorkingDirectory) {
+      delete env.FIN_GURU_DATA_ROOT;
+    } else {
+      env.FIN_GURU_DATA_ROOT = TEST_INSTANCE_ROOT;
+    }
+
     const proc = spawn("bun", [HOOK_PATH], {
-      env: { ...process.env }
+      cwd: useWorkingDirectory ? TEST_INSTANCE_ROOT : undefined,
+      env,
     });
 
     let stdout = "";
@@ -129,6 +157,17 @@ describe("load-fin-core-config hook with Bun", () => {
 
     expect(result.stdout).toContain("module_name: \"Finance Guru™\"");
     expect(result.stdout).toContain("version: \"2.0.0\"");
+  });
+
+  it("should use the working directory when FIN_GURU_DATA_ROOT is unset", async () => {
+    const result = await runHook(
+      { session_id: "test-working-directory", event: "session_start" },
+      true,
+    );
+
+    expect(result.stdout).toContain('module_name: "Finance Guru™"');
+    expect(result.stdout).toContain("profile: test-fixture");
+    expect(result.stdout).toContain("# Test system context");
   });
 
   it("should include completion footer", async () => {

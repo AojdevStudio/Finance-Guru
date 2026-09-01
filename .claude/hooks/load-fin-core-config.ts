@@ -14,20 +14,16 @@
  */
 
 import { readFileSync, readdirSync, statSync } from 'fs';
-import { join, resolve, dirname } from 'path';
+import { join, resolve } from 'path';
 
 // Bun provides import.meta.dir directly
 const __dirname = import.meta.dir;
+const PROJECT_ROOT = resolve(__dirname, '../..');
+const DATA_ROOT = resolve(process.env.FIN_GURU_DATA_ROOT?.trim() || process.cwd());
 
 interface HookInput {
   session_id: string;
   event: string;
-}
-
-function getProjectRoot(): string {
-  // Hook is in family-office/.claude/hooks/
-  // Project root is family-office/
-  return resolve(__dirname, '../..');
 }
 
 function getLatestFile(dir: string, pattern: RegExp): string | null {
@@ -48,7 +44,7 @@ function getLatestFile(dir: string, pattern: RegExp): string | null {
 }
 
 function parsePositionsFileDate(filename: string): Date | null {
-  // Pattern: Portfolio_Positions_Nov-05-2025.csv
+  // Pattern: Portfolio_Positions_MMM-DD-YYYY.csv
   const match = filename.match(/Portfolio_Positions_([A-Za-z]{3})-(\d{2})-(\d{4})\.csv$/);
   if (!match) return null;
 
@@ -97,13 +93,13 @@ function generateUpdateAlert(missingBalances: boolean, missingPositions: boolean
   const alerts: string[] = [];
 
   if (missingBalances) {
-    alerts.push('⚠️ MISSING: Balances file (notebooks/updates/Balances_for_Account_{account_id}.csv)');
+    alerts.push('⚠️ MISSING: Balances file (imports/Balances_for_Account_{account_id}.csv)');
   } else if (outdatedBalances) {
     alerts.push('⚠️ OUTDATED: Balances file is older than 7 days');
   }
 
   if (missingPositions) {
-    alerts.push('⚠️ MISSING: Portfolio positions file (notebooks/updates/Portfolio_Positions_MMM-DD-YYYY.csv)');
+    alerts.push('⚠️ MISSING: Portfolio positions file (imports/Portfolio_Positions_MMM-DD-YYYY.csv)');
   } else if (outdatedPositions) {
     alerts.push('⚠️ OUTDATED: Portfolio positions file is older than 7 days');
   }
@@ -119,8 +115,8 @@ ${alerts.join('\n')}
 
 📥 ACTION REQUIRED:
 Please update your portfolio data by downloading the latest files from Fidelity:
-1. Balances: Export to notebooks/updates/Balances_for_Account_{account_id}.csv
-2. Positions: Export to notebooks/updates/Portfolio_Positions_MMM-DD-YYYY.csv
+1. Balances: Export to imports/Balances_for_Account_{account_id}.csv
+2. Positions: Export to imports/Portfolio_Positions_MMM-DD-YYYY.csv
 
 Your Finance Guru analysis will be more accurate with current data.
 `;
@@ -159,14 +155,12 @@ function main() {
 function processHook(inputData: string) {
   try {
     const input: HookInput = JSON.parse(inputData);
-    const projectRoot = getProjectRoot();
-
-    // File paths (all project-specific)
-    const skillPath = join(projectRoot, '.claude/skills/fin-core/SKILL.md');
-    const configPath = join(projectRoot, 'fin-guru-private/fin-guru/config.yaml');
-    const profilePath = join(projectRoot, 'fin-guru-private/fin-guru/data/user-profile.yaml');
-    const systemContextPath = join(projectRoot, 'fin-guru-private/fin-guru/data/system-context.md');
-    const updatesDir = join(projectRoot, 'notebooks/updates');
+    // The skill ships with the project; private inputs belong to the instance.
+    const skillPath = join(PROJECT_ROOT, '.claude/skills/fin-core/SKILL.md');
+    const configPath = join(DATA_ROOT, 'config.yaml');
+    const profilePath = join(DATA_ROOT, 'user-profile.yaml');
+    const systemContextPath = join(DATA_ROOT, 'system-context.md');
+    const updatesDir = join(DATA_ROOT, 'imports');
 
     // Load core files
     const skillContent = loadFile(skillPath);
