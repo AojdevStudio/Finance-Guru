@@ -200,7 +200,7 @@ def show(database_url: str | None) -> None:
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint."""
     paths = InstancePaths.resolve()
-    load_instance_env(paths)
+    load_instance_env(paths, override=True)
     parser = argparse.ArgumentParser(description="Sync SnapTrade -> local SQLite DB")
     parser.add_argument(
         "--config",

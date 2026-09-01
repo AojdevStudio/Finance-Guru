@@ -284,8 +284,10 @@ class TestConvertStateToUserData:
 class TestGenerateConfigFiles:
     """Test config file generation to correct paths."""
 
-    def test_generates_all_files(self, valid_user_data, tmp_path):
+    def test_generates_all_files(self, valid_user_data, tmp_path, monkeypatch):
         """All config files are created at correct locations."""
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+
         # Copy templates to tmp_path so we can use it as project root
         import shutil
 
@@ -312,8 +314,12 @@ class TestGenerateConfigFiles:
         assert (tmp_path / ".env").exists()
         assert (tmp_path / ".claude" / "mcp.json").exists()
 
-    def test_generated_files_contain_user_name(self, valid_user_data, tmp_path):
+    def test_generated_files_contain_user_name(
+        self, valid_user_data, tmp_path, monkeypatch
+    ):
         """Generated files contain actual user name, not template placeholders."""
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+
         import shutil
 
         template_src = Path("scripts/onboarding/modules/templates")

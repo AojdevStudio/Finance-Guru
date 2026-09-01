@@ -110,6 +110,8 @@ class InstancePaths(BaseModel):
         configured_url = environment.get("DATABASE_URL", "").strip()
         if not configured_url:
             return _sqlite_url(self.db)
+        if configured_url in {":memory:", "sqlite:///:memory:"}:
+            return "sqlite:///:memory:"
         if configured_url.startswith("sqlite:///"):
             database_path = Path(configured_url.removeprefix("sqlite:///"))
         elif "://" in configured_url:
@@ -134,13 +136,18 @@ def _db_path(
     instance_paths = paths or InstancePaths.resolve()
     environment = None if database_url is None else {"DATABASE_URL": database_url}
     resolved_url = instance_paths.database_url(environment)
+    if resolved_url == "sqlite:///:memory:":
+        return Path(":memory:")
     if resolved_url.startswith("sqlite:///"):
         return Path(resolved_url.removeprefix("sqlite:///"))
-    if resolved_url.startswith("sqlite://"):
-        return Path(resolved_url.removeprefix("sqlite://"))
-    return Path(resolved_url)
+    scheme, separator, _ = resolved_url.partition("://")
+    if separator and scheme != "sqlite":
+        raise ValueError(
+            f"Finance Guru only supports sqlite databases, got {scheme}://"
+        )
+    raise ValueError(f"Invalid SQLite database URL: {resolved_url}")
 
 
-def load_instance_env(paths: InstancePaths, override: bool = True) -> None:
+def load_instance_env(paths: InstancePaths, override: bool = False) -> None:
     """Load the instance's environment file into the process environment."""
     load_dotenv(paths.env_file, override=override)

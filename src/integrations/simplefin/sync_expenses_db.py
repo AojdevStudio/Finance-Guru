@@ -20,7 +20,7 @@ class SimpleFinSyncError(RuntimeError):
     """Raised when SimpleFIN data cannot be fetched or parsed."""
 
 
-DEFAULT_APP_DIR = Path("apps/simplefin-sync")
+DEFAULT_APP_DIR = Path(__file__).resolve().parents[3] / "apps" / "simplefin-sync"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS bank_transactions (
@@ -326,7 +326,7 @@ def main(argv: list[str] | None = None) -> int:
         Process exit status.
     """
     paths = InstancePaths.resolve()
-    load_instance_env(paths)
+    load_instance_env(paths, override=True)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--months", type=int, default=12)
     parser.add_argument("--show", action="store_true")

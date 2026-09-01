@@ -1,6 +1,8 @@
 import sqlite3
 from copy import deepcopy
+from pathlib import Path
 
+from src.integrations.simplefin import sync_expenses_db
 from src.integrations.simplefin.categorize import (
     NON_SPEND_CATEGORIES,
     categorize_expense,
@@ -10,6 +12,16 @@ from src.integrations.simplefin.sync_expenses_db import (
     resolve_direction,
     sync,
 )
+
+
+def test_default_app_dir_is_checkout_owned(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    repo_root = Path(sync_expenses_db.__file__).resolve().parents[3]
+    expected_app_dir = repo_root / "apps" / "simplefin-sync"
+
+    assert expected_app_dir == sync_expenses_db.DEFAULT_APP_DIR
+    assert sync_expenses_db.DEFAULT_APP_DIR.is_absolute()
+
 
 SFIN_ACCOUNT_SET = {
     "accounts": [

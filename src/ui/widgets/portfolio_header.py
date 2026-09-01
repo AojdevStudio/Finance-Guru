@@ -12,6 +12,7 @@ from rich.text import Text
 from textual.reactive import reactive
 from textual.widget import Widget
 
+from src.config import InstancePaths
 from src.models.dashboard_inputs import PortfolioSnapshotInput
 
 
@@ -30,8 +31,9 @@ class PortfolioHeader(Widget):
             Rich Text object with formatted portfolio display
         """
         if not self.portfolio:
+            imports = InstancePaths.resolve().imports
             return Text(
-                "📥 No portfolio data. Add a CSV to the instance imports directory.",
+                f"📥 No portfolio data. Add a CSV to {imports}.",
                 style="dim",
             )
 

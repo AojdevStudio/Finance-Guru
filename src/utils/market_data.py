@@ -23,7 +23,7 @@ from pydantic import BaseModel
 
 from src.config.instance_paths import InstancePaths, load_instance_env
 
-load_instance_env(InstancePaths.resolve())
+load_instance_env(InstancePaths.resolve(), override=False)
 
 
 class PriceData(BaseModel):

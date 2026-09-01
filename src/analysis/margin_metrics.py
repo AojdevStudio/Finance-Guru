@@ -324,7 +324,7 @@ def metrics_from_runtime(
     ``source="snaptrade"`` reads the SnapTrade API live, and ``source="csv"``
     (or passing ``csv_path``) reads the legacy Fidelity balances CSV instead.
     """
-    load_instance_env(InstancePaths.resolve())
+    load_instance_env(InstancePaths.resolve(), override=False)
     if csv_path is not None or source == "csv":
         balances = read_fidelity_balances(csv_path)
     elif source == "snaptrade":
