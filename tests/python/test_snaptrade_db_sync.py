@@ -107,6 +107,7 @@ def test_sync_cli_reads_default_account_config_from_instance_root(
         encoding="utf-8",
     )
     monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(instance_root))
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.chdir(working_directory)
 
     assert sync_positions_main([]) == 0
