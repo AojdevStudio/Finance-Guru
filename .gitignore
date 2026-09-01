@@ -165,3 +165,7 @@ family_office.db-shm
 
 # Generated financial reports (personal data)
 reports/
+
+# Instance notes and meeting records (household data; live in the instance directory)
+/.memory/
+/.dev/meeting-notes/
