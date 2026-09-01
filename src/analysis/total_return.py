@@ -32,41 +32,17 @@ Created: 2026-02-17
 
 from __future__ import annotations
 
-import os
 import statistics
 from dataclasses import dataclass, field
 from datetime import date
-from pathlib import Path
 
 import yaml
 
+from src.config.instance_paths import InstancePaths
 from src.models.total_return_inputs import (
     DividendRecord,
     TotalReturnInput,
 )
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-
-PRIVATE_DIR = Path(
-    os.getenv("FIN_GURU_PRIVATE_DIR", str(_PROJECT_ROOT / "fin-guru-private"))
-)
-"""Base directory for gitignored Finance Guru data.
-
-Override with ``FIN_GURU_PRIVATE_DIR`` for testing or portable deployment.
-"""
-
-DIVIDEND_SCHEDULES_PATH = Path(
-    os.getenv(
-        "FIN_GURU_DIVIDEND_SCHEDULES",
-        str(PRIVATE_DIR / "dividend-schedules.yaml"),
-    )
-)
-"""Path to dividend schedule YAML. Missing file is a graceful fallback."""
-
 
 # ---------------------------------------------------------------------------
 # Exceptions
@@ -122,12 +98,13 @@ def load_dividend_schedules() -> dict:
         Dict mapping ticker -> {frequency: int, label: str}.
         Empty dict if file does not exist (graceful fallback).
 
-    The YAML file lives in fin-guru-private/ which is gitignored.
-    Missing file is normal (first clone, CI environment).
+    The YAML file lives under the resolved instance root. Missing files are
+    normal for a new instance and in CI.
     """
-    if not DIVIDEND_SCHEDULES_PATH.exists():
+    schedules_path = InstancePaths.resolve().dividend_schedules
+    if not schedules_path.exists():
         return {}
-    with open(DIVIDEND_SCHEDULES_PATH) as f:
+    with schedules_path.open() as f:
         data = yaml.safe_load(f)
     if not isinstance(data, dict):
         return {}
@@ -404,5 +381,4 @@ __all__ = [
     "TotalReturnCalculator",
     "TotalReturnResult",
     "load_dividend_schedules",
-    "DIVIDEND_SCHEDULES_PATH",
 ]

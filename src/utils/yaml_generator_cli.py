@@ -38,6 +38,7 @@ import json
 import sys
 from pathlib import Path
 
+from src.config.instance_paths import InstancePaths
 from src.models.yaml_generation_inputs import (
     CashFlowInput,
     DebtProfileInput,
@@ -242,18 +243,13 @@ Examples:
                 print(generated_content)
             else:
                 # Write single file
+                paths = InstancePaths(root=Path(args.output).expanduser().resolve())
                 file_map = {
-                    "user-profile": Path(args.output)
-                    / "fin-guru"
-                    / "data"
-                    / "user-profile.yaml",
-                    "config": Path(args.output) / "fin-guru" / "config.yaml",
-                    "system-context": Path(args.output)
-                    / "fin-guru"
-                    / "data"
-                    / "system-context.md",
-                    "claude-md": Path(args.output) / "CLAUDE.md",
-                    "env": Path(args.output) / ".env",
+                    "user-profile": paths.profile,
+                    "config": paths.config,
+                    "system-context": paths.system_context,
+                    "claude-md": paths.root / "CLAUDE.md",
+                    "env": paths.env_file,
                 }
 
                 output_path = file_map[args.type]

@@ -9,8 +9,9 @@ from pathlib import Path
 from typing import Any, Self
 
 import yaml
-from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_serializer
+
+from src.config.instance_paths import InstancePaths, load_instance_env
 
 
 class SnapTradeCredentials(BaseModel):
@@ -24,7 +25,7 @@ class SnapTradeCredentials(BaseModel):
     @classmethod
     def from_env(cls) -> Self:
         """Load SnapTrade credentials from the local `.env`/process environment."""
-        load_dotenv()
+        load_instance_env(InstancePaths.resolve(), override=False)
         required = {
             "client_id": "SNAPTRADE_CLIENT_ID",
             "consumer_key": "SNAPTRADE_CONSUMER_KEY",

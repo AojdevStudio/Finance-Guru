@@ -8,7 +8,6 @@ Author: Finance Guru™ Development Team
 Created: 2025-11-17
 """
 
-import os
 from pathlib import Path
 
 import yaml
@@ -21,9 +20,6 @@ class FinGuruConfig:
     """
 
     PROJECT_ROOT = Path(__file__).parent.parent.parent
-    PORTFOLIO_DIR = Path(
-        os.getenv("FIN_GURU_PORTFOLIO_DIR", PROJECT_ROOT / "notebooks" / "updates")
-    )
     CONFIG_DIR = Path.home() / ".config" / "finance-guru"
     LAYERS_FILE = CONFIG_DIR / "layers.yaml"
 

@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import argparse
-import os
 from collections.abc import Callable
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
-
+from src.config.instance_paths import InstancePaths, load_instance_env
 from src.integrations.simplefin.sync_expenses_db import sync as sync_expenses
 from src.integrations.snaptrade.sync_db import sync as sync_positions
 from src.integrations.snaptrade.sync_transactions_db import sync as sync_transactions
@@ -26,7 +23,7 @@ def refresh(database_url: str | None, *, months: int = 12) -> dict[str, Any]:
     Returns:
         Per-source statuses and the refresh timestamp.
     """
-    account_config = Path("config/snaptrade-accounts.yaml")
+    account_config = InstancePaths.resolve().snaptrade_accounts
     operations: tuple[tuple[str, Callable[[], dict[str, Any]]], ...] = (
         ("positions", lambda: sync_positions(account_config, database_url)),
         ("transactions", lambda: sync_transactions(account_config, database_url)),
@@ -54,12 +51,13 @@ def main(argv: list[str] | None = None) -> int:
         Zero when every source succeeds, otherwise one (so automation can
         detect a partial refresh where one leg went stale).
     """
-    load_dotenv(override=True)
+    paths = InstancePaths.resolve()
+    load_instance_env(paths, override=True)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--months", type=int, default=12)
     parser.add_argument("--show", action="store_true")
     args = parser.parse_args(argv)
-    database_url = os.getenv("DATABASE_URL")
+    database_url = paths.database_url()
 
     if args.show:
         from src.integrations.simplefin.sync_expenses_db import show as show_expenses

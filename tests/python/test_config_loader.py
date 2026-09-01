@@ -131,6 +131,16 @@ class TestLoadHedgeConfig:
         assert config.monthly_budget == 500.0
         assert config.roll_window_days == 7
 
+    def test_uses_profile_from_instance_data_root(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _write_profile(tmp_path, {"monthly_budget": 1234})
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+
+        config = load_hedge_config()
+
+        assert config.monthly_budget == 1234.0
+
     def test_loads_from_yaml(self, tmp_path: Path):
         """YAML hedging section values should override defaults."""
         path = _write_profile(tmp_path, {"monthly_budget": 800})

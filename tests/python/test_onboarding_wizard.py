@@ -284,8 +284,10 @@ class TestConvertStateToUserData:
 class TestGenerateConfigFiles:
     """Test config file generation to correct paths."""
 
-    def test_generates_all_files(self, valid_user_data, tmp_path):
+    def test_generates_all_files(self, valid_user_data, tmp_path, monkeypatch):
         """All config files are created at correct locations."""
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+
         # Copy templates to tmp_path so we can use it as project root
         import shutil
 
@@ -302,22 +304,22 @@ class TestGenerateConfigFiles:
         valid_user_data.project_root = str(tmp_path)
         generate_config_files(valid_user_data, tmp_path)
 
-        # Verify private files
-        assert (
-            tmp_path / "fin-guru-private" / "fin-guru" / "data" / "user-profile.yaml"
-        ).exists()
-        assert (tmp_path / "fin-guru-private" / "fin-guru" / "config.yaml").exists()
-        assert (
-            tmp_path / "fin-guru-private" / "fin-guru" / "data" / "system-context.md"
-        ).exists()
+        # Verify instance files
+        assert (tmp_path / "user-profile.yaml").exists()
+        assert (tmp_path / "config.yaml").exists()
+        assert (tmp_path / "system-context.md").exists()
 
         # Verify project-root files
         assert (tmp_path / "CLAUDE.md").exists()
         assert (tmp_path / ".env").exists()
         assert (tmp_path / ".claude" / "mcp.json").exists()
 
-    def test_generated_files_contain_user_name(self, valid_user_data, tmp_path):
+    def test_generated_files_contain_user_name(
+        self, valid_user_data, tmp_path, monkeypatch
+    ):
         """Generated files contain actual user name, not template placeholders."""
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+
         import shutil
 
         template_src = Path("scripts/onboarding/modules/templates")
@@ -331,9 +333,7 @@ class TestGenerateConfigFiles:
         valid_user_data.project_root = str(tmp_path)
         generate_config_files(valid_user_data, tmp_path)
 
-        profile = (
-            tmp_path / "fin-guru-private" / "fin-guru" / "data" / "user-profile.yaml"
-        ).read_text()
+        profile = (tmp_path / "user-profile.yaml").read_text()
         assert "TestUser" in profile
         assert "{{user_name}}" not in profile
 

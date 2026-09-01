@@ -65,6 +65,7 @@ sys.path.insert(0, str(project_root))
 
 from src.analysis.rolling_tracker import RollingTracker
 from src.config.config_loader import load_hedge_config
+from src.config.instance_paths import InstancePaths
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -170,11 +171,10 @@ def handle_status(args: argparse.Namespace, tracker: RollingTracker) -> int:  # 
     lines.append("=" * 80)
 
     if not positions:
-        from src.analysis.rolling_tracker import HEDGING_DIR
-
         lines.append("")
         lines.append("  No active hedge positions.")
-        lines.append(f"  Add positions to {HEDGING_DIR / 'positions.yaml'}")
+        positions_path = InstancePaths.resolve().hedging / "positions.yaml"
+        lines.append(f"  Add positions to {positions_path}")
     else:
         # Table header
         lines.append("")

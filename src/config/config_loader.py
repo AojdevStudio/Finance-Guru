@@ -25,16 +25,9 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from src.config.instance_paths import InstancePaths
+
 logger = logging.getLogger(__name__)
-
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-"""Project root directory (three levels up from src/config/config_loader.py)."""
-
-_PROFILE_SEARCH_PATHS = [
-    PROJECT_ROOT / "fin-guru-private" / "data" / "user-profile.yaml",
-    PROJECT_ROOT / "fin-guru" / "data" / "user-profile.yaml",
-]
-"""Ordered list of paths to search for user-profile.yaml."""
 
 
 class HedgeConfig(BaseModel):
@@ -155,8 +148,8 @@ def load_hedge_config(
     """Load hedging configuration with the priority chain: CLI > YAML > defaults.
 
     Args:
-        profile_path: Explicit path to user-profile.yaml. If None, searches
-            ``_PROFILE_SEARCH_PATHS`` for the first existing file.
+        profile_path: Explicit path to user-profile.yaml. If None, uses the
+            profile under the resolved instance root.
         cli_overrides: Dict of CLI flag values. Keys with None values are
             ignored (only non-None values override).
 
@@ -171,12 +164,7 @@ def load_hedge_config(
     config_data: dict = {}
 
     # --- Resolve profile path ---
-    resolved_path = profile_path
-    if resolved_path is None:
-        for candidate in _PROFILE_SEARCH_PATHS:
-            if candidate.exists():
-                resolved_path = candidate
-                break
+    resolved_path = profile_path or InstancePaths.resolve().profile
 
     # --- Load YAML hedging section ---
     if resolved_path is not None and resolved_path.exists():

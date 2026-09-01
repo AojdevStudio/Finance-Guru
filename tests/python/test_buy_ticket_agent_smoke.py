@@ -8,6 +8,8 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from buy_ticket_agent.config import NotificationConfig
 from buy_ticket_agent.main import main
 from buy_ticket_agent.notifier import NotificationResult, push_ticket_preview
@@ -18,6 +20,12 @@ from buy_ticket_agent.secrets import (
     resolve_notification_config,
 )
 from buy_ticket_agent.state import connect_state, initialize_state, record_smoke_run
+
+
+@pytest.fixture(autouse=True)
+def instance_data_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Resolve buy-ticket artifacts under each test's instance root."""
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
 
 
 def test_initialize_state_is_idempotent(tmp_path: Path) -> None:
@@ -202,7 +210,7 @@ def test_run_smoke_writes_draft_log_and_state(tmp_path: Path, monkeypatch) -> No
         from datetime import UTC, datetime
 
         now.return_value = datetime(2026, 6, 5, 12, 0, 0, tzinfo=UTC)
-        result = run_smoke(project_root=tmp_path)
+        result = run_smoke()
 
     draft_path = tmp_path / result.draft_path
     log_path = tmp_path / result.log_path
@@ -226,11 +234,9 @@ def test_run_smoke_writes_draft_log_and_state(tmp_path: Path, monkeypatch) -> No
     assert log["layer3"]["stderr_chars"] == len(completed.stderr)
     assert "stdout" not in log["layer3"]
     assert "stderr" not in log["layer3"]
-    assert result.draft_path == (
-        f"fin-guru-private/fin-guru/tickets/auto-drafts/{result.run_id}.json"
-    )
-    assert result.log_path.startswith("notebooks/auto-tickets/runs/smoke-20260605-")
-    assert result.state_db == "notebooks/auto-tickets/state.db"
+    assert result.draft_path == f"tickets/auto-drafts/{result.run_id}.json"
+    assert result.log_path.startswith("auto-tickets/runs/smoke-20260605-")
+    assert result.state_db == "auto-tickets/state.db"
 
     command = run.call_args.args[0]
     assert command[1:] == [
@@ -270,7 +276,7 @@ def test_run_smoke_includes_sanitized_trigger_context(
     completed.stderr = ""
 
     with patch("buy_ticket_agent.pipeline.subprocess.run", return_value=completed):
-        result = run_smoke(project_root=tmp_path)
+        result = run_smoke()
 
     draft = json.loads((tmp_path / result.draft_path).read_text())
     log = json.loads((tmp_path / result.log_path).read_text())
@@ -312,13 +318,13 @@ def test_run_smoke_does_not_record_success_state_if_log_write_fails(
         ),
     ):
         try:
-            run_smoke(project_root=tmp_path)
+            run_smoke()
         except OSError:
             pass
         else:
             raise AssertionError("Expected log write failure")
 
-    state_db = tmp_path / "notebooks" / "auto-tickets" / "state.db"
+    state_db = tmp_path / "auto-tickets" / "state.db"
     with sqlite3.connect(state_db) as conn:
         counts = (
             conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0],
@@ -373,7 +379,7 @@ def test_run_smoke_layer3_failure_records_failure_without_draft(
         from datetime import UTC, datetime
 
         now.return_value = datetime(2026, 6, 5, 12, 0, 0, tzinfo=UTC)
-        result = run_smoke(project_root=tmp_path)
+        result = run_smoke()
 
     log_path = tmp_path / result.log_path
     state_db = tmp_path / result.state_db
@@ -384,9 +390,7 @@ def test_run_smoke_layer3_failure_records_failure_without_draft(
     assert result.ticket_id is None
     assert result.draft_path is None
     assert result.notification is None
-    assert not (
-        tmp_path / "fin-guru-private" / "fin-guru" / "tickets" / "auto-drafts"
-    ).exists()
+    assert not (tmp_path / "tickets" / "auto-drafts").exists()
     assert log["layer3"]["returncode"] == 2
     assert log["layer3"]["stdout_chars"] == len(completed.stdout)
     assert log["layer3"]["stderr_chars"] == len(completed.stderr)
@@ -424,13 +428,13 @@ def test_run_smoke_does_not_record_failure_state_if_log_write_fails(
         ),
     ):
         try:
-            run_smoke(project_root=tmp_path)
+            run_smoke()
         except OSError:
             pass
         else:
             raise AssertionError("Expected log write failure")
 
-    state_db = tmp_path / "notebooks" / "auto-tickets" / "state.db"
+    state_db = tmp_path / "auto-tickets" / "state.db"
     with sqlite3.connect(state_db) as conn:
         counts = (
             conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0],
@@ -468,17 +472,15 @@ def test_run_smoke_secret_failure_leaves_no_partial_artifacts(tmp_path: Path) ->
         side_effect=SecretAccessError("bws unavailable"),
     ):
         try:
-            run_smoke(project_root=tmp_path)
+            run_smoke()
         except SecretAccessError:
             pass
         else:
             raise AssertionError("Expected SecretAccessError")
 
-    assert not (
-        tmp_path / "fin-guru-private" / "fin-guru" / "tickets" / "auto-drafts"
-    ).exists()
-    assert not (tmp_path / "notebooks" / "auto-tickets" / "state.db").exists()
-    assert not (tmp_path / "notebooks" / "auto-tickets" / "runs").exists()
+    assert not (tmp_path / "tickets" / "auto-drafts").exists()
+    assert not (tmp_path / "auto-tickets" / "state.db").exists()
+    assert not (tmp_path / "auto-tickets" / "runs").exists()
 
 
 def test_main_smoke_exits_zero(tmp_path: Path) -> None:

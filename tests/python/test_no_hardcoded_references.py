@@ -25,7 +25,7 @@ ALLOWED_FILES = {
     "fin-guru/distribution-plan.md",  # Distribution planning doc
     "fin-guru/tasks/",  # Task files with examples
     "specs/archive/",  # Archived specs
-    "fin-guru-private/",  # Private data directory (not distributed)
+    "fin-guru-private/",  # Legacy private data directory (gitignored, not distributed)
     "notebooks/",  # Private notebooks (not distributed)
     "docs/onboarding-flow-evaluation.md",  # Evaluation document referencing the owner's setup
     "Plans/",  # Session plans (gitignored, not distributed)

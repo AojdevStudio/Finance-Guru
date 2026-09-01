@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sqlite3
 import subprocess
 import sys
@@ -13,17 +12,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
-
+from src.config.instance_paths import InstancePaths, _db_path, load_instance_env
 from src.integrations.simplefin.categorize import categorize_expense
-from src.integrations.snaptrade.sync_db import _db_path
 
 
 class SimpleFinSyncError(RuntimeError):
     """Raised when SimpleFIN data cannot be fetched or parsed."""
 
 
-DEFAULT_APP_DIR = Path("apps/simplefin-sync")
+DEFAULT_APP_DIR = Path(__file__).resolve().parents[3] / "apps" / "simplefin-sync"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS bank_transactions (
@@ -328,12 +325,13 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Process exit status.
     """
-    load_dotenv(override=True)
+    paths = InstancePaths.resolve()
+    load_instance_env(paths, override=True)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--months", type=int, default=12)
     parser.add_argument("--show", action="store_true")
     args = parser.parse_args(argv)
-    database_url = os.getenv("DATABASE_URL")
+    database_url = paths.database_url()
 
     if args.show:
         show(database_url)

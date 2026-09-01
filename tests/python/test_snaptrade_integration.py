@@ -213,8 +213,11 @@ def test_probe_account_reports_phase_0_diagnostics():
     assert probe["average_purchase_price_missing_count"] == 1
 
 
-def test_credentials_from_env_reports_missing_keys(monkeypatch: pytest.MonkeyPatch):
+def test_credentials_from_env_reports_missing_keys(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
     """Missing SnapTrade env keys fail closed with key names only."""
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
     for key in (
         "SNAPTRADE_CLIENT_ID",
         "SNAPTRADE_CONSUMER_KEY",
@@ -245,7 +248,13 @@ def test_accounts_cli_writes_unassigned_disabled_config(
     monkeypatch.setattr(
         "src.integrations.snaptrade.cli.SnapTradeClientWrapper", FakeWrapper
     )
-    config_path = tmp_path / "snaptrade-accounts.yaml"
+    instance_root = tmp_path / "instance"
+    working_directory = tmp_path / "cwd"
+    instance_root.mkdir()
+    working_directory.mkdir()
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(instance_root))
+    monkeypatch.chdir(working_directory)
+    config_path = instance_root / "snaptrade-accounts.yaml"
 
     exit_code = main(
         [
@@ -253,7 +262,6 @@ def test_accounts_cli_writes_unassigned_disabled_config(
             "--output",
             "json",
             "--write-config",
-            str(config_path),
         ]
     )
 

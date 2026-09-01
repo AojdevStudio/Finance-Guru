@@ -56,6 +56,7 @@ from src.analysis.total_return import (
     TotalReturnCalculator,
     TotalReturnResult,
 )
+from src.config.instance_paths import InstancePaths
 from src.models.total_return_inputs import (
     DividendRecord,
     TotalReturnInput,
@@ -64,10 +65,6 @@ from src.models.total_return_inputs import (
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-
-PORTFOLIO_CSV_GLOB = str(
-    project_root / "notebooks" / "updates" / "Portfolio_Positions_*.csv"
-)
 
 DISCLAIMER = (
     "DISCLAIMER: For educational purposes only. Not investment advice. "
@@ -177,19 +174,22 @@ def fetch_ticker_data(
 # ---------------------------------------------------------------------------
 
 
-def load_portfolio_shares(csv_glob: str = PORTFOLIO_CSV_GLOB) -> dict[str, float]:
+def load_portfolio_shares(csv_glob: str | None = None) -> dict[str, float]:
     """Load share counts from the latest Portfolio_Positions CSV.
 
-    Reads the most recently dated CSV from notebooks/updates/ and extracts
-    ticker -> share count mapping.
+    Reads the most recently dated CSV from the resolved instance's ``imports``
+    directory and extracts ticker -> share count mapping.
 
     Args:
-        csv_glob: Glob pattern for CSV files.
+        csv_glob: Optional explicit glob pattern for CSV files.
 
     Returns:
         Dict mapping ticker -> quantity of shares. Empty dict if no CSV found.
     """
-    files = sorted(glob.glob(csv_glob))
+    resolved_glob = csv_glob or str(
+        InstancePaths.resolve().imports / "Portfolio_Positions_*.csv"
+    )
+    files = sorted(glob.glob(resolved_glob))
     if not files:
         return {}
 
@@ -566,7 +566,7 @@ def main() -> int:
             )
         else:
             print(
-                "No Portfolio CSV found in notebooks/updates/ -- "
+                f"No Portfolio CSV found under {InstancePaths.resolve().imports}. "
                 "showing per-share amounts only",
                 file=sys.stderr,
             )

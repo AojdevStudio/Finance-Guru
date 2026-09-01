@@ -316,9 +316,9 @@ class TestFullGeneration:
 
         # Verify files were created
         expected_files = [
-            tmp_path / "fin-guru" / "data" / "user-profile.yaml",
-            tmp_path / "fin-guru" / "config.yaml",
-            tmp_path / "fin-guru" / "data" / "system-context.md",
+            tmp_path / "user-profile.yaml",
+            tmp_path / "config.yaml",
+            tmp_path / "system-context.md",
             tmp_path / "CLAUDE.md",
             tmp_path / ".env",
             tmp_path / ".claude" / "mcp.json",
