@@ -248,7 +248,13 @@ def test_accounts_cli_writes_unassigned_disabled_config(
     monkeypatch.setattr(
         "src.integrations.snaptrade.cli.SnapTradeClientWrapper", FakeWrapper
     )
-    config_path = tmp_path / "snaptrade-accounts.yaml"
+    instance_root = tmp_path / "instance"
+    working_directory = tmp_path / "cwd"
+    instance_root.mkdir()
+    working_directory.mkdir()
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(instance_root))
+    monkeypatch.chdir(working_directory)
+    config_path = instance_root / "snaptrade-accounts.yaml"
 
     exit_code = main(
         [
@@ -256,7 +262,6 @@ def test_accounts_cli_writes_unassigned_disabled_config(
             "--output",
             "json",
             "--write-config",
-            str(config_path),
         ]
     )
 

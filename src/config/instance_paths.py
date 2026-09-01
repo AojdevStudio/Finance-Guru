@@ -50,6 +50,11 @@ class InstancePaths(BaseModel):
         return self.root / "config.yaml"
 
     @property
+    def snaptrade_accounts(self) -> Path:
+        """Return the SnapTrade account-routing configuration path."""
+        return self.root / "snaptrade-accounts.yaml"
+
+    @property
     def system_context(self) -> Path:
         """Return the generated system context path."""
         return self.root / "system-context.md"

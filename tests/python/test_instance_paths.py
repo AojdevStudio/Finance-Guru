@@ -63,3 +63,9 @@ def test_bare_database_path_resolves_under_root(tmp_path: Path) -> None:
     assert paths.database_url(env={"DATABASE_URL": "relative.db"}) == (
         f"sqlite:///{tmp_path / 'relative.db'}"
     )
+
+
+def test_snaptrade_accounts_file_is_under_instance_root(tmp_path: Path) -> None:
+    paths = InstancePaths(root=tmp_path)
+
+    assert paths.snaptrade_accounts == tmp_path / "snaptrade-accounts.yaml"

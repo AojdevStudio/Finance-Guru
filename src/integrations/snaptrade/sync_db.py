@@ -28,8 +28,6 @@ from src.integrations.snaptrade.cli import _account_balances, _account_positions
 from src.integrations.snaptrade.client import SnapTradeAPIError, SnapTradeClientWrapper
 from src.integrations.snaptrade.models import SnapTradeAccountsConfig
 
-DEFAULT_CONFIG_PATH = Path("config/snaptrade-accounts.yaml")
-
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS positions (
     account_id  TEXT NOT NULL,
@@ -204,17 +202,27 @@ def main(argv: list[str] | None = None) -> int:
     paths = InstancePaths.resolve()
     load_instance_env(paths)
     parser = argparse.ArgumentParser(description="Sync SnapTrade -> local SQLite DB")
-    parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH))
+    parser.add_argument(
+        "--config",
+        default=None,
+        help=(
+            "Account routing config. Defaults to snaptrade-accounts.yaml "
+            "under the instance data root."
+        ),
+    )
     parser.add_argument(
         "--show", action="store_true", help="Print current snapshot and exit"
     )
     args = parser.parse_args(argv)
     database_url = paths.database_url()
+    config_path = (
+        Path(args.config) if args.config is not None else paths.snaptrade_accounts
+    )
     try:
         if args.show:
             show(database_url)
             return 0
-        summary = sync(Path(args.config), database_url)
+        summary = sync(config_path, database_url)
     except (SnapTradeAPIError, ValueError, RuntimeError, FileNotFoundError) as exc:
         print(f"Sync error: {exc}", file=sys.stderr)
         return 1

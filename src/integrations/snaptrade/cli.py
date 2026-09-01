@@ -8,9 +8,8 @@ USAGE:
     # Include read-only diagnostics needed before deleting CSV paths
     uv run python -m src.integrations.snaptrade.cli accounts --probe --output json
 
-    # Create local account-routing config for later Sheet sync phases
-    uv run python -m src.integrations.snaptrade.cli accounts \
-        --write-config config/snaptrade-accounts.yaml
+    # Create the instance account-routing config for later sync phases
+    uv run python -m src.integrations.snaptrade.cli accounts --write-config
 
     # Phase 1 — sync positions / balances for config-enabled accounts ONLY.
     # Accounts with role=unassigned or enabled=false are refused, not fetched,
@@ -33,6 +32,7 @@ from typing import Any
 
 import yaml
 
+from src.config.instance_paths import InstancePaths
 from src.integrations.snaptrade.client import (
     SnapTradeAPIError,
     SnapTradeClientWrapper,
@@ -42,8 +42,6 @@ from src.integrations.snaptrade.models import (
     SnapTradeAccountConfig,
     SnapTradeAccountsConfig,
 )
-
-DEFAULT_CONFIG_PATH = Path("config/snaptrade-accounts.yaml")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -82,10 +80,10 @@ def _build_parser() -> argparse.ArgumentParser:
     accounts.add_argument(
         "--write-config",
         nargs="?",
-        const=str(DEFAULT_CONFIG_PATH),
+        const="",
         help=(
             "Write local account routing config. Defaults to "
-            "config/snaptrade-accounts.yaml when no path is supplied."
+            "snaptrade-accounts.yaml under the instance data root."
         ),
     )
     accounts.add_argument(
@@ -107,9 +105,10 @@ def _build_parser() -> argparse.ArgumentParser:
         )
         sub.add_argument(
             "--config",
-            default=str(DEFAULT_CONFIG_PATH),
+            default=None,
             help=(
-                "Account routing config. Defaults to config/snaptrade-accounts.yaml."
+                "Account routing config. Defaults to snaptrade-accounts.yaml "
+                "under the instance data root."
             ),
         )
     return parser
@@ -133,8 +132,12 @@ def _accounts_command(args: argparse.Namespace) -> int:
         if probes:
             payload["probes"] = probes
             payload["phase_0_findings"] = _phase_0_findings(account_payloads, probes)
-        if args.write_config:
-            config_path = Path(args.write_config)
+        if args.write_config is not None:
+            config_path = (
+                Path(args.write_config)
+                if args.write_config
+                else InstancePaths.resolve().snaptrade_accounts
+            )
             _write_config(config_path, accounts, force=args.force)
             payload["config_written"] = str(config_path)
         _print_payload(payload, args.output)
@@ -146,8 +149,13 @@ def _accounts_command(args: argparse.Namespace) -> int:
 
 def _routing_command(args: argparse.Namespace) -> int:
     kind = args.command  # "positions", "balances", or "activities"
+    config_path = (
+        Path(args.config)
+        if args.config is not None
+        else InstancePaths.resolve().snaptrade_accounts
+    )
     try:
-        config = SnapTradeAccountsConfig.from_path(Path(args.config))
+        config = SnapTradeAccountsConfig.from_path(config_path)
     except (FileNotFoundError, ValueError) as exc:
         print(f"SnapTrade config error: {exc}", file=sys.stderr)
         return 1

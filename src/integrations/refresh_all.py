@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 from collections.abc import Callable
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 from src.config.instance_paths import InstancePaths, load_instance_env
@@ -24,7 +23,7 @@ def refresh(database_url: str | None, *, months: int = 12) -> dict[str, Any]:
     Returns:
         Per-source statuses and the refresh timestamp.
     """
-    account_config = Path("config/snaptrade-accounts.yaml")
+    account_config = InstancePaths.resolve().snaptrade_accounts
     operations: tuple[tuple[str, Callable[[], dict[str, Any]]], ...] = (
         ("positions", lambda: sync_positions(account_config, database_url)),
         ("transactions", lambda: sync_transactions(account_config, database_url)),

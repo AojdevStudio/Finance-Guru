@@ -173,18 +173,23 @@ def _broker_balances_from_snaptrade(client: Any, account_id: str) -> FidelityBal
 
 
 def read_snaptrade_balances(
-    config_path: str | Path = "config/snaptrade-accounts.yaml",
+    config_path: str | Path | None = None,
 ) -> FidelityBalances:
     """Pull live balances for the first enabled+routed SnapTrade account."""
     from src.integrations.snaptrade.client import SnapTradeClientWrapper
     from src.integrations.snaptrade.models import SnapTradeAccountsConfig
 
-    config = SnapTradeAccountsConfig.from_path(Path(config_path))
+    resolved_config_path = (
+        Path(config_path)
+        if config_path is not None
+        else InstancePaths.resolve().snaptrade_accounts
+    )
+    config = SnapTradeAccountsConfig.from_path(resolved_config_path)
     syncable = config.syncable
     if not syncable:
         msg = (
             "No SnapTrade account is enabled+routed in "
-            f"{config_path}; cannot read margin balances"
+            f"{resolved_config_path}; cannot read margin balances"
         )
         raise ValueError(msg)
     client = SnapTradeClientWrapper.from_env()
