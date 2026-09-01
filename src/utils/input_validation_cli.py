@@ -13,16 +13,16 @@ This is Layer 3 of our 3-layer architecture:
 
 USAGE:
     # Validate a single ticker
-    uv run python src/utils/input_validation_cli.py TSLA --days 90
+    uv run python -m src.utils.input_validation_cli TSLA --days 90
 
     # Use IQR method for outlier detection
-    uv run python src/utils/input_validation_cli.py NVDA --outlier-method iqr
+    uv run python -m src.utils.input_validation_cli NVDA --outlier-method iqr
 
     # Strict validation (low thresholds)
-    uv run python src/utils/input_validation_cli.py PLTR --outlier-threshold 2.0
+    uv run python -m src.utils.input_validation_cli PLTR --outlier-threshold 2.0
 
     # JSON output for programmatic use
-    uv run python src/utils/input_validation_cli.py AAPL --output json
+    uv run python -m src.utils.input_validation_cli AAPL --output json
 
 AGENT USE CASES:
     - Quant Analyst: Validate data before running calculations

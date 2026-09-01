@@ -20,15 +20,15 @@ tools:
     type: local_python
     location: "src/"
     purpose: "Quantitative analysis: risk metrics, momentum, volatility, correlation, backtesting, optimization"
-    execution: "uv run python src/{tool_path} {ticker} [flags]"
+    execution: "uv run python -m src.{tool_module} {ticker} [flags]"
     tools:
-      - "analysis/risk_metrics_cli.py - VaR, CVaR, Sharpe, Sortino, Max DD, Beta, Alpha"
-      - "utils/momentum_cli.py - RSI, MACD, Stochastic, Williams %R, ROC, confluence"
-      - "utils/volatility_cli.py - Bollinger Bands, ATR, Historical Vol, Keltner, regime"
-      - "utils/moving_averages_cli.py - SMA, EMA, WMA, HMA, Golden/Death Cross"
-      - "analysis/correlation_cli.py - Pearson matrix, covariance, diversification"
-      - "strategies/backtester_cli.py - Strategy validation, performance metrics"
-      - "strategies/optimizer_cli.py - Mean-Variance, Risk Parity, Max Sharpe, Black-Litterman"
+      - "analysis.risk_metrics_cli - VaR, CVaR, Sharpe, Sortino, Max DD, Beta, Alpha"
+      - "utils.momentum_cli - RSI, MACD, Stochastic, Williams %R, ROC, confluence"
+      - "utils.volatility_cli - Bollinger Bands, ATR, Historical Vol, Keltner, regime"
+      - "utils.moving_averages_cli - SMA, EMA, WMA, HMA, Golden/Death Cross"
+      - "analysis.correlation_cli - Pearson matrix, covariance, diversification"
+      - "strategies.backtester_cli - Strategy validation, performance metrics"
+      - "strategies.optimizer_cli - Mean-Variance, Risk Parity, Max Sharpe, Black-Litterman"
 
 ## Operating Modes
 modes:
@@ -50,9 +50,9 @@ modes:
     use_when: "Running risk metrics, technical analysis, backtesting, portfolio optimization, correlation analysis"
     required_tool: "cli-tools"
     execution_policy:
-      - "Use uv run python src/{tool} {ticker} [flags]"
+      - "Use uv run python -m src.{tool_module} {ticker} [flags]"
       - "Check tool documentation in CLAUDE.md or tool --help for flags"
-      - "Save outputs to analysis/reports/ or analysis/"
+      - "Save outputs to reports/ or analysis/"
       - "Summarize results clearly; cite metrics with values and dates"
     examples:
       - "uv run python -m src.analysis.risk_metrics_cli PLTR --days 252"

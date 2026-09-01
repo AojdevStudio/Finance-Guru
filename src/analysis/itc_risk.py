@@ -170,7 +170,7 @@ class ITCRiskCalculator:
         EDUCATIONAL NOTE:
         ITC only covers a subset of assets. If you need risk analysis for
         unsupported tickers (PLTR, NVDA, GOOGL, etc.), use:
-            uv run python src/analysis/risk_metrics_cli.py TICKER --days 90
+            uv run python -m src.analysis.risk_metrics_cli TICKER --days 90
 
         WHY FAIL FAST:
         We validate before making API calls to:
@@ -192,7 +192,7 @@ class ITCRiskCalculator:
                 f"{symbol_upper} not supported by ITC API.\n"
                 f"Supported {universe} assets: {', '.join(sorted(supported))}\n\n"
                 f"For unsupported tickers, use internal risk analysis:\n"
-                f"  uv run python src/analysis/risk_metrics_cli.py {symbol_upper} --days 90"
+                f"  uv run python -m src.analysis.risk_metrics_cli {symbol_upper} --days 90"
             )
 
     def get_risk_score(

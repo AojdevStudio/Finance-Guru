@@ -6,15 +6,15 @@ Command-line interface for Black-Scholes options pricing and Greeks.
 
 AGENT USAGE:
     # Price an option
-    uv run python src/analysis/options_cli.py --ticker TSLA \\
+    uv run python -m src.analysis.options_cli --ticker TSLA \\
         --spot 265 --strike 250 --days 90 --volatility 0.45 --type call
 
     # Calculate implied volatility
-    uv run python src/analysis/options_cli.py --ticker TSLA \\
+    uv run python -m src.analysis.options_cli --ticker TSLA \\
         --spot 265 --strike 250 --days 90 --market-price 25.50 --type call --implied-vol
 
     # JSON output
-    uv run python src/analysis/options_cli.py --ticker TSLA \\
+    uv run python -m src.analysis.options_cli --ticker TSLA \\
         --spot 265 --strike 250 --days 90 --volatility 0.45 --type call --output json
 
 EDUCATIONAL NOTE:

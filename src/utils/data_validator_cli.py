@@ -13,23 +13,23 @@ This is Layer 3 of our 3-layer architecture:
 
 AGENT USAGE:
     # Basic validation
-    uv run python src/utils/data_validator_cli.py TSLA --days 90
+    uv run python -m src.utils.data_validator_cli TSLA --days 90
 
     # Custom outlier detection
-    uv run python src/utils/data_validator_cli.py TSLA --days 252 \\
+    uv run python -m src.utils.data_validator_cli TSLA --days 252 \\
         --outlier-method iqr \\
         --outlier-threshold 2.5
 
     # Strict validation (Compliance Officer mode)
-    uv run python src/utils/data_validator_cli.py TSLA --days 90 \\
+    uv run python -m src.utils.data_validator_cli TSLA --days 90 \\
         --missing-threshold 0.01 \\
         --max-gap 5
 
     # JSON output
-    uv run python src/utils/data_validator_cli.py TSLA --days 90 --output json
+    uv run python -m src.utils.data_validator_cli TSLA --days 90 --output json
 
     # Save report
-    uv run python src/utils/data_validator_cli.py TSLA --days 90 \\
+    uv run python -m src.utils.data_validator_cli TSLA --days 90 \\
         --save-to analysis/data-validation-tsla-2025-10-13.json
 
 EDUCATIONAL NOTE:

@@ -13,28 +13,28 @@ This is Layer 3 of our 3-layer architecture:
 
 AGENT USAGE:
     # Basic usage (calculate all momentum indicators)
-    uv run python src/utils/momentum_cli.py TSLA --days 90
+    uv run python -m src.utils.momentum_cli TSLA --days 90
 
     # Real-time momentum with Finnhub (RECOMMENDED for live analysis!)
-    uv run python src/utils/momentum_cli.py TSLA --days 90 --realtime
+    uv run python -m src.utils.momentum_cli TSLA --days 90 --realtime
 
     # Specific indicator only
-    uv run python src/utils/momentum_cli.py TSLA --days 90 --indicator rsi
+    uv run python -m src.utils.momentum_cli TSLA --days 90 --indicator rsi
 
     # Real-time RSI for quick intraday signals
-    uv run python src/utils/momentum_cli.py TSLA --days 90 --indicator rsi --realtime
+    uv run python -m src.utils.momentum_cli TSLA --days 90 --indicator rsi --realtime
 
     # Custom configuration
-    uv run python src/utils/momentum_cli.py TSLA --days 90 \\
+    uv run python -m src.utils.momentum_cli TSLA --days 90 \\
         --rsi-period 21 \\
         --macd-fast 8 \\
         --macd-slow 21
 
     # JSON output
-    uv run python src/utils/momentum_cli.py TSLA --days 90 --output json
+    uv run python -m src.utils.momentum_cli TSLA --days 90 --output json
 
     # Save to file
-    uv run python src/utils/momentum_cli.py TSLA --days 90 \\
+    uv run python -m src.utils.momentum_cli TSLA --days 90 \\
         --output json \\
         --save-to analysis/tsla-momentum-2025-10-13.json
 

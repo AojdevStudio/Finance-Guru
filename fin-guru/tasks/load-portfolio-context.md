@@ -20,7 +20,7 @@ Load current portfolio positions and key metrics into the agent's working memory
 Find the most recent portfolio CSV within `imports/` (lists every match so you can confirm the latest export):
 
 ```bash
-cd /Users/ossieirondi/Documents/Irondi-Household/family-office && find imports -name "Portfolio_Positions*.csv" -type f 2>/dev/null
+find imports -name "Portfolio_Positions*.csv" -type f 2>/dev/null
 ```
 
 Expected format: `Portfolio_Positions_[YYYY-MM-DD].csv` or `Portfolio_Positions_[MonthName-DD-YYYY].csv`
@@ -34,7 +34,7 @@ Read the latest CSV file using the Read tool.
 Check for margin and balance information:
 
 ```bash
-cd /Users/ossieirondi/Documents/Irondi-Household/family-office && ls imports/Balances_for_Account_{account_id}.csv 2>/dev/null
+ls imports/Balances_for_Account_{account_id}.csv 2>/dev/null
 ```
 
 If the balance file exists, read it using the Read tool. This file contains:

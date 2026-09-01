@@ -6,14 +6,14 @@ Command-line interface for Fama-French factor analysis.
 
 AGENT USAGE:
     # CAPM (1-factor) analysis
-    uv run python src/analysis/factors_cli.py TSLA --days 252 --benchmark SPY
+    uv run python -m src.analysis.factors_cli TSLA --days 252 --benchmark SPY
 
     # 3-factor analysis (requires Fama-French data)
-    uv run python src/analysis/factors_cli.py TSLA --days 252 --benchmark SPY \\
+    uv run python -m src.analysis.factors_cli TSLA --days 252 --benchmark SPY \\
         --smb-ticker SMBTICKER --hml-ticker HMLTICKER
 
     # JSON output
-    uv run python src/analysis/factors_cli.py TSLA --days 252 --benchmark SPY --output json
+    uv run python -m src.analysis.factors_cli TSLA --days 252 --benchmark SPY --output json
 
 EDUCATIONAL NOTE:
 This tool requires market factor data. For full Fama-French analysis,

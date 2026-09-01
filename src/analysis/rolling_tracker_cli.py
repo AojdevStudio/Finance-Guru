@@ -15,20 +15,20 @@ This is the first argparse subcommand CLI in the codebase (HEDG-04).
 
 AGENT USAGE:
     # View all hedge positions with live pricing and P&L
-    uv run python src/analysis/rolling_tracker_cli.py status
+    uv run python -m src.analysis.rolling_tracker_cli status
 
     # JSON output for programmatic parsing
-    uv run python src/analysis/rolling_tracker_cli.py status --output json
+    uv run python -m src.analysis.rolling_tracker_cli status --output json
 
     # Get roll suggestions for expiring positions (DTE <= 7)
-    uv run python src/analysis/rolling_tracker_cli.py suggest-roll
+    uv run python -m src.analysis.rolling_tracker_cli suggest-roll
 
     # Log a completed roll
-    uv run python src/analysis/rolling_tracker_cli.py log-roll \
+    uv run python -m src.analysis.rolling_tracker_cli log-roll \
         --ticker QQQ --strike 440 --expiry 2026-06-19 --premium 8.50
 
     # View roll history
-    uv run python src/analysis/rolling_tracker_cli.py history
+    uv run python -m src.analysis.rolling_tracker_cli history
 
 EDUCATIONAL NOTE:
 Rolling is the process of closing an expiring options position and opening a

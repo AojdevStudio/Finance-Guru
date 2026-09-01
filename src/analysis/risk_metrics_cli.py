@@ -13,25 +13,25 @@ This is Layer 3 of our 3-layer architecture:
 
 AGENT USAGE:
     # Basic usage (30 days of data required)
-    uv run python src/analysis/risk_metrics_cli.py TSLA --days 90
+    uv run python -m src.analysis.risk_metrics_cli TSLA --days 90
 
     # Real-time risk analysis with Finnhub (RECOMMENDED for live assessment!)
-    uv run python src/analysis/risk_metrics_cli.py TSLA --days 90 --realtime
+    uv run python -m src.analysis.risk_metrics_cli TSLA --days 90 --realtime
 
     # With benchmark (calculate beta/alpha) - real-time for both ticker and benchmark
-    uv run python src/analysis/risk_metrics_cli.py TSLA --days 90 --benchmark SPY --realtime
+    uv run python -m src.analysis.risk_metrics_cli TSLA --days 90 --benchmark SPY --realtime
 
     # Custom configuration
-    uv run python src/analysis/risk_metrics_cli.py TSLA --days 252 \\
+    uv run python -m src.analysis.risk_metrics_cli TSLA --days 252 \\
         --confidence 0.99 \\
         --var-method parametric \\
         --risk-free-rate 0.05
 
     # JSON output (for programmatic parsing)
-    uv run python src/analysis/risk_metrics_cli.py TSLA --days 90 --output json
+    uv run python -m src.analysis.risk_metrics_cli TSLA --days 90 --output json
 
     # Save to file
-    uv run python src/analysis/risk_metrics_cli.py TSLA --days 90 \\
+    uv run python -m src.analysis.risk_metrics_cli TSLA --days 90 \\
         --output json \\
         --save-to analysis/tsla-risk-2025-10-13.json
 

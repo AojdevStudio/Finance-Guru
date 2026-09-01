@@ -12,19 +12,19 @@ This is Layer 3 of our 3-layer architecture:
 
 AGENT USAGE:
     # Single ticker total return (1 year)
-    uv run python src/analysis/total_return_cli.py SCHD --days 252
+    uv run python -m src.analysis.total_return_cli SCHD --days 252
 
     # Multi-ticker comparison ranked by total return
-    uv run python src/analysis/total_return_cli.py SCHD JEPI VYM --days 252
+    uv run python -m src.analysis.total_return_cli SCHD JEPI VYM --days 252
 
     # JSON output for programmatic parsing
-    uv run python src/analysis/total_return_cli.py SCHD --days 252 --output json
+    uv run python -m src.analysis.total_return_cli SCHD --days 252 --output json
 
     # Override data quality warnings
-    uv run python src/analysis/total_return_cli.py CLM --days 252 --force
+    uv run python -m src.analysis.total_return_cli CLM --days 252 --force
 
     # Save results to file
-    uv run python src/analysis/total_return_cli.py SCHD JEPI --days 252 --save-to analysis/returns.txt
+    uv run python -m src.analysis.total_return_cli SCHD JEPI --days 252 --save-to analysis/returns.txt
 
 EDUCATIONAL NOTE:
 Total return measures the COMPLETE performance of an investment:

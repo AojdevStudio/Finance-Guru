@@ -8,23 +8,23 @@ ARCHITECTURE: Layer 3 of 3-layer type-safe architecture
 
 USAGE:
     # Quick volatility scan (all indicators with defaults)
-    uv run python src/utils/volatility_cli.py TSLA --days 90
+    uv run python -m src.utils.volatility_cli TSLA --days 90
 
     # Real-time volatility with Finnhub (RECOMMENDED for live analysis!)
-    uv run python src/utils/volatility_cli.py TSLA --days 90 --realtime
+    uv run python -m src.utils.volatility_cli TSLA --days 90 --realtime
 
     # Custom Bollinger Bands settings
-    uv run python src/utils/volatility_cli.py TSLA --days 90 --bb-period 14 --bb-std 2.5
+    uv run python -m src.utils.volatility_cli TSLA --days 90 --bb-period 14 --bb-std 2.5
 
     # Custom ATR period with real-time data
-    uv run python src/utils/volatility_cli.py TSLA --days 90 --atr-period 20 --realtime
+    uv run python -m src.utils.volatility_cli TSLA --days 90 --atr-period 20 --realtime
 
     # JSON output for programmatic use
-    uv run python src/utils/volatility_cli.py TSLA --days 90 --output json
+    uv run python -m src.utils.volatility_cli TSLA --days 90 --output json
 
     # Portfolio volatility comparison (real-time!)
     for ticker in TSLA PLTR NVDA; do
-        uv run python src/utils/volatility_cli.py $ticker --days 90 --realtime
+        uv run python -m src.utils.volatility_cli $ticker --days 90 --realtime
     done
 
 AGENT USE CASES:
@@ -262,17 +262,17 @@ def main():
         epilog="""
 Examples:
   # Quick volatility scan
-  uv run python src/utils/volatility_cli.py TSLA --days 90
+  uv run python -m src.utils.volatility_cli TSLA --days 90
 
   # Custom Bollinger Bands settings
-  uv run python src/utils/volatility_cli.py TSLA --days 90 --bb-period 14 --bb-std 2.5
+  uv run python -m src.utils.volatility_cli TSLA --days 90 --bb-period 14 --bb-std 2.5
 
   # JSON output for programmatic use
-  uv run python src/utils/volatility_cli.py TSLA --days 90 --output json
+  uv run python -m src.utils.volatility_cli TSLA --days 90 --output json
 
   # Portfolio comparison
   for ticker in TSLA PLTR NVDA; do
-      uv run python src/utils/volatility_cli.py $ticker --days 90
+      uv run python -m src.utils.volatility_cli $ticker --days 90
   done
 
 Agent Use Cases:

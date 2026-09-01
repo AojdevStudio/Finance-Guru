@@ -117,11 +117,11 @@ If `Accounts_History.csv` doesn't exist:
 
 ## Step 5: Update imports/ Copy
 
-After merging, also update `imports/History_for_Account_{account_id}.csv` with the latest download so other skills (dividend-tracking, etc.) can reference it:
+After merging, also update `imports/transactions/History_for_Account_{account_id}.csv` with the latest download so other skills (dividend-tracking, etc.) can reference it:
 
 ```bash
 cp ~/Downloads/History_for_Account_{account_id}.csv \
-   imports/History_for_Account_{account_id}.csv
+   imports/transactions/History_for_Account_{account_id}.csv
 ```
 
 ## Step 6: Extract Dividend Summary
