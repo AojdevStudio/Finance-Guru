@@ -104,6 +104,11 @@ class InstancePaths(BaseModel):
         """Return the automated-ticket runtime directory."""
         return self.root / "auto-tickets"
 
+    @property
+    def notes(self) -> Path:
+        """Return the instance notes and meeting records directory."""
+        return self.root / "notes"
+
     def database_url(self, env: Mapping[str, str] | None = None) -> str:
         """Return the configured database URL with relative paths under root."""
         environment = os.environ if env is None else env
