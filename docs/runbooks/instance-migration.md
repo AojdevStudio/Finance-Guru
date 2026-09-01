@@ -8,7 +8,13 @@
    uv run --project "<repo>" python -m src.cli.instance_init "<root>" --repo "<repo>"
    ```
 
-2. Check that the project link exists.
+2. Check that the instance virtual environment exists.
+
+   ```bash
+   test -d "<root>/.venv"
+   ```
+
+3. Check that the project link exists.
 
    ```bash
    test -L "<root>/.claude"
@@ -116,7 +122,7 @@
 2. Refresh the local database and print the position and balance tables.
 
    ```bash
-   uv run --project "<repo>" python -m src.integrations.refresh_all --show
+   uv run python -m src.integrations.refresh_all --show
    ```
 
 3. Check the checkout for unexpected untracked files under the moved paths.
@@ -133,7 +139,7 @@
    cd "<root>"
    ```
 
-2. Commit the migrated data.
+2. Commit the migrated data and `uv.lock`.
 
    ```bash
    git add -A && git commit -m "migrate household data from the checkout"

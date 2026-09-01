@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import io
 import os
 import subprocess
-import sys
+import tomllib
+import traceback
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 import yaml
 
+from src.cli import instance_init
 from src.config import InstancePaths
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 GIT_ENV = {
     "GIT_AUTHOR_NAME": "Finance Guru Test",
     "GIT_AUTHOR_EMAIL": "finance-guru@example.invalid",
@@ -36,6 +40,7 @@ def _run_init(
     repo: Path,
     *,
     configure_git_identity: bool = True,
+    sync_roots: list[Path] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     if configure_git_identity:
@@ -49,20 +54,29 @@ def _run_init(
         env["GIT_CONFIG_KEY_0"] = "user.useConfigOnly"
         env["GIT_CONFIG_VALUE_0"] = "true"
 
-    return subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "src.cli.instance_init",
-            str(root),
-            "--repo",
-            str(repo),
-        ],
-        cwd=PROJECT_ROOT,
-        env=env,
-        check=False,
-        capture_output=True,
-        text=True,
+    args = [str(root), "--repo", str(repo)]
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    with (
+        mock.patch.dict(os.environ, env, clear=True),
+        mock.patch.object(instance_init, "_run_uv_sync", autospec=True) as sync,
+        redirect_stdout(stdout),
+        redirect_stderr(stderr),
+    ):
+        try:
+            returncode = instance_init.main(args)
+        except Exception:
+            traceback.print_exc()
+            returncode = 1
+
+    if sync_roots is not None:
+        sync_roots.extend(Path(call.args[0]) for call in sync.call_args_list)
+
+    return subprocess.CompletedProcess(
+        args=args,
+        returncode=returncode,
+        stdout=stdout.getvalue(),
+        stderr=stderr.getvalue(),
     )
 
 
@@ -88,9 +102,39 @@ def _managed_file_mtimes(root: Path) -> dict[Path, int]:
 def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
     repo = _fake_repo(tmp_path)
     root = tmp_path / "instance"
+    sync_roots: list[Path] = []
 
-    result = _run_init(root, repo)
+    result = _run_init(root, repo, sync_roots=sync_roots)
 
+    claude_text = (root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert (
+        "Command form: `uv run python -m src.<tool>`" in claude_text
+        and "Example: `uv run python -m src.integrations.refresh_all --show`"
+        in claude_text
+        and "--project" not in claude_text
+    )
+    pyproject_path = root / "pyproject.toml"
+    pyproject = (
+        tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+        if pyproject_path.is_file()
+        else None
+    )
+    assert pyproject == {
+        "project": {
+            "name": "finance-guru-instance",
+            "version": "0.0.0",
+            "requires-python": ">=3.12",
+            "dependencies": ["family-office"],
+        },
+        "tool": {
+            "uv": {
+                "sources": {
+                    "family-office": {"path": str(repo), "editable": True},
+                }
+            }
+        },
+    }
+    assert sync_roots == [root]
     assert result.returncode == 0, result.stderr
     assert all(line.startswith("created ") for line in result.stdout.splitlines())
 
@@ -115,7 +159,8 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
     )
     assert all(path.is_file() for path in expected_files)
     assert (root / ".gitignore").read_text(encoding="utf-8") == (
-        ".env\n.DS_Store\n*.db-journal\n*.db-wal\n*.db-shm\n.claude\n__pycache__/\n"
+        ".env\n.DS_Store\n*.db-journal\n*.db-wal\n*.db-shm\n.claude\n.venv/\n"
+        "__pycache__/\n"
     )
     assert (root / ".claude").is_symlink()
     assert (root / ".claude").resolve() == (repo / ".claude").resolve()
@@ -137,15 +182,9 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
         "session_context",
     }
 
-    claude_text = (root / "CLAUDE.md").read_text(encoding="utf-8")
     assert claude_text.splitlines()[0] == f"@{repo / 'CLAUDE.md'}"
     assert claude_text.index("# Instance") < claude_text.index(
         "This directory is a Finance Guru instance"
-    )
-    assert f"uv run --project {repo} python -m src.<tool>" in claude_text
-    assert (
-        f"uv run --project {repo} python -m src.integrations.refresh_all --show"
-        in claude_text
     )
 
     assert _git(root, "rev-list", "--count", "HEAD") == "1"
@@ -157,12 +196,14 @@ def test_second_run_is_a_no_op(tmp_path: Path) -> None:
     repo = _fake_repo(tmp_path)
     root = tmp_path / "instance"
     first = _run_init(root, repo)
+    (root / ".venv").mkdir()
     before = _managed_file_mtimes(root) if first.returncode == 0 else {}
 
     second = _run_init(root, repo)
 
     assert first.returncode == 0, first.stderr
     assert second.returncode == 0, second.stderr
+    assert f"exists {root / '.venv'}" in second.stdout.splitlines()
     assert all(line.startswith("exists ") for line in second.stdout.splitlines())
     assert _managed_file_mtimes(root) == before
     assert _git(root, "rev-list", "--count", "HEAD") == "1"

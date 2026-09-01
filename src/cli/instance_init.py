@@ -1,4 +1,8 @@
-"""Create a local Finance Guru instance without overwriting existing files."""
+"""Create a local Finance Guru instance without overwriting existing files.
+
+The scaffold commit runs before uv sync so it cannot include a partial virtual
+environment, and the later migration commit owns ``uv.lock``.
+"""
 
 from __future__ import annotations
 
@@ -17,6 +21,7 @@ GITIGNORE = """.env
 *.db-wal
 *.db-shm
 .claude
+.venv/
 __pycache__/
 """
 
@@ -136,10 +141,32 @@ def _instance_instructions(repo: Path) -> str:
 
 This directory is a Finance Guru instance, and the engine lives at `{repo}`.
 
-Command form: `uv run --project {repo} python -m src.<tool>`
+Command form: `uv run python -m src.<tool>`
 
-Example: `uv run --project {repo} python -m src.integrations.refresh_all --show`
+Example: `uv run python -m src.integrations.refresh_all --show`
 """
+
+
+def _instance_pyproject(repo: Path) -> str:
+    return f"""[project]
+name = "finance-guru-instance"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = ["family-office"]
+
+[tool.uv.sources]
+family-office = {{ path = "{repo}", editable = true }}
+"""
+
+
+def _run_uv_sync(root: Path) -> None:
+    subprocess.run(["uv", "sync", "--quiet"], cwd=root, check=True)
+
+
+def _sync_environment(path: Path) -> StepResult:
+    existed = path.exists()
+    _run_uv_sync(path.parent)
+    return "exists" if existed else "created"
 
 
 def _build_plan(paths: InstancePaths, repo: Path) -> list[PlanStep]:
@@ -160,6 +187,10 @@ def _build_plan(paths: InstancePaths, repo: Path) -> list[PlanStep]:
     plan.extend(
         (
             PlanStep(paths.root / ".gitignore", _write_text(GITIGNORE)),
+            PlanStep(
+                paths.root / "pyproject.toml",
+                _write_text(_instance_pyproject(repo)),
+            ),
             PlanStep(paths.env_file, _write_text(env_content)),
             PlanStep(paths.profile, _write_text(USER_PROFILE)),
             PlanStep(paths.root / ".claude", _create_symlink(repo / ".claude")),
@@ -168,6 +199,7 @@ def _build_plan(paths: InstancePaths, repo: Path) -> list[PlanStep]:
                 _write_text(_instance_instructions(repo)),
             ),
             PlanStep(paths.root / ".git", _initialize_git),
+            PlanStep(paths.root / ".venv", _sync_environment),
         )
     )
     return plan
