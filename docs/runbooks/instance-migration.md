@@ -119,13 +119,19 @@
    cd "<root>"
    ```
 
-2. Refresh the local database and print the position and balance tables.
+2. Refresh the local database from the migrated credentials and routing file.
+
+   ```bash
+   uv run python -m src.integrations.refresh_all
+   ```
+
+3. Print the position and balance tables.
 
    ```bash
    uv run python -m src.integrations.refresh_all --show
    ```
 
-3. Check the checkout for unexpected untracked files under the moved paths.
+4. Check the checkout for unexpected untracked files under the moved paths.
 
    ```bash
    git -C "<repo>" status --short --untracked-files=all
