@@ -888,15 +888,15 @@ _This research workflow is designed to integrate seamlessly with the Finance Gur
 ### Momentum Screening
 ```bash
 # Quick momentum scan
-uv run python src/utils/momentum_cli.py [TICKER] --days 90
+uv run python -m src.utils.momentum_cli [TICKER] --days 90
 
 # Batch screening across watchlist
 for ticker in TSLA PLTR NVDA AAPL; do
-  uv run python src/utils/momentum_cli.py $ticker --days 90
+  uv run python -m src.utils.momentum_cli $ticker --days 90
 done
 
 # Focus on specific indicator
-uv run python src/utils/momentum_cli.py [TICKER] --days 90 --indicator rsi
+uv run python -m src.utils.momentum_cli [TICKER] --days 90 --indicator rsi
 ```
 
 **Use For:** Technical screening, momentum confluence detection, market sentiment gauging
@@ -904,11 +904,11 @@ uv run python src/utils/momentum_cli.py [TICKER] --days 90 --indicator rsi
 ### Volatility Assessment
 ```bash
 # Quick volatility profile
-uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 90
+uv run python -m src.analysis.risk_metrics_cli [TICKER] --days 90
 
 # Comparative volatility screening
 for ticker in TSLA PLTR NVDA; do
-  uv run python src/analysis/risk_metrics_cli.py $ticker --days 252
+  uv run python -m src.analysis.risk_metrics_cli $ticker --days 252
 done
 ```
 
@@ -917,12 +917,12 @@ done
 ### Research Workflow Integration
 ```bash
 # Save for handoff to Quant Analyst
-uv run python src/utils/momentum_cli.py [TICKER] --days 90 \
-  --save-to fin-guru-private/fin-guru/momentum-[TICKER]-$(date +%Y-%m-%d).json
+uv run python -m src.utils.momentum_cli [TICKER] --days 90 \
+  --save-to analysis/momentum-[TICKER]-$(date +%Y-%m-%d).json
 
 # Save risk profile for strategy development
-uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 252 --benchmark SPY \
-  --save-to fin-guru-private/fin-guru/risk-[TICKER]-$(date +%Y-%m-%d).json
+uv run python -m src.analysis.risk_metrics_cli [TICKER] --days 252 --benchmark SPY \
+  --save-to analysis/risk-[TICKER]-$(date +%Y-%m-%d).json
 ```
 
 ### Research Notes

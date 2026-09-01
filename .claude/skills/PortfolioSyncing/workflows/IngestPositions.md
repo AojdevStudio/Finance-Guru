@@ -1,6 +1,6 @@
 # IngestPositions Workflow
 
-Ingest Fidelity portfolio CSVs from Downloads into `notebooks/updates/`. Handles duplicate file detection, regular vs dividend view classification, and Balances file updates.
+Ingest Fidelity portfolio CSVs from Downloads into `imports/`. Handles duplicate file detection, regular vs dividend view classification, and Balances file updates.
 
 > **Post-SnapTrade-cutover note (issue 71):** Position + balance sync now reads **live from SnapTrade**, so the regular `Portfolio_Positions_*.csv` and `Balances_*.csv` are **optional** (useful only as a CSV fallback or for re-verification). The **Dividend view** (`Dividend_Positions_*.csv`, used by `dividend-tracking`) and **History** (`History_for_Account_*.csv`, used by `TransactionSyncing`) are still CSV-sourced — keep ingesting those.
 
@@ -17,7 +17,7 @@ Ingest Fidelity portfolio CSVs from Downloads into `notebooks/updates/`. Handles
 
 ## Step 1: Locate Source Files in Downloads
 
-**Account ID**: Read from `fin-guru/data/user-profile.yaml` → `accounts[].account_id` at runtime. NEVER hardcode.
+**Account ID**: Read from `user-profile.yaml` → `accounts[].account_id` at runtime. NEVER hardcode.
 
 Scan `~/Downloads/` for all matching files. **CRITICAL**: Use `fd` (not `ls` with globs) because zsh kills the entire command if _any_ glob pattern has zero matches.
 
@@ -72,13 +72,13 @@ The regular view file is already date-tagged by Fidelity: `Portfolio_Positions_M
 
 ```bash
 # Move regular view as-is (already properly named)
-mv ~/Downloads/Portfolio_Positions_MMM-DD-YYYY.csv notebooks/updates/Portfolio_Positions_MMM-DD-YYYY.csv
+mv ~/Downloads/Portfolio_Positions_MMM-DD-YYYY.csv imports/Portfolio_Positions_MMM-DD-YYYY.csv
 ```
 
 If the regular view was the `(1)` tagged file:
 ```bash
 # Remove the (1) tag when moving
-mv "~/Downloads/Portfolio_Positions_MMM-DD-YYYY (1).csv" notebooks/updates/Portfolio_Positions_MMM-DD-YYYY.csv
+mv "~/Downloads/Portfolio_Positions_MMM-DD-YYYY (1).csv" imports/Portfolio_Positions_MMM-DD-YYYY.csv
 ```
 
 ## Step 4: Move and Rename Dividend View
@@ -88,14 +88,14 @@ Rename the dividend view to follow the `Dividend_Positions_MMM-DD-YYYY.csv` conv
 ```bash
 # Extract date from the original filename (e.g., "Mar-06-2026" from "Portfolio_Positions_Mar-06-2026.csv")
 # Rename to Dividend_Positions_MMM-DD-YYYY.csv
-mv "~/Downloads/Portfolio_Positions_MMM-DD-YYYY.csv" notebooks/updates/Dividend_Positions_MMM-DD-YYYY.csv
+mv "~/Downloads/Portfolio_Positions_MMM-DD-YYYY.csv" imports/Dividend_Positions_MMM-DD-YYYY.csv
 # OR if it was the (1) file:
-mv "~/Downloads/Portfolio_Positions_MMM-DD-YYYY (1).csv" notebooks/updates/Dividend_Positions_MMM-DD-YYYY.csv
+mv "~/Downloads/Portfolio_Positions_MMM-DD-YYYY (1).csv" imports/Dividend_Positions_MMM-DD-YYYY.csv
 ```
 
 **Example**:
 ```bash
-mv "~/Downloads/Portfolio_Positions_Mar-06-2026 (1).csv" notebooks/updates/Dividend_Positions_Mar-06-2026.csv
+mv "~/Downloads/Portfolio_Positions_Mar-06-2026 (1).csv" imports/Dividend_Positions_Mar-06-2026.csv
 ```
 
 ## Step 5: Move Balances File
@@ -104,13 +104,13 @@ Balances file overwrites the existing one (no date tag, single canonical file):
 
 ```bash
 # Move balances (overwrites existing)
-mv ~/Downloads/Balances_for_Account_{ACCOUNT_ID}.csv notebooks/updates/Balances_for_Account_{ACCOUNT_ID}.csv
+mv ~/Downloads/Balances_for_Account_{ACCOUNT_ID}.csv imports/Balances_for_Account_{ACCOUNT_ID}.csv
 ```
 
 **Duplicate handling**: If `Balances_for_Account_{ACCOUNT_ID} (1).csv` exists, it's a re-download. Use the newest one (highest number or no number = first download):
 ```bash
 # If (1) exists, it's the newer download — use it, discard the older
-mv "~/Downloads/Balances_for_Account_{ACCOUNT_ID} (1).csv" notebooks/updates/Balances_for_Account_{ACCOUNT_ID}.csv
+mv "~/Downloads/Balances_for_Account_{ACCOUNT_ID} (1).csv" imports/Balances_for_Account_{ACCOUNT_ID}.csv
 # Clean up the older one if still present
 rm -f ~/Downloads/Balances_for_Account_{ACCOUNT_ID}.csv 2>/dev/null
 ```
@@ -119,9 +119,9 @@ rm -f ~/Downloads/Balances_for_Account_{ACCOUNT_ID}.csv 2>/dev/null
 
 ```bash
 # Verify files landed correctly
-ls -la notebooks/updates/Portfolio_Positions_*.csv | tail -3
-ls -la notebooks/updates/Dividend_Positions_*.csv | tail -3
-ls -la notebooks/updates/Balances_for_Account_*.csv
+ls -la imports/Portfolio_Positions_*.csv | tail -3
+ls -la imports/Dividend_Positions_*.csv | tail -3
+ls -la imports/Balances_for_Account_*.csv
 ```
 
 **Generate ingestion report**:
@@ -155,7 +155,7 @@ NEXT STEPS:
   - Process only the **latest date** by default
   - Ask user if they want to import older files too
 
-### File already exists in notebooks/updates/
+### File already exists in imports/
 - If `Portfolio_Positions_MMM-DD-YYYY.csv` already exists in destination:
   - Compare file sizes. If identical, skip with note.
   - If different, overwrite (newer download wins)

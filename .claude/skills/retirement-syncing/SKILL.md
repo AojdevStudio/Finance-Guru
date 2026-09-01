@@ -1,6 +1,6 @@
 ---
 name: retirement-syncing
-description: Parse and report retirement holdings from Vanguard and Fidelity CSV exports. CSV-only by design — the Vanguard IRAs and Fidelity 401k are not connected in SnapTrade, so there is no live/DB path yet and no persistent destination. Triggers on sync retirement, update retirement, vanguard sync, 401k update, IRA sync, or working with notebooks/retirement-accounts/ files.
+description: Parse and report retirement holdings from Vanguard and Fidelity CSV exports. CSV-only by design — the Vanguard IRAs and Fidelity 401k are not connected in SnapTrade, so there is no live/DB path yet and no persistent destination. Triggers on sync retirement, update retirement, vanguard sync, 401k update, IRA sync, or working with imports/retirement/ files.
 ---
 
 # Retirement Account Syncing
@@ -33,13 +33,13 @@ Parse Vanguard and Fidelity retirement account CSV exports and report current ho
 ## When to Use
 
 Use this skill when:
-- Syncing retirement account positions from `notebooks/retirement-accounts/`
+- Syncing retirement account positions from `imports/retirement/`
 - User mentions: "sync retirement", "update retirement", "vanguard sync", "401k update", "IRA sync"
-- Working with files in `notebooks/retirement-accounts/` directory
+- Working with files in `imports/retirement/` directory
 
 ## Source Files
 
-**Location**: `notebooks/retirement-accounts/`
+**Location**: `imports/retirement/`
 
 | File | Source | Contents |
 |------|--------|----------|
@@ -75,7 +75,7 @@ Holdings seen across the Vanguard IRAs, Vanguard brokerage, and Fidelity 401(k):
 VOO, VUG, VTSAX, SCHG, PLTR, NVDA, TSLA, VB, ARKK, VMFXX, FGCKX, FXAIX.
 
 Mary's Goucher 403(b) and Principal 401(k) allocations are tracked separately in
-`fin-guru/data/user-profile.yaml` and the strategy docs, not through this skill.
+`user-profile.yaml` and the strategy docs, not through this skill.
 
 ## Core Workflow
 
@@ -83,11 +83,11 @@ Mary's Goucher 403(b) and Principal 401(k) allocations are tracked separately in
 
 ```python
 # Read Vanguard files
-vanguard_1 = read_csv("notebooks/retirement-accounts/OfxDownload.csv")
-vanguard_2 = read_csv("notebooks/retirement-accounts/OfxDownload (1).csv")
+vanguard_1 = read_csv("imports/retirement/OfxDownload.csv")
+vanguard_2 = read_csv("imports/retirement/OfxDownload (1).csv")
 
 # Read latest Fidelity file (by date in filename)
-fidelity = read_csv("notebooks/retirement-accounts/Portfolio_Positions_*.csv")
+fidelity = read_csv("imports/retirement/Portfolio_Positions_*.csv")
 ```
 
 ### 2. Aggregate Holdings by Ticker
@@ -119,7 +119,7 @@ destination to write to, so the report IS the deliverable.
 ## Safety Checks
 
 **Before reporting:**
-- Verify all 3 CSV files exist in `notebooks/retirement-accounts/`
+- Verify all 3 CSV files exist in `imports/retirement/`
 - Note the export date of each CSV; flag anything older than 30 days
 - Call out any ticker not previously seen in the known-tickers list
 

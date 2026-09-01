@@ -32,11 +32,11 @@ These files are automatically loaded into context at session start:
 **Contains**: Module identity, agent roster (13 agents), workflow pipeline, tools, temporal awareness
 
 ### 2. User Profile
-**Path**: `fin-guru/data/user-profile.yaml`
+**Path**: `user-profile.yaml`
 **Contains**: Portfolio structure (${FG_PORTFOLIO_STRUCTURE}), investment capacity (${FG_W2_MONTHLY_INCOME}/month W2), risk profile (aggressive), Layer 2 Income strategy
 
 ### 3. Portfolio Updates
-**Path**: `notebooks/updates/`
+**Path**: `imports/`
 **Live source**: Positions + balances now sync **live from SnapTrade** (issue 71) — the position/balance CSVs are a fallback/re-verification source only, not the source of truth. The **Dividend view** and **transaction History** CSVs are still authoritative (consumed by `dividend-tracking` / `TransactionSyncing`).
 
 **File Patterns** (fallback + dividend/history):

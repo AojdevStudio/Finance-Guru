@@ -23,25 +23,25 @@ Execute structured quantitative analysis workflows with statistical validation.
 
 ```bash
 # Risk metrics
-uv run python src/analysis/risk_metrics_cli.py TICKER --days 252 --benchmark SPY
+uv run python -m src.analysis.risk_metrics_cli TICKER --days 252 --benchmark SPY
 
 # Momentum confluence
-uv run python src/utils/momentum_cli.py TICKER --days 90
+uv run python -m src.utils.momentum_cli TICKER --days 90
 
 # Volatility regime
-uv run python src/utils/volatility_cli.py TICKER --days 90
+uv run python -m src.utils.volatility_cli TICKER --days 90
 
 # Correlation matrix
-uv run python src/analysis/correlation_cli.py TICKER1 TICKER2 --days 90
+uv run python -m src.analysis.correlation_cli TICKER1 TICKER2 --days 90
 
 # Factor analysis
-uv run python src/analysis/factors_cli.py TICKER --days 252 --benchmark SPY
+uv run python -m src.analysis.factors_cli TICKER --days 252 --benchmark SPY
 
 # Backtesting
-uv run python src/strategies/backtester_cli.py TICKER --days 252 --strategy rsi
+uv run python -m src.strategies.backtester_cli TICKER --days 252 --strategy rsi
 
 # Portfolio optimization
-uv run python src/strategies/optimizer_cli.py TICKERS --days 252 --method max_sharpe
+uv run python -m src.strategies.optimizer_cli TICKERS --days 252 --method max_sharpe
 ```
 
 ## Requirements

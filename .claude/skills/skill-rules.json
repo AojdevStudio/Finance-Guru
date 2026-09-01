@@ -30,8 +30,8 @@
             },
             "fileTriggers": {
                 "pathPatterns": [
-                    "notebooks/updates/DataHub_*.csv",
-                    "notebooks/updates/Balances_for_Account_*.csv"
+                    "imports/DataHub_*.csv",
+                    "imports/Balances_for_Account_*.csv"
                 ],
                 "contentPatterns": [
                     "Symbol,Quantity",
@@ -69,8 +69,8 @@
             "fileTriggers": {
                 "pathPatterns": [
                     "fin-guru/data/*dividend*.md",
-                    "fin-guru-private/fin-guru/strategies/active/*dividend*.md",
-                    "fin-guru/data/user-profile.yaml"
+                    "strategies/active/*dividend*.md",
+                    "user-profile.yaml"
                 ]
             }
         },
@@ -101,9 +101,9 @@
             },
             "fileTriggers": {
                 "pathPatterns": [
-                    "notebooks/updates/Balances_for_Account_*.csv",
+                    "imports/Balances_for_Account_*.csv",
                     "fin-guru/data/*margin*.md",
-                    "fin-guru-private/fin-guru/strategies/active/*margin*.md"
+                    "strategies/active/*margin*.md"
                 ]
             }
         },
@@ -134,9 +134,9 @@
             },
             "fileTriggers": {
                 "pathPatterns": [
-                    "notebooks/retirement-accounts/*.csv",
-                    "notebooks/retirement-accounts/OfxDownload*.csv",
-                    "notebooks/retirement-accounts/Portfolio_Positions_*.csv"
+                    "imports/retirement/*.csv",
+                    "imports/retirement/OfxDownload*.csv",
+                    "imports/retirement/Portfolio_Positions_*.csv"
                 ]
             }
         },
@@ -167,8 +167,8 @@
             },
             "fileTriggers": {
                 "pathPatterns": [
-                    "fin-guru-private/fin-guru/analysis/reports/*.pdf",
-                    "fin-guru-private/fin-guru/analysis/*watchlist*.md",
+                    "reports/*.pdf",
+                    "analysis/*watchlist*.md",
                     "scripts/reports/generate_*_report.py"
                 ]
             }
@@ -200,8 +200,8 @@
             },
             "fileTriggers": {
                 "pathPatterns": [
-                    "notebooks/updates/History_for_Account_*.csv",
-                    "notebooks/updates/*transaction*.csv"
+                    "imports/History_for_Account_*.csv",
+                    "imports/*transaction*.csv"
                 ]
             }
         }

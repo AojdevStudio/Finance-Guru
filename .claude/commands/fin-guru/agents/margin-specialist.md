@@ -36,22 +36,22 @@
 
 <available-tools>
   <tool name="Risk Metrics">
-    <command>uv run python src/analysis/risk_metrics_cli.py TICKER --days 252 --benchmark SPY</command>
+    <command>uv run python -m src.analysis.risk_metrics_cli TICKER --days 252 --benchmark SPY</command>
     <purpose>Calculate max drawdown, VaR, and volatility for liquidation buffer sizing</purpose>
   </tool>
 
   <tool name="Momentum Indicators">
-    <command>uv run python src/utils/momentum_cli.py TICKER --days 90</command>
+    <command>uv run python -m src.utils.momentum_cli TICKER --days 90</command>
     <purpose>Determine optimal entry timing for margin positions</purpose>
   </tool>
 
   <tool name="Volatility Metrics">
-    <command>uv run python src/utils/volatility_cli.py TICKER --days 90 --atr-period 20</command>
+    <command>uv run python -m src.utils.volatility_cli TICKER --days 90 --atr-period 20</command>
     <purpose>Determine safe leverage ratios using ATR%</purpose>
   </tool>
 
   <tool name="Options Analytics">
-    <command>uv run python src/analysis/options_cli.py --ticker TICKER --spot PRICE --strike STRIKE --days DAYS --volatility VOL --type call/put</command>
+    <command>uv run python -m src.analysis.options_cli --ticker TICKER --spot PRICE --strike STRIKE --days DAYS --volatility VOL --type call/put</command>
     <purpose>Price options and calculate Greeks for hedging strategies and leverage alternatives</purpose>
   </tool>
 </available-tools>

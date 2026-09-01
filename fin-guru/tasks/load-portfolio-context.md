@@ -17,10 +17,10 @@ Load current portfolio positions and key metrics into the agent's working memory
 
 ### 1. Locate Latest Portfolio Export
 
-Find the most recent portfolio CSV within `notebooks/` (lists every match so you can confirm the latest export):
+Find the most recent portfolio CSV within `imports/` (lists every match so you can confirm the latest export):
 
 ```bash
-cd /Users/ossieirondi/Documents/Irondi-Household/family-office && find notebooks -name "Portfolio_Positions*.csv" -type f 2>/dev/null
+cd /Users/ossieirondi/Documents/Irondi-Household/family-office && find imports -name "Portfolio_Positions*.csv" -type f 2>/dev/null
 ```
 
 Expected format: `Portfolio_Positions_[YYYY-MM-DD].csv` or `Portfolio_Positions_[MonthName-DD-YYYY].csv`
@@ -34,7 +34,7 @@ Read the latest CSV file using the Read tool.
 Check for margin and balance information:
 
 ```bash
-cd /Users/ossieirondi/Documents/Irondi-Household/family-office && ls notebooks/updates/Balances_for_Account_{account_id}.csv 2>/dev/null
+cd /Users/ossieirondi/Documents/Irondi-Household/family-office && ls imports/Balances_for_Account_{account_id}.csv 2>/dev/null
 ```
 
 If the balance file exists, read it using the Read tool. This file contains:
@@ -133,7 +133,7 @@ PENDING ACTIVITY: $X,XXX (if any)
 ## Error Handling
 
 **If no CSV found:**
-- Alert user: "No portfolio export found in notebooks/updates/. Please download latest positions from Fidelity."
+- Alert user: "No portfolio export found in imports/. Please download latest positions from Fidelity."
 - Provide instructions for export location
 
 **If CSV is malformed:**
@@ -182,7 +182,7 @@ This task should produce:
 - This task does NOT modify any files
 - This task does NOT make trading recommendations
 - This task ONLY loads data into memory
-- Portfolio CSV should remain in `notebooks/updates/` for historical tracking
+- Portfolio CSV should remain in `imports/` for historical tracking
 - Agents should reference this loaded context throughout the session
 
 ---

@@ -22,13 +22,13 @@ For portfolio positions with ITC coverage:
 
 ```bash
 # Single ticker check
-uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi
+uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi
 
 # Batch processing
-uv run python src/analysis/itc_risk_cli.py TSLA AAPL MSTR --universe tradfi
+uv run python -m src.analysis.itc_risk_cli TSLA AAPL MSTR --universe tradfi
 
 # Full risk band analysis
-uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi --full-table
+uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi --full-table
 ```
 
 ## Risk Thresholds

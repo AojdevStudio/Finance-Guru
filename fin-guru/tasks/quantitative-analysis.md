@@ -82,10 +82,10 @@ This workflow guides the Quant Analyst through rigorous quantitative financial a
 **For Individual Securities:**
 ```bash
 # Full analysis with benchmark
-uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 252 --benchmark SPY
+uv run python -m src.analysis.risk_metrics_cli [TICKER] --days 252 --benchmark SPY
 
 # Custom risk parameters
-uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 252 \
+uv run python -m src.analysis.risk_metrics_cli [TICKER] --days 252 \
   --confidence 0.99 \
   --var-method parametric \
   --risk-free-rate 0.05
@@ -95,7 +95,7 @@ uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 252 \
 ```bash
 # Batch analysis across holdings
 for ticker in TSLA PLTR NVDA; do
-  uv run python src/analysis/risk_metrics_cli.py $ticker --days 252 --benchmark SPY --output json
+  uv run python -m src.analysis.risk_metrics_cli $ticker --days 252 --benchmark SPY --output json
 done
 ```
 
@@ -119,13 +119,13 @@ done
 **For Timing Analysis:**
 ```bash
 # All indicators with confluence
-uv run python src/utils/momentum_cli.py [TICKER] --days 90
+uv run python -m src.utils.momentum_cli [TICKER] --days 90
 
 # Specific indicator focus
-uv run python src/utils/momentum_cli.py [TICKER] --days 90 --indicator rsi
+uv run python -m src.utils.momentum_cli [TICKER] --days 90 --indicator rsi
 
 # Custom periods for sensitivity
-uv run python src/utils/momentum_cli.py [TICKER] --days 90 \
+uv run python -m src.utils.momentum_cli [TICKER] --days 90 \
   --rsi-period 21 \
   --macd-fast 8 \
   --macd-slow 21
@@ -135,7 +135,7 @@ uv run python src/utils/momentum_cli.py [TICKER] --days 90 \
 ```bash
 # Momentum confluence across holdings
 for ticker in TSLA PLTR NVDA; do
-  uv run python src/utils/momentum_cli.py $ticker --days 90
+  uv run python -m src.utils.momentum_cli $ticker --days 90
 done
 ```
 
@@ -159,13 +159,13 @@ done
 **For Volatility Assessment:**
 ```bash
 # Full volatility analysis with regime classification
-uv run python src/utils/volatility_cli.py [TICKER] --days 90
+uv run python -m src.utils.volatility_cli [TICKER] --days 90
 
 # Specific indicator focus
-uv run python src/utils/volatility_cli.py [TICKER] --days 90 --indicator bollinger
+uv run python -m src.utils.volatility_cli [TICKER] --days 90 --indicator bollinger
 
 # Custom parameters
-uv run python src/utils/volatility_cli.py [TICKER] --days 90 \
+uv run python -m src.utils.volatility_cli [TICKER] --days 90 \
   --bb-period 20 \
   --bb-std 2.0 \
   --atr-period 14
@@ -175,7 +175,7 @@ uv run python src/utils/volatility_cli.py [TICKER] --days 90 \
 ```bash
 # Volatility regime across holdings
 for ticker in TSLA PLTR NVDA; do
-  uv run python src/utils/volatility_cli.py $ticker --days 90
+  uv run python -m src.utils.volatility_cli $ticker --days 90
 done
 ```
 
@@ -204,24 +204,24 @@ done
 **For Portfolio Diversification:**
 ```bash
 # Correlation matrix for portfolio holdings
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 252
+uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA --days 252
 
 # Include benchmark for market correlation
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA SPY --days 252
+uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA SPY --days 252
 
 # Custom correlation period
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA \
+uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA \
   --days 90 \
   --method pearson
 
 # JSON output for programmatic use
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 252 --output json
+uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA --days 252 --output json
 ```
 
 **For Hedge Identification:**
 ```bash
 # Find low/negative correlation assets
-uv run python src/analysis/correlation_cli.py TSLA TLT GLD --days 252
+uv run python -m src.analysis.correlation_cli TSLA TLT GLD --days 252
 ```
 
 **Interpret Results:**
@@ -255,17 +255,17 @@ uv run python src/analysis/correlation_cli.py TSLA TLT GLD --days 252
 **For Trend Analysis:**
 ```bash
 # All moving average types (SMA, EMA, WMA, HMA)
-uv run python src/utils/moving_averages_cli.py [TICKER] --days 252
+uv run python -m src.utils.moving_averages_cli [TICKER] --days 252
 
 # Specific MA type focus
-uv run python src/utils/moving_averages_cli.py [TICKER] --days 252 --indicator sma
+uv run python -m src.utils.moving_averages_cli [TICKER] --days 252 --indicator sma
 
 # Golden Cross/Death Cross detection (50/200 SMA)
-uv run python src/utils/moving_averages_cli.py [TICKER] --days 252 \
+uv run python -m src.utils.moving_averages_cli [TICKER] --days 252 \
   --periods 50 200
 
 # Custom periods for different timeframes
-uv run python src/utils/moving_averages_cli.py [TICKER] --days 252 \
+uv run python -m src.utils.moving_averages_cli [TICKER] --days 252 \
   --periods 10 20 50 100 200
 ```
 
@@ -273,7 +273,7 @@ uv run python src/utils/moving_averages_cli.py [TICKER] --days 252 \
 ```bash
 # Trend analysis across holdings
 for ticker in TSLA PLTR NVDA; do
-  uv run python src/utils/moving_averages_cli.py $ticker --days 252
+  uv run python -m src.utils.moving_averages_cli $ticker --days 252
 done
 ```
 
@@ -332,25 +332,25 @@ done
 **For Strategy Validation:**
 ```bash
 # Backtest RSI mean reversion strategy
-uv run python src/strategies/backtester_cli.py [TICKER] \
+uv run python -m src.strategies.backtester_cli [TICKER] \
   --strategy rsi \
   --days 252 \
   --capital 10000
 
 # Backtest SMA crossover strategy
-uv run python src/strategies/backtester_cli.py [TICKER] \
+uv run python -m src.strategies.backtester_cli [TICKER] \
   --strategy sma_cross \
   --days 252 \
   --capital 10000
 
 # Buy-and-hold benchmark comparison
-uv run python src/strategies/backtester_cli.py [TICKER] \
+uv run python -m src.strategies.backtester_cli [TICKER] \
   --strategy buy_hold \
   --days 252 \
   --capital 10000
 
 # Custom transaction costs
-uv run python src/strategies/backtester_cli.py [TICKER] \
+uv run python -m src.strategies.backtester_cli [TICKER] \
   --strategy rsi \
   --days 252 \
   --capital 10000 \
@@ -362,7 +362,7 @@ uv run python src/strategies/backtester_cli.py [TICKER] \
 ```bash
 # Backtest strategy across portfolio holdings
 for ticker in TSLA PLTR NVDA; do
-  uv run python src/strategies/backtester_cli.py $ticker \
+  uv run python -m src.strategies.backtester_cli $ticker \
     --strategy rsi \
     --days 252 \
     --output json
@@ -401,29 +401,29 @@ done
 **For Portfolio Optimization:**
 ```bash
 # Mean-Variance Optimization (maximize Sharpe ratio)
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method mean_variance \
   --days 252 \
   --risk-free-rate 0.05
 
 # Risk Parity (equal risk contribution)
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method risk_parity \
   --days 252
 
 # Minimum Variance (lowest portfolio volatility)
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method min_variance \
   --days 252
 
 # Maximum Sharpe (highest risk-adjusted return)
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method max_sharpe \
   --days 252 \
   --risk-free-rate 0.05
 
 # Black-Litterman (incorporate market views)
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method black_litterman \
   --days 252 \
   --risk-free-rate 0.05 \
@@ -433,14 +433,14 @@ uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
 **For Constrained Optimization:**
 ```bash
 # Add position limits
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method mean_variance \
   --days 252 \
   --min-weight 0.05 \
   --max-weight 0.50
 
 # Target specific return level
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method mean_variance \
   --days 252 \
   --target-return 0.15
@@ -505,41 +505,41 @@ uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
 **Documentation:**
 ```bash
 # Save risk analysis
-uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 252 --benchmark SPY \
+uv run python -m src.analysis.risk_metrics_cli [TICKER] --days 252 --benchmark SPY \
   --output json \
-  --save-to fin-guru-private/fin-guru/quant-risk-[TICKER]-$(date +%Y-%m-%d).json
+  --save-to analysis/quant-risk-[TICKER]-$(date +%Y-%m-%d).json
 
 # Save momentum analysis
-uv run python src/utils/momentum_cli.py [TICKER] --days 90 \
+uv run python -m src.utils.momentum_cli [TICKER] --days 90 \
   --output json \
-  --save-to fin-guru-private/fin-guru/quant-momentum-[TICKER]-$(date +%Y-%m-%d).json
+  --save-to analysis/quant-momentum-[TICKER]-$(date +%Y-%m-%d).json
 
 # Save volatility analysis
-uv run python src/utils/volatility_cli.py [TICKER] --days 90 \
+uv run python -m src.utils.volatility_cli [TICKER] --days 90 \
   --output json \
-  --save-to fin-guru-private/fin-guru/quant-volatility-[TICKER]-$(date +%Y-%m-%d).json
+  --save-to analysis/quant-volatility-[TICKER]-$(date +%Y-%m-%d).json
 
 # Save correlation analysis
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 252 \
+uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA --days 252 \
   --output json \
-  --save-to fin-guru-private/fin-guru/quant-correlation-$(date +%Y-%m-%d).json
+  --save-to analysis/quant-correlation-$(date +%Y-%m-%d).json
 
 # Save moving average analysis
-uv run python src/utils/moving_averages_cli.py [TICKER] --days 252 \
+uv run python -m src.utils.moving_averages_cli [TICKER] --days 252 \
   --output json \
-  --save-to fin-guru-private/fin-guru/quant-ma-[TICKER]-$(date +%Y-%m-%d).json
+  --save-to analysis/quant-ma-[TICKER]-$(date +%Y-%m-%d).json
 
 # Save backtest results
-uv run python src/strategies/backtester_cli.py [TICKER] \
+uv run python -m src.strategies.backtester_cli [TICKER] \
   --strategy rsi --days 252 \
   --output json \
-  --save-to fin-guru-private/fin-guru/quant-backtest-[TICKER]-$(date +%Y-%m-%d).json
+  --save-to analysis/quant-backtest-[TICKER]-$(date +%Y-%m-%d).json
 
 # Save optimization results
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method mean_variance --days 252 \
   --output json \
-  --save-to fin-guru-private/fin-guru/quant-optimization-$(date +%Y-%m-%d).json
+  --save-to analysis/quant-optimization-$(date +%Y-%m-%d).json
 ```
 
 **Report Structure:**
@@ -574,7 +574,7 @@ uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
 - [ ] Portfolio optimization run for allocation decisions (if applicable)
 - [ ] Results make intuitive sense (no anomalies)
 - [ ] Data date is current (within 3 days)
-- [ ] Analysis saved to fin-guru-private/fin-guru/ directory
+- [ ] Analysis saved to analysis/ directory
 - [ ] Recommendations are clear and actionable
 
 **Output:** Quality-validated analysis ready for decision-making.
@@ -710,20 +710,20 @@ uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
 **Basic Usage:**
 ```bash
 # Full analysis with benchmark
-uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 252 --benchmark SPY
+uv run python -m src.analysis.risk_metrics_cli [TICKER] --days 252 --benchmark SPY
 
 # Custom parameters
-uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 252 \
+uv run python -m src.analysis.risk_metrics_cli [TICKER] --days 252 \
   --confidence 0.99 \
   --var-method parametric \
   --risk-free-rate 0.05
 
 # JSON output for programmatic use
-uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 252 --output json
+uv run python -m src.analysis.risk_metrics_cli [TICKER] --days 252 --output json
 
 # Batch portfolio analysis
 for ticker in TSLA PLTR NVDA; do
-  uv run python src/analysis/risk_metrics_cli.py $ticker --days 252 --benchmark SPY --output json
+  uv run python -m src.analysis.risk_metrics_cli $ticker --days 252 --benchmark SPY --output json
 done
 ```
 
@@ -734,7 +734,7 @@ done
 - Annual Volatility
 - Beta, Alpha (with benchmark)
 
-**Documentation:** `fin-guru-private/guides/risk-metrics-tool-guide.md`
+**Documentation:** `guides/risk-metrics-tool-guide.md`
 
 ---
 
@@ -745,19 +745,19 @@ done
 **Basic Usage:**
 ```bash
 # All indicators with confluence
-uv run python src/utils/momentum_cli.py [TICKER] --days 90
+uv run python -m src.utils.momentum_cli [TICKER] --days 90
 
 # Specific indicator
-uv run python src/utils/momentum_cli.py [TICKER] --days 90 --indicator rsi
+uv run python -m src.utils.momentum_cli [TICKER] --days 90 --indicator rsi
 
 # Custom periods
-uv run python src/utils/momentum_cli.py [TICKER] --days 90 \
+uv run python -m src.utils.momentum_cli [TICKER] --days 90 \
   --rsi-period 21 \
   --macd-fast 8 \
   --macd-slow 21
 
 # JSON for programmatic use
-uv run python src/utils/momentum_cli.py [TICKER] --days 90 --output json
+uv run python -m src.utils.momentum_cli [TICKER] --days 90 --output json
 ```
 
 **Indicators Available:**
@@ -778,23 +778,23 @@ uv run python src/utils/momentum_cli.py [TICKER] --days 90 --output json
 **Basic Usage:**
 ```bash
 # Full volatility analysis with all indicators
-uv run python src/utils/volatility_cli.py [TICKER] --days 90
+uv run python -m src.utils.volatility_cli [TICKER] --days 90
 
 # Specific indicator
-uv run python src/utils/volatility_cli.py [TICKER] --days 90 --indicator bollinger
+uv run python -m src.utils.volatility_cli [TICKER] --days 90 --indicator bollinger
 
 # Custom parameters
-uv run python src/utils/volatility_cli.py [TICKER] --days 90 \
+uv run python -m src.utils.volatility_cli [TICKER] --days 90 \
   --bb-period 20 \
   --bb-std 2.0 \
   --atr-period 14
 
 # JSON for programmatic use
-uv run python src/utils/volatility_cli.py [TICKER] --days 90 --output json
+uv run python -m src.utils.volatility_cli [TICKER] --days 90 --output json
 
 # Batch portfolio volatility analysis
 for ticker in TSLA PLTR NVDA; do
-  uv run python src/utils/volatility_cli.py $ticker --days 90 --output json
+  uv run python -m src.utils.volatility_cli $ticker --days 90 --output json
 done
 ```
 
@@ -819,21 +819,21 @@ done
 **Basic Usage:**
 ```bash
 # Portfolio correlation matrix
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 252
+uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA --days 252
 
 # Include benchmark
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA SPY --days 252
+uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA SPY --days 252
 
 # Custom parameters
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA \
+uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA \
   --days 90 \
   --method pearson
 
 # JSON for programmatic use
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 252 --output json
+uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA --days 252 --output json
 
 # Hedge identification
-uv run python src/analysis/correlation_cli.py TSLA TLT GLD --days 252
+uv run python -m src.analysis.correlation_cli TSLA TLT GLD --days 252
 ```
 
 **Metrics Available:**
@@ -863,25 +863,25 @@ uv run python src/analysis/correlation_cli.py TSLA TLT GLD --days 252
 **Basic Usage:**
 ```bash
 # All moving average types (SMA, EMA, WMA, HMA)
-uv run python src/utils/moving_averages_cli.py [TICKER] --days 252
+uv run python -m src.utils.moving_averages_cli [TICKER] --days 252
 
 # Specific MA type
-uv run python src/utils/moving_averages_cli.py [TICKER] --days 252 --indicator sma
+uv run python -m src.utils.moving_averages_cli [TICKER] --days 252 --indicator sma
 
 # Golden Cross/Death Cross detection (50/200 SMA)
-uv run python src/utils/moving_averages_cli.py [TICKER] --days 252 \
+uv run python -m src.utils.moving_averages_cli [TICKER] --days 252 \
   --periods 50 200
 
 # Custom periods for different timeframes
-uv run python src/utils/moving_averages_cli.py [TICKER] --days 252 \
+uv run python -m src.utils.moving_averages_cli [TICKER] --days 252 \
   --periods 10 20 50 100 200
 
 # JSON for programmatic use
-uv run python src/utils/moving_averages_cli.py [TICKER] --days 252 --output json
+uv run python -m src.utils.moving_averages_cli [TICKER] --days 252 --output json
 
 # Batch portfolio trend analysis
 for ticker in TSLA PLTR NVDA; do
-  uv run python src/utils/moving_averages_cli.py $ticker --days 252 --output json
+  uv run python -m src.utils.moving_averages_cli $ticker --days 252 --output json
 done
 ```
 
@@ -913,25 +913,25 @@ done
 **Basic Usage:**
 ```bash
 # Backtest RSI strategy
-uv run python src/strategies/backtester_cli.py [TICKER] \
+uv run python -m src.strategies.backtester_cli [TICKER] \
   --strategy rsi \
   --days 252 \
   --capital 10000
 
 # Backtest SMA crossover strategy
-uv run python src/strategies/backtester_cli.py [TICKER] \
+uv run python -m src.strategies.backtester_cli [TICKER] \
   --strategy sma_cross \
   --days 252 \
   --capital 10000
 
 # Buy-and-hold benchmark
-uv run python src/strategies/backtester_cli.py [TICKER] \
+uv run python -m src.strategies.backtester_cli [TICKER] \
   --strategy buy_hold \
   --days 252 \
   --capital 10000
 
 # Custom transaction costs
-uv run python src/strategies/backtester_cli.py [TICKER] \
+uv run python -m src.strategies.backtester_cli [TICKER] \
   --strategy rsi \
   --days 252 \
   --capital 10000 \
@@ -939,7 +939,7 @@ uv run python src/strategies/backtester_cli.py [TICKER] \
   --slippage 0.001
 
 # JSON for programmatic use
-uv run python src/strategies/backtester_cli.py [TICKER] \
+uv run python -m src.strategies.backtester_cli [TICKER] \
   --strategy rsi \
   --days 252 \
   --output json
@@ -979,43 +979,43 @@ uv run python src/strategies/backtester_cli.py [TICKER] \
 **Basic Usage:**
 ```bash
 # Mean-Variance Optimization
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method mean_variance \
   --days 252 \
   --risk-free-rate 0.05
 
 # Risk Parity
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method risk_parity \
   --days 252
 
 # Minimum Variance
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method min_variance \
   --days 252
 
 # Maximum Sharpe
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method max_sharpe \
   --days 252 \
   --risk-free-rate 0.05
 
 # Black-Litterman
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method black_litterman \
   --days 252 \
   --risk-free-rate 0.05 \
   --market-cap-weights 0.4 0.3 0.3
 
 # Constrained optimization
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method mean_variance \
   --days 252 \
   --min-weight 0.05 \
   --max-weight 0.50
 
 # JSON for programmatic use
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA \
   --method mean_variance \
   --days 252 \
   --output json
@@ -1090,7 +1090,7 @@ uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA \
 
 ### Tool Integration
 - **Use JSON output** for integration with optimization models
-- **Save results** with `--save-to fin-guru-private/fin-guru/[analysis-name]-{date}.json`
+- **Save results** with `--save-to analysis/[analysis-name]-{date}.json`
 - **Chain analysis** - risk metrics inform position sizing, momentum informs timing, volatility adjusts both, correlation validates diversification, moving averages confirm trends, backtesting validates strategies, optimization determines allocation
 - **Quality check outputs** - ensure results make intuitive sense
 
@@ -1121,13 +1121,12 @@ When analysis is complete, provide Strategy Advisor with:
 10. **Caveats** - Any data quality issues or analytical limitations
 
 **Handoff Format:**
-> "Completed quantitative analysis on [SECURITIES]. Risk profile shows [SHARPE/DD/VAR]. Momentum analysis indicates [CONFLUENCE/SIGNALS]. Volatility regime is [LOW/NORMAL/HIGH/EXTREME] suggesting [POSITION SIZING GUIDANCE]. Correlation analysis shows [DIVERSIFICATION SCORE] with [CONCENTRATION RISKS]. Moving average analysis shows [GOLDEN CROSS/DEATH CROSS/TREND DIRECTION] confirming [MOMENTUM ALIGNMENT]. [Backtest results show DEPLOY/OPTIMIZE/REJECT recommendation with Sharpe [X], Max DD [Y]%, Win Rate [Z]%.] [Portfolio optimization recommends [METHOD] with optimal weights: [ALLOCATIONS], expected Sharpe [X], expected volatility [Y]%.] Recommend [ACTION] based on [RATIONALE]. Analysis saved to fin-guru-private/fin-guru/. Key caveat: [LIMITATION]."
+> "Completed quantitative analysis on [SECURITIES]. Risk profile shows [SHARPE/DD/VAR]. Momentum analysis indicates [CONFLUENCE/SIGNALS]. Volatility regime is [LOW/NORMAL/HIGH/EXTREME] suggesting [POSITION SIZING GUIDANCE]. Correlation analysis shows [DIVERSIFICATION SCORE] with [CONCENTRATION RISKS]. Moving average analysis shows [GOLDEN CROSS/DEATH CROSS/TREND DIRECTION] confirming [MOMENTUM ALIGNMENT]. [Backtest results show DEPLOY/OPTIMIZE/REJECT recommendation with Sharpe [X], Max DD [Y]%, Win Rate [Z]%.] [Portfolio optimization recommends [METHOD] with optimal weights: [ALLOCATIONS], expected Sharpe [X], expected volatility [Y]%.] Recommend [ACTION] based on [RATIONALE]. Analysis saved to analysis/. Key caveat: [LIMITATION]."
 
 ---
 
 ## Notes
 
-- **Legacy Code:** Old Python code extracted to `notebooks/tools-needed/legacy-quant-code-for-migration.md`
 - **Future Tools:** Options analytics, factor analysis, technical screener planned (see Build List)
 - **Tool Architecture:** All tools follow 3-layer Pydantic pattern (models → calculator → CLI)
 - **Quality Focus:** Type-safe validation prevents calculation errors

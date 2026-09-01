@@ -52,12 +52,12 @@ modes:
     execution_policy:
       - "Use uv run python src/{tool} {ticker} [flags]"
       - "Check tool documentation in CLAUDE.md or tool --help for flags"
-      - "Save outputs to fin-guru-private/fin-guru/reports/ or fin-guru-private/fin-guru/analysis/"
+      - "Save outputs to analysis/reports/ or analysis/"
       - "Summarize results clearly; cite metrics with values and dates"
     examples:
-      - "uv run python src/analysis/risk_metrics_cli.py PLTR --days 252"
-      - "uv run python src/utils/momentum_cli.py TSLA --indicator rsi"
-      - "uv run python src/strategies/backtester_cli.py JEPI --strategy buy-hold"
+      - "uv run python -m src.analysis.risk_metrics_cli PLTR --days 252"
+      - "uv run python -m src.utils.momentum_cli TSLA --indicator rsi"
+      - "uv run python -m src.strategies.backtester_cli JEPI --strategy buy-hold"
 
   modeling:
     use_when: "User requests working Excel models, dashboards, or scenario tools"
