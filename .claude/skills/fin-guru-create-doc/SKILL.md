@@ -24,7 +24,7 @@ Create professional financial documents using Finance Guru templates.
 2. Load the template from `{project-root}/fin-guru/templates/`
 3. Gather required inputs (analysis data, recommendations, metrics)
 4. Generate document with proper YAML frontmatter (date stamp, disclaimer, citations)
-5. Save under `fin-guru-private/fin-guru/` using naming conventions:
+5. Save under `analysis/` using naming conventions:
    - Analysis reports: `analysis/{topic}-{YYYY-MM-DD}.md`
    - Buy tickets: `tickets/buy-ticket-{YYYY-MM-DD}-{short-descriptor}.md`
    - Strategy docs: `analysis/{strategy-name}-master-strategy.md`
@@ -37,7 +37,7 @@ Buy tickets use the canonical `buy-ticket-template.md` contract:
 - YAML frontmatter plus a structured `## Execution Summary` section
 - Portfolio context must already be loaded
 - Require deployment amount, allocation table, price snapshot, strategy rationale, risk notes, and sources/assumptions
-- Save tickets to `fin-guru-private/fin-guru/tickets/`
+- Save tickets to `tickets/`
 - Treat ITC risk as advisory-only; include an ITC advisory only when upstream analysis provided it and the signal is materially elevated
 
 ## Requirements

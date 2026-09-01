@@ -27,16 +27,16 @@ Convert quantitative analysis into actionable strategic recommendations.
 
 ```bash
 # Pre-trade risk validation
-uv run python src/analysis/risk_metrics_cli.py TICKER --days 252 --benchmark SPY
+uv run python -m src.analysis.risk_metrics_cli TICKER --days 252 --benchmark SPY
 
 # Entry timing analysis
-uv run python src/utils/momentum_cli.py TICKER --days 90
+uv run python -m src.utils.momentum_cli TICKER --days 90
 
 # Volatility-based position sizing
-uv run python src/utils/volatility_cli.py TICKER --days 90
+uv run python -m src.utils.volatility_cli TICKER --days 90
 
 # Portfolio optimization
-uv run python src/strategies/optimizer_cli.py TICKERS --method max_sharpe
+uv run python -m src.strategies.optimizer_cli TICKERS --method max_sharpe
 ```
 
 ## Requirements

@@ -57,7 +57,7 @@ ITC Risk Models API for supported tickers. Provides market-implied risk scores a
 ### Workflow
 
 1. Check if ticker is ITC-supported before analysis
-2. Run ITC risk check: `uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi --output json`
+2. Run ITC risk check: `uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi --output json`
 3. Include ITC risk score in research summary
 4. Flag if ITC risk > 0.7 (high risk zone)
 

@@ -142,7 +142,7 @@ CSV ingest is an archive and fallback path. The primary flow is the Step 0 refre
 **Example 1: Sync after downloading Fidelity transaction history**
 ```
 User: "sync transactions"
--> Reads History_for_Account_{account_id}.csv from notebooks/transactions/
+-> Reads History_for_Account_{account_id}.csv from imports/transactions/
 -> Creates/updates Transactions tab with full Fidelity data
 -> Routes DEBIT CARD PURCHASE entries to Expense Tracker
 -> Auto-categorizes expenses (H-E-B -> Groceries, Tesla -> Auto & Transport)
@@ -254,7 +254,7 @@ fallback only; it is no longer the primary path.
 
 ### 1. Read Fidelity Transaction History CSV
 
-**Location**: `notebooks/transactions/History_for_Account_{account_id}.csv`
+**Location**: `imports/transactions/History_for_Account_{account_id}.csv`
 
 **CSV Columns**:
 ```

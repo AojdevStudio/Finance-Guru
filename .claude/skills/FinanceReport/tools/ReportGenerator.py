@@ -34,6 +34,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from src.config.instance_paths import InstancePaths
+
 # Finance Guru Brand Colors
 NAVY = colors.HexColor("#1a365d")
 GOLD = colors.HexColor("#d69e2e")
@@ -185,11 +187,15 @@ class FinanceGuruReport:
         self,
         ticker: str,
         portfolio_value: float = 250000,
-        output_dir: str = "fin-guru-private/fin-guru/analysis/reports",
+        output_dir: str | Path | None = None,
     ):
         self.ticker = ticker
         self.portfolio_value = portfolio_value
-        self.output_dir = Path(output_dir)
+        self.output_dir = (
+            Path(output_dir)
+            if output_dir is not None
+            else InstancePaths.resolve().reports
+        )
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.date = datetime.now().strftime("%Y-%m-%d")
@@ -794,8 +800,8 @@ Examples:
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="fin-guru-private/fin-guru/analysis/reports",
-        help="Output directory for PDF",
+        default=None,
+        help="Output directory for PDF (default: instance reports directory)",
     )
 
     args = parser.parse_args()

@@ -4,11 +4,11 @@ _Single source of truth for every named formula, threshold, classifier, and rule
 
 **Audience:** Finance Guru agents (Cassandra and her specialists), KeepFolio engineers porting these rules into TypeScript, and the principal reviewing methodology.
 
-**Status:** v1.0 — 2026-05-02. Compiled from `src/` (Python toolkit), `fin-guru/data/`, `fin-guru/tasks/`, `.claude/skills/`, and `fin-guru-private/fin-guru/strategies/`. Every entry cites its origin so the glossary stays auditable.
+**Status:** v1.0 — 2026-05-02. Compiled from `src/` (Python toolkit), `fin-guru/data/`, `fin-guru/tasks/`, `.claude/skills/`, and `strategies/`. Every entry cites its origin so the glossary stays auditable.
 
 **Maintenance rule:** When a formula or threshold changes anywhere else in the repo, update _this_ file too — divergence here is a bug.
 
-> **Note on numbers:** The constants in §1 are real defaults imported from `src/` and skill files. Every other dollar figure, portfolio size, deployment amount, milestone target, and date in this document is **illustrative**. Real operating values for the principal — W2 income, current portfolio NAV, business-income backstop, milestone trajectory, Monte Carlo outcomes — live in the private side of the repo (`fin-guru-private/`, `user-profile.yaml`) and never in this file.
+> **Note on numbers:** The constants in §1 are real defaults imported from `src/` and skill files. Every other dollar figure, portfolio size, deployment amount, milestone target, and date in this document is **illustrative**. Real operating values for the principal — W2 income, current portfolio NAV, business-income backstop, milestone trajectory, Monte Carlo outcomes — live in the instance directory (`user-profile.yaml`) and never in this file.
 
 ---
 
@@ -55,7 +55,7 @@ _Single source of truth for every named formula, threshold, classifier, and rule
 | `PUT_CALL_PARITY_TOLERANCE` | $0.10 | `src/analysis/options.py:251-298` | Arbitrage-detection band |
 | `CONCENTRATION_LIMIT_HARD` | 0.30 (30%) | `.claude/skills/fin-guru-buy-ticket/SKILL.md:129` | Single-position deployment cap |
 
-_Strategy anchor date (`STRATEGY_START_DATE`) is operational metadata, not methodology — it lives in `fin-guru-private/` and is loaded at runtime by the margin-management skill._
+_Strategy anchor date (`STRATEGY_START_DATE`) is operational metadata, not methodology — it lives in the instance directory and is loaded at runtime by the margin-management skill._
 
 ---
 
@@ -75,17 +75,17 @@ ELSE:                                                                           
 
 - _Definition:_ Buy-and-hold growth equities and broad-market index funds. Never sold; diluted naturally as Layer 2 grows.
 - _Allocation rule:_ Keep 100%. New W2 capital does NOT flow here (except the SPMO weekly DCA and any single-name scale-in carved out separately).
-- _Current value:_ tracked in `fin-guru-private/`; not pinned here.
-- _Source:_ `fin-guru-private/fin-guru/strategies/active/portfolio-master-strategy.md`.
+- _Current value:_ tracked in the instance directory; not pinned here.
+- _Source:_ `strategies/active/portfolio-master-strategy.md`.
 
 ### 2.2 Layer 2 — Income Generation
 
 - _Definition:_ Monthly-distribution vehicles built with W2 deployments.
 - _Target blended TTM yield:_ 24–30% annualized.
-- _Monthly deployment:_ a fixed share of monthly W2 take-home (e.g., 94%); exact value lives in `fin-guru-private/.../bucket-allocations.json` and `user-profile.yaml`.
+- _Monthly deployment:_ a fixed share of monthly W2 take-home (e.g., 94%); exact value lives in the instance directory (`bucket-allocations.json` and `user-profile.yaml`).
 - _Allocation:_ Five buckets (see § 3.4).
 - _Target portfolio value at Month 28:_ illustrative example $300k–$400k Layer 2 capital with associated dividend run-rate.
-- _Source:_ `fin-guru-private/fin-guru/strategies/active/dividend-income-master-strategy.md`.
+- _Source:_ `strategies/active/dividend-income-master-strategy.md`.
 
 ### 2.3 Layer 3 — Downside Protection
 
@@ -93,13 +93,13 @@ ELSE:                                                                           
 - _Current vehicle pattern:_ Protective puts on QQQ + SPY, 15% OTM, ~30 DTE. Earlier vehicle was SQQQ (deprecated; see § 11.6).
 - _Sizing rule:_ 1 contract per $50,000 of portfolio value. _This is the canonical sizing rule; budget bends to match actual market premium, not the other way around._
 - _Target weights across underlyings:_ QQQ 40–50%, SPY 30–40%, IWM 10–20% (default; tilt by portfolio composition).
-- _Source:_ `fin-guru-private/fin-guru/strategies/risk-management/downside-protection-strategy.md`, `.claude/skills/fin-guru-hedge-roll/`.
+- _Source:_ `strategies/risk-management/downside-protection-strategy.md`, `.claude/skills/fin-guru-hedge-roll/`.
 
 ### 2.4 GOOGL — special scale-in
 
 - _Pattern:_ GOOGL is the single ticker carved out for staged accumulation, funded from Layer 2 cash (typically a small monthly bleed from the YieldMax bucket).
 - Treated as a Layer 1 holding for risk purposes but funded out of Layer 2 cash.
-- Share-count target, pace, and current position size live in `fin-guru-private/`.
+- Share-count target, pace, and current position size live in the instance directory.
 
 ---
 
@@ -144,7 +144,7 @@ monthly_dividend_income  =  Σ estimated_dividend_per_ticker
 - Date format in sheet: `MM/DD/YYYY`.
 - DRIP flag: `TRUE` = reinvested (shares grew), `FALSE` = cash. Default `TRUE` during accumulation.
 
-**Orphan tickers (pattern):** When a ticker has been bought into the portfolio but the historical-log roster does not yet aggregate its dividends, it lands in the raw log only and is flagged as an orphan. Current orphan list lives in `fin-guru-private/`.
+**Orphan tickers (pattern):** When a ticker has been bought into the portfolio but the historical-log roster does not yet aggregate its dividends, it lands in the raw log only and is flagged as an orphan. Current orphan list lives in the instance directory.
 
 ### 3.3 Total return decomposition
 
@@ -171,7 +171,7 @@ drip_return         =  (final_shares × final_price) / (initial_shares × initia
 
 ### 3.4 Five-bucket Layer 2 allocation
 
-Source-of-truth: `fin-guru-private/fin-guru/strategies/.../bucket-allocations.json`. Bucket weights sum to 100% and the $/month column derives from `total_monthly_deployment × weight`. The dollar column below is illustrative for a $10,000/month example deployment; the real total lives in the private config.
+Source-of-truth: `strategies/.../bucket-allocations.json`. Bucket weights sum to 100% and the $/month column derives from `total_monthly_deployment × weight`. The dollar column below is illustrative for a $10,000/month example deployment; the real total lives in the private config.
 
 | # | Bucket | Weight | $/month (example: $10k total) | Target yield | Variance band | Holdings |
 |---|---|---:|---:|---:|---:|---|
@@ -306,7 +306,7 @@ portfolio_to_margin_ratio  =  total_account_value / margin_balance
 | < 3.0:1 | 🔴 Red | All draws halted, mandatory business-income injection |
 | < 2.5:1 | ⚫ Critical | Larger injection, consider selling hedge (SQQQ/puts) |
 
-_Specific injection thresholds (e.g., $20k at Alert, $30k+ at Critical) live in `fin-guru-private/.../risk-thresholds.json`._
+_Specific injection thresholds (e.g., $20k at Alert, $30k+ at Critical) live in the instance directory (`risk-thresholds.json`)._
 
 ### 5.5 Margin jump alert
 
@@ -330,9 +330,9 @@ The 1.5× safety multiplier accommodates dividend cuts and rate increases. Net s
 
 ### 5.7 Margin scaling milestones
 
-Anchor: a `STRATEGY_START_DATE` loaded from `fin-guru-private/`. `months_elapsed = (today − start).days // 30`.
+Anchor: a `STRATEGY_START_DATE` loaded from the instance directory. `months_elapsed = (today − start).days // 30`.
 
-The table below is a sample trajectory; actual triggers and dollar amounts live in `fin-guru-private/.../active-management-triggers.json`.
+The table below is a sample trajectory; actual triggers and dollar amounts live in the instance directory (`active-management-triggers.json`).
 
 | Milestone | Month | Trigger (illustrative) | Action (illustrative) | Required ratio |
 |---|---:|---|---|---:|
@@ -348,7 +348,7 @@ The table below is a sample trajectory; actual triggers and dollar amounts live 
 - _Mandatory use:_ ratio < 3:1 (margin call risk).
 - _Optional use:_ market correction 20–30%, or to accelerate FI timeline.
 - _Monte Carlo expectation:_ used in the vast majority of simulation paths at least once.
-- Specific dollar capacity lives in `fin-guru-private/`.
+- Specific dollar capacity lives in the instance directory.
 
 ---
 
@@ -528,7 +528,7 @@ Framework checks before executing:
 
 ### 11.5 Hedge budget
 
-Annual hedge cost target: **3.0–3.5% of portfolio** (`framework-rules.md:57-69`). Override per-user via `fin-guru/data/user-profile.yaml` Layer 3 budget.
+Annual hedge cost target: **3.0–3.5% of portfolio** (`framework-rules.md:57-69`). Override per-user via `user-profile.yaml` Layer 3 budget.
 
 ### 11.6 Inverse-ETF prohibition for multi-week hedges
 
@@ -562,7 +562,7 @@ For a $200k portfolio carrying 4 contracts (= floor($200k / $50k)) of 15%-OTM ~3
 | −30% | ~$12,000–18,000 | Offsets ~$48k–72k |
 | −40% | ~$18,000+ | Tail-risk catch |
 
-**Funding model (illustrative):** an upfront premium reserve covers the first few months; ongoing premiums then come out of monthly dividend income — at the right ratio of dividend income to per-contract premium, puts become self-funding. Actual reserve and current monthly draw live in `fin-guru-private/`.
+**Funding model (illustrative):** an upfront premium reserve covers the first few months; ongoing premiums then come out of monthly dividend income — at the right ratio of dividend income to per-contract premium, puts become self-funding. Actual reserve and current monthly draw live in the instance directory.
 
 ---
 
@@ -579,7 +579,7 @@ For a $200k portfolio carrying 4 contracts (= floor($200k / $50k)) of 15%-OTM ~3
 
 **Concentration warning:** average correlation > 0.7 across the book triggers a portfolio-level alert.
 
-**Pairwise correlation cap:** ≤ 0.85 between any two Layer 2 holdings (`fin-guru-private/.../concentration-limits.json`). Pairs that breach 0.85 require an explicit context note in the private config; "acceptable-in-context" exceptions are tracked there, not here.
+**Pairwise correlation cap:** ≤ 0.85 between any two Layer 2 holdings (`concentration-limits.json` in the instance directory). Pairs that breach 0.85 require an explicit context note in the private config; "acceptable-in-context" exceptions are tracked there, not here.
 
 ---
 
@@ -774,7 +774,7 @@ If all three test negative → **skip** (let the hedge expire).
 
 ### 18.3 Output schema (illustrative)
 
-The Monte Carlo run emits a headline table of the form below. The numbers shown are representative shapes only; the live results live in `fin-guru-private/fin-guru/strategies/.../` after each run.
+The Monte Carlo run emits a headline table of the form below. The numbers shown are representative shapes only; the live results live in `strategies/.../` after each run.
 
 | Metric | Shape | Interpretation |
 |---|---|---|
@@ -883,9 +883,9 @@ Example: 4% muni at 32% bracket = 5.88% taxable equivalent.
 
 ## 21. Milestones & 28-month roadmap
 
-Anchor: `STRATEGY_START_DATE` (loaded from `fin-guru-private/`). Capital deployment is cumulative.
+Anchor: `STRATEGY_START_DATE` (loaded from the instance directory). Capital deployment is cumulative.
 
-The phases below are the structural shape of the 28-month plan. The capital and dividend columns are illustrative for an example $10,000/month deployment (28 × $10k = $280k cumulative). Real numbers live in `fin-guru-private/`.
+The phases below are the structural shape of the 28-month plan. The capital and dividend columns are illustrative for an example $10,000/month deployment (28 × $10k = $280k cumulative). Real numbers live in the instance directory.
 
 | Phase | Window | Capital deployed (illustrative) | Expected dividends (illustrative) | Milestone |
 |---|---|---:|---:|---|
@@ -1010,7 +1010,7 @@ Where to look for canonical authority on each topic. The first row of each clust
 - Expense categorization → `TransactionSyncing/CategoryRules.md`
 - Reports → `FinanceReport/SKILL.md`
 
-### Private strategies (`fin-guru-private/fin-guru/strategies/`)
+### Private strategies (`strategies/`)
 - Master allocation → `active/portfolio-master-strategy.md`
 - Layer 2 specifics → `active/dividend-income-master-strategy.md`
 - DRIP v2 simulation → `active/self-sustaining-leverage-drip-strategy-v2.md`

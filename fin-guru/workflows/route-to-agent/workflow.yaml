@@ -76,7 +76,7 @@ steps:
       - "Load {canonical_agent_path} as the source-of-truth specialist definition."
       - "Pass {current_datetime} and {current_date} into the specialist session."
       - "Retain orchestrator-scoped system context, user name, and communication language."
-      - "If the specialist supports buy-ticket generation, preserve the canonical buy-ticket contract (YAML frontmatter plus Execution Summary, saved under fin-guru-private/fin-guru/tickets/)."
+      - "If the specialist supports buy-ticket generation, preserve the canonical buy-ticket contract (YAML frontmatter plus Execution Summary, saved under tickets/)."
 
   - id: "route-complete"
     name: "Routing Complete"

@@ -95,8 +95,6 @@ All Python tools follow a 3-layer architecture pattern:
 - **Layer 2**: Calculator Classes (`src/analysis/`, `src/utils/`) - Business logic
 - **Layer 3**: CLI Interface - Agent integration
 
-**Architecture Documentation**: `notebooks/tools-needed/type-safety-strategy.md`
-
 **Available Tools**: see `.claude/tools/python-tools.md`
 
 ## Development Commands
@@ -121,55 +119,55 @@ uv run python <script-path>
 
 ```bash
 # Get current stock price (single)
-uv run python src/utils/market_data.py TSLA
+uv run python -m src.utils.market_data TSLA
 
 # Get multiple stock prices
-uv run python src/utils/market_data.py TSLA PLTR AAPL
+uv run python -m src.utils.market_data TSLA PLTR AAPL
 ```
 
 ### Risk Metrics Analysis
 
 ```bash
 # Market Researcher - Quick risk scan
-uv run python src/analysis/risk_metrics_cli.py TSLA --days 90
+uv run python -m src.analysis.risk_metrics_cli TSLA --days 90
 
 # Quant Analyst - Full analysis with benchmark
-uv run python src/analysis/risk_metrics_cli.py TSLA --days 252 --benchmark SPY --output json
+uv run python -m src.analysis.risk_metrics_cli TSLA --days 252 --benchmark SPY --output json
 
 # Strategy Advisor - Portfolio comparison
 for ticker in TSLA PLTR NVDA; do
-    uv run python src/analysis/risk_metrics_cli.py $ticker --days 252 --benchmark SPY
+    uv run python -m src.analysis.risk_metrics_cli $ticker --days 252 --benchmark SPY
 done
 
 # Save to file for report generation
-uv run python src/analysis/risk_metrics_cli.py TSLA --days 90 \
+uv run python -m src.analysis.risk_metrics_cli TSLA --days 90 \
     --output json \
-    --save-to fin-guru-private/fin-guru/risk-analysis-tsla-$(date +%Y-%m-%d).json
+    --save-to analysis/risk-analysis-tsla-$(date +%Y-%m-%d).json
 ```
 
 **Available Metrics**: VaR (95%), CVaR, Sharpe Ratio, Sortino Ratio, Max Drawdown, Calmar Ratio, Annual Volatility, Beta, Alpha
 
-**Documentation**: `fin-guru-private/guides/risk-metrics-tool-guide.md`
+**Documentation**: `guides/risk-metrics-tool-guide.md`
 
 ### Momentum Indicators
 
 ```bash
 # Market Researcher - Quick momentum scan (all indicators)
-uv run python src/utils/momentum_cli.py TSLA --days 90
+uv run python -m src.utils.momentum_cli TSLA --days 90
 
 # Quant Analyst - Specific indicator with custom periods
-uv run python src/utils/momentum_cli.py TSLA --days 90 --indicator rsi --rsi-period 21
+uv run python -m src.utils.momentum_cli TSLA --days 90 --indicator rsi --rsi-period 21
 
 # Strategy Advisor - Portfolio momentum comparison
 for ticker in TSLA PLTR NVDA; do
-    uv run python src/utils/momentum_cli.py $ticker --days 90
+    uv run python -m src.utils.momentum_cli $ticker --days 90
 done
 
 # JSON output for programmatic analysis
-uv run python src/utils/momentum_cli.py TSLA --days 90 --output json
+uv run python -m src.utils.momentum_cli TSLA --days 90 --output json
 
 # Custom MACD settings for different timeframes
-uv run python src/utils/momentum_cli.py TSLA --days 252 \
+uv run python -m src.utils.momentum_cli TSLA --days 252 \
     --macd-fast 8 \
     --macd-slow 21 \
     --macd-signal 9
@@ -183,21 +181,21 @@ uv run python src/utils/momentum_cli.py TSLA --days 252 \
 
 ```bash
 # Market Researcher - Quick volatility scan (all indicators)
-uv run python src/utils/volatility_cli.py TSLA --days 90
+uv run python -m src.utils.volatility_cli TSLA --days 90
 
 # Compliance Officer - Position limit calculation
-uv run python src/utils/volatility_cli.py TSLA --days 90 --output json
+uv run python -m src.utils.volatility_cli TSLA --days 90 --output json
 
 # Margin Specialist - Leverage assessment with custom ATR
-uv run python src/utils/volatility_cli.py TSLA --days 90 --atr-period 20
+uv run python -m src.utils.volatility_cli TSLA --days 90 --atr-period 20
 
 # Strategy Advisor - Portfolio volatility comparison
 for ticker in TSLA PLTR NVDA; do
-    uv run python src/utils/volatility_cli.py $ticker --days 90
+    uv run python -m src.utils.volatility_cli $ticker --days 90
 done
 
 # Custom Bollinger Bands settings
-uv run python src/utils/volatility_cli.py TSLA --days 90 \
+uv run python -m src.utils.volatility_cli TSLA --days 90 \
     --bb-period 14 \
     --bb-std 2.5
 ```
@@ -216,16 +214,16 @@ uv run python src/utils/volatility_cli.py TSLA --days 90 \
 
 ```bash
 # Basic portfolio correlation (2+ tickers required)
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 90
+uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA --days 90
 
 # Pairwise correlation check
-uv run python src/analysis/correlation_cli.py TSLA SPY --days 90
+uv run python -m src.analysis.correlation_cli TSLA SPY --days 90
 
 # Rolling correlation (time-varying)
-uv run python src/analysis/correlation_cli.py TSLA SPY --days 252 --rolling 60
+uv run python -m src.analysis.correlation_cli TSLA SPY --days 252 --rolling 60
 
 # JSON output for programmatic use
-uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 90 --output json
+uv run python -m src.analysis.correlation_cli TSLA PLTR NVDA --days 90 --output json
 ```
 
 **Available Analysis**: Pearson correlation matrices, covariance matrices, rolling correlations, diversification scoring, concentration risk detection
@@ -240,20 +238,20 @@ uv run python src/analysis/correlation_cli.py TSLA PLTR NVDA --days 90 --output 
 
 ```bash
 # Test RSI strategy
-uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy rsi
+uv run python -m src.strategies.backtester_cli TSLA --days 252 --strategy rsi
 
 # Test with custom capital and costs
-uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy rsi \
+uv run python -m src.strategies.backtester_cli TSLA --days 252 --strategy rsi \
     --capital 500000 --commission 5.0 --slippage 0.001
 
 # Test SMA crossover strategy
-uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy sma_cross
+uv run python -m src.strategies.backtester_cli TSLA --days 252 --strategy sma_cross
 
 # Buy-and-hold benchmark
-uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy buy_hold
+uv run python -m src.strategies.backtester_cli TSLA --days 252 --strategy buy_hold
 
 # JSON output
-uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy rsi --output json
+uv run python -m src.strategies.backtester_cli TSLA --days 252 --strategy rsi --output json
 ```
 
 **Built-in Strategies**: RSI mean reversion, SMA crossover, buy-and-hold benchmark
@@ -270,19 +268,19 @@ uv run python src/strategies/backtester_cli.py TSLA --days 252 --strategy rsi --
 
 ```bash
 # Single MA calculation (SMA, EMA, WMA, HMA)
-uv run python src/utils/moving_averages_cli.py TSLA --days 200 --ma-type SMA --period 50
+uv run python -m src.utils.moving_averages_cli TSLA --days 200 --ma-type SMA --period 50
 
 # Golden Cross detection (50/200 SMA - classic trend signal)
-uv run python src/utils/moving_averages_cli.py TSLA --days 252 --fast 50 --slow 200
+uv run python -m src.utils.moving_averages_cli TSLA --days 252 --fast 50 --slow 200
 
 # EMA crossover (12/26 for MACD-style signals)
-uv run python src/utils/moving_averages_cli.py TSLA --days 252 --ma-type EMA --fast 12 --slow 26
+uv run python -m src.utils.moving_averages_cli TSLA --days 252 --ma-type EMA --fast 12 --slow 26
 
 # Hull MA (minimal lag, responsive)
-uv run python src/utils/moving_averages_cli.py TSLA --days 200 --ma-type HMA --period 50
+uv run python -m src.utils.moving_averages_cli TSLA --days 200 --ma-type HMA --period 50
 
 # JSON output
-uv run python src/utils/moving_averages_cli.py TSLA --days 200 --ma-type SMA --period 50 --output json
+uv run python -m src.utils.moving_averages_cli TSLA --days 200 --ma-type SMA --period 50 --output json
 ```
 
 **Available MA Types**: SMA (simple), EMA (exponential), WMA (weighted), HMA (Hull - advanced)
@@ -299,27 +297,27 @@ uv run python src/utils/moving_averages_cli.py TSLA --days 200 --ma-type SMA --p
 
 ```bash
 # Maximum Sharpe ratio (aggressive growth)
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method max_sharpe
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method max_sharpe
 
 # Risk parity allocation (all-weather portfolio)
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method risk_parity
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method risk_parity
 
 # Minimum variance (defensive, capital preservation)
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method min_variance
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method min_variance
 
 # Mean-variance optimization
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method mean_variance
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method mean_variance
 
 # Black-Litterman with views
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA --days 252 --method black_litterman \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA --days 252 --method black_litterman \
     --view TSLA:0.15 --view PLTR:0.20
 
 # With position limits (max 30% per stock)
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method max_sharpe \
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method max_sharpe \
     --max-position 0.30
 
 # JSON output
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --method max_sharpe --output json
+uv run python -m src.strategies.optimizer_cli TSLA PLTR NVDA SPY --days 252 --method max_sharpe --output json
 ```
 
 **Optimization Methods**: Mean-Variance (Markowitz), Risk Parity, Min Variance, Max Sharpe, Black-Litterman
@@ -336,8 +334,8 @@ uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY --days 252 --me
 
 Generated Finance Guru documents use split destinations:
 
-- Analysis artifacts: `fin-guru-private/fin-guru/analysis/`
-- Buy tickets: `fin-guru-private/fin-guru/tickets/`
+- Analysis artifacts: `analysis/`
+- Buy tickets: `tickets/`
 - Format: Markdown with YAML frontmatter
 - Naming: `{topic}-{strategy/analysis}-{YYYY-MM-DD}.md` (analysis), `buy-ticket-{YYYY-MM-DD}-{descriptor}.md` (tickets)
 - Include: Date stamp, disclaimer, source citations
@@ -405,9 +403,9 @@ Durable, non-obvious notes for cloud agents. The startup update script already r
   `export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"` first (or call the binaries by full path).
 - **This is a CLI-first product — there is no long-running server to start.** The "app" is a
   set of Python analysis CLIs plus a Textual TUI. Run analysis with
-  `uv run python src/analysis/risk_metrics_cli.py AAPL --days 252 --benchmark SPY` (fetches live
+  `uv run python -m src.analysis.risk_metrics_cli AAPL --days 252 --benchmark SPY` (fetches live
   data via yfinance — needs network, no API key). Launch the interactive dashboard with
-  `uv run python src/cli/fin_guru.py` (quit with `q`). Full commands are documented above and in `docs/setup/SETUP.md`.
+  `uv run python -m src.cli.fin_guru` (quit with `q`). Full commands are documented above and in `docs/setup/SETUP.md`.
 - **Do NOT keep a scaffolded `.env` around when running tests.** `setup.sh` copies
   `.env.example` → `.env`, which contains literal placeholder values (e.g.
   `FG_DIVIDEND_MONTHLY_INCOME=your_monthly_dividend_income_here`). `python-dotenv` loads `.env`,

@@ -39,4 +39,4 @@ Create presentation
 
 
 
-{project-root}/fin-guru{module-path}/templates{module-path}/tasks{project-root}/fin-guru-private/fin-guru
+{project-root}/fin-guru{module-path}/templates{module-path}/tasks{data-root}/analysis

@@ -830,40 +830,40 @@ Implementation Success Metrics:
 ### Strategy Validation
 ```bash
 # Validate risk profile with full-year stats
-uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 252 --benchmark SPY
+uv run python -m src.analysis.risk_metrics_cli [TICKER] --days 252 --benchmark SPY
 
 # Timing validation through momentum confluence
-uv run python src/utils/momentum_cli.py [TICKER] --days 90
+uv run python -m src.utils.momentum_cli [TICKER] --days 90
 ```
 
 ### Portfolio Analysis
 ```bash
 # Portfolio-wide risk-adjusted metrics
 for ticker in [PORTFOLIO_TICKERS]; do
-  uv run python src/analysis/risk_metrics_cli.py $ticker --days 252 --benchmark SPY --output json
+  uv run python -m src.analysis.risk_metrics_cli $ticker --days 252 --benchmark SPY --output json
 done
 
 # Portfolio-wide momentum analysis
 for ticker in [PORTFOLIO_TICKERS]; do
-  uv run python src/utils/momentum_cli.py $ticker --days 90 --output json
+  uv run python -m src.utils.momentum_cli $ticker --days 90 --output json
 done
 ```
 
 ### Position Sizing
 ```bash
 # Conservative risk assessment (99% confidence)
-uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 252 --confidence 0.99
+uv run python -m src.analysis.risk_metrics_cli [TICKER] --days 252 --confidence 0.99
 ```
 
 ### Strategy Documentation
 ```bash
 # Document risk profile
-uv run python src/analysis/risk_metrics_cli.py [TICKER] --days 252 --benchmark SPY \
-  --save-to fin-guru-private/fin-guru/strategy-risk-[TICKER]-$(date +%Y-%m-%d).json
+uv run python -m src.analysis.risk_metrics_cli [TICKER] --days 252 --benchmark SPY \
+  --save-to analysis/strategy-risk-[TICKER]-$(date +%Y-%m-%d).json
 
 # Document timing analysis
-uv run python src/utils/momentum_cli.py [TICKER] --days 90 \
-  --save-to fin-guru-private/fin-guru/strategy-momentum-[TICKER]-$(date +%Y-%m-%d).json
+uv run python -m src.utils.momentum_cli [TICKER] --days 90 \
+  --save-to analysis/strategy-momentum-[TICKER]-$(date +%Y-%m-%d).json
 ```
 
 ### Strategic Guidelines

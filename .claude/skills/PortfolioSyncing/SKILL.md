@@ -105,7 +105,7 @@ Dividend funds → Layer 2, growth → Layer 1, hedges → Layer 3. If a new tic
 
 ## CSV Fallback
 
-CSV import is a fallback and re-verification path only, not the primary flow. The `IngestPositions` workflow archives `Portfolio_Positions_*.csv` and `Balances_*.csv` from `~/Downloads` into `notebooks/updates/`. Use it when a live source is down or the user explicitly wants an archive.
+CSV import is a fallback and re-verification path only, not the primary flow. The `IngestPositions` workflow archives `Portfolio_Positions_*.csv` and `Balances_*.csv` from `~/Downloads` into `imports/`. Use it when a live source is down or the user explicitly wants an archive.
 
 Classifier for Fidelity position exports: a header containing `Ex-date` is the dividend view; a header containing `Average Cost Basis` is the regular view. The dividend view and transaction history CSVs are still consumed by `dividend-tracking` and `TransactionSyncing`.
 
@@ -117,7 +117,7 @@ Classifier for Fidelity position exports: a header containing `Ex-date` is the d
 
 ## Reference Files
 
-- **User Profile**: `fin-guru/data/user-profile.yaml`
+- **User Profile**: `user-profile.yaml`
 - **Account routing**: `config/snaptrade-accounts.yaml`
 - **Sync-first pattern**: `.claude/skills/_shared/SyncFirstDbRead.md`
 

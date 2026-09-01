@@ -21,7 +21,7 @@ If the selected template is `buy-ticket-template.md`, treat it as a canonical tr
 - Confirm deployment amount and available cash buffer
 - Require a concrete allocation table with tickers, dollars, weights, prices, and shares
 - Require strategy rationale, risk notes, and a price snapshot timestamp
-- Save the final ticket under `fin-guru-private/fin-guru/tickets/`
+- Save the final ticket under `tickets/`
 
 ## Buy Ticket Contract
 
@@ -77,8 +77,8 @@ For each template section:
 ## Saving & Output Policy
 
 - Confirm desired file format using Finance Guru overrides: `[format:xlsx|pptx|pdf|md]`, `[save:/finance/reports/name.ext]`.
-- Save analysis reports, memos, presentations, and other research artifacts under `fin-guru-private/fin-guru/analysis/`.
-- Save buy tickets under `fin-guru-private/fin-guru/tickets/`.
+- Save analysis reports, memos, presentations, and other research artifacts under `analysis/`.
+- Save buy tickets under `tickets/`.
 - Append Sources & Assumptions section summarizing:
   - Data sources with timestamps
   - Key assumptions (rates, tax brackets, margin costs)

@@ -303,9 +303,9 @@ Cash-management accounts sync through SimpleFIN into `bank_transactions`, delibe
 ## Reference Files
 
 For complete strategy details, see:
-- _Margin Strategy_: `fin-guru-private/fin-guru/strategies/active/margin-living-master-strategy.md`
-- _Portfolio Strategy_: `fin-guru-private/fin-guru/strategies/active/portfolio-master-strategy.md`
-- _User Profile_: `fin-guru/data/user-profile.yaml`
+- _Margin Strategy_: `strategies/active/margin-living-master-strategy.md`
+- _Portfolio Strategy_: `strategies/active/portfolio-master-strategy.md`
+- _User Profile_: `user-profile.yaml`
 - _Account routing_: `config/snaptrade-accounts.yaml`
 
 ## Pre-Flight Checklist

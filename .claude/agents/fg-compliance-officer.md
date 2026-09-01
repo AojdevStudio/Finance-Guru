@@ -56,7 +56,7 @@ ITC Risk Models API integration for compliance risk monitoring and early warning
 
 ### Compliance Workflow
 
-1. Check ITC risk: `uv run python src/analysis/itc_risk_cli.py TICKER --universe tradfi`
+1. Check ITC risk: `uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi`
 2. Compare with internal VaR limits from `risk_metrics_cli.py`
 3. Flag HIGH risk (>0.7) positions for enhanced monitoring
 4. Document risk assessment in compliance review with `{current_date}` timestamp
