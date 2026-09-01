@@ -31,6 +31,16 @@ from src.analysis.hedge_sizer import (
 )
 from src.config.config_loader import HedgeConfig
 
+
+@pytest.fixture
+def imports_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Return the broker-import directory for an isolated instance root."""
+    path = tmp_path / "imports"
+    path.mkdir()
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    return path
+
+
 # ---------------------------------------------------------------------------
 # calculate_contract_count
 # ---------------------------------------------------------------------------
@@ -147,66 +157,56 @@ class TestAllocateContracts:
 class TestReadPortfolioValueFromCSV:
     """Test Fidelity CSV parsing."""
 
-    def test_reads_actual_csv_format(self, tmp_path: Path) -> None:
+    def test_reads_actual_csv_format(self, imports_dir: Path) -> None:
         """Parse real Fidelity balance CSV format."""
         csv_content = textwrap.dedent("""\
             ,Balance,Day change
             Total account value,202688.46,-764.66
             Account equity percentage,85.51%,
         """)
-        csv_file = tmp_path / "Balances_for_Account_Z12345.csv"
+        csv_file = imports_dir / "Balances_for_Account_TEST.csv"
         csv_file.write_text(csv_content)
 
-        glob_pattern = str(tmp_path / "Balances_for_Account_*.csv")
-        with patch("src.analysis.hedge_sizer.BALANCES_GLOB", glob_pattern):
-            result = read_portfolio_value_from_csv()
+        result = read_portfolio_value_from_csv()
 
         assert result == pytest.approx(202688.46)
 
-    def test_returns_none_when_no_files(self, tmp_path: Path) -> None:
+    def test_returns_none_when_no_files(self, imports_dir: Path) -> None:
         """Returns None when no balance CSV exists."""
-        glob_pattern = str(tmp_path / "Balances_for_Account_*.csv")
-        with patch("src.analysis.hedge_sizer.BALANCES_GLOB", glob_pattern):
-            result = read_portfolio_value_from_csv()
+        result = read_portfolio_value_from_csv()
 
         assert result is None
 
-    def test_returns_none_on_missing_row(self, tmp_path: Path) -> None:
+    def test_returns_none_on_missing_row(self, imports_dir: Path) -> None:
         """Returns None when CSV lacks 'Total account value' row."""
         csv_content = ",Balance,Day change\nSome other row,100,0\n"
-        csv_file = tmp_path / "Balances_for_Account_Z99999.csv"
+        csv_file = imports_dir / "Balances_for_Account_TEST.csv"
         csv_file.write_text(csv_content)
 
-        glob_pattern = str(tmp_path / "Balances_for_Account_*.csv")
-        with patch("src.analysis.hedge_sizer.BALANCES_GLOB", glob_pattern):
-            result = read_portfolio_value_from_csv()
+        result = read_portfolio_value_from_csv()
 
         assert result is None
 
-    def test_handles_dollar_sign_and_commas(self, tmp_path: Path) -> None:
+    def test_handles_dollar_sign_and_commas(self, imports_dir: Path) -> None:
         """Parse values with $ and comma formatting."""
         csv_content = ",Balance,Day change\nTotal account value,$1,234,567.89,0\n"
-        csv_file = tmp_path / "Balances_for_Account_Z00001.csv"
+        csv_file = imports_dir / "Balances_for_Account_TEST.csv"
         csv_file.write_text(csv_content)
 
-        glob_pattern = str(tmp_path / "Balances_for_Account_*.csv")
-        with patch("src.analysis.hedge_sizer.BALANCES_GLOB", glob_pattern):
-            result = read_portfolio_value_from_csv()
+        result = read_portfolio_value_from_csv()
 
         # With commas in the value and splitting by comma, the parsing
         # extracts the first part after the label -- "$1" -> 1.0
         # This is expected behavior for the current CSV format (no commas in value)
         assert result is not None
 
-    def test_case_insensitive_match(self, tmp_path: Path) -> None:
+    def test_case_insensitive_match(self, imports_dir: Path) -> None:
         """Match 'total account value' regardless of case."""
         csv_content = ",Balance\ntotal ACCOUNT Value,500000.00,0\n"
-        csv_file = tmp_path / "Balances_for_Account_Z11111.csv"
+        csv_file = imports_dir / "Balances_for_Account_TEST.csv"
         csv_file.write_text(csv_content)
 
-        glob_pattern = str(tmp_path / "Balances_for_Account_*.csv")
-        with patch("src.analysis.hedge_sizer.BALANCES_GLOB", glob_pattern):
-            result = read_portfolio_value_from_csv()
+        result = read_portfolio_value_from_csv()
 
         assert result == pytest.approx(500000.00)
 
@@ -592,21 +592,11 @@ class TestHedgeSizerCLI:
         assert "disclaimer" in data
 
 
-class TestEnvVarOverrides:
-    """Verify module-level path constants honor their env var overrides."""
+class TestInstanceDataRoot:
+    """Verify CSV discovery follows the resolved instance root."""
 
-    def test_portfolio_dir_env_var_shifts_balances_glob(self, monkeypatch, tmp_path):
-        import importlib
+    def test_data_root_selects_import_directory(self, imports_dir: Path) -> None:
+        csv_path = imports_dir / "Balances_for_Account_SYNTH.csv"
+        csv_path.write_text("Total account value,123456.00,0\n")
 
-        from src.analysis import hedge_sizer
-
-        monkeypatch.setenv("FIN_GURU_PORTFOLIO_DIR", str(tmp_path))
-        reloaded = importlib.reload(hedge_sizer)
-        try:
-            assert tmp_path == reloaded.PORTFOLIO_DIR
-            assert (
-                str(tmp_path / "Balances_for_Account_*.csv") == reloaded.BALANCES_GLOB
-            )
-        finally:
-            monkeypatch.delenv("FIN_GURU_PORTFOLIO_DIR")
-            importlib.reload(hedge_sizer)
+        assert read_portfolio_value_from_csv() == pytest.approx(123456.0)

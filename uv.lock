@@ -740,7 +740,7 @@ wheels = [
 [[package]]
 name = "family-office"
 version = "2.2.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
     { name = "beautifulsoup4" },

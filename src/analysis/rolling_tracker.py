@@ -36,38 +36,20 @@ from __future__ import annotations
 import contextlib
 import io
 import logging
-import os
 import sys
 from datetime import date
-from pathlib import Path
 
 import yaml
 
 from src.analysis.options import price_option
 from src.analysis.options_chain_cli import scan_chain
 from src.config.config_loader import HedgeConfig
+from src.config.instance_paths import InstancePaths
 from src.models.hedging_inputs import HedgePosition
 from src.models.options_inputs import OptionContractData
 from src.utils.market_data import get_prices
 
 logger = logging.getLogger(__name__)
-
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-"""Project root directory (three levels up from src/analysis/rolling_tracker.py)."""
-
-PRIVATE_DIR = Path(
-    os.getenv("FIN_GURU_PRIVATE_DIR", str(PROJECT_ROOT / "fin-guru-private"))
-)
-"""Base directory for gitignored Finance Guru data.
-
-Override with ``FIN_GURU_PRIVATE_DIR`` for testing or portable deployment.
-"""
-
-HEDGING_DIR = Path(os.getenv("FIN_GURU_HEDGING_DIR", str(PRIVATE_DIR / "hedging")))
-"""Directory containing hedge position and roll history YAML files.
-
-Defaults to ``PRIVATE_DIR/hedging``. Override with ``FIN_GURU_HEDGING_DIR``.
-"""
 
 # Default parameters for pricing
 DEFAULT_IV = 0.30
@@ -183,17 +165,14 @@ def price_american_put(
 def load_positions() -> list[HedgePosition]:
     """Load active hedge positions from positions.yaml.
 
-    Reads ``HEDGING_DIR / "positions.yaml"`` and parses each entry through the
-    HedgePosition Pydantic model. ``HEDGING_DIR`` defaults to
-    ``fin-guru-private/hedging`` and is configurable via the
-    ``FIN_GURU_HEDGING_DIR`` or ``FIN_GURU_PRIVATE_DIR`` environment variables.
-    Invalid entries are skipped with a stderr warning (Pitfall 5: empty YAML
-    returns None, not {}).
+    Reads ``hedging/positions.yaml`` under the resolved instance root and parses
+    each entry through the HedgePosition Pydantic model. Invalid entries are
+    skipped with a stderr warning (Pitfall 5: empty YAML returns None, not {}).
 
     Returns:
         List of validated HedgePosition instances.
     """
-    positions_path = HEDGING_DIR / "positions.yaml"
+    positions_path = InstancePaths.resolve().hedging / "positions.yaml"
     if not positions_path.exists():
         return []
 
@@ -231,7 +210,7 @@ def save_positions(positions: list[HedgePosition]) -> None:
     Args:
         positions: List of HedgePosition instances to persist.
     """
-    positions_path = HEDGING_DIR / "positions.yaml"
+    positions_path = InstancePaths.resolve().hedging / "positions.yaml"
     positions_path.parent.mkdir(parents=True, exist_ok=True)
 
     data = {
@@ -247,7 +226,7 @@ def load_roll_history() -> list[dict]:
     Returns:
         List of roll record dicts. Empty list if file doesn't exist or is empty.
     """
-    history_path = HEDGING_DIR / "roll-history.yaml"
+    history_path = InstancePaths.resolve().hedging / "roll-history.yaml"
     if not history_path.exists():
         return []
 
@@ -270,7 +249,7 @@ def save_roll_history(history: list[dict]) -> None:
     Args:
         history: List of roll record dicts to persist.
     """
-    history_path = HEDGING_DIR / "roll-history.yaml"
+    history_path = InstancePaths.resolve().hedging / "roll-history.yaml"
     history_path.parent.mkdir(parents=True, exist_ok=True)
 
     data = {"rolls": history}

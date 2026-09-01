@@ -30,7 +30,7 @@ AGENT USAGE:
 
     # Save report
     uv run python src/utils/data_validator_cli.py TSLA --days 90 \\
-        --save-to fin-guru-private/fin-guru/data-validation-tsla-2025-10-13.json
+        --save-to analysis/data-validation-tsla-2025-10-13.json
 
 EDUCATIONAL NOTE:
 This CLI helps agents verify data quality before analysis.

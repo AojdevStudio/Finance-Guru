@@ -6,7 +6,6 @@ import argparse
 import json
 import sys
 from dataclasses import asdict
-from pathlib import Path
 
 from buy_ticket_agent.pipeline import run_smoke_for_cli
 from buy_ticket_agent.secrets import SecretAccessError
@@ -35,7 +34,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     try:
-        result = run_smoke_for_cli(project_root=Path.cwd())
+        result = run_smoke_for_cli()
     except SecretAccessError as exc:
         print(f"Secret access blocker: {exc}", file=sys.stderr)
         return 1

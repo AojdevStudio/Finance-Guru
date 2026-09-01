@@ -7,12 +7,15 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
+from src.config.instance_paths import InstancePaths
+
 
 class SmokePaths(BaseModel):
     """Filesystem destinations used by the smoke path."""
 
     model_config = ConfigDict(frozen=True)
 
+    instance_root: Path
     project_root: Path
     drafts_dir: Path
     runs_dir: Path
@@ -20,19 +23,16 @@ class SmokePaths(BaseModel):
     state_db: Path
 
     @classmethod
-    def from_project_root(cls, project_root: Path | None = None) -> SmokePaths:
-        """Build default smoke output paths from the repository root."""
-        root = project_root or Path.cwd()
+    def from_instance(cls, paths: InstancePaths | None = None) -> SmokePaths:
+        """Build smoke output paths from one resolved instance layout."""
+        instance_paths = paths or InstancePaths.resolve()
         return cls(
-            project_root=root,
-            drafts_dir=root
-            / "fin-guru-private"
-            / "fin-guru"
-            / "tickets"
-            / "auto-drafts",
-            runs_dir=root / "notebooks" / "auto-tickets" / "runs",
-            bundles_dir=root / "notebooks" / "auto-tickets" / "bundles",
-            state_db=root / "notebooks" / "auto-tickets" / "state.db",
+            instance_root=instance_paths.root,
+            project_root=Path(__file__).resolve().parent.parent,
+            drafts_dir=instance_paths.tickets / "auto-drafts",
+            runs_dir=instance_paths.auto_tickets / "runs",
+            bundles_dir=instance_paths.auto_tickets / "bundles",
+            state_db=instance_paths.auto_tickets / "state.db",
         )
 
 

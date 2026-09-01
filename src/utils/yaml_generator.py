@@ -23,6 +23,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from src.config.instance_paths import InstancePaths
 from src.models.yaml_generation_inputs import (
     UserDataInput,
     YAMLGenerationOutput,
@@ -320,16 +321,16 @@ def write_config_files(output: YAMLGenerationOutput, base_dir: str = ".") -> Non
         output: YAMLGenerationOutput with generated content
         base_dir: Base directory for output files (default: current directory)
     """
-    base_path = Path(base_dir)
+    paths = InstancePaths(root=Path(base_dir).expanduser().resolve())
 
     # Define output paths
     files = {
-        base_path / "fin-guru" / "data" / "user-profile.yaml": output.user_profile_yaml,
-        base_path / "fin-guru" / "config.yaml": output.config_yaml,
-        base_path / "fin-guru" / "data" / "system-context.md": output.system_context_md,
-        base_path / "CLAUDE.md": output.claude_md,
-        base_path / ".env": output.env_file,
-        base_path / ".claude" / "mcp.json": output.mcp_json,
+        paths.profile: output.user_profile_yaml,
+        paths.config: output.config_yaml,
+        paths.system_context: output.system_context_md,
+        paths.root / "CLAUDE.md": output.claude_md,
+        paths.env_file: output.env_file,
+        paths.root / ".claude" / "mcp.json": output.mcp_json,
     }
 
     # Write files

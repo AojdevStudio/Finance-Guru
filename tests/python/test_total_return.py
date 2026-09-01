@@ -45,7 +45,7 @@ from src.models.total_return_inputs import (
 )
 
 # ---------------------------------------------------------------------------
-# Mock dividend schedules (for CI where fin-guru-private/ doesn't exist)
+# Mock dividend schedules for CI instances without a schedule file.
 # ---------------------------------------------------------------------------
 
 MOCK_DIVIDEND_SCHEDULES = {
@@ -635,14 +635,15 @@ class TestScheduleLoader:
         for ticker in ["SCHD", "VYM", "VOO"]:
             assert schedules.get(ticker, {}).get("frequency") == 4
 
-    def test_missing_file_returns_empty_dict(self, _mock):
+    def test_missing_file_returns_empty_dict(
+        self, _mock, monkeypatch, tmp_path: Path
+    ) -> None:
         """If YAML file does not exist, return empty dict (graceful fallback)."""
-        with patch(
-            "src.analysis.total_return.DIVIDEND_SCHEDULES_PATH",
-            Path("/nonexistent/path/dividend-schedules.yaml"),
-        ):
-            schedules = load_dividend_schedules()
-            assert schedules == {}
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+
+        schedules = load_dividend_schedules()
+
+        assert schedules == {}
 
 
 # ---------------------------------------------------------------------------
@@ -1156,37 +1157,14 @@ class TestFetchTickerDataAutoAdjust:
         assert [dividend.amount for dividend in divs] == [1.0]
 
 
-class TestEnvVarOverrides:
-    """Verify module-level path constants honor their env var overrides."""
+class TestInstancePaths:
+    """Verify schedule loading resolves the instance root at call time."""
 
-    def test_private_dir_env_var_shifts_dividend_schedules_default(
-        self, monkeypatch, tmp_path
-    ):
-        import importlib
+    def test_data_root_selects_dividend_schedule(self, monkeypatch, tmp_path: Path):
+        schedules_path = tmp_path / "dividend-schedules.yaml"
+        schedules_path.write_text("SYNTH: {frequency: 4, label: quarterly}\n")
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
 
-        from src.analysis import total_return
-
-        monkeypatch.setenv("FIN_GURU_PRIVATE_DIR", str(tmp_path))
-        reloaded = importlib.reload(total_return)
-        try:
-            assert tmp_path == reloaded.PRIVATE_DIR
-            assert (
-                tmp_path / "dividend-schedules.yaml" == reloaded.DIVIDEND_SCHEDULES_PATH
-            )
-        finally:
-            monkeypatch.delenv("FIN_GURU_PRIVATE_DIR")
-            importlib.reload(total_return)
-
-    def test_dividend_schedules_env_var_takes_precedence(self, monkeypatch, tmp_path):
-        import importlib
-
-        from src.analysis import total_return
-
-        explicit = tmp_path / "custom-schedules.yaml"
-        monkeypatch.setenv("FIN_GURU_DIVIDEND_SCHEDULES", str(explicit))
-        reloaded = importlib.reload(total_return)
-        try:
-            assert explicit == reloaded.DIVIDEND_SCHEDULES_PATH
-        finally:
-            monkeypatch.delenv("FIN_GURU_DIVIDEND_SCHEDULES")
-            importlib.reload(total_return)
+        assert load_dividend_schedules() == {
+            "SYNTH": {"frequency": 4, "label": "quarterly"}
+        }

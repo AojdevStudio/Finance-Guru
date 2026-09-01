@@ -16,7 +16,6 @@ ever wanted, add an append-only `position_history` table keyed on synced_at.
 from __future__ import annotations
 
 import argparse
-import os
 import sqlite3
 import sys
 from collections import defaultdict
@@ -24,8 +23,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
-
+from src.config.instance_paths import InstancePaths, _db_path, load_instance_env
 from src.integrations.snaptrade.cli import _account_balances, _account_positions
 from src.integrations.snaptrade.client import SnapTradeAPIError, SnapTradeClientWrapper
 from src.integrations.snaptrade.models import SnapTradeAccountsConfig
@@ -54,18 +52,6 @@ CREATE TABLE IF NOT EXISTS balances (
     synced_at          TEXT NOT NULL
 );
 """
-
-
-def _db_path(database_url: str | None) -> Path:
-    """Resolve a sqlite:/// URL (or bare path) to a filesystem path."""
-    if not database_url:
-        raise ValueError("DATABASE_URL is not set")
-    if database_url.startswith("sqlite:///"):
-        # sqlite:///rel.db -> rel.db ; sqlite:////abs.db -> /abs.db
-        return Path(database_url[len("sqlite:///") :])
-    if database_url.startswith("sqlite://"):
-        return Path(database_url[len("sqlite://") :])
-    return Path(database_url)
 
 
 def _net_positions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -215,14 +201,15 @@ def show(database_url: str | None) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint."""
-    load_dotenv(override=True)
+    paths = InstancePaths.resolve()
+    load_instance_env(paths)
     parser = argparse.ArgumentParser(description="Sync SnapTrade -> local SQLite DB")
     parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH))
     parser.add_argument(
         "--show", action="store_true", help="Print current snapshot and exit"
     )
     args = parser.parse_args(argv)
-    database_url = os.getenv("DATABASE_URL")
+    database_url = paths.database_url()
     try:
         if args.show:
             show(database_url)

@@ -33,6 +33,7 @@ from typing import Any
 _project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(_project_root))
 
+from src.config.instance_paths import InstancePaths
 from src.models.onboarding_inputs import OnboardingState, SectionName
 from src.models.yaml_generation_inputs import (
     AllocationStrategy,
@@ -57,7 +58,7 @@ from src.utils.onboarding_sections import (
     run_preferences_section,
     run_summary_section,
 )
-from src.utils.yaml_generator import YAMLGenerator, write_config_files
+from src.utils.yaml_generator import YAMLGenerator
 
 try:
     import questionary
@@ -380,10 +381,10 @@ def generate_config_files(user_data: UserDataInput, project_root: Path) -> None:
     """Generate all configuration files and write to correct locations.
 
     Private config files (user-profile.yaml, config.yaml, system-context.md)
-    are written under fin-guru-private/ via write_config_files().
+    and .env are written under the resolved instance root.
 
-    Project-root files (CLAUDE.md, .env, .claude/mcp.json) are written
-    separately via explicit Path.write_text() to their correct locations.
+    CLAUDE.md and .claude/mcp.json stay under the project root. The instance
+    .env follows the private config files under the resolved instance root.
 
     Args:
         user_data: Validated user data from the onboarding wizard.
@@ -392,10 +393,16 @@ def generate_config_files(user_data: UserDataInput, project_root: Path) -> None:
     template_dir = project_root / _TEMPLATE_DIR
     generator = YAMLGenerator(str(template_dir))
     output = generator.generate_all_configs(user_data)
+    paths = InstancePaths.resolve(cwd=project_root)
 
-    # --- Write private config files to fin-guru-private/ ---
-    private_base = project_root / "fin-guru-private"
-    write_config_files(output, str(private_base))
+    instance_files = {
+        paths.profile: output.user_profile_yaml,
+        paths.config: output.config_yaml,
+        paths.system_context: output.system_context_md,
+    }
+    for file_path, content in instance_files.items():
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(content, encoding="utf-8")
 
     # --- Write project-root files with backup ---
 
@@ -405,7 +412,7 @@ def generate_config_files(user_data: UserDataInput, project_root: Path) -> None:
     claude_path.write_text(output.claude_md, encoding="utf-8")
 
     # .env
-    env_path = project_root / ".env"
+    env_path = paths.env_file
     _backup_file(env_path)
     env_path.write_text(output.env_file, encoding="utf-8")
 
@@ -419,9 +426,9 @@ def generate_config_files(user_data: UserDataInput, project_root: Path) -> None:
     # --- Print results ---
     print()
     print("  Generated configuration files:")
-    print(f"    - {private_base / 'fin-guru' / 'data' / 'user-profile.yaml'}")
-    print(f"    - {private_base / 'fin-guru' / 'config.yaml'}")
-    print(f"    - {private_base / 'fin-guru' / 'data' / 'system-context.md'}")
+    print(f"    - {paths.profile}")
+    print(f"    - {paths.config}")
+    print(f"    - {paths.system_context}")
     print(f"    - {claude_path}")
     print(f"    - {env_path}")
     print(f"    - {mcp_path}")
@@ -507,6 +514,7 @@ def run_wizard(dry_run: bool = False) -> None:
 
     # Convert state to validated model
     project_root = Path.cwd()
+    paths = InstancePaths.resolve(cwd=project_root)
     user_data = convert_state_to_user_data(state, str(project_root))
 
     if dry_run:
@@ -519,11 +527,11 @@ def run_wizard(dry_run: bool = False) -> None:
         print(f"    Philosophy: {user_data.preferences.investment_philosophy.value}")
         print()
         print("  [DRY RUN] Files would be written to:")
-        print("    - fin-guru-private/fin-guru/data/user-profile.yaml")
-        print("    - fin-guru-private/fin-guru/config.yaml")
-        print("    - fin-guru-private/fin-guru/data/system-context.md")
+        print(f"    - {paths.profile}")
+        print(f"    - {paths.config}")
+        print(f"    - {paths.system_context}")
         print(f"    - {project_root / 'CLAUDE.md'}")
-        print(f"    - {project_root / '.env'}")
+        print(f"    - {paths.env_file}")
         print(f"    - {project_root / '.claude' / 'mcp.json'}")
         print()
         # Deactivate handler and clean up progress on dry-run completion too

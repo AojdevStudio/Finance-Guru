@@ -35,7 +35,7 @@ ALLOCATION:
 
 PORTFOLIO VALUE CASCADE:
     1. CLI flag (--portfolio-value)
-    2. Fidelity CSV (notebooks/updates/Balances_for_Account_*.csv)
+    2. Fidelity CSV (imports/Balances_for_Account_*.csv under the instance root)
     3. ValueError if nothing found
 
 BUDGET VALIDATION:
@@ -56,12 +56,12 @@ import contextlib
 import io
 import logging
 import math
-import os
 import statistics
 from glob import glob
 from pathlib import Path
 
 from src.config.config_loader import HedgeConfig
+from src.config.instance_paths import InstancePaths
 
 logger = logging.getLogger(__name__)
 
@@ -69,24 +69,8 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-"""Project root directory (three levels up from src/analysis/hedge_sizer.py)."""
-
 DEFAULT_RATIO_PER_CONTRACT = 50_000.0
 """Default portfolio value per contract: $50,000. HS-01."""
-
-PORTFOLIO_DIR = Path(
-    os.getenv("FIN_GURU_PORTFOLIO_DIR", str(PROJECT_ROOT / "notebooks" / "updates"))
-)
-"""Directory holding broker export CSVs (balances, positions, transactions).
-
-Override with ``FIN_GURU_PORTFOLIO_DIR`` for testing or portable deployment.
-Matches the env var convention in ``src/config/fin_guru_config.py``.
-"""
-
-BALANCES_GLOB = str(PORTFOLIO_DIR / "Balances_for_Account_*.csv")
-"""Glob pattern for Fidelity balance CSV files."""
-
 
 # ---------------------------------------------------------------------------
 # Module-level helper functions
@@ -163,17 +147,17 @@ def allocate_contracts(
 def read_portfolio_value_from_csv() -> float | None:
     """Read total account value from latest Fidelity balance CSV.
 
-    Searches the configured portfolio directory (``FIN_GURU_PORTFOLIO_DIR``,
-    default ``notebooks/updates/``) via ``BALANCES_GLOB``, picks the most
-    recently modified ``Balances_for_Account_*.csv`` file, and extracts the
-    "Total account value" row.
+    Searches the ``imports`` directory under the resolved instance root, picks
+    the most recently modified ``Balances_for_Account_*.csv`` file, and
+    extracts the "Total account value" row.
 
     Returns:
         Portfolio value as float, or None if not found / parse error.
     """
-    csv_files = sorted(glob(BALANCES_GLOB), key=lambda p: Path(p).stat().st_mtime)
+    balances_glob = str(InstancePaths.resolve().imports / "Balances_for_Account_*.csv")
+    csv_files = sorted(glob(balances_glob), key=lambda p: Path(p).stat().st_mtime)
     if not csv_files:
-        logger.debug("No Fidelity balance CSV files found at %s", BALANCES_GLOB)
+        logger.debug("No Fidelity balance CSV files found at %s", balances_glob)
         return None
 
     latest = csv_files[-1]  # most recent by mtime
@@ -252,8 +236,8 @@ class HedgeSizer:
         # 3. No value found
         msg = (
             "No portfolio value found. Provide --portfolio-value flag or "
-            f"ensure a Fidelity balance CSV exists matching {BALANCES_GLOB} "
-            "(override the directory via FIN_GURU_PORTFOLIO_DIR)."
+            "ensure a Fidelity balance CSV exists under "
+            f"{InstancePaths.resolve().imports}."
         )
         raise ValueError(msg)
 

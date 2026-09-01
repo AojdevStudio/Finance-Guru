@@ -20,9 +20,7 @@ from glob import glob
 from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
-
-DEFAULT_PORTFOLIO_DIR = Path("notebooks/updates")
+from src.config.instance_paths import InstancePaths, load_instance_env
 
 
 @dataclass(frozen=True)
@@ -92,10 +90,7 @@ def parse_rate(value: str | None) -> float:
 
 def balances_glob() -> str:
     """Return the configured Fidelity balances glob."""
-    portfolio_dir = Path(
-        os.getenv("FIN_GURU_PORTFOLIO_DIR", str(DEFAULT_PORTFOLIO_DIR))
-    )
-    return str(portfolio_dir / "Balances_for_Account_*.csv")
+    return str(InstancePaths.resolve().imports / "Balances_for_Account_*.csv")
 
 
 def latest_balances_csv() -> Path:
@@ -204,9 +199,9 @@ def read_db_balances(database_url: str | None = None) -> FidelityBalances:
     local DB the single source of truth. Margin debt is the derived loan
     (SnapTrade does not expose it), so accrued interest and day-change are None.
     """
-    from src.integrations.snaptrade.sync_db import _db_path
+    from src.config.instance_paths import _db_path
 
-    db = _db_path(database_url or os.getenv("DATABASE_URL"))
+    db = _db_path(database_url)
     if not db.exists():
         msg = (
             f"No local database at {db}; run the sync-first refresh "
@@ -324,7 +319,7 @@ def metrics_from_runtime(
     ``source="snaptrade"`` reads the SnapTrade API live, and ``source="csv"``
     (or passing ``csv_path``) reads the legacy Fidelity balances CSV instead.
     """
-    load_dotenv()
+    load_instance_env(InstancePaths.resolve())
     if csv_path is not None or source == "csv":
         balances = read_fidelity_balances(csv_path)
     elif source == "snaptrade":

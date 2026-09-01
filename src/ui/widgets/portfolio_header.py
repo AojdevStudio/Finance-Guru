@@ -31,7 +31,8 @@ class PortfolioHeader(Widget):
         """
         if not self.portfolio:
             return Text(
-                "📥 No portfolio data - upload CSV to notebooks/updates/", style="dim"
+                "📥 No portfolio data. Add a CSV to the instance imports directory.",
+                style="dim",
             )
 
         p: PortfolioSnapshotInput = self.portfolio

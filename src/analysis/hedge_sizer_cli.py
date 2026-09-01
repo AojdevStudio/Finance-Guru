@@ -52,6 +52,7 @@ sys.path.insert(0, str(project_root))
 
 from src.analysis.hedge_sizer import HedgeSizer
 from src.config.config_loader import load_hedge_config
+from src.config.instance_paths import InstancePaths
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -344,7 +345,7 @@ def main() -> int:
             print(f"ERROR: {exc}", file=sys.stderr)
             print(
                 "Provide --portfolio flag or ensure a Fidelity balance CSV "
-                "exists at notebooks/updates/Balances_for_Account_*.csv",
+                f"exists under {InstancePaths.resolve().imports}",
                 file=sys.stderr,
             )
             return 1

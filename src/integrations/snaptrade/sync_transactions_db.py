@@ -21,18 +21,15 @@ data source appears.
 from __future__ import annotations
 
 import argparse
-import os
 import sqlite3
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
-
+from src.config.instance_paths import InstancePaths, _db_path, load_instance_env
 from src.integrations.snaptrade.client import SnapTradeAPIError, SnapTradeClientWrapper
 from src.integrations.snaptrade.models import SnapTradeAccountsConfig
-from src.integrations.snaptrade.sync_db import _db_path
 
 DEFAULT_CONFIG_PATH = Path("config/snaptrade-accounts.yaml")
 
@@ -151,14 +148,15 @@ def show(database_url: str | None) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint."""
-    load_dotenv(override=True)
+    paths = InstancePaths.resolve()
+    load_instance_env(paths)
     parser = argparse.ArgumentParser(
         description="Sync SnapTrade activities -> local SQLite DB"
     )
     parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH))
     parser.add_argument("--show", action="store_true", help="Print summary and exit")
     args = parser.parse_args(argv)
-    database_url = os.getenv("DATABASE_URL")
+    database_url = paths.database_url()
     try:
         if args.show:
             show(database_url)

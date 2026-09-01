@@ -91,14 +91,16 @@ def test_calculate_margin_metrics_derives_values_from_live_balances(tmp_path):
 
 
 def test_metrics_from_runtime_uses_latest_csv_and_env_config(tmp_path, monkeypatch):
-    older = tmp_path / "Balances_for_Account_OLD.csv"
-    newer = tmp_path / "Balances_for_Account_NEW.csv"
+    imports_dir = tmp_path / "imports"
+    imports_dir.mkdir()
+    older = imports_dir / "Balances_for_Account_OLD.csv"
+    newer = imports_dir / "Balances_for_Account_NEW.csv"
     write_balances(older)
     write_balances(newer)
     os.utime(older, (1, 1))
     os.utime(newer, (2, 2))
 
-    monkeypatch.setenv("FIN_GURU_PORTFOLIO_DIR", str(tmp_path))
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
     monkeypatch.setenv("FG_MARGIN_INTEREST_RATE_DECIMAL", "0.12")
     monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "$5,000")
     monkeypatch.setenv("FG_DIVIDEND_MONTHLY_INCOME", "$250")

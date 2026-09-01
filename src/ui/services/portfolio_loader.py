@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.config import FinGuruConfig
+from src.config import FinGuruConfig, InstancePaths
 from src.models.dashboard_inputs import HoldingInput, PortfolioSnapshotInput
 
 
@@ -30,7 +30,9 @@ class PortfolioLoader:
         Returns:
             Path to latest CSV file, or None if no files found
         """
-        csv_files = list(FinGuruConfig.PORTFOLIO_DIR.glob("Portfolio_Positions_*.csv"))
+        csv_files = list(
+            InstancePaths.resolve().imports.glob("Portfolio_Positions_*.csv")
+        )
         if not csv_files:
             return None
         return max(csv_files, key=lambda p: p.stat().st_mtime)

@@ -595,7 +595,9 @@ def run_broker_section(state: OnboardingState) -> OnboardingState:
     print("  two CSV files from your brokerage account:")
     print("    1. Positions CSV (your stock/ETF holdings)")
     print("    2. Balances CSV (cash, margin debt, account totals)")
-    print("  Save these files to: notebooks/updates/")
+    from src.config.instance_paths import InstancePaths
+
+    print(f"  Save these files to: {InstancePaths.resolve().imports}")
     print()
 
     state.data[SectionName.BROKER.value] = {

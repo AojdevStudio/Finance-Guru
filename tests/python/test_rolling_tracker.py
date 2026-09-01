@@ -9,7 +9,6 @@ interfaces work end-to-end.
 
 from __future__ import annotations
 
-import importlib
 import json
 import subprocess
 import sys
@@ -20,7 +19,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from src.analysis import rolling_tracker
 from src.analysis.rolling_tracker import (
     RollingTracker,
     _dte_status,
@@ -33,6 +31,16 @@ from src.analysis.rolling_tracker import (
 )
 from src.config.config_loader import HedgeConfig
 from src.models.hedging_inputs import HedgePosition
+
+
+@pytest.fixture
+def hedging_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Return the hedging directory for an isolated instance root."""
+    path = tmp_path / "hedging"
+    path.mkdir()
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    return path
+
 
 # ---------------------------------------------------------------------------
 # price_american_put
@@ -178,24 +186,24 @@ class TestRankContractScore:
 class TestPositionPersistence:
     """Tests for position YAML load/save round-trip."""
 
-    def test_load_empty_file(self, tmp_path: Path):
+    def test_load_empty_file(self, hedging_dir: Path):
         """Empty positions file should return empty list."""
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text("positions: []\n")
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = load_positions()
         assert result == []
 
-    def test_load_nonexistent_file(self, tmp_path: Path):
+    def test_load_nonexistent_file(self, hedging_dir: Path):
         """Missing positions file should return empty list."""
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = load_positions()
         assert result == []
 
-    def test_load_valid_position(self, tmp_path: Path):
+    def test_load_valid_position(self, hedging_dir: Path):
         """Valid position entry should parse correctly."""
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         data = {
             "positions": [
                 {
@@ -212,15 +220,15 @@ class TestPositionPersistence:
         }
         positions_file.write_text(yaml.dump(data))
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = load_positions()
         assert len(result) == 1
         assert result[0].ticker == "QQQ"
         assert result[0].strike == 420.0
 
-    def test_load_skips_invalid_entry(self, tmp_path: Path):
+    def test_load_skips_invalid_entry(self, hedging_dir: Path):
         """Invalid entries should be skipped with warning."""
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         data = {
             "positions": [
                 {"ticker": "QQQ", "hedge_type": "put"},  # missing required fields
@@ -237,12 +245,12 @@ class TestPositionPersistence:
         }
         positions_file.write_text(yaml.dump(data))
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = load_positions()
         assert len(result) == 1
         assert result[0].ticker == "SPY"
 
-    def test_save_and_reload(self, tmp_path: Path):
+    def test_save_and_reload(self, hedging_dir: Path):
         """Saved positions should round-trip through YAML."""
         pos = HedgePosition(
             ticker="QQQ",
@@ -254,7 +262,7 @@ class TestPositionPersistence:
             entry_date=date(2026, 2, 1),
         )
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             save_positions([pos])
             reloaded = load_positions()
 
@@ -263,12 +271,12 @@ class TestPositionPersistence:
         assert reloaded[0].strike == 420.0
         assert reloaded[0].quantity == 2
 
-    def test_load_yaml_none_safety(self, tmp_path: Path):
+    def test_load_yaml_none_safety(self, hedging_dir: Path):
         """Empty YAML file (None from safe_load) should return empty list."""
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text("")
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = load_positions()
         assert result == []
 
@@ -281,22 +289,22 @@ class TestPositionPersistence:
 class TestRollHistoryPersistence:
     """Tests for roll history YAML load/save."""
 
-    def test_load_empty_history(self, tmp_path: Path):
+    def test_load_empty_history(self, hedging_dir: Path):
         """Empty roll history should return empty list."""
-        history_file = tmp_path / "roll-history.yaml"
+        history_file = hedging_dir / "roll-history.yaml"
         history_file.write_text("rolls: []\n")
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = load_roll_history()
         assert result == []
 
-    def test_load_nonexistent_history(self, tmp_path: Path):
+    def test_load_nonexistent_history(self, hedging_dir: Path):
         """Missing history file should return empty list."""
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = load_roll_history()
         assert result == []
 
-    def test_save_and_reload_history(self, tmp_path: Path):
+    def test_save_and_reload_history(self, hedging_dir: Path):
         """Saved history should round-trip correctly."""
         record = {
             "roll_date": "2026-02-01",
@@ -304,7 +312,7 @@ class TestRollHistoryPersistence:
             "reason": "rolled",
         }
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             save_roll_history([record])
             result = load_roll_history()
 
@@ -320,17 +328,17 @@ class TestRollHistoryPersistence:
 class TestRollingTrackerGetStatus:
     """Tests for RollingTracker.get_status method."""
 
-    def test_empty_positions(self, tmp_path: Path):
+    def test_empty_positions(self, hedging_dir: Path):
         """Status with no positions should return empty lists."""
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text("positions: []\n")
-        history_file = tmp_path / "roll-history.yaml"
+        history_file = hedging_dir / "roll-history.yaml"
         history_file.write_text("rolls: []\n")
 
         config = HedgeConfig()
         tracker = RollingTracker(config)
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             status = tracker.get_status()
 
         assert status["positions"] == []
@@ -338,7 +346,7 @@ class TestRollingTrackerGetStatus:
         assert status["summary"]["total_hedge_cost"] == 0.0
         assert status["summary"]["total_pnl"] == 0.0
 
-    def test_auto_archives_expired(self, tmp_path: Path):
+    def test_auto_archives_expired(self, hedging_dir: Path):
         """Expired positions should be moved to roll history."""
         yesterday = date.today() - timedelta(days=1)
         data = {
@@ -354,27 +362,27 @@ class TestRollingTrackerGetStatus:
                 }
             ]
         }
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text(yaml.dump(data))
-        history_file = tmp_path / "roll-history.yaml"
+        history_file = hedging_dir / "roll-history.yaml"
         history_file.write_text("rolls: []\n")
 
         config = HedgeConfig()
         tracker = RollingTracker(config)
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             status = tracker.get_status()
 
         # Position should be archived
         assert status["summary"]["position_count"] == 0
 
         # Check roll history was updated
-        with open(tmp_path / "roll-history.yaml") as f:
+        with open(hedging_dir / "roll-history.yaml") as f:
             history_data = yaml.safe_load(f)
         assert len(history_data["rolls"]) == 1
         assert history_data["rolls"][0]["reason"] == "expired"
 
-    def test_enriches_put_position(self, tmp_path: Path):
+    def test_enriches_put_position(self, hedging_dir: Path):
         """Active put position should be enriched with pricing and DTE."""
         future_date = date.today() + timedelta(days=30)
         data = {
@@ -391,9 +399,9 @@ class TestRollingTrackerGetStatus:
                 }
             ]
         }
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text(yaml.dump(data))
-        history_file = tmp_path / "roll-history.yaml"
+        history_file = hedging_dir / "roll-history.yaml"
         history_file.write_text("rolls: []\n")
 
         # Mock get_prices to return a known spot price
@@ -404,7 +412,7 @@ class TestRollingTrackerGetStatus:
         tracker = RollingTracker(config)
 
         with (
-            patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path),
+            patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}),
             patch(
                 "src.analysis.rolling_tracker.get_prices",
                 return_value={"QQQ": mock_price},
@@ -420,7 +428,7 @@ class TestRollingTrackerGetStatus:
         assert pos["dte_color"] == "green"
         assert pos["quantity"] == 2
 
-    def test_pricing_error_fallback(self, tmp_path: Path):
+    def test_pricing_error_fallback(self, hedging_dir: Path):
         """Pricing error should fall back to entry cost with error flag."""
         future_date = date.today() + timedelta(days=30)
         data = {
@@ -436,16 +444,16 @@ class TestRollingTrackerGetStatus:
                 }
             ]
         }
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text(yaml.dump(data))
-        history_file = tmp_path / "roll-history.yaml"
+        history_file = hedging_dir / "roll-history.yaml"
         history_file.write_text("rolls: []\n")
 
         config = HedgeConfig()
         tracker = RollingTracker(config)
 
         with (
-            patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path),
+            patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}),
             patch(
                 "src.analysis.rolling_tracker.get_prices",
                 side_effect=Exception("API error"),
@@ -467,7 +475,7 @@ class TestRollingTrackerGetStatus:
 class TestRollingTrackerLogRoll:
     """Tests for RollingTracker.log_roll method."""
 
-    def test_roll_creates_new_position(self, tmp_path: Path):
+    def test_roll_creates_new_position(self, hedging_dir: Path):
         """Logging a roll should archive old and create new position."""
         future_date = date.today() + timedelta(days=5)
         new_expiry = date.today() + timedelta(days=75)
@@ -485,15 +493,15 @@ class TestRollingTrackerLogRoll:
                 }
             ]
         }
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text(yaml.dump(data))
-        history_file = tmp_path / "roll-history.yaml"
+        history_file = hedging_dir / "roll-history.yaml"
         history_file.write_text("rolls: []\n")
 
         config = HedgeConfig()
         tracker = RollingTracker(config)
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = tracker.log_roll("QQQ", 430.0, new_expiry, 9.00)
 
         assert result["old_position"]["strike"] == 420.0
@@ -501,28 +509,28 @@ class TestRollingTrackerLogRoll:
         assert result["new_position"]["quantity"] == 2  # inherited
 
         # Check files updated
-        with open(tmp_path / "positions.yaml") as f:
+        with open(hedging_dir / "positions.yaml") as f:
             pos_data = yaml.safe_load(f)
         assert len(pos_data["positions"]) == 1
         assert pos_data["positions"][0]["strike"] == 430.0
 
-        with open(tmp_path / "roll-history.yaml") as f:
+        with open(hedging_dir / "roll-history.yaml") as f:
             hist_data = yaml.safe_load(f)
         assert len(hist_data["rolls"]) == 1
         assert hist_data["rolls"][0]["reason"] == "rolled"
 
-    def test_roll_nonexistent_ticker_raises(self, tmp_path: Path):
+    def test_roll_nonexistent_ticker_raises(self, hedging_dir: Path):
         """Rolling a ticker not in positions should raise ValueError."""
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text("positions: []\n")
-        history_file = tmp_path / "roll-history.yaml"
+        history_file = hedging_dir / "roll-history.yaml"
         history_file.write_text("rolls: []\n")
 
         config = HedgeConfig()
         tracker = RollingTracker(config)
 
         with (
-            patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path),
+            patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}),
             pytest.raises(ValueError, match="No active put position"),
         ):
             tracker.log_roll("QQQ", 430.0, date.today() + timedelta(days=75), 9.00)
@@ -536,19 +544,19 @@ class TestRollingTrackerLogRoll:
 class TestRollingTrackerGetHistory:
     """Tests for RollingTracker.get_history method."""
 
-    def test_empty_history(self, tmp_path: Path):
+    def test_empty_history(self, hedging_dir: Path):
         """Empty history file should return empty list."""
-        history_file = tmp_path / "roll-history.yaml"
+        history_file = hedging_dir / "roll-history.yaml"
         history_file.write_text("rolls: []\n")
 
         config = HedgeConfig()
         tracker = RollingTracker(config)
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = tracker.get_history()
         assert result == []
 
-    def test_returns_history_records(self, tmp_path: Path):
+    def test_returns_history_records(self, hedging_dir: Path):
         """History with records should be returned."""
         data = {
             "rolls": [
@@ -559,13 +567,13 @@ class TestRollingTrackerGetHistory:
                 },
             ]
         }
-        history_file = tmp_path / "roll-history.yaml"
+        history_file = hedging_dir / "roll-history.yaml"
         history_file.write_text(yaml.dump(data))
 
         config = HedgeConfig()
         tracker = RollingTracker(config)
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = tracker.get_history()
         assert len(result) == 1
         assert result[0]["reason"] == "rolled"
@@ -579,19 +587,19 @@ class TestRollingTrackerGetHistory:
 class TestRollingTrackerSuggestRolls:
     """Tests for RollingTracker.suggest_rolls method."""
 
-    def test_no_positions_returns_empty(self, tmp_path: Path):
+    def test_no_positions_returns_empty(self, hedging_dir: Path):
         """No positions should return empty suggestions list."""
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text("positions: []\n")
 
         config = HedgeConfig()
         tracker = RollingTracker(config)
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = tracker.suggest_rolls()
         assert result == []
 
-    def test_non_expiring_positions_skipped(self, tmp_path: Path):
+    def test_non_expiring_positions_skipped(self, hedging_dir: Path):
         """Positions with DTE > 7 should not generate suggestions."""
         future_date = date.today() + timedelta(days=30)
         data = {
@@ -607,17 +615,17 @@ class TestRollingTrackerSuggestRolls:
                 }
             ]
         }
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text(yaml.dump(data))
 
         config = HedgeConfig()
         tracker = RollingTracker(config)
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = tracker.suggest_rolls()
         assert result == []
 
-    def test_inverse_etf_positions_skipped(self, tmp_path: Path):
+    def test_inverse_etf_positions_skipped(self, hedging_dir: Path):
         """Inverse ETF positions should not generate roll suggestions."""
         data = {
             "positions": [
@@ -630,17 +638,17 @@ class TestRollingTrackerSuggestRolls:
                 }
             ]
         }
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text(yaml.dump(data))
 
         config = HedgeConfig()
         tracker = RollingTracker(config)
 
-        with patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path):
+        with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             result = tracker.suggest_rolls()
         assert result == []
 
-    def test_expiring_position_generates_suggestion(self, tmp_path: Path):
+    def test_expiring_position_generates_suggestion(self, hedging_dir: Path):
         """Position with DTE <= 7 should generate a roll suggestion."""
         expiry_soon = date.today() + timedelta(days=5)
         data = {
@@ -657,7 +665,7 @@ class TestRollingTrackerSuggestRolls:
                 }
             ]
         }
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text(yaml.dump(data))
 
         # Mock get_prices for remaining value calculation
@@ -686,7 +694,7 @@ class TestRollingTrackerSuggestRolls:
         tracker = RollingTracker(config)
 
         with (
-            patch("src.analysis.rolling_tracker.HEDGING_DIR", tmp_path),
+            patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}),
             patch(
                 "src.analysis.rolling_tracker.get_prices",
                 return_value={"QQQ": mock_price},
@@ -727,12 +735,12 @@ class TestRollingTrackerCLI:
         assert "status" in result.stdout
         assert "suggest-roll" in result.stdout
 
-    def test_cli_status_json(self, tmp_path: Path):
+    def test_cli_status_json(self, hedging_dir: Path):
         """status --output json exits 0 and returns valid JSON."""
         # Create empty positions and history files so status returns cleanly
-        positions_file = tmp_path / "positions.yaml"
+        positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text("positions: []\n")
-        history_file = tmp_path / "roll-history.yaml"
+        history_file = hedging_dir / "roll-history.yaml"
         history_file.write_text("rolls: []\n")
 
         result = subprocess.run(
@@ -748,7 +756,7 @@ class TestRollingTrackerCLI:
             cwd=str(Path(__file__).parent.parent.parent),
             env={
                 **__import__("os").environ,
-                "FIN_GURU_HEDGING_DIR": str(tmp_path),
+                "FIN_GURU_DATA_ROOT": str(hedging_dir.parent),
             },
         )
         # The CLI may fail if config file is missing, but if it succeeds
@@ -759,25 +767,10 @@ class TestRollingTrackerCLI:
             assert "positions" in data or "summary" in data
 
 
-class TestEnvVarOverrides:
-    """Verify module-level path constants honor their env var overrides."""
+class TestInstanceDataRoot:
+    """Verify persistence follows the resolved instance root."""
 
-    def test_private_dir_env_var_shifts_hedging_default(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("FIN_GURU_PRIVATE_DIR", str(tmp_path))
-        reloaded = importlib.reload(rolling_tracker)
-        try:
-            assert tmp_path == reloaded.PRIVATE_DIR
-            assert tmp_path / "hedging" == reloaded.HEDGING_DIR
-        finally:
-            monkeypatch.delenv("FIN_GURU_PRIVATE_DIR")
-            importlib.reload(rolling_tracker)
+    def test_data_root_selects_hedging_directory(self, hedging_dir: Path) -> None:
+        save_positions([])
 
-    def test_hedging_dir_env_var_takes_precedence(self, monkeypatch, tmp_path):
-        explicit = tmp_path / "custom-hedging"
-        monkeypatch.setenv("FIN_GURU_HEDGING_DIR", str(explicit))
-        reloaded = importlib.reload(rolling_tracker)
-        try:
-            assert explicit == reloaded.HEDGING_DIR
-        finally:
-            monkeypatch.delenv("FIN_GURU_HEDGING_DIR")
-            importlib.reload(rolling_tracker)
+        assert (hedging_dir / "positions.yaml").exists()

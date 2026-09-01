@@ -213,8 +213,11 @@ def test_probe_account_reports_phase_0_diagnostics():
     assert probe["average_purchase_price_missing_count"] == 1
 
 
-def test_credentials_from_env_reports_missing_keys(monkeypatch: pytest.MonkeyPatch):
+def test_credentials_from_env_reports_missing_keys(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
     """Missing SnapTrade env keys fail closed with key names only."""
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
     for key in (
         "SNAPTRADE_CLIENT_ID",
         "SNAPTRADE_CONSUMER_KEY",

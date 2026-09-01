@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from src.integrations.snaptrade.sync_db import _db_path, _net_positions
+from pathlib import Path
+
+from src.config.instance_paths import InstancePaths, _db_path
+from src.integrations.snaptrade.sync_db import _net_positions
 from src.integrations.snaptrade.sync_transactions_db import _dedupe_key
 
 
@@ -73,10 +76,16 @@ def test_dedupe_key_stable_and_distinguishes_same_day_dividends() -> None:
     assert _dedupe_key("acct1", a) != _dedupe_key("acct1", b)
 
 
-def test_db_path_parses_sqlite_url() -> None:
-    """sqlite:///rel.db -> relative; bare path passes through."""
-    assert str(_db_path("sqlite:///family_office.db")) == "family_office.db"
-    assert str(_db_path("family_office.db")) == "family_office.db"
+def test_db_path_resolves_relative_locations_under_instance_root(
+    tmp_path: Path,
+) -> None:
+    """SQLite URLs and bare paths resolve under the instance root."""
+    paths = InstancePaths(root=tmp_path)
+
+    assert _db_path("sqlite:///family_office.db", paths) == (
+        tmp_path / "family_office.db"
+    )
+    assert _db_path("family_office.db", paths) == tmp_path / "family_office.db"
 
 
 def test_categorize_matches_and_prioritizes_transfers() -> None:

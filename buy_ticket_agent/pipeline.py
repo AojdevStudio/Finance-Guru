@@ -25,6 +25,7 @@ from buy_ticket_agent.state import (
     record_smoke_failure,
     record_smoke_run,
 )
+from src.config.instance_paths import InstancePaths
 
 SMOKE_TICKER = "SPY"
 ITC_PROXY_TICKER = "SP500"
@@ -129,6 +130,19 @@ def _relative(path: Path, root: Path) -> str:
         return str(path.relative_to(root))
     except ValueError:
         return str(path)
+
+
+def _resolve_smoke_paths(
+    instance_paths: InstancePaths | None,
+    project_root: Path | None,
+) -> SmokePaths:
+    """Resolve instance storage while retaining a source-root test override."""
+    if instance_paths is None and project_root is not None:
+        instance_paths = InstancePaths(root=project_root.resolve())
+    paths = SmokePaths.from_instance(instance_paths)
+    if project_root is None:
+        return paths
+    return paths.model_copy(update={"project_root": project_root.resolve()})
 
 
 def _output_length(output: str | bytes | None) -> int:
@@ -401,6 +415,7 @@ def run(
     tickers: list[str] | tuple[str, ...],
     *,
     universe: str = "tradfi",
+    instance_paths: InstancePaths | None = None,
     project_root: Path | None = None,
     timeout_seconds: int = 55,
     days: int = 90,
@@ -409,7 +424,7 @@ def run(
     """Run the deterministic AOJ-460 Layer 3 pipeline and persist its bundle."""
     normalized_tickers = _normalize_tickers(tickers)
     validated_universe = _validate_universe(universe)
-    paths = SmokePaths.from_project_root(project_root)
+    paths = _resolve_smoke_paths(instance_paths, project_root)
     now = _utc_now()
     created_at = now.isoformat()
     run_id = f"layer3-{now:%Y%m%d}-{uuid4().hex[:8]}"
@@ -436,8 +451,8 @@ def run(
         primary_ticker=normalized_tickers[0],
         tickers=list(normalized_tickers),
         universe=validated_universe,
-        bundle_path=_relative(bundle_path, paths.project_root),
-        state_db=_relative(paths.state_db, paths.project_root),
+        bundle_path=_relative(bundle_path, paths.instance_root),
+        state_db=_relative(paths.state_db, paths.instance_root),
         itc=tool_results["itc"],
         risk=tool_results["risk"],
         mom=tool_results["mom"],
@@ -453,7 +468,7 @@ def run(
         primary_ticker=normalized_tickers[0],
         tickers=normalized_tickers,
         status=bundle.status,
-        bundle_path=_relative(bundle_path, paths.project_root),
+        bundle_path=_relative(bundle_path, paths.instance_root),
         payload=payload,
     )
     return payload
@@ -564,9 +579,12 @@ def _make_ticket_payload(
     return payload
 
 
-def run_smoke(project_root: Path | None = None) -> SmokeResult:
+def run_smoke(
+    instance_paths: InstancePaths | None = None,
+    project_root: Path | None = None,
+) -> SmokeResult:
     """Run the AOJ-458 end-to-end smoke path."""
-    paths = SmokePaths.from_project_root(project_root)
+    paths = _resolve_smoke_paths(instance_paths, project_root)
     now = _utc_now()
     created_at = now.isoformat()
     run_id = f"smoke-{now:%Y%m%d}-{uuid4().hex[:8]}"
@@ -590,7 +608,7 @@ def run_smoke(project_root: Path | None = None) -> SmokeResult:
             "created_at": created_at,
             "status": status,
             "draft_path": None,
-            "state_db": _relative(paths.state_db, paths.project_root),
+            "state_db": _relative(paths.state_db, paths.instance_root),
             "trigger": trigger_context,
             "layer3": asdict(cli_result),
             "notification": None,
@@ -608,8 +626,8 @@ def run_smoke(project_root: Path | None = None) -> SmokeResult:
             ticket_id=None,
             status=status,
             draft_path=None,
-            log_path=_relative(log_path, paths.project_root),
-            state_db=_relative(paths.state_db, paths.project_root),
+            log_path=_relative(log_path, paths.instance_root),
+            state_db=_relative(paths.state_db, paths.instance_root),
             notification=None,
         )
 
@@ -639,8 +657,8 @@ def run_smoke(project_root: Path | None = None) -> SmokeResult:
         "ticket_id": ticket_id,
         "created_at": created_at,
         "status": status,
-        "draft_path": _relative(draft_path, paths.project_root),
-        "state_db": _relative(paths.state_db, paths.project_root),
+        "draft_path": _relative(draft_path, paths.instance_root),
+        "state_db": _relative(paths.state_db, paths.instance_root),
         "trigger": trigger_context,
         "layer3": asdict(cli_result),
         "notification": asdict(notification),
@@ -662,13 +680,16 @@ def run_smoke(project_root: Path | None = None) -> SmokeResult:
         run_id=run_id,
         ticket_id=ticket_id,
         status=status,
-        draft_path=_relative(draft_path, paths.project_root),
-        log_path=_relative(log_path, paths.project_root),
-        state_db=_relative(paths.state_db, paths.project_root),
+        draft_path=_relative(draft_path, paths.instance_root),
+        log_path=_relative(log_path, paths.instance_root),
+        state_db=_relative(paths.state_db, paths.instance_root),
         notification=notification,
     )
 
 
-def run_smoke_for_cli(project_root: Path | None = None) -> SmokeResult:
+def run_smoke_for_cli(
+    instance_paths: InstancePaths | None = None,
+    project_root: Path | None = None,
+) -> SmokeResult:
     """CLI wrapper that surfaces BWS access failures to the caller."""
-    return run_smoke(project_root=project_root)
+    return run_smoke(instance_paths=instance_paths, project_root=project_root)

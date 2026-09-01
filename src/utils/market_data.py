@@ -19,11 +19,11 @@ from typing import Any
 
 import requests
 import yfinance as yf
-from dotenv import load_dotenv
 from pydantic import BaseModel
 
-# Load environment variables from .env file
-load_dotenv()
+from src.config.instance_paths import InstancePaths, load_instance_env
+
+load_instance_env(InstancePaths.resolve())
 
 
 class PriceData(BaseModel):

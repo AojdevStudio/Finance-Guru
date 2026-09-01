@@ -302,14 +302,10 @@ class TestGenerateConfigFiles:
         valid_user_data.project_root = str(tmp_path)
         generate_config_files(valid_user_data, tmp_path)
 
-        # Verify private files
-        assert (
-            tmp_path / "fin-guru-private" / "fin-guru" / "data" / "user-profile.yaml"
-        ).exists()
-        assert (tmp_path / "fin-guru-private" / "fin-guru" / "config.yaml").exists()
-        assert (
-            tmp_path / "fin-guru-private" / "fin-guru" / "data" / "system-context.md"
-        ).exists()
+        # Verify instance files
+        assert (tmp_path / "user-profile.yaml").exists()
+        assert (tmp_path / "config.yaml").exists()
+        assert (tmp_path / "system-context.md").exists()
 
         # Verify project-root files
         assert (tmp_path / "CLAUDE.md").exists()
@@ -331,9 +327,7 @@ class TestGenerateConfigFiles:
         valid_user_data.project_root = str(tmp_path)
         generate_config_files(valid_user_data, tmp_path)
 
-        profile = (
-            tmp_path / "fin-guru-private" / "fin-guru" / "data" / "user-profile.yaml"
-        ).read_text()
+        profile = (tmp_path / "user-profile.yaml").read_text()
         assert "TestUser" in profile
         assert "{{user_name}}" not in profile
 
