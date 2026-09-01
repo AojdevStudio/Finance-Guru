@@ -150,8 +150,7 @@ uv run python .claude/skills/FinanceReport/tools/ChartKit.py \
 ```bash
 uv run python .claude/skills/FinanceReport/tools/ReportGenerator.py \
   --ticker TSLA \
-  --portfolio-value 250000 \
-  --output-dir reports/
+  --portfolio-value 250000
 ```
 
 ## Integration Points

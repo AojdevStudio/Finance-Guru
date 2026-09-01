@@ -73,7 +73,8 @@ TSLA, AAPL, MSTR, NFLX, SP500, DXY, XAUUSD, XAGUSD, XPDUSD, PL, HG, NICKEL BTC, 
 
   For supported tickers, run a non-blocking ITC check when creating buy tickets or position recommendations Run: uv run python -m src.analysis.itc_risk_cli TICKER --universe [tradfi|crypto] (choose the matching asset universe) If the ITC score is unavailable, continue without blocking the ticket Add a timing/risk advisory only when the ITC signal is materially elevated Document the ITC result in strategic recommendations when it was used
 
-uv run python -m src.analysis.itc_risk_cli TICKER --universe [tradfi|crypto] uv run python -m src.analysis.itc_risk_cli TICKER --universe [tradfi|crypto] --full-table
+uv run python -m src.analysis.itc_risk_cli TICKER --universe [tradfi|crypto]
+uv run python -m src.analysis.itc_risk_cli TICKER --universe [tradfi|crypto] --full-table
 
 Add this block to buy tickets when ITC risk > 0.7:
 

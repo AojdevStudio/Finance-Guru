@@ -25,9 +25,9 @@ Contains the core Finance Guru system overview:
 
 TypeScript hook that executes at session start and:
 - Reads the fin-core skill content
-- Reads `fin-guru/config.yaml`
+- Reads `config.yaml`
 - Reads `user-profile.yaml`
-- Reads `fin-guru/data/system-context.md`
+- Reads `system-context.md`
 - Loads latest portfolio balances CSV (auto-detects newest)
 - Loads latest portfolio positions CSV (auto-detects newest)
 - Outputs all content as a formatted system-reminder

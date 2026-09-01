@@ -19,7 +19,7 @@ uv run python ReportGenerator.py --ticker TICKER [OPTIONS]
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `--portfolio-value` | 250000 | Portfolio value for position sizing |
-| `--output-dir` | reports | Output directory |
+| `--output-dir` | `reports/` under the instance data root | Output directory |
 
 ## Examples
 
