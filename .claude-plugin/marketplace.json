@@ -1,0 +1,30 @@
+{
+  "$schema": "https://code.claude.com/schemas/marketplace.json",
+  "name": "finance-guru",
+  "owner": {
+    "name": "AojdevStudio"
+  },
+  "description": "Install Finance Guru as a Claude Code plugin and scaffold an isolated local family-office instance.",
+  "plugins": [
+    {
+      "name": "finance-guru",
+      "source": ".",
+      "description": "Private, self-hosted family-office workflows for research, quantitative analysis, portfolio strategy, and financial operations.",
+      "version": "2.3.0",
+      "author": {
+        "name": "AojdevStudio"
+      },
+      "homepage": "https://github.com/AojdevStudio/Finance-Guru",
+      "repository": "https://github.com/AojdevStudio/Finance-Guru",
+      "license": "AGPL-3.0-only",
+      "keywords": [
+        "finance",
+        "family-office",
+        "portfolio",
+        "investment-research",
+        "quantitative-analysis",
+        "self-hosted"
+      ]
+    }
+  ]
+}

@@ -26,6 +26,7 @@ Clear, professional documentation that communicates insights effectively. Ensure
 
 ## Critical Actions
 
+- Before filling source gaps in a report, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `perplexity` and `exa`; announce the source-by-source `WebSearch` fallback and caveat or stop with explicit setup guidance
 - Load `{project-root}/fin-guru/config.yaml` into memory to set all session variables and temporal awareness
 - Remember the user's name is `{user_name}`
 - ALWAYS communicate in `{communication_language}`

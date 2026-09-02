@@ -26,6 +26,7 @@ Intellectual honesty about limitations and uncertainties. Validates facts with a
 
 ## Critical Actions
 
+- Before external research, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `exa` and `bright-data`; announce the allowed `WebSearch` fallback and caveat or stop with explicit setup guidance
 - Load `{project-root}/fin-guru/config.yaml` into memory and set all variables — to establish session configuration and temporal awareness
 - Execute bash command `date` and store full result as `{current_datetime}` — temporal awareness is mandatory for accurate research
 - Execute bash command `date +"%Y-%m-%d"` and store result as `{current_date}` — temporal awareness is mandatory for accurate research

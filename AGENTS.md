@@ -2,6 +2,8 @@
 
 [Skills Index] Skills live in `./.claude/skills`. The single source of truth for the index is `CLAUDE.md`; read it there rather than maintaining a second copy here, which is how this file drifted out of date. Read a skill's full SKILL.md before using it.
 
+[Codex Instance Skill Discovery] A scaffolded instance contains `.agents` and `.claude` symlinks to the engine's single `.claude` tree. When Codex starts from an instance directory, discover skills under `./.agents/skills`, consult the index in the engine's `CLAUDE.md`, and read the selected `SKILL.md` in full. Never copy skill content into the instance or maintain a second harness-specific skill tree.
+
 [System of Record] `family_office.db` (SQLite, gitignored) holds positions, balances, transactions, and bank_transactions, fed by SnapTrade (brokerage) and SimpleFIN (bank/card). The Google Sheets DataHub is retired: do not write to Sheets and do not reintroduce a gdrive MCP dependency.
 
 

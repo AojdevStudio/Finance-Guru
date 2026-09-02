@@ -33,6 +33,7 @@ def _fake_repo(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (repo / "CLAUDE.md").write_text("# Engine instructions\n", encoding="utf-8")
+    (repo / "AGENTS.md").write_text("# Engine agent instructions\n", encoding="utf-8")
     return repo
 
 
@@ -161,13 +162,20 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
         root / ".gitignore",
         paths.env_file,
         paths.profile,
+        root / "AGENTS.md",
         root / "CLAUDE.md",
     )
     assert all(path.is_file() for path in expected_files)
     assert (root / ".gitignore").read_text(encoding="utf-8") == (
-        ".env\n.DS_Store\n*.db-journal\n*.db-wal\n*.db-shm\n.claude\n.venv/\n"
+        ".env\n.DS_Store\n*.db-journal\n*.db-wal\n*.db-shm\n.agents\n"
+        ".claude\n.venv/\n"
         "__pycache__/\n"
     )
+    assert (root / ".agents").is_symlink()
+    assert (root / ".agents").resolve() == (repo / ".claude").resolve()
+    assert (root / ".agents" / "skills").resolve() == (
+        repo / ".claude" / "skills"
+    ).resolve()
     assert (root / ".claude").is_symlink()
     assert (root / ".claude").resolve() == (repo / ".claude").resolve()
     assert (root / ".git").is_dir()
@@ -192,6 +200,10 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
     assert claude_text.index("# Instance") < claude_text.index(
         "This directory is a Finance Guru instance"
     )
+    agents_text = (root / "AGENTS.md").read_text(encoding="utf-8")
+    assert str(repo / "AGENTS.md") in agents_text
+    assert ".agents/skills/" in agents_text
+    assert "Do not\ncopy or fork skill content" in agents_text
 
     assert _git(root, "rev-list", "--count", "HEAD") == "1"
     assert _git(root, "log", "-1", "--format=%s") == "scaffold instance"
@@ -234,6 +246,18 @@ def test_real_claude_directory_fails_and_names_path(tmp_path: Path) -> None:
     repo = _fake_repo(tmp_path)
     root = tmp_path / "instance"
     conflict = root / ".claude"
+    conflict.mkdir(parents=True)
+
+    result = _run_init(root, repo)
+
+    assert result.returncode != 0
+    assert str(conflict) in result.stderr
+
+
+def test_real_agents_directory_fails_and_names_path(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    conflict = root / ".agents"
     conflict.mkdir(parents=True)
 
     result = _run_init(root, repo)

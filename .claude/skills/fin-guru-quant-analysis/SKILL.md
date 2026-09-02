@@ -7,6 +7,10 @@ description: Perform quantitative analysis of returns, correlations, risk factor
 
 Execute structured quantitative analysis workflows with statistical validation.
 
+## Capability probe
+
+Before collecting external fundamentals or filings, follow the shared **[paid MCP capability probe](../_shared/PaidMcpCapabilityProbe.md)**. This workflow wants `financial-datasets` for normalized statements and filing data. If it is absent, state whether primary-source `WebSearch` can support the requested model with extra validation; otherwise stop and name the missing MCP and setup action.
+
 ## Workflow Steps
 
 1. **Plan** — Define statistical modeling objectives, metrics, and assumptions

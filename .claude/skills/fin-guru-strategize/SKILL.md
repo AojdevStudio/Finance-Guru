@@ -7,6 +7,10 @@ description: Develop comprehensive portfolio strategies from quantitative analys
 
 Convert quantitative analysis into actionable strategic recommendations.
 
+## Capability probe
+
+Before adding current external assumptions, follow the shared **[paid MCP capability probe](../_shared/PaidMcpCapabilityProbe.md)**. This workflow wants `exa` for broad current-market discovery and `financial-datasets` for normalized company fundamentals. Announce any primary-source `WebSearch` fallback and its quality limits; stop if the requested strategy depends on data the fallback cannot verify.
+
 ## Workflow Steps
 
 1. **Review Analysis** — Ingest quantitative outputs (risk metrics, momentum, correlations)

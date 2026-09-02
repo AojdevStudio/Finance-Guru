@@ -7,6 +7,10 @@ description: Execute comprehensive compliance reviews for Finance Guru deliverab
 
 Structured compliance review workflow for Finance Guru outputs.
 
+## Capability probe
+
+Before validating an externally sourced filing or issuer claim, follow the shared **[paid MCP capability probe](../_shared/PaidMcpCapabilityProbe.md)**. This workflow wants `financial-datasets` for normalized filing data. If it is absent, announce a primary-source regulator/issuer `WebSearch` fallback and the manual-validation caveat, or stop when the claim cannot be verified reliably.
+
 ## Review Scope
 
 1. **Disclaimer Verification** — Educational-only positioning present and correct
