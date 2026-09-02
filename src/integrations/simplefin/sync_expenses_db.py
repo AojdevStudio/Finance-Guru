@@ -237,6 +237,13 @@ def sync(
     accounts = payload.get("accounts") or []
     errors = payload.get("errors") or []
     errlist = payload.get("errlist") or []
+    partial_errors = len(errors) + len(errlist)
+    if partial_errors:
+        details = "; ".join(str(item) for item in [*errors, *errlist])
+        raise SimpleFinSyncError(
+            f"SimpleFIN reported {partial_errors} partial account error(s); "
+            f"sync aborted: {details}"
+        )
     rows: list[tuple[Any, ...]] = []
     transactions_seen = 0
     skipped_missing_id = 0
@@ -279,7 +286,7 @@ def sync(
         "inserted": inserted,
         "updated": updated,
         "skipped_missing_id": skipped_missing_id,
-        "partial_errors": len(errors) + len(errlist),
+        "partial_errors": partial_errors,
         "by_category": by_category,
     }
 

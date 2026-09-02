@@ -63,6 +63,41 @@ describe("SimpleFIN deposit trigger", () => {
     expect(detections[0].sourceAccountKey).not.toContain("account-default");
   });
 
+  test("filters unsettled deposits before detection", async () => {
+    const seenStore = createMemorySeenStore();
+    const { detections, skippedDuplicates } = await findNewDepositDetections(
+      accountSet([
+        transaction({
+          id: "tx-pending",
+          amount: "5000.00",
+          posted: 1_779_984_000,
+          pending: true,
+        }),
+        transaction({
+          id: "tx-zero-posted",
+          amount: "4500.00",
+          posted: 0,
+          pending: false,
+        }),
+        transaction({
+          id: "tx-settled",
+          amount: "3100.00",
+          posted: 1_779_984_000,
+          pending: false,
+        }),
+      ]),
+      seenStore,
+    );
+
+    expect(skippedDuplicates).toBe(0);
+    expect(detections).toHaveLength(1);
+    expect(detections[0]).toMatchObject({
+      amount: "3100.00",
+      posted: 1_779_984_000,
+      pending: false,
+    });
+  });
+
   test("suppresses duplicate transaction ids within a single poll response", async () => {
     const seenStore = createMemorySeenStore();
     const { detections, skippedDuplicates } = await findNewDepositDetections(

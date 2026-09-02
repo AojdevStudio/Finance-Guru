@@ -2,12 +2,15 @@ import sqlite3
 from copy import deepcopy
 from pathlib import Path
 
+import pytest
+
 from src.integrations.simplefin import sync_expenses_db
 from src.integrations.simplefin.categorize import (
     NON_SPEND_CATEGORIES,
     categorize_expense,
 )
 from src.integrations.simplefin.sync_expenses_db import (
+    SimpleFinSyncError,
     normalize_transaction,
     resolve_direction,
     sync,
@@ -143,6 +146,29 @@ def test_sync_inserts_updates_and_promotes_pending_transaction(tmp_path) -> None
         count = conn.execute("SELECT COUNT(*) FROM bank_transactions").fetchone()[0]
     assert pending_date == "2024-01-02"
     assert count == 2
+
+
+def test_sync_rejects_partial_failure_payload_before_writing(tmp_path) -> None:
+    database_url = f"sqlite:///{tmp_path}/t.db"
+    payload = {
+        "errors": [
+            {
+                "code": "act.failed",
+                "msg": "Account temporarily unavailable",
+                "account_id": "ACT-failed",
+            }
+        ],
+        "errlist": ["Connection refresh failed"],
+        "accounts": deepcopy(SFIN_ACCOUNT_SET["accounts"]),
+    }
+
+    def fake_dump(months, app_dir):
+        return payload
+
+    with pytest.raises(SimpleFinSyncError, match="2 partial account error"):
+        sync(database_url, dump_provider=fake_dump)
+
+    assert not (tmp_path / "t.db").exists()
 
 
 def test_resolve_direction_handles_fidelity_card_and_transfer_wording() -> None:
