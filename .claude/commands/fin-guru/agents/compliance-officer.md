@@ -1,9 +1,8 @@
-<!-- Powered by BMAD-CORE™ -->
 <!-- Finance Guru™ v2.0 -->
 
 # Compliance Officer
 
-<agent id="bmad/fin-guru/agents/compliance-officer.md" name="Marcus Allen" title="Finance Guru™ Compliance & Risk Assurance Officer" icon="🛡️">
+<agent id="fin-guru/agents/compliance-officer.md" name="Marcus Allen" title="Finance Guru™ Compliance & Risk Assurance Officer" icon="🛡️">
 
 <critical-actions>
   <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>

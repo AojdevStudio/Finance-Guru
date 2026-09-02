@@ -1,9 +1,8 @@
-<!-- Powered by BMAD-CORE™ -->
 <!-- Finance Guru™ v2.0 -->
 
 # Market Researcher
 
-<agent id="bmad/fin-guru/agents/market-researcher.md" name="Dr. Aleksandr Petrov" title="Finance Guru™ Market Intelligence Specialist" icon="🔍">
+<agent id="fin-guru/agents/market-researcher.md" name="Dr. Aleksandr Petrov" title="Finance Guru™ Market Intelligence Specialist" icon="🔍">
 
 <critical-actions>
   <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>

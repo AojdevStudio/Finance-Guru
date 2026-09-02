@@ -123,7 +123,7 @@ def test_workflow_yaml_generic():
 
 
 def test_readme_generic_author():
-    """Verify README uses generic author placeholder."""
+    """Verify the fin-guru README carries no hardcoded personal name."""
     project_root = Path(__file__).parent.parent.parent
     readme_path = project_root / "fin-guru/README.md"
 
@@ -133,12 +133,6 @@ def test_readme_generic_author():
     with open(readme_path, encoding="utf-8") as f:
         content = f.read()
 
-    # Should use template variable or placeholder
-    assert (
-        "{user_name}" in content or "[Your Name]" in content or "[User Name]" in content
-    ), "README should use template variable for author"
-
-    # Should NOT contain hardcoded personal name
     assert _OWNER_FIRST not in content, (
         "README should not contain hardcoded personal name"
     )

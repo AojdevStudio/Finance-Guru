@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Finance Guru™ - {{possessive_name}} private AI-powered family office system built on BMAD-CORE™ v6.
+Finance Guru™ - {{possessive_name}} private family office: a Claude Code and Codex plugin over typed Python calculators and a private SQLite ledger.
 
 *For Claude Code only*: ALWAYS use the `AskUserQuestion` tool when posing questions to the user.
 *For Claude Code only*: ALWAYS use the `AskUserQuestion` tool when posing questions to the user.
@@ -92,7 +92,7 @@ done
 
 ## Version Info
 
-**Finance Guru™**: v2.0.0 | **BMAD-CORE™**: v6.0.0 | **Build**: 2025-10-08 | **Updated**: {{date}} | **Tools**: 8/11 complete
+**Updated**: {{date}}
 
 ---
 
