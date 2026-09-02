@@ -220,7 +220,7 @@ export async function runSummarySection(state: OnboardingState): Promise<Onboard
         console.log('✅ Configuration files generated successfully');
         console.log('');
         console.log('Files created:');
-        console.log('  ✓ fin-guru/data/user-profile.yaml');
+        console.log('  ✓ user-profile.yaml');
         console.log('  ✓ fin-guru/config.yaml');
         console.log('  ✓ fin-guru/data/system-context.md');
         console.log('');

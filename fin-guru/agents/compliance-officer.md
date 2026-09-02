@@ -88,7 +88,7 @@
   <execution-steps>
     <step n="1" name="Identify Scope">
       Determine which portfolio positions have ITC coverage.
-      Use: uv run python -m src.analysis.itc_risk_cli --list-supported
+      Use: uv run python -m src.analysis.itc_risk_cli --list-supported tradfi
       Cross-reference with current holdings from the positions table in family_office.db.
     </step>
 

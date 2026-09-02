@@ -150,6 +150,17 @@ class TestOnboardingStructure:
         for func_name in expected_functions:
             assert func_name in content, f"yaml-generator.ts should export {func_name}"
 
+    def test_yaml_generator_uses_instance_root_paths(self, onboarding_dir):
+        """Profile and import paths should match the instance-root contract."""
+        generator_file = onboarding_dir / "modules" / "yaml-generator.ts"
+        content = generator_file.read_text()
+
+        assert "join(outputDir, 'user-profile.yaml')" in content
+        assert "'fin-guru', 'data', 'user-profile.yaml'" not in content
+        assert "join(outputDir, 'imports')" in content
+        assert "join(outputDir, 'imports', 'transactions')" in content
+        assert "join(outputDir, 'imports', 'retirement')" in content
+
     def test_index_entry_point_content(self, onboarding_dir):
         """Test that index.ts has main function and displays"""
         index_file = onboarding_dir / "index.ts"

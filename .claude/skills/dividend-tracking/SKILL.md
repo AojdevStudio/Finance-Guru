@@ -84,7 +84,7 @@ Dividend income against margin interest is the coverage ratio that drives the sc
 
 ## CSV fallback
 
-`imports/dividend.csv` (the Fidelity dividend view export) remains a manual reconciliation source if the live activities sync is unavailable. It is not the primary path.
+`imports/Dividend_Positions_MMM-DD-YYYY.csv` (the Fidelity dividend view export) remains a manual reconciliation source if the live activities sync is unavailable. It is not the primary path.
 
 ## Reference Files
 

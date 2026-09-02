@@ -14,7 +14,17 @@ Regenerate reports for multiple tickers using parallel subagents.
 
 ## Workflow Steps
 
-### Step 1: Identify Tickers
+### Step 1: Capture Batch Date
+
+Compute the simulation date once before launching any subagents:
+
+```bash
+simulation_date=$(date +%Y-%m-%d)
+```
+
+Store that value as `{simulation_date}` and reuse it for every output in the batch.
+
+### Step 2: Identify Tickers
 
 **Batch 1 (Original 8):**
 - CRWD, BRK.B, APLD, IREN, GOOG, MSFT, SOFI, VTV
@@ -22,7 +32,7 @@ Regenerate reports for multiple tickers using parallel subagents.
 **Batch 2 (Added 9):**
 - VGT, NVDA, AVGO, PLTR, META, VRT, AMZN, FTNT, ARM
 
-### Step 2: Launch Parallel Subagents
+### Step 3: Launch Parallel Subagents
 
 Use the Task tool to launch one subagent per ticker:
 
@@ -53,7 +63,7 @@ for ticker in ["CRWD", "BRKB", "APLD", "IREN", "GOOG", "MSFT", "SOFI", "VTV"]:
            - Build comprehensive 8-10 page report
            - Use VGT-style header
            - Include all quant data
-           - Save to reports/{ticker}-analysis-2025-12-18.pdf
+           - Save to reports/{ticker}-analysis-{simulation_date}.pdf
 
         Follow the FinanceReport skill workflows.
         Replace existing PDF if present.
@@ -63,14 +73,14 @@ for ticker in ["CRWD", "BRKB", "APLD", "IREN", "GOOG", "MSFT", "SOFI", "VTV"]:
     )
 ```
 
-### Step 3: Monitor Completion
+### Step 4: Monitor Completion
 
 Each subagent will:
 1. Complete full research workflow
 2. Generate PDF report
 3. Report back with summary
 
-### Step 4: Validate All Reports
+### Step 5: Validate All Reports
 
 After all subagents complete:
 
@@ -80,13 +90,14 @@ ls -la reports/*.pdf
 
 # Verify file sizes
 for f in reports/*.pdf; do
-    echo "$f: $(stat -f%z "$f") bytes"
+    size=$(wc -c < "$f")
+    echo "$f: $size bytes"
 done
 ```
 
-### Step 5: Update Watchlist Document (Optional)
+### Step 6: Update Watchlist Document (Optional)
 
-Update `analysis/2026-watchlist-2025-12-18.md` with:
+Update `analysis/2026-watchlist-{simulation_date}.md` with:
 - Verdict summaries for each ticker
 - Links to PDF reports
 - Consolidated recommendations
