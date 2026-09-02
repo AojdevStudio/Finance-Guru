@@ -103,6 +103,15 @@ def _run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _reject_git_remotes(root: Path) -> None:
+    remote_names = _run_git(root, "remote").stdout.splitlines()
+    if remote_names:
+        names = ", ".join(remote_names)
+        raise RuntimeError(
+            f"{root} has git remote(s): {names}; the instance must have no remote"
+        )
+
+
 def _initialize_git(path: Path) -> StepResult:
     existed = path.exists()
     root = path.parent
@@ -115,6 +124,7 @@ def _initialize_git(path: Path) -> StepResult:
             env=_git_env(),
         )
 
+    _reject_git_remotes(root)
     commit_count = int(_run_git(root, "rev-list", "--count", "--all").stdout)
     if commit_count == 0:
         _run_git(root, "add", "-A")
@@ -133,13 +143,37 @@ def _initialize_git(path: Path) -> StepResult:
 
 
 def _instance_env(example: str) -> str:
-    lines = example.splitlines()
-    for index, line in enumerate(lines):
-        if line.startswith("FIN_GURU_DATA_ROOT="):
-            lines[index] = "FIN_GURU_DATA_ROOT="
-            break
-    else:
-        lines.append("FIN_GURU_DATA_ROOT=")
+    lines: list[str] = []
+    found_data_root = False
+    for line in example.splitlines():
+        if line.lstrip().startswith("#") or "=" not in line:
+            lines.append(line)
+            continue
+
+        key, value = line.split("=", 1)
+        normalized_value = value.strip()
+        if (
+            len(normalized_value) >= 2
+            and normalized_value[0] == normalized_value[-1]
+            and normalized_value[0] in {'"', "'"}
+        ):
+            normalized_value = normalized_value[1:-1]
+
+        if key == "FIN_GURU_DATA_ROOT":
+            value = ""
+            found_data_root = True
+        elif (
+            not normalized_value
+            or "your_" in normalized_value
+            or normalized_value.endswith("_here")
+            or (normalized_value.startswith("${") and normalized_value.endswith("}"))
+        ):
+            value = ""
+
+        lines.append(f"{key}={value}" if value else f"# {key}=")
+
+    if not found_data_root:
+        lines.append("# FIN_GURU_DATA_ROOT=")
     return "\n".join(lines) + "\n"
 
 
@@ -252,6 +286,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
     paths = InstancePaths(root=args.root.expanduser().resolve())
     repo = args.repo.expanduser().resolve()
+
+    if (paths.root / ".git").exists():
+        _reject_git_remotes(paths.root)
 
     for step in _build_plan(paths, repo):
         result = step.action(step.target)

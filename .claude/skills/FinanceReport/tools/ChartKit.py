@@ -47,17 +47,17 @@ COLORS = {
 }
 
 
-def run_cli_tool(tool_path: str, args: list[str]) -> dict[str, Any]:
+def run_cli_tool(module_name: str, args: list[str]) -> dict[str, Any]:
     """Run a Finance Guru CLI tool and parse JSON output."""
-    cmd = ["uv", "run", "python", tool_path] + args + ["--output", "json"]
+    cmd = [sys.executable, "-m", module_name] + args + ["--output", "json"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return json.loads(result.stdout)
     except subprocess.CalledProcessError as e:
-        print(f"Error running {tool_path}: {e.stderr}")
+        print(f"Error running {module_name}: {e.stderr}")
         return {}
     except json.JSONDecodeError:
-        print(f"Error parsing JSON from {tool_path}")
+        print(f"Error parsing JSON from {module_name}")
         return {}
 
 
@@ -317,7 +317,7 @@ Examples:
         else:
             # Use momentum CLI to get price data
             data = run_cli_tool(
-                "src/utils/momentum_cli.py", [args.ticker, "--days", str(args.days)]
+                "src.utils.momentum_cli", [args.ticker, "--days", str(args.days)]
             )
 
         title = args.title or f"{args.ticker} - {args.days} Day Price History"
@@ -329,7 +329,7 @@ Examples:
         else:
             # Use risk metrics CLI
             data = run_cli_tool(
-                "src/analysis/risk_metrics_cli.py", [args.ticker, "--days", "252"]
+                "src.analysis.risk_metrics_cli", [args.ticker, "--days", "252"]
             )
 
         title = args.title or f"{args.ticker} - Risk Metrics"
@@ -342,9 +342,7 @@ Examples:
         tickers = args.tickers.split(",") if args.tickers else [args.ticker]
 
         # Use correlation CLI
-        data = run_cli_tool(
-            "src/analysis/correlation_cli.py", tickers + ["--days", "252"]
-        )
+        data = run_cli_tool("src.analysis.correlation_cli", tickers + ["--days", "252"])
 
         title = args.title or "Correlation Matrix"
         buffer = create_heatmap(
@@ -360,7 +358,7 @@ Examples:
             data = json.loads(args.data)
         else:
             data = run_cli_tool(
-                "src/utils/momentum_cli.py", [args.ticker, "--days", str(args.days)]
+                "src.utils.momentum_cli", [args.ticker, "--days", str(args.days)]
             )
 
         title = args.title or f"{args.ticker} - Technical Analysis"

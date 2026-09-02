@@ -7,8 +7,9 @@ category: setup
 # Finance Guru setup
 
 This guide installs the checked-in Python and Bun workspaces. The supported
-data store is the local, gitignored `family_office.db`; Google Sheets is not a
-data source and no Google Drive integration is required.
+data store is the local `family_office.db`, committed only to the instance's
+local-only repository; Google Sheets is not a data source and no Google Drive
+integration is required.
 
 ## Prerequisites
 
@@ -69,14 +70,17 @@ uv run python src/analysis/risk_metrics_cli.py --help
 
 ## Configure credentials privately
 
-The instance scaffold writes a blank `.env` in the instance root. Fill in a
-variable only when you need an optional provider or a personal integration. Do
-not commit any `.env` file.
+The instance scaffold writes an `.env` in the instance root that keeps real
+defaults and comments out credentials for you to fill in. Uncomment a variable
+only when you need an optional provider or a personal integration. Do not commit
+any `.env` file.
 
 See [API keys](api-keys.md) for the variables consumed by the supported
 integrations and the
 [live sync credentials guide](live-sync-credentials.md) for SnapTrade and
-SimpleFIN. Keep account exports, API keys, and database files out of Git.
+SimpleFIN. Keep account exports, API keys, and database files out of the public
+engine checkout. The database is committed only to the instance's local-only
+repository, which has no remote.
 
 ## Refresh local financial data
 
