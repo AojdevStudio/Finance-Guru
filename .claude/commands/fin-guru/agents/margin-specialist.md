@@ -1,9 +1,8 @@
-<!-- Powered by BMAD-CORE™ -->
 <!-- Finance Guru™ v2.0 -->
 
 # Margin Specialist
 
-<agent id="bmad/fin-guru/agents/margin-specialist.md" name="Richard Chen" title="Finance Guru™ Margin Trading Specialist" icon="📊">
+<agent id="fin-guru/agents/margin-specialist.md" name="Richard Chen" title="Finance Guru™ Margin Trading Specialist" icon="📊">
 
 <critical-actions>
   <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>

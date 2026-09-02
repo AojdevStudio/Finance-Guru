@@ -18,8 +18,8 @@ integration is required.
 - Git
 - Bun only when working on `apps/simplefin-sync/`
 
-The transitional Claude Code skills and hooks are not required to run the
-Python analysis engine.
+The Claude Code plugin is not required to run the Python analysis engine from
+a shell.
 
 ## Install
 

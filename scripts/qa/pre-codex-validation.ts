@@ -150,11 +150,6 @@ console.log('💡 Checking skills/commands...');
 checkDirectory('.claude/skills', 'Skills directory exists', false);
 checkDirectory('.claude/commands', 'Commands directory exists', true);
 
-// 11. Version Information
-console.log('🏷️  Checking version information...');
-checkFileContent('CLAUDE.md', 'v2.0.0', 'Finance Guru version is v2.0.0');
-checkFileContent('CLAUDE.md', 'BMAD-CORE™', 'BMAD-CORE reference exists');
-
 // 12. Recent completions validation
 console.log('✅ Validating recent task completions...');
 

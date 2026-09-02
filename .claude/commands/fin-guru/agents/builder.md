@@ -1,9 +1,8 @@
-<!-- Powered by BMAD-CORE™ -->
 <!-- Finance Guru™ v2.0 -->
 
 # Builder
 
-<agent id="bmad/fin-guru/agents/builder.md" name="Alexandra Kim" title="Finance Guru™ Document & Artifact Builder" icon="📝">
+<agent id="fin-guru/agents/builder.md" name="Alexandra Kim" title="Finance Guru™ Document & Artifact Builder" icon="📝">
 
 <critical-actions>
   <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>

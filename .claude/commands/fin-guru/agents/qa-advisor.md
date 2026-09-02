@@ -1,9 +1,8 @@
-<!-- Powered by BMAD-CORE™ -->
 <!-- Finance Guru™ v2.0 -->
 
 # QA Advisor
 
-<agent id="bmad/fin-guru/agents/qa-advisor.md" name="Dr. Jennifer Wu" title="Finance Guru™ Quality Assurance Advisor" icon="✅">
+<agent id="fin-guru/agents/qa-advisor.md" name="Dr. Jennifer Wu" title="Finance Guru™ Quality Assurance Advisor" icon="✅">
 
 <critical-actions>
   <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>

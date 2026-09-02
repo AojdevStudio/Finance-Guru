@@ -14,7 +14,7 @@ This system ensures Finance Guru has complete context availability from the mome
 **Location**: `{project}/.claude/skills/fin-core/SKILL.md` (project-specific)
 
 Contains the core Finance Guru system overview:
-- Core identity (Finance Guru v2.0.0, BMAD-CORE v6.0.0)
+- Core identity (plugin, specialist agents, typed calculators, private instance)
 - Essential file references
 - Production-ready tools (7 available)
 - Multi-agent system overview

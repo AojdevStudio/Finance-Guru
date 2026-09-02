@@ -1,20 +1,13 @@
 ---
-title: Legacy agent-harness material
-description: Status of the transitional Claude Code skills and hooks
+title: Skills across harnesses
+description: Where skills live and how Claude Code and Codex reach them
 category: reference
 ---
 
-# Legacy agent-harness material
+# Skills across harnesses
 
-The checked-in `.claude/` skills, commands, and hooks are transitional
-implementation material. They are not part of the supported public setup path
-and are not a cross-harness distribution mechanism.
+Skills live in one place, `.claude/skills/<name>/SKILL.md`, and ship in the plugin. Claude Code discovers them from the plugin or from the checkout's `.claude` tree. Codex reaches the same files through the `.agents` symlink that `src.cli.instance_init` creates in a checkout-mode instance, so a Codex session started from the instance discovers skills under `./.agents/skills`. A plugin-mode instance omits the symlink because the installed plugin is the source of skills.
 
-In particular, this repository does not contain tracked `.agents/skills/` or
-`.pi/skills/` symlink trees. Do not create those paths by following older
-documentation. A harness-specific integration belongs in an issue while the
-standalone-app transition described in [the vision](../VISION.md) is underway.
+This repository tracks no `.agents/` or `.pi/` tree. Do not create one. A harness that needs a different discovery path gets an issue, not a second copy of the skills.
 
-The stable public surfaces are the Python analysis engine, its documented
-commands, tests, and operational repository documentation. See
-[Contributing](../CONTRIBUTING.md) for the current contribution boundaries.
+See [AGENTS.md](../../AGENTS.md) for the operating rules every harness follows.

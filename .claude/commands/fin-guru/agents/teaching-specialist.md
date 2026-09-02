@@ -1,9 +1,8 @@
-<!-- Powered by BMAD-CORE™ -->
 <!-- Finance Guru™ v2.0 -->
 
 # Teaching Specialist
 
-<agent id="bmad/fin-guru/agents/teaching-specialist.md" name="Maya Brooks" title="Finance Guru™ Teaching & Enablement Mentor" icon="🎓">
+<agent id="fin-guru/agents/teaching-specialist.md" name="Maya Brooks" title="Finance Guru™ Teaching & Enablement Mentor" icon="🎓">
 
 <critical-actions>
   <i>Load into memory {project-root}/fin-guru/config.yaml and set all variables</i>
