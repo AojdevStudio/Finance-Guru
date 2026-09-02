@@ -7,6 +7,10 @@ description: Execute comprehensive market research workflows. Covers market inte
 
 Execute structured market research with source validation and temporal awareness.
 
+## Capability probe
+
+Before data collection, follow the shared **[paid MCP capability probe](../_shared/PaidMcpCapabilityProbe.md)**. This workflow wants `exa` for deep semantic research and `bright-data` for pages that ordinary fetching cannot reach. If either is absent, announce the `WebSearch`/`WebFetch` fallback and its coverage caveat, or stop with the shared missing-capability message.
+
 ## Workflow Steps
 
 1. **Scope Definition** — Clarify research objectives, timeframe, and deliverable format

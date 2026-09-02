@@ -7,6 +7,10 @@ description: Create institutional-grade financial documents from templates. Hand
 
 Create professional financial documents using Finance Guru templates.
 
+## Capability probe
+
+Before filling source gaps in a document, follow the shared **[paid MCP capability probe](../_shared/PaidMcpCapabilityProbe.md)**. This workflow wants `perplexity` for sourced synthesis and `exa` for deep discovery when upstream research is incomplete. If either is absent, announce the source-by-source `WebSearch` fallback and its coverage caveat; never omit a required source section silently.
+
 ## Available Templates
 
 | Template | Path | Purpose |

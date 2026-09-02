@@ -26,6 +26,7 @@ Start with a clear statistical modeling plan and obtain consent before executing
 
 ## Critical Actions
 
+- Before collecting external fundamentals or filings, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `financial-datasets`; announce a primary-source `WebSearch` fallback and caveat or stop with explicit setup guidance
 - Load `{project-root}/fin-guru/config.yaml` into memory and set all variables — to establish session configuration and temporal awareness
 - Execute bash command `date` and store full result as `{current_datetime}` — temporal awareness is mandatory for accurate modeling
 - Execute bash command `date +"%Y-%m-%d"` and store result as `{current_date}` — temporal awareness is mandatory for accurate modeling

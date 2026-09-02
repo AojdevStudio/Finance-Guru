@@ -7,6 +7,10 @@ description: Generate institutional-quality PDF analysis reports for stocks and 
 
 Generate comprehensive 8-10 page PDF investment analysis reports with Finance Guru branding.
 
+## Capability probe
+
+Before routing a report workflow, follow the shared **[paid MCP capability probe](../_shared/PaidMcpCapabilityProbe.md)**. Reports want `perplexity` for sourced sentiment synthesis and `exa` for deep catalyst/risk discovery. If either is absent, announce the `WebSearch`/`WebFetch` fallback and its coverage caveat, or stop if the requested research depth cannot be met.
+
 ## Workflow Routing
 
 **When executing a workflow, output this notification directly:**

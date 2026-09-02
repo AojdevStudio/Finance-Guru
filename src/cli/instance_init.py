@@ -21,6 +21,7 @@ GITIGNORE = """.env
 *.db-journal
 *.db-wal
 *.db-shm
+.agents
 .claude
 .venv/
 __pycache__/
@@ -156,6 +157,21 @@ Example: `uv run python -m src.integrations.refresh_all --show`
 """
 
 
+def _instance_agent_instructions(repo: Path) -> str:
+    return f"""# Finance Guru instance
+
+Before doing Finance Guru work, read `{repo / "AGENTS.md"}` in full.
+
+The engine lives at `{repo}`. This instance's `.agents` symlink points to
+`{repo / ".claude"}`, so Codex discovers the canonical skills under
+`.agents/skills/`. Read a skill's complete `SKILL.md` before using it. Do not
+copy or fork skill content into this instance.
+
+Run engine commands from this instance as `uv run python -m src.<tool>` so all
+private paths resolve from the current directory.
+"""
+
+
 def _instance_pyproject(repo: Path) -> str:
     return f"""[project]
 name = "finance-guru-instance"
@@ -202,10 +218,15 @@ def _build_plan(paths: InstancePaths, repo: Path) -> list[PlanStep]:
             ),
             PlanStep(paths.env_file, _write_text(env_content)),
             PlanStep(paths.profile, _write_text(USER_PROFILE)),
+            PlanStep(paths.root / ".agents", _create_symlink(repo / ".claude")),
             PlanStep(paths.root / ".claude", _create_symlink(repo / ".claude")),
             PlanStep(
                 paths.root / "CLAUDE.md",
                 _write_text(_instance_instructions(repo)),
+            ),
+            PlanStep(
+                paths.root / "AGENTS.md",
+                _write_text(_instance_agent_instructions(repo)),
             ),
             PlanStep(paths.root / ".git", _initialize_git),
             PlanStep(paths.root / ".venv", _sync_environment),

@@ -1,0 +1,65 @@
+{
+  "name": "finance-guru",
+  "displayName": "Finance Guru",
+  "version": "2.3.0",
+  "description": "Private, self-hosted family-office workflows for research, quantitative analysis, portfolio strategy, and financial operations.",
+  "author": {
+    "name": "AojdevStudio"
+  },
+  "homepage": "https://github.com/AojdevStudio/Finance-Guru",
+  "repository": "https://github.com/AojdevStudio/Finance-Guru",
+  "license": "AGPL-3.0-only",
+  "keywords": [
+    "finance",
+    "family-office",
+    "portfolio",
+    "investment-research",
+    "quantitative-analysis",
+    "self-hosted"
+  ],
+  "commands": [
+    "./.claude/commands/fin-guru/agents/builder.md",
+    "./.claude/commands/fin-guru/agents/compliance-officer.md",
+    "./.claude/commands/fin-guru/agents/dividend-specialist.md",
+    "./.claude/commands/fin-guru/agents/finance-orchestrator.md",
+    "./.claude/commands/fin-guru/agents/margin-specialist.md",
+    "./.claude/commands/fin-guru/agents/market-researcher.md",
+    "./.claude/commands/fin-guru/agents/onboarding-specialist.md",
+    "./.claude/commands/fin-guru/agents/qa-advisor.md",
+    "./.claude/commands/fin-guru/agents/quant-analyst.md",
+    "./.claude/commands/fin-guru/agents/strategy-advisor.md",
+    "./.claude/commands/fin-guru/agents/teaching-specialist.md"
+  ],
+  "agents": [
+    "./.claude/agents/fg-builder.md",
+    "./.claude/agents/fg-compliance-officer.md",
+    "./.claude/agents/fg-dividend-specialist.md",
+    "./.claude/agents/fg-finance-orchestrator.md",
+    "./.claude/agents/fg-margin-specialist.md",
+    "./.claude/agents/fg-market-researcher.md",
+    "./.claude/agents/fg-onboarding-specialist.md",
+    "./.claude/agents/fg-qa-advisor.md",
+    "./.claude/agents/fg-quant-analyst.md",
+    "./.claude/agents/fg-strategy-advisor.md",
+    "./.claude/agents/fg-teaching-specialist.md"
+  ],
+  "skills": [
+    "./.claude/skills/compliance-scan",
+    "./.claude/skills/dividend-tracking",
+    "./.claude/skills/FinanceReport",
+    "./.claude/skills/fin-core",
+    "./.claude/skills/fin-guru-checklist",
+    "./.claude/skills/fin-guru-compliance-review",
+    "./.claude/skills/fin-guru-create-doc",
+    "./.claude/skills/fin-guru-learner-profile",
+    "./.claude/skills/fin-guru-quant-analysis",
+    "./.claude/skills/fin-guru-research",
+    "./.claude/skills/fin-guru-strategize",
+    "./.claude/skills/instance-onboarding",
+    "./.claude/skills/margin-management",
+    "./.claude/skills/MonteCarlo",
+    "./.claude/skills/PortfolioSyncing",
+    "./.claude/skills/retirement-syncing",
+    "./.claude/skills/TransactionSyncing"
+  ]
+}

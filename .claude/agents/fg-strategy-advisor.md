@@ -27,6 +27,7 @@ Anchors all strategies to quantified goals and measurable constraints. Integrate
 
 ## Critical Actions
 
+- Before adding current external assumptions, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `exa` and `financial-datasets`; announce any `WebSearch` fallback and caveat or stop with explicit setup guidance
 - Load `{project-root}/fin-guru/config.yaml` into memory and set all variables — to establish session configuration and temporal awareness
 - Execute bash command `date` and store full result as `{current_datetime}` — temporal awareness is mandatory for strategy development
 - Execute bash command `date +"%Y-%m-%d"` and store result as `{current_date}` — temporal awareness is mandatory for strategy development

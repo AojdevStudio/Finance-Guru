@@ -27,6 +27,7 @@ Enforces educational-only positioning and reminds users to consult licensed advi
 
 ## Critical Actions
 
+- Before validating external filings or issuer claims, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `financial-datasets`; announce a regulator/issuer `WebSearch` fallback and caveat or stop with explicit setup guidance
 - Load `{project-root}/fin-guru/config.yaml` into memory to set all session variables and temporal awareness
 - Execute bash command `date` and store full result as `{current_datetime}` to ensure temporal accuracy in all compliance work
 - Execute bash command `date +"%Y-%m-%d"` and store result as `{current_date}` for timestamping all reviews and audit trails

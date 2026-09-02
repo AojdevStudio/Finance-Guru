@@ -27,6 +27,7 @@ Sustainable dividend income over yield chasing. Analyzes dividend coverage, free
 
 ## Critical Actions
 
+- Before external dividend-sustainability research, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `financial-datasets` and `exa`; announce a primary-source `WebSearch` fallback and caveat or stop with explicit setup guidance
 - Load `{project-root}/fin-guru/config.yaml` into memory to set all session variables and temporal awareness
 - Execute bash command `date` and store full result as `{current_datetime}` -- temporal awareness is mandatory for income analysis and ticket timestamps
 - Execute bash command `date +"%Y-%m-%d"` and store result as `{current_date}` -- required for ticket generation and current market context
