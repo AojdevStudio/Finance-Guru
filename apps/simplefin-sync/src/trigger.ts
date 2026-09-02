@@ -21,7 +21,7 @@ export interface DepositDetection {
   sourceAccountKey: string;
   amount: string;
   posted: number;
-  pending: boolean;
+  pending: false;
 }
 
 export interface TriggerResult {
@@ -175,6 +175,14 @@ export function isDepositOverThreshold(
   return amount > thresholdUnits;
 }
 
+export function isSettledTransaction(transaction: SfinTransaction): boolean {
+  return (
+    transaction.pending !== true &&
+    Number.isSafeInteger(transaction.posted) &&
+    transaction.posted > 0
+  );
+}
+
 function stableKey(...parts: string[]): string {
   return createHash("sha256").update(parts.join("\u001f")).digest("hex").slice(0, 16);
 }
@@ -184,13 +192,14 @@ export function detectionFromTransaction(
   transaction: SfinTransaction,
   threshold = DEFAULT_THRESHOLD,
 ): DepositDetection | null {
+  if (!isSettledTransaction(transaction)) return null;
   if (!isDepositOverThreshold(transaction, threshold)) return null;
   return {
     transactionKey: stableKey(account.id, transaction.id),
     sourceAccountKey: stableKey(account.id),
     amount: transaction.amount,
     posted: transaction.posted,
-    pending: transaction.pending ?? false,
+    pending: false,
   };
 }
 

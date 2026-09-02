@@ -7,13 +7,21 @@
  */
 import { createClient, toSfinTimestamp } from "./client";
 
+const MAX_MONTHS = 120;
 const accessUrl = process.env.SIMPLEFIN_ACCESS_URL?.trim();
 if (!accessUrl) {
   console.error("✗ SIMPLEFIN_ACCESS_URL is empty. Run `bun run claim` first.");
   process.exit(1);
 }
 
-const months = Number(process.argv[2] ?? 12);
+const monthsArgument = process.argv[2] ?? "12";
+const months = Number(monthsArgument);
+if (!Number.isInteger(months) || months < 1 || months > MAX_MONTHS) {
+  console.error(
+    `✗ months must be a whole number between 1 and ${MAX_MONTHS}, got "${monthsArgument}"`,
+  );
+  process.exit(1);
+}
 const startDate = toSfinTimestamp(
   new Date(Date.now() - months * 31 * 24 * 60 * 60 * 1000),
 );
