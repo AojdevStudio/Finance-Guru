@@ -1,14 +1,20 @@
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
+import sys
 from datetime import date
+from pathlib import Path
 
 import pytest
 
 from src.analysis import margin_metrics as mm
 from src.analysis.margin_metrics import (
     FidelityBalances,
+    IncompleteBalanceGenerationError,
+    MarginAccountRoutingError,
+    UnsupportedMarginSourceError,
     _broker_balances_from_snaptrade,
     calculate_margin_metrics,
     metrics_from_runtime,
@@ -26,6 +32,42 @@ def write_balances(path):
         "Net debit,-10000.00,-500.00\n"
         "Margin interest accrued this month,12.34,\n"
     )
+
+
+def write_account_config(path: Path, accounts: list[tuple[str, str, bool]]) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "generated_at": "2026-01-01T00:00:00+00:00",
+                "accounts": [
+                    {
+                        "snaptrade_account_id": account_id,
+                        "role": role,
+                        "enabled": enabled,
+                    }
+                    for account_id, role, enabled in accounts
+                ],
+            }
+        )
+    )
+
+
+def write_balances_db(
+    path: Path, rows: list[tuple[str, float, float, float, str]]
+) -> None:
+    conn = sqlite3.connect(path)
+    try:
+        conn.execute(
+            "CREATE TABLE balances (account_id TEXT PRIMARY KEY, currency TEXT, "
+            "settled_cash REAL, buying_power REAL, account_equity REAL, "
+            "gross_market_value REAL, margin_debt REAL, synced_at TEXT NOT NULL)"
+        )
+        conn.executemany(
+            "INSERT INTO balances VALUES (?, 'USD', 0.0, ?, ?, 0.0, ?, ?)", rows
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def test_parse_money_supports_currency_commas_percent_and_k():
@@ -174,8 +216,32 @@ def test_metrics_from_runtime_snaptrade_source_reads_api(monkeypatch):
     assert metrics.margin_balance == 83820.02
 
 
+def test_metrics_from_runtime_rejects_unsupported_source(monkeypatch):
+    sentinel = FidelityBalances(
+        source_file="db:synthetic.db",
+        total_account_value=100000.0,
+        total_account_day_change=None,
+        margin_buying_power=1000.0,
+        margin_buying_power_day_change=None,
+        net_debit=-10000.0,
+        net_debit_day_change=None,
+        margin_interest_accrued_this_month=None,
+    )
+    monkeypatch.setattr(mm, "read_db_balances", lambda: sentinel)
+    monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "$5,000")
+
+    with pytest.raises(UnsupportedMarginSourceError) as exc_info:
+        metrics_from_runtime(source="unsupported", annual_rate=0.12)
+
+    assert "db, snaptrade, csv" in str(exc_info.value)
+
+
 def test_read_db_balances_reads_latest_snapshot(tmp_path, monkeypatch):
     """read_db_balances returns the newest balances row as Fidelity-shaped facts."""
+    write_account_config(
+        tmp_path / "snaptrade-accounts.yaml",
+        [("acct-1", "taxable_margin", True)],
+    )
     db_path = tmp_path / "family_office.db"
     conn = sqlite3.connect(db_path)
     try:
@@ -191,6 +257,7 @@ def test_read_db_balances_reads_latest_snapshot(tmp_path, monkeypatch):
         conn.commit()
     finally:
         conn.close()
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
 
     balances = mm.read_db_balances()
@@ -199,6 +266,183 @@ def test_read_db_balances_reads_latest_snapshot(tmp_path, monkeypatch):
     assert balances.total_account_value == 150000.00
     assert balances.net_debit == pytest.approx(-50000.00)
     assert balances.margin_interest_accrued_this_month is None
+
+
+def test_read_db_balances_routes_to_unique_enabled_taxable_margin_account(
+    tmp_path, monkeypatch
+):
+    config_path = tmp_path / "snaptrade-accounts.yaml"
+    write_account_config(
+        config_path,
+        [
+            ("synthetic-retirement", "retirement", True),
+            ("synthetic-margin", "taxable_margin", True),
+            ("synthetic-margin-disabled", "taxable_margin", False),
+        ],
+    )
+    db_path = tmp_path / "family_office.db"
+    write_balances_db(
+        db_path,
+        [
+            (
+                "synthetic-retirement",
+                1000.0,
+                900000.0,
+                0.0,
+                "2026-01-01T00:00:00+00:00",
+            ),
+            (
+                "synthetic-margin",
+                5000.0,
+                150000.0,
+                50000.0,
+                "2026-01-01T00:00:00+00:00",
+            ),
+        ],
+    )
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+
+    balances = mm.read_db_balances()
+
+    assert balances.total_account_value == 150000.0
+    assert balances.net_debit == -50000.0
+
+
+def test_read_db_balances_rejects_missing_taxable_margin_account(tmp_path, monkeypatch):
+    write_account_config(
+        tmp_path / "snaptrade-accounts.yaml",
+        [
+            ("synthetic-retirement", "retirement", True),
+            ("synthetic-margin-disabled", "taxable_margin", False),
+        ],
+    )
+    db_path = tmp_path / "family_office.db"
+    write_balances_db(
+        db_path,
+        [
+            (
+                "synthetic-retirement",
+                1000.0,
+                900000.0,
+                0.0,
+                "2026-01-01T00:00:00+00:00",
+            ),
+        ],
+    )
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+
+    with pytest.raises(MarginAccountRoutingError) as exc_info:
+        mm.read_db_balances()
+
+    assert "exactly one" in str(exc_info.value)
+
+
+def test_read_db_balances_rejects_ambiguous_taxable_margin_accounts(
+    tmp_path, monkeypatch
+):
+    write_account_config(
+        tmp_path / "snaptrade-accounts.yaml",
+        [
+            ("synthetic-margin-a", "taxable_margin", True),
+            ("synthetic-margin-b", "taxable_margin", True),
+        ],
+    )
+    db_path = tmp_path / "family_office.db"
+    write_balances_db(
+        db_path,
+        [
+            (
+                "synthetic-margin-a",
+                1000.0,
+                100000.0,
+                10000.0,
+                "2026-01-01T00:00:00+00:00",
+            ),
+            (
+                "synthetic-margin-b",
+                2000.0,
+                200000.0,
+                20000.0,
+                "2026-01-01T00:00:00+00:00",
+            ),
+        ],
+    )
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+
+    with pytest.raises(MarginAccountRoutingError) as exc_info:
+        mm.read_db_balances()
+
+    assert "Found 2" in str(exc_info.value)
+
+
+def test_read_db_balances_rejects_incomplete_latest_generation(tmp_path, monkeypatch):
+    write_account_config(
+        tmp_path / "snaptrade-accounts.yaml",
+        [
+            ("synthetic-margin", "taxable_margin", True),
+            ("synthetic-retirement", "retirement", True),
+        ],
+    )
+    db_path = tmp_path / "family_office.db"
+    write_balances_db(
+        db_path,
+        [
+            (
+                "synthetic-margin",
+                1000.0,
+                100000.0,
+                10000.0,
+                "2026-01-01T00:00:00+00:00",
+            ),
+            (
+                "synthetic-retirement",
+                2000.0,
+                200000.0,
+                0.0,
+                "2026-01-02T00:00:00+00:00",
+            ),
+        ],
+    )
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+
+    with pytest.raises(IncompleteBalanceGenerationError) as exc_info:
+        mm.read_db_balances()
+
+    assert "run the sync-first refresh" in str(exc_info.value)
+
+
+def test_margin_cli_json_includes_educational_disclaimer(tmp_path, monkeypatch, capsys):
+    csv_path = tmp_path / "Balances_for_Account_SYNTHETIC.csv"
+    write_balances(csv_path)
+    monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "$5,000")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "margin_metrics",
+            "--source",
+            "csv",
+            "--csv",
+            str(csv_path),
+            "--annual-rate",
+            "0.12",
+            "--monthly-dividend-income",
+            "250",
+            "--pretty",
+        ],
+    )
+
+    mm.main()
+
+    output = json.loads(capsys.readouterr().out)
+    assert "educational purposes only" in output["disclaimer"].lower()
+    assert "not investment advice" in output["disclaimer"].lower()
+    assert "licensed financial professional" in output["disclaimer"].lower()
+    assert "loss of principal" in output["disclaimer"].lower()
 
 
 def test_broker_balances_from_snaptrade_derives_net_debit():
