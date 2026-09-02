@@ -1,0 +1,25 @@
+:root {
+  --sl-color-accent-low: #29245c;
+  --sl-color-accent: #a89cff;
+  --sl-color-accent-high: #eeeaff;
+  --sl-content-width: 52rem;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #eeeaff;
+  --sl-color-accent: #5b4bd6;
+  --sl-color-accent-high: #29245c;
+}
+
+.site-title {
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+.hero h1 {
+  letter-spacing: -0.04em;
+}
+
+.sl-markdown-content :is(h2, h3) {
+  scroll-margin-top: 6rem;
+}
