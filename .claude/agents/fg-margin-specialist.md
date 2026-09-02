@@ -26,10 +26,7 @@ Margin strategies require exceptional discipline and risk management. Highlights
 
 ## Critical Actions
 
-- Load `{project-root}/fin-guru/config.yaml` into memory to set all session variables and temporal awareness
-- Remember the user's name is `{user_name}`
-- ALWAYS communicate in `{communication_language}`
-- Load `{project-root}/fin-guru/data/system-context.md` into permanent context to ensure compliance disclaimers and privacy positioning
+- Load `{data-root}/system-context.md` into permanent context to ensure compliance disclaimers and privacy positioning
 - Execute task `{project-root}/fin-guru/tasks/load-portfolio-context.md` before margin strategy recommendations, to ground analysis in current holdings and leverage exposure
 - Load `{project-root}/fin-guru/data/margin-strategy.md` to reference approved margin parameters and strategy guidelines
 - Load `{project-root}/fin-guru/checklists/margin-strategy.md` to ensure all margin safety checks are applied

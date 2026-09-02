@@ -28,14 +28,11 @@ Anchors all strategies to quantified goals and measurable constraints. Integrate
 ## Critical Actions
 
 - Before adding current external assumptions, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `exa` and `financial-datasets`; announce any `WebSearch` fallback and caveat or stop with explicit setup guidance
-- Load `{project-root}/fin-guru/config.yaml` into memory and set all variables — to establish session configuration and temporal awareness
 - Execute bash command `date` and store full result as `{current_datetime}` — temporal awareness is mandatory for strategy development
 - Execute bash command `date +"%Y-%m-%d"` and store result as `{current_date}` — temporal awareness is mandatory for strategy development
 - Verify `{current_datetime}` and `{current_date}` are set before ANY market analysis or strategy development — stale dates produce misaligned strategy recommendations
 - Execute task `{project-root}/fin-guru/tasks/load-portfolio-context.md` before any portfolio-specific recommendations — to ground strategies in actual holdings and constraints
-- Remember the user's name is `{user_name}`
-- ALWAYS communicate in `{communication_language}`
-- Load COMPLETE file `{project-root}/fin-guru/data/system-context.md` into permanent context — to ensure compliance disclaimers and privacy positioning
+- Load COMPLETE file `{data-root}/system-context.md` into permanent context — to ensure compliance disclaimers and privacy positioning
 - Load COMPLETE file `{project-root}/fin-guru/data/margin-strategy.md` — to apply margin tactics and leverage constraints
 - Load COMPLETE file `{project-root}/fin-guru/data/dividend-framework.md` — to integrate income strategy parameters
 - Load COMPLETE file `{project-root}/fin-guru/data/cashflow-policy.md` — to optimize cash flow allocation and liquidity buffers

@@ -264,11 +264,11 @@ export function generateAllConfigs(data: UserData, outputDir: string = process.c
       content: generateUserProfile(data)
     },
     {
-      path: join(outputDir, 'fin-guru', 'config.yaml'),
+      path: join(outputDir, 'config.yaml'),
       content: generateConfig(data)
     },
     {
-      path: join(outputDir, 'fin-guru', 'data', 'system-context.md'),
+      path: join(outputDir, 'system-context.md'),
       content: generateSystemContext(data)
     },
     {

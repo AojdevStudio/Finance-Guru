@@ -56,23 +56,19 @@ class TestAgentPromptConfiguration:
         """Agent prompt must contain ITC risk integration section."""
         content = agent_prompt_path.read_text()
 
-        # Check for ITC risk monitoring in critical-actions
-        assert "ITC RISK MONITORING" in content, (
-            "Missing ITC RISK MONITORING in critical-actions"
+        assert "market-implied risk assessment" in content, (
+            "Missing the ITC risk monitoring rule"
         )
         assert "itc_risk_cli.py" in content, "Missing itc_risk_cli.py reference"
 
     def test_agent_prompt_contains_itc_integration_section(
         self, agent_prompt_path: Path
     ):
-        """Agent prompt must contain <itc-risk-integration> section."""
+        """Agent prompt must contain the ITC risk integration section."""
         content = agent_prompt_path.read_text()
 
-        assert "<itc-risk-integration>" in content, (
-            "Missing <itc-risk-integration> section"
-        )
-        assert "</itc-risk-integration>" in content, (
-            "Unclosed itc-risk-integration section"
+        assert "## ITC risk integration" in content, (
+            "Missing ITC risk integration section"
         )
 
     def test_agent_prompt_contains_supported_tickers(self, agent_prompt_path: Path):
@@ -104,18 +100,18 @@ class TestAgentPromptConfiguration:
         """Agent prompt must contain ITC Risk Validation Workflow."""
         content = agent_prompt_path.read_text()
 
-        assert "<itc-risk-validation-workflow>" in content, (
-            "Missing validation workflow section"
+        assert "## ITC risk validation workflow" in content, (
+            "Missing ITC risk validation workflow section"
         )
-        assert "execution-steps" in content, "Missing execution steps in workflow"
-        assert "decision-rules" in content, "Missing decision rules in workflow"
+        assert "Execution steps" in content, "Missing execution steps in workflow"
+        assert "Decision rules" in content, "Missing decision rules in workflow"
 
     def test_agent_prompt_contains_divergence_guidance(self, agent_prompt_path: Path):
         """Agent prompt must contain divergence analysis guidance."""
         content = agent_prompt_path.read_text()
 
-        assert "<itc-internal-divergence-guidance>" in content, (
-            "Missing divergence guidance section"
+        assert "## ITC internal divergence guidance" in content, (
+            "Missing ITC internal divergence guidance section"
         )
         assert "ITC HIGH, Internal LOW" in content or "DIV-1" in content, (
             "Missing high ITC/low internal scenario"

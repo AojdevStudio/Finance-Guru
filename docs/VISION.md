@@ -265,7 +265,7 @@ The agents have names, roles, and distinct communication styles. This isn't thea
 
 Agents are _not_ Claude Code commands. They are:
 
-- Defined in YAML (portable, not the current XML persona files)
+- Defined in YAML (portable, not the current Markdown persona files)
 - Dispatched by the orchestrator with precise context injection
 - Given exactly the right files/APIs at dispatch time (not a dump of everything)
 - Stateful within a session, stateless across sessions (DB is the state)
@@ -378,7 +378,7 @@ All 11 agents carry forward with their names and voices. The orchestration patte
 | **Google Sheets as data hub** | Replaced by SnapTrade → local DB. No more syncing, formula protection, or sacred columns. |
 | **Automated CSV download workflow** | SnapTrade provides live data. CSV import stays as a _fallback_ for edge cases, not the primary pipeline. |
 | **Claude Code hooks/skills** | FG is a standalone app. No `.claude/skills`, no session-start hooks, no `UserPromptSubmit` activation. Current Claude Code skills continue running until the app reaches feature parity — then they're retired. Clean break, no migration. |
-| **XML persona definitions in `.claude/commands/`** | Agents move to YAML. Portable, simple, not framework-dependent. |
+| **Persona definitions in `.claude/commands/`** | Agents move to YAML. Portable, simple, not framework-dependent. |
 | **PAI entanglement** | Finance Guru is its own process. It doesn't share context with dental projects, church media, or anything else. |
 | **Streamlit/Textual TUI** | Replaced by native macOS app with proper UI. |
 | **Multiple repo confusion** | One monorepo. No more `family-office` vs `fin-guru` vs `fin-guru-desktop` confusion. |
