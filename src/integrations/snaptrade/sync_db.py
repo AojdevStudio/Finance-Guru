@@ -26,7 +26,11 @@ from typing import Any
 from src.config.instance_paths import InstancePaths, _db_path, load_instance_env
 from src.integrations.snaptrade.cli import _account_balances, _account_positions
 from src.integrations.snaptrade.client import SnapTradeAPIError, SnapTradeClientWrapper
-from src.integrations.snaptrade.models import SnapTradeAccountsConfig
+from src.integrations.snaptrade.models import (
+    NettedPositions,
+    SnapTradeAccountsConfig,
+    UnpricedPositionLot,
+)
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS positions (
@@ -52,7 +56,7 @@ CREATE TABLE IF NOT EXISTS balances (
 """
 
 
-def _net_positions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _net_positions(rows: list[dict[str, Any]]) -> NettedPositions:
     """Net multiple lots of the same (symbol, instrument) into one row.
 
     SnapTrade can return a symbol as several lots (observed: SPMO twice). The
@@ -64,20 +68,27 @@ def _net_positions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             continue
         groups[(p["symbol"], p.get("instrument", "equity"))].append(p)
     netted: list[dict[str, Any]] = []
+    unpriced_lots: list[UnpricedPositionLot] = []
     for (symbol, instrument), lots in groups.items():
         qty = sum((lot.get("quantity") or 0) for lot in lots)
         cost_lots = [
             lot for lot in lots if lot.get("average_purchase_price") is not None
         ]
+        unpriced_lots.extend(
+            UnpricedPositionLot(
+                symbol=symbol,
+                instrument=instrument,
+                quantity=lot.get("quantity"),
+            )
+            for lot in lots
+            if lot.get("average_purchase_price") is None
+        )
+        priced_qty = sum((lot.get("quantity") or 0) for lot in cost_lots)
         weighted = sum(
             (lot["average_purchase_price"] * (lot.get("quantity") or 0))
             for lot in cost_lots
         )
-        avg_cost = (
-            (weighted / qty)
-            if (qty and cost_lots)
-            else (cost_lots[0]["average_purchase_price"] if cost_lots else None)
-        )
+        avg_cost = weighted / priced_qty if priced_qty else None
         price = next(
             (lot.get("price") for lot in lots if lot.get("price") is not None), None
         )
@@ -91,7 +102,7 @@ def _net_positions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             }
         )
     netted.sort(key=lambda r: (r["instrument"], r["symbol"]))
-    return netted
+    return NettedPositions(positions=netted, unpriced_lots=unpriced_lots)
 
 
 def sync(config_path: Path, database_url: str | None) -> dict[str, Any]:
@@ -110,7 +121,8 @@ def sync(config_path: Path, database_url: str | None) -> dict[str, Any]:
         client = SnapTradeClientWrapper.from_env()
         for account in syncable:
             aid = account.snaptrade_account_id
-            positions = _net_positions(_account_positions(client, aid))
+            netted = _net_positions(_account_positions(client, aid))
+            positions = netted.positions
             balances = _account_balances(client, aid)
             with conn:  # one transaction per account
                 conn.execute("DELETE FROM positions WHERE account_id = ?", (aid,))
@@ -160,6 +172,7 @@ def sync(config_path: Path, database_url: str | None) -> dict[str, Any]:
                     "settled_cash": balances.get("settled_cash"),
                     "margin_debt": balances.get("margin_debt"),
                     "account_equity": balances.get("account_equity"),
+                    "unpriced_lots": [lot.model_dump() for lot in netted.unpriced_lots],
                 }
             )
     finally:
@@ -197,6 +210,10 @@ def show(database_url: str | None) -> None:
         conn.close()
 
 
+def _format_money(value: float | int | None) -> str:
+    return "n/a" if value is None else f"${value:,}"
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint."""
     paths = InstancePaths.resolve()
@@ -230,9 +247,17 @@ def main(argv: list[str] | None = None) -> int:
     for a in summary["accounts"]:
         print(
             f"- {a['name']} ({a['role']}): {a['equity_rows']} equities, "
-            f"{a['option_rows']} options | equity=${a['account_equity']:,} "
-            f"cash=${a['settled_cash']:,} margin=${a['margin_debt']:,}"
+            f"{a['option_rows']} options | "
+            f"equity={_format_money(a['account_equity'])} "
+            f"cash={_format_money(a['settled_cash'])} "
+            f"margin={_format_money(a['margin_debt'])}"
         )
+        for lot in a["unpriced_lots"]:
+            print(
+                "  warning: cost basis unavailable for "
+                f"{lot['quantity']} {lot['symbol']} {lot['instrument']} units",
+                file=sys.stderr,
+            )
     if not summary["accounts"]:
         print("- no syncable accounts (check config role/enabled)")
     return 0

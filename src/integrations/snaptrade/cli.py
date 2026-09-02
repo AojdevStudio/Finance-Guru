@@ -34,6 +34,7 @@ import yaml
 
 from src.config.instance_paths import InstancePaths
 from src.integrations.snaptrade.client import (
+    BalanceCurrencyMismatchError,
     SnapTradeAPIError,
     SnapTradeClientWrapper,
     derive_margin_debt,
@@ -219,10 +220,27 @@ def _account_positions(
 
 
 def _account_balances(
-    client: SnapTradeClientWrapper, account_id: str
+    client: SnapTradeClientWrapper, account_id: str, currency: str = "USD"
 ) -> dict[str, Any]:
     raw = client.get_balances(account_id)
-    first = raw[0] if raw else {}
+    requested_currency = currency.strip().upper()
+    selected = next(
+        (
+            balance
+            for balance in raw
+            if str(balance.get("currency") or "").strip().upper() == requested_currency
+        ),
+        None,
+    )
+    if selected is None:
+        available = sorted(
+            {
+                str(balance.get("currency")).strip().upper()
+                for balance in raw
+                if balance.get("currency")
+            }
+        )
+        raise BalanceCurrencyMismatchError(requested_currency, available)
     equity = client.get_account_equity(account_id)
     margin_debt, gross_mv = derive_margin_debt(
         client.get_positions(account_id),
@@ -230,9 +248,9 @@ def _account_balances(
         equity,
     )
     return {
-        "currency": first.get("currency"),
-        "settled_cash": first.get("cash"),  # -> SPAXX row
-        "buying_power": first.get("buying_power"),
+        "currency": requested_currency,
+        "settled_cash": selected.get("cash"),  # -> SPAXX row
+        "buying_power": selected.get("buying_power"),
         "account_equity": equity,
         "gross_market_value": gross_mv,
         "margin_debt": margin_debt,  # derived; SnapTrade omits it directly

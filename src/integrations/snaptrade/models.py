@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, Self
@@ -89,6 +89,35 @@ class SnapTradeAccount(BaseModel):
     number_masked: str | None = None
     balance_total: float | None = None
     raw: dict[str, Any] = Field(default_factory=dict, exclude=True)
+
+
+class SnapTradeActivity(BaseModel):
+    """Canonical activity shape shared by CLI and SQLite consumers."""
+
+    id: str = Field(min_length=1)
+    date: date
+    type: str | None = None
+    symbol: str | None = None
+    amount: float | None = None
+    quantity: float | None = None
+    currency: str | None = None
+    description: str | None = None
+    account: str | None = None
+
+
+class UnpricedPositionLot(BaseModel):
+    """A position lot excluded from average-cost weighting."""
+
+    symbol: str
+    instrument: str
+    quantity: float | None = None
+
+
+class NettedPositions(BaseModel):
+    """Netted positions plus incomplete lots the caller must surface."""
+
+    positions: list[dict[str, Any]]
+    unpriced_lots: list[UnpricedPositionLot]
 
 
 class AccountRole(StrEnum):
