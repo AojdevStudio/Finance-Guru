@@ -20,6 +20,7 @@ user-guide pages.
 | Install or develop the checked-in engine | [Setup](setup/SETUP.md) |
 | Find a verified command entry point | [CLI reference](reference/api.md) |
 | Configure optional provider credentials | [API keys](setup/api-keys.md) |
+| Connect SnapTrade or SimpleFIN live sync | [Live sync credentials](setup/live-sync-credentials.md) |
 | Resolve an environment or provider failure | [Troubleshooting](setup/TROUBLESHOOTING.md) |
 | Understand contribution boundaries and checks | [Contributing](CONTRIBUTING.md) |
 | Review data-handling boundaries | [Privacy](../PRIVACY.md) |

@@ -6,23 +6,18 @@ category: setup
 
 # Finance Guru private configuration
 
-Keep credentials in a local `.env` file or process environment. `.env` and the
-local SQLite database are gitignored; that is a safeguard, not permission to
-print or commit their contents.
-
-Before running a supported data sync, create the root environment file from the
-checked-in sample. It supplies the required local database location even when
-you do not configure an external provider:
-
-```bash
-cp .env.example .env
-```
+Keep credentials in a local `.env` file or process environment. The engine
+reads `.env` from the instance root, the directory named by
+`FIN_GURU_DATA_ROOT` or the current working directory. `instance_init`
+scaffolds that file from the checked-in `.env.example` with every value blank.
+The `.env` file and the local SQLite database are gitignored; that is a
+safeguard, not permission to print or commit their contents.
 
 ## Local data store
 
 | Variable | Purpose | Default behavior |
 | --- | --- | --- |
-| `DATABASE_URL` | SQLite connection URL used by the supported sync modules. | Required; the checked-in sample sets `sqlite:///family_office.db`. |
+| `DATABASE_URL` | SQLite connection URL used by the supported sync modules. | Optional; defaults to `family_office.db` under the instance root. |
 
 The standard local database filename is `family_office.db`. Do not point a
 public example or CI job at a real database.
@@ -39,9 +34,10 @@ contact the provider:
 | `SNAPTRADE_USER_ID` | Linked user identifier. |
 | `SNAPTRADE_USER_SECRET` | Linked user secret. |
 
-Account roles and enabled-state are stored separately in the local
-`config/snaptrade-accounts.yaml` file after account discovery. Do not commit
-that file when it contains personal routing information.
+Account roles and enabled-state are stored separately in
+`snaptrade-accounts.yaml` under the instance root after account discovery. See
+the [live sync credentials guide](live-sync-credentials.md) for the discovery
+command and the routing rules.
 
 ## SimpleFIN
 

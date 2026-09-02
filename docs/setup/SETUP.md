@@ -34,6 +34,20 @@ The legacy `./setup.sh` scaffolds private-profile files and points to an
 unfinished onboarding flow. It is not part of the supported analysis-engine
 setup path.
 
+## Create an instance
+
+Private data lives in an instance directory outside the checkout. The engine
+resolves it from `FIN_GURU_DATA_ROOT` or the current working directory. Create
+one from the checkout:
+
+```bash
+uv run python -m src.cli.instance_init ~/finance-guru-data --repo .
+```
+
+The instance is a small uv project that depends on the engine, so
+`uv run python -m src.<tool>` works from inside it with no extra flags. Run
+Finance Guru sessions and sync commands from the instance directory.
+
 For the SimpleFIN workspace, install its Bun dependencies from that workspace:
 
 ```bash
@@ -55,20 +69,18 @@ uv run python src/analysis/risk_metrics_cli.py --help
 
 ## Configure credentials privately
 
-Copy the sample environment file only when you need an optional provider or a
-personal integration. Do not commit the resulting `.env` file.
-
-```bash
-cp .env.example .env
-```
+The instance scaffold writes a blank `.env` in the instance root. Fill in a
+variable only when you need an optional provider or a personal integration. Do
+not commit any `.env` file.
 
 See [API keys](api-keys.md) for the variables consumed by the supported
-integrations. Keep account exports, API keys, and database files out of Git.
+integrations and the
+[live sync credentials guide](live-sync-credentials.md) for SnapTrade and
+SimpleFIN. Keep account exports, API keys, and database files out of Git.
 
 ## Refresh local financial data
 
-The all-source refresh command must run as a module so Python can resolve the
-repository package imports:
+Run the all-source refresh from the instance directory:
 
 ```bash
 uv run python -m src.integrations.refresh_all --show

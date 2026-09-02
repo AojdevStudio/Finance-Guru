@@ -1,186 +1,126 @@
 # Finance Guru™
 
-Finance Guru is a local-first financial analysis and automation repository built
-for a private family office workflow. It combines a typed Python analysis
-engine, brokerage-data integrations, operational runbooks, and AI-assisted
-workflows.
+Finance Guru is a self-hosted family office engine for technical operators who
+already run Claude Code or Codex. It combines a typed Python analysis engine
+with agent skills that read your portfolio from a local SQLite database. All of
+it is open under AGPL-3.0. The skills, the agents, and the engine ship
+together, and there is no withheld feature tier. Finance Guru is the free,
+self-hosted, CLI-native experience. Keepfolio is the polished macOS product for
+people who will not run a terminal.
 
-> [!IMPORTANT]
-> The repository is in a product transition. The Python analysis engine and
-> documentation are the stable public surfaces. The Claude Code agent/skill
-> stack remains usable but is transitional. The planned standalone Tauri v2
-> macOS application is described in [the vision document](docs/VISION.md); it
-> is not yet present in this repository.
-
-## What is here today
-
-| Area | Purpose | Status |
-| --- | --- | --- |
-| `src/` | Typed financial calculators, strategies, CLIs, and integrations | Stable |
-| `tests/` | Regression and contract tests; provider tests use an integration marker | Stable |
-| `buy_ticket_agent/` | Guardrailed buy-ticket generation workflow | Internal |
-| `apps/simplefin-sync/` | Bun/TypeScript SimpleFIN ingestion and deposit triggers | Internal |
-| `fin-guru/` and `.claude/` | Specialist agents, skills, hooks, and orchestration | Transitional |
-| `docs/` | Setup guides, reference material, and operating runbooks | Active |
-
-The stable analysis engine covers risk, momentum, volatility, correlation,
-portfolio optimization, backtesting, options, factor analysis, total return,
-hedging, margin metrics, and data validation. See the
-[CLI reference](docs/reference/api.md) for the core command documentation.
+The engine works on day one with broker CSV exports dropped into `imports/`.
+Live sync through SnapTrade and SimpleFIN is optional and uses your own
+credentials.
 
 ## Quick start
 
-### Prerequisites
+You need Python 3.12 or later, [uv](https://docs.astral.sh/uv/), and Git.
 
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/)
-- Git
-- Bun for onboarding scripts and TypeScript workspaces
-- Claude Code only if you use the transitional agent workflows
-
-### Install
-
-Finance Guru is designed to be forked so private configuration stays separate
-from upstream development.
+Clone the engine, then create an instance directory for your private data. The
+instance is a small uv project that depends on the engine, so engine commands
+run from it with no extra flags.
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/Finance-Guru.git
+git clone https://github.com/AojdevStudio/Finance-Guru.git
 cd Finance-Guru
-./setup.sh
+uv run python -m src.cli.instance_init ~/finance-guru-data --repo .
+cd ~/finance-guru-data
+uv run python -m src.integrations.refresh_all --show
 ```
 
-For analysis-engine development without the interactive setup:
+The last command prints the position, transaction, and expense tables. On a new
+instance it reports an empty database. Drop broker CSV exports into `imports/`
+to work CSV-first, or set up [live sync](#live-sync) later.
+
+Market analysis needs no portfolio data at all. From the instance directory,
+run any engine tool as a module.
 
 ```bash
-uv sync --dev
-uv run pytest
+uv run python -m src.analysis.risk_metrics_cli TSLA --days 252 --benchmark SPY
 ```
 
-The script checks prerequisites, installs Python dependencies, prepares local
-private-data paths, and prints the onboarding command to run next. It does not
-start an agent harness for you.
+See the [CLI reference](docs/reference/api.md) for the full tool list.
 
-## Run the analysis engine
+## Install as a plugin
 
-Every financial tool follows the same core pattern:
-
-```text
-Pydantic input models → calculator or strategy → CLI
-```
-
-Examples:
+This install path lands with the plugin release. It is not on main yet.
 
 ```bash
-# Risk and benchmark metrics
-uv run python src/analysis/risk_metrics_cli.py TSLA --days 252 --benchmark SPY
-
-# Momentum indicators
-uv run python src/utils/momentum_cli.py TSLA --days 90
-
-# Portfolio optimization
-uv run python src/strategies/optimizer_cli.py TSLA PLTR NVDA SPY \
-  --days 252 \
-  --method risk_parity
-
-# Price, dividend, and total-return analysis
-uv run python src/analysis/total_return_cli.py SCHD --days 365
+claude plugin marketplace add AojdevStudio/Finance-Guru
+claude plugin install finance-guru@finance-guru
 ```
 
-Most CLIs support structured output for downstream automation:
+After install, run the `instance-onboarding` skill. It scaffolds the instance
+directory described above and walks through the first CSV import.
 
-```bash
-uv run python src/analysis/risk_metrics_cli.py TSLA --output json
-```
+## What you get
 
-## Use the transitional agent workflows
+| Surface | Location | What it does |
+| --- | --- | --- |
+| Python engine | `src/` | Typed calculators and CLIs for risk, momentum, volatility, correlation, portfolio optimization, backtesting, options, factor analysis, total return, hedging, and margin metrics |
+| Skills | `.claude/skills/` | Workflows for portfolio sync, dividend tracking, margin management, Monte Carlo simulation, market research, report generation, and compliance scanning |
+| Agents | `.claude/commands/fin-guru/agents/` | Specialist financial agents coordinated by the Finance Orchestrator |
 
-After running setup, start your supported harness from the repository root.
-Claude Code users can activate the existing orchestrator with:
+Every tool in the engine follows the same three-layer pattern. Pydantic input
+models feed a calculator class, and a CLI wraps the calculator. Calculations
+stay testable outside any AI session.
 
-```text
-/fin-guru:agents:finance-orchestrator
-```
+## Live sync
 
-The checked-in skill source is `.claude/skills/`.
-
-These surfaces are scheduled for replacement by the standalone application.
-New feature work against agents, skills, hooks, integrations, or other internal
-runtime surfaces starts as an issue rather than a pull request. See
-[Contributing](docs/CONTRIBUTING.md) for the exact boundaries.
-
-## Architecture
-
-```text
-Finance-Guru/
-├── src/
-│   ├── models/          # Pydantic contracts
-│   ├── analysis/        # Risk, return, options, hedging, and factor tools
-│   ├── strategies/      # Portfolio optimization and backtesting
-│   ├── utils/           # Market data, indicators, validation, and logging
-│   ├── integrations/    # Brokerage adapters, including SnapTrade
-│   └── config/          # Configuration loading and defaults
-├── buy_ticket_agent/    # Guardrailed ticket-generation pipeline
-├── apps/
-│   └── simplefin-sync/  # Bun/TypeScript financial-data ingestion
-├── fin-guru/            # Transitional agent module
-├── .claude/             # Transitional skills, commands, and hooks
-├── docs/                # Guides, reference, and runbooks
-└── tests/               # Python and TypeScript-backed validation
-```
-
-The Python engine keeps validation, business logic, and command-line adapters
-separate so calculations remain testable outside an AI session. External
-providers are adapters around that engine, not the source of its financial
-math.
+CSV exports are enough to start. Power users can connect SnapTrade for
+read-only brokerage positions, balances, and transactions, and SimpleFIN for
+read-only bank and card activity. Both use credentials you obtain yourself and
+keep in local, gitignored files. The
+[live sync credentials guide](docs/setup/live-sync-credentials.md) lists the
+environment variables each provider needs and explains what
+`refresh_all` does with each leg.
 
 ## Data and privacy
 
-The repository's `.gitignore` covers environment files, common portfolio-export
-formats, user profiles, designated private directories, and local
-account-routing configuration. It cannot prevent an explicit force-add or
-protect an arbitrary output path. Before every push:
+The engine reads every private file from an instance directory outside the
+repository. The instance root comes from `FIN_GURU_DATA_ROOT`, or the current
+working directory when that variable is unset. The instance holds `.env`,
+`user-profile.yaml`, `config.yaml`, `system-context.md`, `family_office.db`,
+`snaptrade-accounts.yaml`, `dividend-schedules.yaml`, and the working
+directories `imports/`, `analysis/`, `tickets/`, `strategies/`, `hedging/`,
+`reports/`, `auto-tickets/`, and `notes/`.
 
-```bash
-git status --ignored
-git diff --cached
-git check-ignore .env
-```
+The repository is public. Tracked files describe behaviour and never carry
+personal values. The full rule and its enforcement live in
+[DataClassification](.claude/skills/compliance-scan/references/DataClassification.md)
+and [PRIVACY.md](PRIVACY.md).
 
-Use synthetic data in tests. Never commit account identifiers, balances,
-positions, API keys, or brokerage exports.
-
-Local-first does not mean network-free: market-data, brokerage, research, and
-LLM integrations may send request data to their configured providers. Review
-each provider's privacy terms and configure only the integrations you intend to
-use.
+Local-first does not mean network-free. Market data, brokerage, and LLM
+integrations send request data to their configured providers. Configure only
+the integrations you intend to use.
 
 ## Development
 
-The required Python gates mirror CI:
+The required Python gates mirror CI.
 
 ```bash
 uv sync --dev
 uv run ruff format --check .
 uv run ruff check .
 uv run mypy src/
-uv run pytest
+uv run pytest -m "not integration"
 ```
 
-Pull requests are accepted for documentation and the generic Python analysis
-engine. Other surfaces are issues-only while the standalone-app transition is
-underway. Read [Contributing](docs/CONTRIBUTING.md) before starting work.
+Read [Contributing](docs/CONTRIBUTING.md) before opening a pull request. It
+covers the accepted surfaces, the quality gates, and the privacy rules that
+every push must pass.
 
 ## Documentation
 
 | Document | Purpose |
 | --- | --- |
-| [GitHub Wiki](https://github.com/AojdevStudio/Finance-Guru/wiki) | Planned canonical guide; publication and rendered inspection are pending |
-| [Repository documentation](docs/index.md) | Current reader-facing setup, usage, architecture, privacy, contributor, and operational material |
+| [Repository documentation](docs/index.md) | Setup, usage, architecture, privacy, contributor, and operational material |
+| [Setup](docs/setup/SETUP.md) | Install the engine and create an instance |
 | [CLI reference](docs/reference/api.md) | Commands, arguments, and output |
+| [Live sync credentials](docs/setup/live-sync-credentials.md) | Bring-your-own-credentials setup for SnapTrade and SimpleFIN |
 | [API keys](docs/setup/api-keys.md) | Optional provider configuration |
 | [Troubleshooting](docs/setup/TROUBLESHOOTING.md) | Common installation and runtime failures |
 | [Runbooks](docs/runbooks/README.md) | Recurring portfolio and operations workflows |
-| [Vision](docs/VISION.md) | Standalone application direction and product decisions |
 | [Contributing](docs/CONTRIBUTING.md) | Accepted surfaces, review rules, and quality gates |
 
 ## License
