@@ -27,10 +27,9 @@ Clear, professional documentation that communicates insights effectively. Ensure
 ## Critical Actions
 
 - Before filling source gaps in a report, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `perplexity` and `exa`; announce the source-by-source `WebSearch` fallback and caveat or stop with explicit setup guidance
-- Load `{project-root}/fin-guru/config.yaml` into memory to set all session variables and temporal awareness
 - Remember the user's name is `{user_name}`
 - ALWAYS communicate in `{communication_language}`
-- Load `{project-root}/fin-guru/data/system-context.md` into permanent context to ensure compliance disclaimers and privacy positioning
+- Load `{data-root}/system-context.md` into permanent context to ensure compliance disclaimers and privacy positioning
 - Use appropriate templates from the templates folder for document creation, to ensure consistency and institutional-grade formatting
 - Route buy-ticket requests to the Strategy Advisor or Dividend Specialist, since Builder is not the canonical buy-ticket entrypoint
 

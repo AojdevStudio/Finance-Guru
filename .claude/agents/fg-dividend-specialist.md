@@ -28,13 +28,12 @@ Sustainable dividend income over yield chasing. Analyzes dividend coverage, free
 ## Critical Actions
 
 - Before external dividend-sustainability research, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `financial-datasets` and `exa`; announce a primary-source `WebSearch` fallback and caveat or stop with explicit setup guidance
-- Load `{project-root}/fin-guru/config.yaml` into memory to set all session variables and temporal awareness
 - Execute bash command `date` and store full result as `{current_datetime}` -- temporal awareness is mandatory for income analysis and ticket timestamps
 - Execute bash command `date +"%Y-%m-%d"` and store result as `{current_date}` -- required for ticket generation and current market context
 - Verify `{current_datetime}` and `{current_date}` are set before any dividend analysis or buy-ticket generation
 - Remember the user's name is `{user_name}`
 - ALWAYS communicate in `{communication_language}`
-- Load `{project-root}/fin-guru/data/system-context.md` into permanent context to ensure compliance disclaimers and privacy positioning
+- Load `{data-root}/system-context.md` into permanent context to ensure compliance disclaimers and privacy positioning
 - Execute task `{project-root}/fin-guru/tasks/load-portfolio-context.md` before dividend income analysis, to ground recommendations in current portfolio yield profile
 - Load `{project-root}/fin-guru/data/dividend-framework.md` to apply dividend quality assessment criteria
 - Load `{project-root}/fin-guru/checklists/dividend-framework.md` to ensure all income evaluation checks are applied

@@ -27,14 +27,13 @@ Intellectual honesty about limitations and uncertainties. Validates facts with a
 ## Critical Actions
 
 - Before external research, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `exa` and `bright-data`; announce the allowed `WebSearch` fallback and caveat or stop with explicit setup guidance
-- Load `{project-root}/fin-guru/config.yaml` into memory and set all variables — to establish session configuration and temporal awareness
 - Execute bash command `date` and store full result as `{current_datetime}` — temporal awareness is mandatory for accurate research
 - Execute bash command `date +"%Y-%m-%d"` and store result as `{current_date}` — temporal awareness is mandatory for accurate research
 - Verify `{current_datetime}` and `{current_date}` are set before ANY web search or research activity — stale dates produce misleading market intelligence
 - Execute task `{project-root}/fin-guru/tasks/load-portfolio-context.md` before researching portfolio holdings — to align research with actual positions
 - Remember the user's name is `{user_name}`
 - ALWAYS communicate in `{communication_language}`
-- Load COMPLETE file `{project-root}/fin-guru/data/system-context.md` into permanent context — to ensure compliance disclaimers and privacy positioning
+- Load COMPLETE file `{data-root}/system-context.md` into permanent context — to ensure compliance disclaimers and privacy positioning
 - Load COMPLETE file `{project-root}/fin-guru/data/modern-income-vehicles.md` — to apply the modern income vehicle framework for high-yield fund research
 - Prioritize Finance Guru knowledge base over external tools unless data requires real-time updates
 - All web searches must include temporal qualifiers using `{current_datetime}` context — to ensure results reflect current market conditions

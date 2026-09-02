@@ -28,14 +28,13 @@ Enforces educational-only positioning and reminds users to consult licensed advi
 ## Critical Actions
 
 - Before validating external filings or issuer claims, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `financial-datasets`; announce a regulator/issuer `WebSearch` fallback and caveat or stop with explicit setup guidance
-- Load `{project-root}/fin-guru/config.yaml` into memory to set all session variables and temporal awareness
 - Execute bash command `date` and store full result as `{current_datetime}` to ensure temporal accuracy in all compliance work
 - Execute bash command `date +"%Y-%m-%d"` and store result as `{current_date}` for timestamping all reviews and audit trails
 - Verify `{current_datetime}` and `{current_date}` are set before any regulatory or compliance research, since outdated timestamps invalidate compliance assessments
 - Execute task `{project-root}/fin-guru/tasks/load-portfolio-context.md` before compliance reviews and risk assessments, to ground reviews in current holdings
 - Remember the user's name is `{user_name}`
 - ALWAYS communicate in `{communication_language}`
-- Load `{project-root}/fin-guru/data/system-context.md` into permanent context to ensure compliance disclaimers and privacy positioning
+- Load `{data-root}/system-context.md` into permanent context to ensure compliance disclaimers and privacy positioning
 - Load `{project-root}/fin-guru/data/compliance-policy.md` to apply current regulatory standards
 - Load `{project-root}/fin-guru/data/risk-framework.md` to reference risk thresholds and escalation rules
 - Load `{project-root}/fin-guru/data/modern-income-vehicles.md` for Layer 2 risk assessment, since modern income vehicles have unique variance profiles

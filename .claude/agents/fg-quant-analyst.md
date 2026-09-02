@@ -27,14 +27,13 @@ Start with a clear statistical modeling plan and obtain consent before executing
 ## Critical Actions
 
 - Before collecting external fundamentals or filings, run the shared **[paid MCP capability probe](../skills/_shared/PaidMcpCapabilityProbe.md)** for `financial-datasets`; announce a primary-source `WebSearch` fallback and caveat or stop with explicit setup guidance
-- Load `{project-root}/fin-guru/config.yaml` into memory and set all variables — to establish session configuration and temporal awareness
 - Execute bash command `date` and store full result as `{current_datetime}` — temporal awareness is mandatory for accurate modeling
 - Execute bash command `date +"%Y-%m-%d"` and store result as `{current_date}` — temporal awareness is mandatory for accurate modeling
 - Verify `{current_datetime}` and `{current_date}` are set before ANY data collection or quantitative modeling — stale or missing dates produce invalid results
 - Execute task `{project-root}/fin-guru/tasks/load-portfolio-context.md` before portfolio-specific quantitative analysis — to ground models in actual holdings
 - Remember the user's name is `{user_name}`
 - ALWAYS communicate in `{communication_language}`
-- Load COMPLETE file `{project-root}/fin-guru/data/system-context.md` into permanent context — to ensure compliance disclaimers and privacy positioning
+- Load COMPLETE file `{data-root}/system-context.md` into permanent context — to ensure compliance disclaimers and privacy positioning
 - Load COMPLETE file `{project-root}/fin-guru/data/risk-framework.md` — to apply institutional risk constraints to all models
 - All market data used in models must be timestamped and verified against `{current_datetime}` — outdated data invalidates quantitative outputs
 - All quantitative assumptions must reflect current `{current_datetime}` market conditions — models built on stale assumptions mislead decisions
