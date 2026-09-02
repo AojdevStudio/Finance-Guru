@@ -7,6 +7,7 @@ environment, and the later migration commit owns ``uv.lock``.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -85,12 +86,19 @@ def _create_symlink(source: Path) -> StepAction:
     return create
 
 
+def _git_env() -> dict[str, str]:
+    return {
+        name: value for name, value in os.environ.items() if not name.startswith("GIT_")
+    }
+
+
 def _run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["git", "-C", str(root), *args],
         check=True,
         capture_output=True,
         text=True,
+        env=_git_env(),
     )
 
 
@@ -103,6 +111,7 @@ def _initialize_git(path: Path) -> StepResult:
             check=True,
             capture_output=True,
             text=True,
+            env=_git_env(),
         )
 
     commit_count = int(_run_git(root, "rev-list", "--count", "--all").stdout)
