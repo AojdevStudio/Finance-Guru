@@ -1,41 +1,8 @@
-[Skills Index]|root: ./.claude/skills|Read full SKILL.md before using any skill. Index is for routing only.|compliance-scan:Privacy/security scanner — secrets+PII+gitignore gate, wires into pre-push hook|dividend-tracking:Read DIVIDEND rows from family_office.db for Layer 2 income review|fin-core:Finance Guru Core Context Loader (auto-loads at session start)|fin-guru-checklist:Quality and compliance checklists for FG deliverables|fin-guru-compliance-review:Comprehensive compliance reviews for FG deliverables|fin-guru-create-doc:Create institutional-grade financial documents from templates|fin-guru-learner-profile:Build learner profiles for FG teaching and onboarding|fin-guru-quant-analysis:Quantitative analysis of returns, correlations, risk factors|fin-guru-research:Market research workflows (intelligence, sector, competitive)|fin-guru-strategize:Portfolio strategies from quantitative analysis|finance-report:Institutional-quality PDF analysis reports for stocks and ETFs|instance-onboarding:Scaffold a private instance and complete the first local data readout|margin-management:Margin metrics and coverage ratio from the live DB snapshot|monte-carlo:Monte Carlo simulations for portfolio strategy|portfolio-syncing:Refresh SnapTrade positions and balances into family_office.db|python-performance-optimization:Profile and optimize Python with cProfile and memory profilers|readiness-report:Evaluate codebase readiness for autonomous AI development|retirement-syncing:Sync retirement account holdings into family_office.db|transaction-syncing:Sync investment activities and bank expenses into family_office.db|verification-before-completion:Verify work before claiming completion|[20 skills]
+@AGENTS.md
 
-Finance Guru™ - Private AI family office on BMAD-CORE™ v6.
-_Claude Code only_: ALWAYS use `AskUserQuestion` tool for user questions.
-**Key**: This IS Finance Guru (not product) - personal financial command center. Use "your" for assets/strategies/portfolios.
+## Claude Code
 
-[Architecture]
-Multi-Agent System: Claude→specialized financial agents;Entry Point: Finance Orchestrator (Cassandra Holt) - `.claude/commands/fin-guru/agents/finance-orchestrator.md`;Path Variables: `{project-root}`,`{module-path}`,`{data-root}` (the instance directory, `FIN_GURU_DATA_ROOT` or cwd),`{current_datetime}`,`{current_date}`,`{user_name}`;MCP Servers Required: exa,bright-data,sequential-thinking,financial-datasets,web-search;Apps: `apps/simplefin-sync/` (Bun/TS workspace - indie SimpleFIN broker sync, uses turbo.json);Temporal Awareness: ALL agents MUST run `date` and `date +"%Y-%m-%d"` at startup;Compliance: ALL outputs include educational-only disclaimer,"not investment advice",consult professionals,risk disclosure
-
-[Technology Stack]
-Python: 3.12+|Package Manager: `uv`;Dependencies: pandas,numpy,scipy,scikit-learn,yfinance,streamlit,beautifulsoup4,requests,pydantic,python-dotenv;Architecture: 3-layer (Pydantic Models→Calculator Classes→CLI);Docs: `.claude/tools/python-tools.md`
-
-[CLI Command Patterns]
-Base: `uv run python -m <module> <ticker(s)> [flags]`;Common Flags: `--days N` (90=quarter,252=year),`--output json`,`--benchmark SPY`;Example Tickers: TSLA,PLTR,NVDA,SPY;Portfolio Loop: `for ticker in TSLA PLTR NVDA; do uv run python <tool> $ticker [flags]; done`;Package Management: `uv sync` (install),`uv add/remove <pkg>` (manage);Market Data: `uv run python -m src.utils.market_data TSLA [PLTR AAPL ...]`;Tests: `uv run pytest` (unit),`uv run pytest -m "not integration"` (skip API tests);Lint: `uv run ruff format .` and `uv run ruff check .` (format+lint),`uv run mypy src/` (type check);Justfile: `just --list` (see all recipes),`just load-diagrams` (load mermaid context)
-
-[Financial Analysis Tools]
-Risk Metrics: `src/analysis/risk_metrics_cli.py`;Momentum: `src/utils/momentum_cli.py`;Volatility: `src/utils/volatility_cli.py`;Correlation: `src/analysis/correlation_cli.py`;Backtesting: `src/strategies/backtester_cli.py`;Moving Averages: `src/utils/moving_averages_cli.py`;Portfolio Optimizer: `src/strategies/optimizer_cli.py`;ITC Risk: `src/analysis/itc_risk_cli.py`;Total Return: `src/analysis/total_return_cli.py`
-All tools support `--help` for full flag reference. All follow 3-layer pattern: Pydantic→Calculator→CLI.
-
-[System of Record]
-`family_office.db` (SQLite, gitignored) is the single source of truth for positions, balances, transactions, and bank_transactions. Data flows in from SnapTrade (brokerage) and SimpleFIN (bank/card). _The Google Sheets DataHub is retired: do not write to Sheets, do not reference a spreadsheet ID, and do not reintroduce a gdrive MCP dependency._ Refresh with `uv run python -m src.integrations.refresh_all`.
-
-[Output & Validation]
-Output dirs: `analysis/` (analysis), `tickets/` (buy tickets);Format: Markdown+YAML frontmatter with date stamp,disclaimer,citations;Naming: `{topic}-{YYYY-MM-DD}.md` (analysis), `buy-ticket-{YYYY-MM-DD}-{descriptor}.md` (tickets), `{strategy}-master-strategy.md` (strategies)
-
-[Version Info]
-Finance Guru™: v2.0.0|BMAD-CORE™: v6.0.0|Build: 2025-10-08|Updated: 2026-02-17|Tools: 9/11 complete
-
-Note: Private family office system - maintain exclusive,personalized nature of Finance Guru service.
-
-[Style]
-Markdown emphasis: underscores (`_text_`), not asterisks (`*text`*) — enforced by markdownlint (MD049)
-
-[PR Review Workflow]
-CodeRabbit + Claude bot review PRs automatically; fetch comments via `gh api repos/{owner}/{repo}/pulls/{n}/comments`
-Address all comments before merge; check which are already resolved in latest commit before fixing
-
-[Landing the Plane (Session Completion)]
-When ending work session,MUST complete ALL steps. Work NOT complete until `git push` succeeds.
-MANDATORY WORKFLOW: 1.File issues for remaining work - Create github issues for follow-up;2.Run quality gates (if code changed) - `uv run pytest`,`uv run ruff check .`,`uv run mypy src/`;3.Update issue status - Close finished,update in-progress;4.PUSH TO REMOTE - MANDATORY: `git pull --rebase;git push;git status` (MUST show "up to date with origin");5.Clean up - Clear stashes,prune remote branches;6.Verify - All changes committed AND pushed;7.Hand off - Provide context for next session
-CRITICAL RULES: Work NOT complete until `git push` succeeds;NEVER stop before pushing - leaves work stranded locally;NEVER say "ready to push when you are" - YOU must push;If push fails,resolve and retry until succeeds
+- Ask the owner a question only through the `AskUserQuestion` tool.
+- The plugin install path is `claude plugin marketplace add AojdevStudio/Finance-Guru` then `claude plugin install finance-guru@finance-guru`. The plugin is the source of agents, skills, and hooks for a plugin-mode instance. The checkout path in the README stays fully supported.
+- `.claude/settings.json` wires four hooks. `load-fin-core-config.ts` loads the instance profile and portfolio files from `FIN_GURU_DATA_ROOT` at session start, so start sessions from the instance directory or export that variable. `skill-activation-prompt.ts` suggests skills from `.claude/skills/skill-rules.json`. The other two track tool use and run the build check on stop. `docs/reference/hooks.md` describes their status.
+- `src/CLAUDE.md` loads on its own when you work under `src/`.

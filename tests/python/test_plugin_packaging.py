@@ -111,6 +111,6 @@ def test_onboarding_skill_covers_the_first_instance_run() -> None:
 def test_root_agents_instructions_explain_instance_skill_discovery() -> None:
     content = (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8")
 
-    assert "[Codex Instance Skill Discovery]" in content
+    assert "### Codex instance skill discovery" in content
     assert "./.agents/skills" in content
     assert "single `.claude` tree" in content
