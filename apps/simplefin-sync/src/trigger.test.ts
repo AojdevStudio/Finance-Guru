@@ -338,7 +338,7 @@ describe("SimpleFIN deposit trigger", () => {
       transactionKey: "transaction-key",
       sourceAccountKey: "source-account-key",
       posted: 1_779_984_000,
-      pending: false,
+      pending: false as const,
     };
 
     const env = buildBuyTicketEnv(detection, {

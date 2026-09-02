@@ -132,6 +132,21 @@ jobs:
           head -80 pyinstrument-report.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Profiling step completed with caveats — see logs."
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
+  simplefin-sync-typecheck:
+    name: simplefin-sync typecheck + tests (bun)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/simplefin-sync
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+
   dead-flag-detection:
     name: Dead feature-flag detection
     runs-on: ubuntu-latest
