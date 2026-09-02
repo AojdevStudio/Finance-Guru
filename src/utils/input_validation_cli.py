@@ -39,13 +39,14 @@ import json
 import sys
 from datetime import date, timedelta
 
+import yfinance as yf
+
 from src.models.validation_inputs import (
     OutlierMethod,
     PriceSeriesInput,
     ValidationConfig,
 )
 from src.utils.input_validation import InputValidator
-from src.utils.market_data import MarketDataFetcher
 
 
 def print_validation_summary(result, output_format: str = "text") -> None:
@@ -175,18 +176,14 @@ def validate_ticker(
     """
     print(f"Fetching {days} days of data for {ticker}...", file=sys.stderr)
 
-    # Fetch market data
-    fetcher = MarketDataFetcher()
-
     try:
         end_date = date.today()
         start_date = end_date - timedelta(days=days)
 
         # Get historical data
-        data = fetcher.get_historical_data(
-            ticker=ticker,
-            start_date=start_date.strftime("%Y-%m-%d"),
-            end_date=end_date.strftime("%Y-%m-%d"),
+        data = yf.Ticker(ticker).history(
+            start=start_date.strftime("%Y-%m-%d"),
+            end=end_date.strftime("%Y-%m-%d"),
         )
 
         if data is None or len(data) < 10:

@@ -18,6 +18,7 @@ Test Categories:
 
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -111,6 +112,22 @@ class TestStateManagement:
     def test_clear_nonexistent_state(self):
         """Clearing nonexistent state should not error."""
         clear_state()  # Should not raise
+
+    def test_clear_state_tolerates_concurrent_removal(self, monkeypatch):
+        """A concurrent delete should leave the state cleared without error."""
+        state_path = get_state_path()
+        state_path.write_text("{}", encoding="utf-8")
+        original_unlink = Path.unlink
+
+        def remove_before_unlink(path: Path, *, missing_ok: bool = False) -> None:
+            original_unlink(path, missing_ok=True)
+            original_unlink(path, missing_ok=missing_ok)
+
+        monkeypatch.setattr(Path, "unlink", remove_before_unlink)
+
+        clear_state()
+
+        assert not state_path.exists()
 
     def test_save_updates_timestamp(self):
         """Saving should update the last_updated timestamp."""
@@ -436,3 +453,27 @@ class TestEdgeCases:
         loaded = load_state()
         assert loaded is not None
         assert loaded.current_section == "investments"
+
+    def test_failed_atomic_replace_preserves_previous_state(self, monkeypatch):
+        """An interrupted replacement should leave the prior state readable."""
+        original_state = create_new_state()
+        original_state.current_section = "liquid_assets"
+        save_state(original_state)
+        state_path = get_state_path()
+        previous_content = state_path.read_text(encoding="utf-8")
+
+        replacement_state = create_new_state()
+        replacement_state.current_section = "investments"
+
+        def fail_replace(source: Path, destination: Path) -> None:
+            raise OSError(f"interrupted replacement of {source} with {destination}")
+
+        monkeypatch.setattr("os.replace", fail_replace)
+
+        with pytest.raises(OSError, match="interrupted replacement"):
+            save_state(replacement_state)
+
+        assert state_path.read_text(encoding="utf-8") == previous_content
+        loaded = load_state()
+        assert loaded is not None
+        assert loaded.current_section == "liquid_assets"

@@ -2,6 +2,10 @@
 
 The scaffold commit runs before uv sync so it cannot include a partial virtual
 environment, and the later migration commit owns ``uv.lock``.
+
+An installed Finance Guru plugin is the source of truth for agents, skills, and
+hooks, so plugin-mode instances omit ``.claude`` and ``.agents`` symlinks.
+Checkout-mode instances link both paths to the checkout's ``.claude`` tree.
 """
 
 from __future__ import annotations
@@ -191,15 +195,25 @@ Example: `uv run python -m src.integrations.refresh_all --show`
 """
 
 
-def _instance_agent_instructions(repo: Path) -> str:
+def _instance_agent_instructions(repo: Path, *, plugin_mode: bool) -> str:
+    if plugin_mode:
+        discovery_instructions = """The installed Finance Guru plugin is the source of truth for agents, skills, and hooks.
+This instance intentionally omits `.claude` and `.agents` symlinks.
+"""
+    else:
+        discovery_instructions = f"""This instance's `.agents` symlink points to
+`{repo / ".claude"}`, so Codex discovers the canonical skills under
+`.agents/skills/`. Read a skill's complete `SKILL.md` before using it. Do not
+copy or fork skill content into this instance.
+"""
+
     return f"""# Finance Guru instance
 
 Before doing Finance Guru work, read `{repo / "AGENTS.md"}` in full.
 
-The engine lives at `{repo}`. This instance's `.agents` symlink points to
-`{repo / ".claude"}`, so Codex discovers the canonical skills under
-`.agents/skills/`. Read a skill's complete `SKILL.md` before using it. Do not
-copy or fork skill content into this instance.
+The engine lives at `{repo}`.
+
+{discovery_instructions}
 
 Run engine commands from this instance as `uv run python -m src.<tool>` so all
 private paths resolve from the current directory.
@@ -228,7 +242,9 @@ def _sync_environment(path: Path) -> StepResult:
     return "exists" if existed else "created"
 
 
-def _build_plan(paths: InstancePaths, repo: Path) -> list[PlanStep]:
+def _build_plan(
+    paths: InstancePaths, repo: Path, *, plugin_mode: bool
+) -> list[PlanStep]:
     directory_paths = (
         paths.imports,
         paths.analysis,
@@ -252,15 +268,26 @@ def _build_plan(paths: InstancePaths, repo: Path) -> list[PlanStep]:
             ),
             PlanStep(paths.env_file, _write_text(env_content)),
             PlanStep(paths.profile, _write_text(USER_PROFILE)),
-            PlanStep(paths.root / ".agents", _create_symlink(repo / ".claude")),
-            PlanStep(paths.root / ".claude", _create_symlink(repo / ".claude")),
+        )
+    )
+    if not plugin_mode:
+        plan.extend(
+            (
+                PlanStep(paths.root / ".agents", _create_symlink(repo / ".claude")),
+                PlanStep(paths.root / ".claude", _create_symlink(repo / ".claude")),
+            )
+        )
+    plan.extend(
+        (
             PlanStep(
                 paths.root / "CLAUDE.md",
                 _write_text(_instance_instructions(repo)),
             ),
             PlanStep(
                 paths.root / "AGENTS.md",
-                _write_text(_instance_agent_instructions(repo)),
+                _write_text(
+                    _instance_agent_instructions(repo, plugin_mode=plugin_mode)
+                ),
             ),
             PlanStep(paths.root / ".git", _initialize_git),
             PlanStep(paths.root / ".venv", _sync_environment),
@@ -278,7 +305,22 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         required=True,
         help="Finance Guru engine checkout",
     )
+    parser.add_argument(
+        "--plugin",
+        action="store_true",
+        help="Use the installed plugin as the agent, skill, and hook source",
+    )
     return parser.parse_args(argv)
+
+
+def _uses_installed_plugin(repo: Path, *, explicit: bool) -> bool:
+    if explicit:
+        return True
+
+    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
+    if plugin_root is None:
+        return False
+    return Path(plugin_root).expanduser().resolve() == repo
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -286,11 +328,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
     paths = InstancePaths(root=args.root.expanduser().resolve())
     repo = args.repo.expanduser().resolve()
+    plugin_mode = _uses_installed_plugin(repo, explicit=args.plugin)
 
     if (paths.root / ".git").exists():
         _reject_git_remotes(paths.root)
 
-    for step in _build_plan(paths, repo):
+    for step in _build_plan(paths, repo, plugin_mode=plugin_mode):
         result = step.action(step.target)
         print(f"{result} {step.target}")
 

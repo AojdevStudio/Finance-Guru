@@ -6,6 +6,8 @@ allowing users to complete the Finance Guru setup in multiple sessions.
 """
 
 import json
+import os
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -95,14 +97,28 @@ def save_state(state: OnboardingState) -> None:
         Exception: If save operation fails
     """
     state_path = get_state_path()
+    temp_path: Path | None = None
 
     try:
         state.last_updated = datetime.now().isoformat()
         content = state.model_dump_json(indent=2)
-        state_path.write_text(content, encoding="utf-8")
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=state_path.parent,
+            prefix=f".{state_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temp_file:
+            temp_file.write(content)
+            temp_path = Path(temp_file.name)
+        os.replace(temp_path, state_path)
     except Exception as error:
         print(f"Failed to save onboarding state: {error}")
         raise
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
 
 def create_new_state() -> OnboardingState:
@@ -188,12 +204,11 @@ def clear_state() -> None:
     """
     state_path = get_state_path()
 
-    if state_path.exists():
-        try:
-            state_path.unlink()
-        except Exception as error:
-            print(f"Failed to delete onboarding state: {error}")
-            raise
+    try:
+        state_path.unlink(missing_ok=True)
+    except Exception as error:
+        print(f"Failed to delete onboarding state: {error}")
+        raise
 
 
 def get_next_section(state: OnboardingState) -> SectionName | None:
