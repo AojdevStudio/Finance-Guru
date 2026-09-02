@@ -210,11 +210,15 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
     assert _git(root, "remote") == ""
 
 
-def test_scaffolded_env_comments_empty_and_placeholder_values(tmp_path: Path) -> None:
+@pytest.mark.parametrize("empty_value", ['""', "''", "   "])
+def test_scaffolded_env_comments_empty_and_placeholder_values(
+    tmp_path: Path, empty_value: str
+) -> None:
     repo = _fake_repo(tmp_path)
     (repo / ".env.example").write_text(
         "FIN_GURU_DATA_ROOT=/replace/me\n"
         "SIMPLEFIN_ACCESS_URL=\n"
+        f"QUOTED_OR_BLANK_SETTING={empty_value}\n"
         "SNAPTRADE_CLIENT_ID=your_snaptrade_client_id_here\n"
         "SIMPLEFIN_SETUP_TOKEN=${SIMPLEFIN_SETUP_TOKEN}\n"
         "LEGACY_SECRET=credential_here\n"
@@ -234,6 +238,8 @@ def test_scaffolded_env_comments_empty_and_placeholder_values(tmp_path: Path) ->
     assert "your_" not in env_text
     assert env_lines.count("# SIMPLEFIN_ACCESS_URL=") == 1
     assert not any(line.startswith("SIMPLEFIN_ACCESS_URL=") for line in env_lines)
+    assert env_lines.count("# QUOTED_OR_BLANK_SETTING=") == 1
+    assert not any(line.startswith("QUOTED_OR_BLANK_SETTING=") for line in env_lines)
     assert "# SNAPTRADE_CLIENT_ID=" in env_lines
     assert "# SIMPLEFIN_SETUP_TOKEN=" in env_lines
     assert "# LEGACY_SECRET=" in env_lines
@@ -272,6 +278,35 @@ def test_existing_profile_is_preserved_byte_for_byte(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert profile.read_bytes() == original
     assert f"exists {profile}" in result.stdout.splitlines()
+
+
+def test_existing_repo_with_remote_is_rejected_before_scaffolding(
+    tmp_path: Path,
+) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    remote = tmp_path / "remote.git"
+    subprocess.run(
+        ["git", "init", str(root)],
+        check=True,
+        capture_output=True,
+        text=True,
+        env={
+            name: value
+            for name, value in os.environ.items()
+            if not name.startswith("GIT_")
+        },
+    )
+    _git(root, "remote", "add", "origin", str(remote))
+
+    result = _run_init(root, repo)
+
+    assert result.returncode != 0
+    assert str(root) in result.stderr
+    assert "origin" in result.stderr
+    assert "must have no remote" in result.stderr
+    assert {path.name for path in root.iterdir()} == {".git"}
+    assert _git(root, "rev-list", "--count", "--all") == "0"
 
 
 def test_real_claude_directory_fails_and_names_path(tmp_path: Path) -> None:
