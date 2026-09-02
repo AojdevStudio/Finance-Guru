@@ -482,16 +482,18 @@ def test_occ_to_fidelity_symbol_conversion():
 
 def test_derive_margin_debt_math():
     """Margin debt = gross long MV (options x100) minus net equity."""
-    from src.integrations.snaptrade.client import derive_margin_debt
+    from src.integrations.snaptrade.client import (
+        MissingAccountEquityError,
+        derive_margin_debt,
+    )
 
     stocks = [{"price": 100, "quantity": 10}]  # 1000
     options = [{"price": 2.0, "quantity": 3}]  # 2*3*100 = 600
     debt, gross = derive_margin_debt(stocks, options, equity=1200.0)
     assert gross == 1600.0
     assert debt == 400.0
-    # unknown equity -> debt None, gross still computed
-    debt2, gross2 = derive_margin_debt(stocks, options, equity=None)
-    assert debt2 is None and gross2 == 1600.0
+    with pytest.raises(MissingAccountEquityError):
+        derive_margin_debt(stocks, options, equity=None)
     # net-cash account (equity > gross) clamps to 0, never a negative loan
     debt3, _ = derive_margin_debt(stocks, options, equity=2000.0)
     assert debt3 == 0.0
@@ -539,6 +541,7 @@ def test_summarize_activity_emits_stable_shape():
     record = _summarize_activity(_ACTIVITY_FIXTURE[2])  # the TSLA buy
 
     assert record == {
+        "id": "a3",
         "type": "BUY",
         "date": "2026-01-03",
         "symbol": "TSLA",

@@ -34,7 +34,7 @@ def test_net_positions_sums_lots_and_weights_cost() -> None:
             "price": 100.0,
         },
     ]
-    out = _net_positions(rows)
+    out = _net_positions(rows).positions
     assert len(out) == 1
     row = out[0]
     assert row["quantity"] == 105.381 + 1.631
@@ -64,13 +64,14 @@ def test_net_positions_keeps_distinct_symbols_and_instruments() -> None:
             "average_purchase_price": 4.6,
         },
     ]
-    out = _net_positions(rows)
+    out = _net_positions(rows).positions
     assert len({(r["symbol"], r["instrument"]) for r in out}) == 3
 
 
 def test_dedupe_key_stable_and_distinguishes_same_day_dividends() -> None:
-    """Same activity -> same key (idempotent); different symbol -> different key."""
+    """Same provider activity stays idempotent; distinct activity ids do not collide."""
     a = {
+        "id": "activity-1",
         "date": "2026-01-02",
         "type": "DIVIDEND",
         "amount": 12.5,
@@ -78,7 +79,7 @@ def test_dedupe_key_stable_and_distinguishes_same_day_dividends() -> None:
         "quantity": 0.0,
         "description": "DIV",
     }
-    b = {**a, "symbol": "JEPQ"}  # same day, same amount, different holding
+    b = {**a, "id": "activity-2", "symbol": "JEPQ"}
     assert _dedupe_key("acct1", a) == _dedupe_key("acct1", a)
     assert _dedupe_key("acct1", a) != _dedupe_key("acct1", b)
 

@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from collections.abc import Callable, Mapping
+from datetime import UTC, date, datetime
 from typing import Any, TypeVar, cast
 
-from src.integrations.snaptrade.models import SnapTradeAccount, SnapTradeCredentials
+from src.integrations.snaptrade.models import (
+    SnapTradeAccount,
+    SnapTradeActivity,
+    SnapTradeCredentials,
+)
 
 T = TypeVar("T")
 
@@ -18,6 +25,42 @@ class SnapTradeAPIError(RuntimeError):
         """Create a sanitized API error."""
         super().__init__(message)
         self.status_code = status_code
+
+
+class SnapTradeDataError(SnapTradeAPIError):
+    """Invalid or incomplete data returned by SnapTrade."""
+
+
+class BalanceCurrencyMismatchError(SnapTradeDataError):
+    """No balance row matches the explicitly requested currency."""
+
+    def __init__(self, requested: str, available: list[str]) -> None:
+        currencies = ", ".join(available) if available else "none"
+        super().__init__(
+            f"SnapTrade has no {requested} balance row; available currencies: "
+            f"{currencies}"
+        )
+
+
+class MissingAccountEquityError(SnapTradeDataError):
+    """Margin debt cannot be derived without net account equity."""
+
+    def __init__(self) -> None:
+        super().__init__("SnapTrade account equity is missing")
+
+
+class MissingPositionMarkError(SnapTradeDataError):
+    """Gross market value cannot be derived without a held position's mark."""
+
+    def __init__(self, symbol: str) -> None:
+        super().__init__(f"SnapTrade position mark is missing for {symbol}")
+
+
+class MissingPositionQuantityError(SnapTradeDataError):
+    """Gross market value cannot be derived without a position quantity."""
+
+    def __init__(self, symbol: str) -> None:
+        super().__init__(f"SnapTrade position quantity is missing for {symbol}")
 
 
 class SnapTradeClientWrapper:
@@ -385,10 +428,12 @@ def _summarize_activity(raw_activity: Any) -> dict[str, Any]:
     """Normalize one SnapTrade activity to a stable dict the consumers ingest."""
     raw = _to_plain(raw_activity)
     if not isinstance(raw, Mapping):
-        return {}
-    return {
+        raise SnapTradeDataError("SnapTrade activity payload was not an object")
+    activity_fields = {
         "type": _first_present(raw, "type"),
-        "date": _first_present(raw, "trade_date", "settlement_date"),
+        "date": canonical_activity_date(
+            _first_present(raw, "trade_date", "settlement_date")
+        ),
         "symbol": _activity_symbol(raw),
         "amount": _to_float(_first_present(raw, "amount")),
         "quantity": _to_float(_first_present(raw, "units", "quantity")),
@@ -396,6 +441,60 @@ def _summarize_activity(raw_activity: Any) -> dict[str, Any]:
         "description": _first_present(raw, "description"),
         "account": _activity_account(raw),
     }
+    activity = SnapTradeActivity(
+        id=_activity_id(raw, activity_fields),
+        **activity_fields,
+    )
+    return activity.model_dump(mode="json")
+
+
+def canonical_activity_date(value: Any) -> date:
+    """Parse a calendar date or timezone-aware ISO 8601 datetime as a UTC date."""
+    if isinstance(value, datetime):
+        parsed_datetime = value
+    elif isinstance(value, date):
+        return value
+    elif isinstance(value, str):
+        candidate = value.strip()
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", candidate):
+            try:
+                return date.fromisoformat(candidate)
+            except ValueError as exc:
+                raise SnapTradeDataError(
+                    f"SnapTrade activity date is not ISO 8601: {value!r}"
+                ) from exc
+        if not re.match(r"^\d{4}-\d{2}-\d{2}T", candidate):
+            raise SnapTradeDataError(
+                f"SnapTrade activity date is not ISO 8601: {value!r}"
+            )
+        try:
+            parsed_datetime = datetime.fromisoformat(
+                candidate[:-1] + "+00:00" if candidate.endswith("Z") else candidate
+            )
+        except ValueError as exc:
+            raise SnapTradeDataError(
+                f"SnapTrade activity date is not ISO 8601: {value!r}"
+            ) from exc
+    else:
+        raise SnapTradeDataError("SnapTrade activity date is missing")
+    if parsed_datetime.tzinfo is None or parsed_datetime.utcoffset() is None:
+        raise SnapTradeDataError(
+            "SnapTrade activity datetime must include a timezone offset"
+        )
+    return parsed_datetime.astimezone(UTC).date()
+
+
+def _activity_id(raw: Mapping[str, Any], fields: Mapping[str, Any]) -> str:
+    provider_id = _first_present(raw, "id", "activity_id", "activityId")
+    if provider_id is not None and str(provider_id).strip():
+        return str(provider_id).strip()
+    payload = json.dumps(
+        fields,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    return f"fallback:{hashlib.sha256(payload.encode('utf-8')).hexdigest()}"
 
 
 def _activity_symbol(raw: Mapping[str, Any]) -> str | None:
@@ -477,24 +576,35 @@ def derive_margin_debt(
     stocks: list[dict[str, Any]],
     options: list[dict[str, Any]],
     equity: float | None,
-) -> tuple[float | None, float]:
+) -> tuple[float, float]:
     """Derive margin debt and gross market value from holdings and net equity.
 
     SnapTrade does not expose the margin loan directly. Gross long market value
     (settled cash is carried in the SPAXX position, so it is already included)
     minus net account equity recovers it (validated within ~0.1% of the broker's
     reported net debit). Options use the x100 contract multiplier. margin_debt is
-    a loan, so it is clamped to >= 0 (a net-cash account owes nothing). Returns
-    (margin_debt, gross_market_value); margin_debt is None if equity is unknown.
+    a loan, so it is clamped to >= 0 (a net-cash account owes nothing). Missing
+    equity, quantities, or marks fail closed because they make the result partial.
     """
-    stock_mv = sum((p.get("price") or 0) * (p.get("quantity") or 0) for p in stocks)
-    option_mv = sum(
-        (o.get("price") or 0) * (o.get("quantity") or 0) * 100 for o in options
-    )
-    gross_mv = round(stock_mv + option_mv, 2)
     if equity is None:
-        return None, gross_mv
+        raise MissingAccountEquityError
+    stock_mv = sum(_position_market_value(position, 1) for position in stocks)
+    option_mv = sum(_position_market_value(position, 100) for position in options)
+    gross_mv = round(stock_mv + option_mv, 2)
     return max(round(gross_mv - equity, 2), 0.0), gross_mv
+
+
+def _position_market_value(position: Mapping[str, Any], multiplier: int) -> float:
+    symbol = str(position.get("symbol") or "unknown position")
+    quantity = position.get("quantity")
+    if quantity is None:
+        raise MissingPositionQuantityError(symbol)
+    if quantity == 0:
+        return 0.0
+    price = position.get("price")
+    if price is None:
+        raise MissingPositionMarkError(symbol)
+    return float(price) * float(quantity) * multiplier
 
 
 def _position_symbol(raw_position: Any) -> str | None:
