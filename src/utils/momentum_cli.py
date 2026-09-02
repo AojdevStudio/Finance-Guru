@@ -408,18 +408,18 @@ Examples:
     )
 
     parser.add_argument(
-        "--stoch-k", type=int, default=14, help="Stochastic %K period (default: 14)"
+        "--stoch-k", type=int, default=14, help="Stochastic %%K period (default: 14)"
     )
 
     parser.add_argument(
-        "--stoch-d", type=int, default=3, help="Stochastic %D period (default: 3)"
+        "--stoch-d", type=int, default=3, help="Stochastic %%D period (default: 3)"
     )
 
     parser.add_argument(
         "--williams-period",
         type=int,
         default=14,
-        help="Williams %R period (default: 14)",
+        help="Williams %%R period (default: 14)",
     )
 
     parser.add_argument(

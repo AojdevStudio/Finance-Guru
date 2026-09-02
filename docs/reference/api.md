@@ -53,7 +53,9 @@ uv run python -m src.integrations.refresh_all --help
 | Command | Purpose |
 | --- | --- |
 | `src/utils/data_validator_cli.py` | Check data quality. |
+| `uv run python -m src.utils.input_validation_cli` | Validate financial time-series inputs. |
 | `src/utils/market_data.py` | Retrieve market data. |
+| `src/utils/momentum_cli.py` | Calculate momentum indicators. |
 | `src/utils/moving_averages_cli.py` | Calculate moving averages and crossover signals. |
 | `src/utils/screener_cli.py` | Run the market screener. |
 | `src/utils/volatility_cli.py` | Calculate volatility indicators. |
@@ -78,16 +80,6 @@ fresh setup.
 | `uv run python -m src.integrations.snaptrade.sync_db` | Refresh SnapTrade positions and balances into local SQLite. |
 | `uv run python -m src.integrations.snaptrade.sync_transactions_db` | Refresh SnapTrade activities into local SQLite. |
 | `uv run python -m src.integrations.simplefin.sync_expenses_db` | Refresh SimpleFIN transactions into local SQLite. |
-
-## Known unavailable commands
-
-These checked-in entry points are intentionally excluded from the supported
-inventory until their tracked defects are resolved:
-
-- `src/utils/momentum_cli.py --help` fails because an unescaped percent sign
-  breaks argparse help rendering ([#108](https://github.com/AojdevStudio/Finance-Guru/issues/108)).
-- `src.utils.input_validation_cli` fails before argument parsing because it
-  imports an obsolete `MarketDataFetcher` symbol ([#120](https://github.com/AojdevStudio/Finance-Guru/issues/120)).
 
 ## Output and safety
 

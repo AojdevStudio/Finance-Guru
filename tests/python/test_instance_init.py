@@ -42,9 +42,15 @@ def _run_init(
     repo: Path,
     *,
     configure_git_identity: bool = True,
+    plugin: bool = False,
+    plugin_root: Path | None = None,
     sync_roots: list[Path] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
+    if plugin_root is None:
+        env.pop("CLAUDE_PLUGIN_ROOT", None)
+    else:
+        env["CLAUDE_PLUGIN_ROOT"] = str(plugin_root)
     if configure_git_identity:
         env.update(GIT_ENV)
     else:
@@ -57,6 +63,8 @@ def _run_init(
         env["GIT_CONFIG_VALUE_0"] = "true"
 
     args = [str(root), "--repo", str(repo)]
+    if plugin:
+        args.append("--plugin")
     stdout = io.StringIO()
     stderr = io.StringIO()
     with (
@@ -208,6 +216,32 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
     assert _git(root, "rev-list", "--count", "HEAD") == "1"
     assert _git(root, "log", "-1", "--format=%s") == "scaffold instance"
     assert _git(root, "remote") == ""
+
+
+def test_plugin_flag_omits_harness_symlinks(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode == 0, result.stderr
+    assert not (root / ".claude").exists()
+    assert not (root / ".agents").exists()
+    agent_instructions = (root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "plugin is the source of truth for agents, skills, and hooks" in (
+        agent_instructions
+    )
+
+
+def test_matching_plugin_root_omits_harness_symlinks(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+
+    result = _run_init(root, repo, plugin_root=repo)
+
+    assert result.returncode == 0, result.stderr
+    assert not (root / ".claude").exists()
+    assert not (root / ".agents").exists()
 
 
 @pytest.mark.parametrize("empty_value", ['""', "''", "   "])
