@@ -1,10 +1,11 @@
 # RunSimulation Workflow
 
-Execute the Monte Carlo v3.0 simulation with auto-detected portfolio values.
+Execute the Monte Carlo v3.0 simulation with operator-supplied portfolio values.
 
 ## Prerequisites
 
-- Latest Fidelity positions CSV in `imports/Portfolio_Positions_*.csv`
+- Current portfolio values, optionally derived from the latest Fidelity positions CSV in `imports/Portfolio_Positions_*.csv`
+- Instance-local `strategies/dividend_margin_monte_carlo.py`
 - Python environment configured with `uv`
 
 ## Workflow Steps
@@ -17,15 +18,15 @@ date +"%Y-%m-%d"
 
 Store as `{simulation_date}` for output file naming.
 
-### Step 2: Auto-Detect Portfolio Values
+### Step 2: Derive Portfolio Values
 
-Read the latest Fidelity positions CSV from `imports/`:
+If using the Fidelity CSV fallback, locate the latest positions file in `imports/`:
 
 ```bash
 ls -t imports/Portfolio_Positions_*.csv | head -1
 ```
 
-Parse the CSV to extract current values for each layer:
+Read the current data to determine values for each layer. This step does not update the simulation script automatically:
 
 **Layer 1 (Growth)** - Sum of:
 - PLTR, TSLA, NVDA, AAPL, VOO, FNILX, SPMO, VXUS, FZILX, SOFI, COIN, MSTR

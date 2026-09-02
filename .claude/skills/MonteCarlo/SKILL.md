@@ -1,6 +1,6 @@
 ---
 name: monte-carlo
-description: Run Monte Carlo simulations for Finance Guru portfolio strategy. USE WHEN user mentions monte carlo OR run simulation OR stress test portfolio OR probability analysis OR income projections OR margin safety analysis. Supports 4-layer portfolio (Growth, Income, Hedge, GOOGL) with auto-detection of current values from Fidelity CSV.
+description: Run Monte Carlo simulations for Finance Guru portfolio strategy. USE WHEN user mentions monte carlo OR run simulation OR stress test portfolio OR probability analysis OR income projections OR margin safety analysis. Supports a 4-layer portfolio (Growth, Income, Hedge, GOOGL) with operator-supplied starting values.
 ---
 
 # MonteCarlo
@@ -20,7 +20,7 @@ Monte Carlo simulation engine for Finance Guru's 4-layer dividend income + margi
 ```
 User: "Run the monte carlo simulation with current portfolio"
 -> Invokes RunSimulation workflow
--> Auto-detects portfolio values from imports/Portfolio_Positions_*.csv
+-> Derives current values, then updates the hard-coded inputs in run_single_scenario()
 -> Runs 10,000 scenarios with v3.0 4-layer model
 -> Outputs JSON summary + full CSV + Excel to analysis/
 ```
@@ -73,8 +73,10 @@ All outputs saved to `analysis/`:
 
 ## Configuration
 
-Simulation parameters are set in `strategies/dividend_margin_monte_carlo.py`:
-- Starting portfolio values (auto-detected or manual)
+The instance-local script at `strategies/dividend_margin_monte_carlo.py` reads starting portfolio values that are hard-coded in `run_single_scenario()`. It does not auto-detect values from CSV. Before each run, follow the `RunSimulation` workflow to derive current values and edit those assignments.
+
+Simulation parameters include:
+- Starting portfolio values (manually set in `run_single_scenario()`)
 - Monthly deployment amounts
 - Bucket allocations and yields
 - Margin schedule
@@ -91,4 +93,4 @@ Simulation parameters are set in `strategies/dividend_margin_monte_carlo.py`:
 Fixes applied:
 - Floor at $0 for all positions (stocks can't go negative)
 - Full portfolio margin ratio (all layers count toward Fidelity margin)
-- Correct starting values from Fidelity CSV
+- Operator-supplied starting values derived from current portfolio data

@@ -353,6 +353,11 @@ create_directory_structure() {
 
   # Finance Guru data directory
   create_dir "$PROJECT_ROOT/fin-guru/data"
+
+  # Instance import directories
+  create_dir "$PROJECT_ROOT/imports"
+  create_dir "$PROJECT_ROOT/imports/transactions"
+  create_dir "$PROJECT_ROOT/imports/retirement"
 }
 
 verify_directory_structure() {
@@ -378,6 +383,9 @@ verify_directory_structure() {
     "$PROJECT_ROOT/notebooks/tools-needed"
     "$PROJECT_ROOT/notebooks/tools-needed/done"
     "$PROJECT_ROOT/fin-guru/data"
+    "$PROJECT_ROOT/imports"
+    "$PROJECT_ROOT/imports/transactions"
+    "$PROJECT_ROOT/imports/retirement"
   )
 
   for dir in "${dirs[@]}"; do
@@ -430,7 +438,7 @@ scaffold_file() {
 
 scaffold_config_files() {
   # 1. user-profile.yaml
-  local user_profile="$PROJECT_ROOT/fin-guru/data/user-profile.yaml"
+  local user_profile="$PROJECT_ROOT/user-profile.yaml"
   if scaffold_file "$user_profile" "user profile template"; then
     cat > "$user_profile" << 'PROFILE_EOF'
 # Finance Guru User Profile Configuration

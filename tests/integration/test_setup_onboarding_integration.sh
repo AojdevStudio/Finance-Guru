@@ -147,6 +147,7 @@ mkdir -p "$TEST_DIR"
 cp "$PROJECT_ROOT/setup.sh" "$TEST_DIR/"
 cp "$PROJECT_ROOT/pyproject.toml" "$TEST_DIR/" 2>/dev/null || true
 cp "$PROJECT_ROOT/uv.lock" "$TEST_DIR/" 2>/dev/null || true
+cp "$PROJECT_ROOT/README.md" "$TEST_DIR/" 2>/dev/null || true
 cp "$PROJECT_ROOT/.env.example" "$TEST_DIR/" 2>/dev/null || true
 
 # Create minimal src/ structure so uv sync can find the project
@@ -192,9 +193,13 @@ assert_dir_exists "$TEST_DIR/notebooks/transactions"
 assert_dir_exists "$TEST_DIR/notebooks/tools-needed"
 assert_dir_exists "$TEST_DIR/notebooks/tools-needed/done"
 assert_dir_exists "$TEST_DIR/fin-guru/data"
+assert_dir_exists "$TEST_DIR/imports"
+assert_dir_exists "$TEST_DIR/imports/transactions"
+assert_dir_exists "$TEST_DIR/imports/retirement"
 
 # Verify config files
-assert_file_exists "$TEST_DIR/fin-guru/data/user-profile.yaml"
+assert_file_exists "$TEST_DIR/user-profile.yaml"
+assert_file_not_exists "$TEST_DIR/fin-guru/data/user-profile.yaml"
 assert_file_exists "$TEST_DIR/fin-guru-private/README.md"
 
 # Verify .env created (if .env.example was present)
@@ -256,6 +261,9 @@ assert_no_grep "/tmp/setup-test-second.log" "FAIL" "No FAIL messages in second r
 assert_dir_exists "$TEST_DIR/fin-guru-private/fin-guru/strategies/active"
 assert_dir_exists "$TEST_DIR/fin-guru-private/hedging"
 assert_dir_exists "$TEST_DIR/fin-guru/data"
+assert_dir_exists "$TEST_DIR/imports"
+assert_dir_exists "$TEST_DIR/imports/transactions"
+assert_dir_exists "$TEST_DIR/imports/retirement"
 
 # Verify no duplicate entries in .setup-progress
 DUP_COUNT=$(sort "$TEST_DIR/.setup-progress" | uniq -d | wc -l | tr -d ' ')

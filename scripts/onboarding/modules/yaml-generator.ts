@@ -3,7 +3,7 @@
  * Generates configuration files from templates and user data
  */
 
-import { readFileSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 export interface UserData {
@@ -248,9 +248,19 @@ export function writeConfigFile(filePath: string, content: string): void {
  * @param outputDir - Base directory for output files
  */
 export function generateAllConfigs(data: UserData, outputDir: string = process.cwd()): void {
+  const importDirectories = [
+    join(outputDir, 'imports'),
+    join(outputDir, 'imports', 'transactions'),
+    join(outputDir, 'imports', 'retirement')
+  ];
+
+  for (const directory of importDirectories) {
+    mkdirSync(directory, { recursive: true });
+  }
+
   const configs = [
     {
-      path: join(outputDir, 'fin-guru', 'data', 'user-profile.yaml'),
+      path: join(outputDir, 'user-profile.yaml'),
       content: generateUserProfile(data)
     },
     {
