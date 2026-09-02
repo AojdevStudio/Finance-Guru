@@ -16,8 +16,9 @@ write a credential value into a tracked file, an issue, or a pull request.
 
 The engine loads `.env` from the instance root, the directory named by
 `FIN_GURU_DATA_ROOT` or the current working directory. `instance_init` scaffolds
-that file from `.env.example` with every variable left blank. Edit the
-instance's `.env`, not a copy inside the repository checkout.
+that file from `.env.example`, preserving real defaults and commenting out empty
+values and credential placeholders. Edit the instance's `.env`, not a copy
+inside the repository checkout.
 
 ## SnapTrade
 
@@ -51,9 +52,12 @@ after you have verified the account against a broker export. Accounts left
 
 ## SimpleFIN
 
-SimpleFIN supplies bank and card transactions. The credentials are consumed by
-the Bun workspace under `apps/simplefin-sync/`, which reads its own `.env` in
-that directory, not the instance `.env`.
+SimpleFIN supplies bank and card transactions. The recommended single location
+for its long-lived credential is the instance `.env`. `refresh_all` loads that
+file with override enabled before it starts Bun in `apps/simplefin-sync/`, so an
+uncommented `SIMPLEFIN_ACCESS_URL` in the instance `.env` wins. Bun reads the
+workspace's `apps/simplefin-sync/.env` value only when the instance leaves
+`SIMPLEFIN_ACCESS_URL` commented out.
 
 | Variable | Purpose |
 | --- | --- |
@@ -62,7 +66,9 @@ that directory, not the instance `.env`.
 | `SIMPLEFIN_TRIGGER_INTERVAL_MS` | Optional poll interval for the local deposit-trigger process |
 
 Claim the setup token once. The claim command writes the resulting access URL
-into `apps/simplefin-sync/.env` and refuses to overwrite an existing one.
+into `apps/simplefin-sync/.env` and refuses to overwrite an existing one. To use
+the recommended single location afterward, move that value to the instance
+`.env`, uncomment `SIMPLEFIN_ACCESS_URL`, and comment out the workspace copy.
 
 ```bash
 cd apps/simplefin-sync

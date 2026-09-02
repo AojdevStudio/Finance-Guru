@@ -176,18 +176,19 @@ def create_embedded_chart(data, chart_type, title):
 ```python
 import subprocess
 import json
+import sys
 
-def get_chart_data(ticker, tool, days=90):
+def get_chart_data(ticker, module, days=90):
     """Run CLI tool and parse JSON output for charting."""
     result = subprocess.run(
-        ['uv', 'run', 'python', f'src/analysis/{tool}.py', ticker, '--days', str(days), '--output', 'json'],
+        [sys.executable, '-m', module, ticker, '--days', str(days), '--output', 'json'],
         capture_output=True, text=True
     )
     return json.loads(result.stdout)
 
 # Example usage
-risk_data = get_chart_data('TSLA', 'risk_metrics_cli', 252)
-momentum_data = get_chart_data('TSLA', 'momentum_cli', 90)
+risk_data = get_chart_data('TSLA', 'src.analysis.risk_metrics_cli', 252)
+momentum_data = get_chart_data('TSLA', 'src.utils.momentum_cli', 90)
 ```
 
 ## Accessibility Notes

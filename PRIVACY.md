@@ -8,19 +8,19 @@ Finance Guru is a **private, single-user family-office system**. This document d
 
 - All financial data stays on the owner's machine
 - No telemetry, no remote analytics, no third-party data sharing
-- Nothing personally identifying is committed to git — enforced by `.gitignore` and the `compliance-scan` skill
+- Nothing personally identifying is committed to the public engine repository; the separate instance repository is local-only and has no remote
 - When data _does_ leave the laptop (SnapTrade, SimpleFIN, Fidelity APIs, ITC Risk Models), it goes directly to the owner's own accounts — no intermediary
 
 ## What data Finance Guru handles
 
 | Category | Source | Storage | Exposure |
 | ---------- | -------- | --------- | ---------- |
-| Portfolio positions | SnapTrade (CSV fallback) | `family_office.db` (gitignored) | Local only |
-| Account balances | SnapTrade (CSV fallback) | `family_office.db` (gitignored) | Local only |
-| Transaction history | SnapTrade | `family_office.db` (gitignored) | Local only |
-| Bank / card spending | SimpleFIN | `family_office.db` (gitignored) | Local only |
-| Dividend events | SnapTrade activities | `family_office.db` (gitignored) | Local only |
-| User profile (risk tolerance, goals) | Interactive onboarding | `fin-guru/data/user-profile.yaml` (gitignored) | Local only |
+| Portfolio positions | SnapTrade (CSV fallback) | `family_office.db` (committed to local-only instance repository) | Local only; no remote |
+| Account balances | SnapTrade (CSV fallback) | `family_office.db` (committed to local-only instance repository) | Local only; no remote |
+| Transaction history | SnapTrade | `family_office.db` (committed to local-only instance repository) | Local only; no remote |
+| Bank / card spending | SimpleFIN | `family_office.db` (committed to local-only instance repository) | Local only; no remote |
+| Dividend events | SnapTrade activities | `family_office.db` (committed to local-only instance repository) | Local only; no remote |
+| User profile (risk tolerance, goals) | Interactive onboarding | `user-profile.yaml` under the instance root (committed to local-only instance repository) | Local only; no remote |
 | Market data | yfinance / Finnhub / ITC | In-memory during analysis | Per-provider terms |
 
 ## What leaves your machine

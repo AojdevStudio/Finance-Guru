@@ -133,13 +133,28 @@ def _initialize_git(path: Path) -> StepResult:
 
 
 def _instance_env(example: str) -> str:
-    lines = example.splitlines()
-    for index, line in enumerate(lines):
-        if line.startswith("FIN_GURU_DATA_ROOT="):
-            lines[index] = "FIN_GURU_DATA_ROOT="
-            break
-    else:
-        lines.append("FIN_GURU_DATA_ROOT=")
+    lines: list[str] = []
+    found_data_root = False
+    for line in example.splitlines():
+        if line.lstrip().startswith("#") or "=" not in line:
+            lines.append(line)
+            continue
+
+        key, value = line.split("=", 1)
+        if key == "FIN_GURU_DATA_ROOT":
+            value = ""
+            found_data_root = True
+        elif (
+            "your_" in value
+            or value.endswith("_here")
+            or (value.startswith("${") and value.endswith("}"))
+        ):
+            value = ""
+
+        lines.append(f"{key}={value}" if value else f"# {key}=")
+
+    if not found_data_root:
+        lines.append("# FIN_GURU_DATA_ROOT=")
     return "\n".join(lines) + "\n"
 
 

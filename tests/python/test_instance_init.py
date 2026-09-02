@@ -181,9 +181,9 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
     assert (root / ".git").is_dir()
 
     env_lines = paths.env_file.read_text(encoding="utf-8").splitlines()
-    assert "FIN_GURU_DATA_ROOT=" in env_lines
+    assert "# FIN_GURU_DATA_ROOT=" in env_lines
     assert "FIN_GURU_DATA_ROOT=/replace/me" not in env_lines
-    assert "EXAMPLE_SETTING=" in env_lines
+    assert "# EXAMPLE_SETTING=" in env_lines
 
     profile = yaml.safe_load(paths.profile.read_text(encoding="utf-8"))
     assert set(profile) == {
@@ -208,6 +208,38 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
     assert _git(root, "rev-list", "--count", "HEAD") == "1"
     assert _git(root, "log", "-1", "--format=%s") == "scaffold instance"
     assert _git(root, "remote") == ""
+
+
+def test_scaffolded_env_comments_empty_and_placeholder_values(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    (repo / ".env.example").write_text(
+        "FIN_GURU_DATA_ROOT=/replace/me\n"
+        "SIMPLEFIN_ACCESS_URL=\n"
+        "SNAPTRADE_CLIENT_ID=your_snaptrade_client_id_here\n"
+        "SIMPLEFIN_SETUP_TOKEN=${SIMPLEFIN_SETUP_TOKEN}\n"
+        "LEGACY_SECRET=credential_here\n"
+        "SMTP_PORT=587\n"
+        "DEFAULT_RISK_TOLERANCE=aggressive\n"
+        "DATABASE_URL=sqlite:///family_office.db\n",
+        encoding="utf-8",
+    )
+    root = tmp_path / "instance"
+
+    result = _run_init(root, repo)
+
+    assert result.returncode == 0, result.stderr
+    env_text = (root / ".env").read_text(encoding="utf-8")
+    env_lines = env_text.splitlines()
+    assert "_here" not in env_text
+    assert "your_" not in env_text
+    assert env_lines.count("# SIMPLEFIN_ACCESS_URL=") == 1
+    assert not any(line.startswith("SIMPLEFIN_ACCESS_URL=") for line in env_lines)
+    assert "# SNAPTRADE_CLIENT_ID=" in env_lines
+    assert "# SIMPLEFIN_SETUP_TOKEN=" in env_lines
+    assert "# LEGACY_SECRET=" in env_lines
+    assert "SMTP_PORT=587" in env_lines
+    assert "DEFAULT_RISK_TOLERANCE=aggressive" in env_lines
+    assert "DATABASE_URL=sqlite:///family_office.db" in env_lines
 
 
 def test_second_run_is_a_no_op(tmp_path: Path) -> None:

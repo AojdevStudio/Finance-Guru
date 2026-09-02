@@ -9,9 +9,11 @@ category: setup
 Keep credentials in a local `.env` file or process environment. The engine
 reads `.env` from the instance root, the directory named by
 `FIN_GURU_DATA_ROOT` or the current working directory. `instance_init`
-scaffolds that file from the checked-in `.env.example` with every value blank.
-The `.env` file and the local SQLite database are gitignored; that is a
-safeguard, not permission to print or commit their contents.
+scaffolds that file from the checked-in `.env.example`, preserving real defaults
+and commenting out empty values and credential placeholders for you to fill in.
+The `.env` file is gitignored. The local SQLite database is committed to the
+instance's local-only repository, which has no remote, and never to the public
+engine checkout.
 
 ## Local data store
 
@@ -90,11 +92,10 @@ but a provider may still receive the tickers you query. See [Privacy](../../PRIV
 
 ## Test safety
 
-Do not leave `.env.example` placeholders in a local `.env` while running the
-test suite. Some configuration loaders parse numeric values at import time, so
-placeholder text can fail tests before the test's actual behavior is reached.
-For a clean local test run, remove the scaffolded `.env` or replace only the
-values you intentionally use:
+The instance initializer comments out `.env.example` placeholders so they do
+not enter the process environment. If you copy `.env.example` manually instead,
+comment out unused placeholders before running tests; some configuration loaders
+parse numeric values at import time and reject placeholder text:
 
 ```bash
 uv run pytest -m "not integration"
