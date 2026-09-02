@@ -86,7 +86,7 @@ No portfolio data required. Market analysis works from a fresh clone.
 uv run python -m src.analysis.risk_metrics_cli TSLA --days 252 --benchmark SPY --output json
 ```
 
-Every CLI supports `--output json`. That is the contract the skills consume, so what an agent reports is exactly what the calculator returned.
+Nineteen of the twenty CLIs take `--output json`; margin metrics prints JSON by default. That is the contract the skills consume, so what an agent reports is exactly what the calculator returned.
 
 </details>
 
