@@ -7,6 +7,57 @@ All notable changes to Finance Guru™ will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0](https://github.com/AojdevStudio/Finance-Guru/compare/v2.2.0...v2.3.0) (2026-09-02)
+
+
+### Added
+
+* **config:** resolve every private path from one instance data root ([#133](https://github.com/AojdevStudio/Finance-Guru/issues/133)) ([c70d05b](https://github.com/AojdevStudio/Finance-Guru/commit/c70d05bb13669c06db50b5696e85bcda4ecde5b8))
+* **instance:** scaffold a local-only instance directory ([#135](https://github.com/AojdevStudio/Finance-Guru/issues/135)) ([bac7c5a](https://github.com/AojdevStudio/Finance-Guru/commit/bac7c5a2d3148fab15a35e12e6a821ef7d0f56f5))
+* **plugin:** package Finance Guru as a Claude Code plugin with a Codex surface ([#145](https://github.com/AojdevStudio/Finance-Guru/issues/145)) ([fa9739b](https://github.com/AojdevStudio/Finance-Guru/commit/fa9739bb3aec600ac7c7fb5b8fd4f33f5259eb4c)), closes [#131](https://github.com/AojdevStudio/Finance-Guru/issues/131)
+
+
+### Fixed
+
+* **buy-ticket:** fail closed on NAV, margin rate, and Layer 3 ITC, and model persistence apart from notification ([#159](https://github.com/AojdevStudio/Finance-Guru/issues/159)) ([3735eae](https://github.com/AojdevStudio/Finance-Guru/commit/3735eae1e91b50d201edf095a50b78635b6ec3e8))
+* **cli:** restore the broken CLI help paths, harden onboarding state writes, and add plugin-mode instance init ([#156](https://github.com/AojdevStudio/Finance-Guru/issues/156)) ([8546d5c](https://github.com/AojdevStudio/Finance-Guru/commit/8546d5c0df8cea94ab88e3c73b9e4a9a49b2cb6d))
+* **deps:** cap the SnapTrade SDK below 12 ([#142](https://github.com/AojdevStudio/Finance-Guru/issues/142)) ([d5817d4](https://github.com/AojdevStudio/Finance-Guru/commit/d5817d4520437324c4cdc2b7d006fcad1abd8e6a)), closes [#131](https://github.com/AojdevStudio/Finance-Guru/issues/131)
+* **deps:** upgrade gitpython, nltk, soupsieve, and pygments past their advisories ([#151](https://github.com/AojdevStudio/Finance-Guru/issues/151)) ([947bf9f](https://github.com/AojdevStudio/Finance-Guru/commit/947bf9f967fb0d7bd19ce8292de5917a4977a06a))
+* **docs-site:** make bun.lock the only lockfile and bump astro to 7.2.10 ([#152](https://github.com/AojdevStudio/Finance-Guru/issues/152)) ([171b6d6](https://github.com/AojdevStudio/Finance-Guru/commit/171b6d6fcbe624bc88d101b82b8b204e8748a5de))
+* **instance:** ignore inherited git environment when scaffolding ([#140](https://github.com/AojdevStudio/Finance-Guru/issues/140)) ([c1e77fb](https://github.com/AojdevStudio/Finance-Guru/commit/c1e77fbcdb6fa15b23229fc17b6134349e50b2a3)), closes [#131](https://github.com/AojdevStudio/Finance-Guru/issues/131)
+* **instance:** scrub placeholder env values and run chart tools as modules ([#149](https://github.com/AojdevStudio/Finance-Guru/issues/149)) ([feaf759](https://github.com/AojdevStudio/Finance-Guru/commit/feaf759377235dece2ca348cf52ee1a0eebc5f48)), closes [#131](https://github.com/AojdevStudio/Finance-Guru/issues/131)
+* **margin:** route margin metrics to the unique taxable_margin account and validate the balance generation ([#155](https://github.com/AojdevStudio/Finance-Guru/issues/155)) ([8c94e83](https://github.com/AojdevStudio/Finance-Guru/commit/8c94e83a454bb7968277cdf4a89a94d857787008))
+* **simplefin:** correct sync direction, payroll and retirement categorization, and close the privacy gate that missed them ([#128](https://github.com/AojdevStudio/Finance-Guru/issues/128)) ([89f3c4f](https://github.com/AojdevStudio/Finance-Guru/commit/89f3c4ff5135989f10b5371a362258681ee7b420))
+* **simplefin:** fail partial syncs loudly and gate the deposit trigger on settled transactions ([#154](https://github.com/AojdevStudio/Finance-Guru/issues/154)) ([5917d28](https://github.com/AojdevStudio/Finance-Guru/commit/5917d28a29f44afb1d94496f97793343a203e949))
+* **snaptrade:** key activities on provider identity, canonicalize dates, and fail closed on incomplete balances ([#157](https://github.com/AojdevStudio/Finance-Guru/issues/157)) ([89fb024](https://github.com/AojdevStudio/Finance-Guru/commit/89fb024f80762f0568c2a623afa3ce19d2e30b4b))
+
+
+### Changed
+
+* **deps:** upgrade the 12 packages from the stale dependabot PR ([#124](https://github.com/AojdevStudio/Finance-Guru/issues/124)) ([d13f5ab](https://github.com/AojdevStudio/Finance-Guru/commit/d13f5ab69d99750229bc91d00c8dc9a257f20817))
+* **privacy:** clear the standing layer-7 and pattern findings ([#141](https://github.com/AojdevStudio/Finance-Guru/issues/141)) ([a8fcf0e](https://github.com/AojdevStudio/Finance-Guru/commit/a8fcf0ed7135fc3acde3ebcb5aa56e709d1cb08e)), closes [#130](https://github.com/AojdevStudio/Finance-Guru/issues/130)
+* **privacy:** rewrite standing financial figures as ratios per DataClassification ([#129](https://github.com/AojdevStudio/Finance-Guru/issues/129)) ([62b1ad9](https://github.com/AojdevStudio/Finance-Guru/commit/62b1ad9e9d682fcf509f364b92f910aa592fe706))
+* **privacy:** untrack the last three instance artifacts ([#132](https://github.com/AojdevStudio/Finance-Guru/issues/132)) ([8d441f8](https://github.com/AojdevStudio/Finance-Guru/commit/8d441f82ce32dc9f607238a954278df707dfc1c6))
+* **sheets:** retire the Google Sheets DataHub; family_office.db is the system of record ([#114](https://github.com/AojdevStudio/Finance-Guru/issues/114)) ([42be217](https://github.com/AojdevStudio/Finance-Guru/commit/42be217693cda90bc27a5b763ad2512eebcc9490))
+
+
+### Documentation
+
+* establish source-backed Wiki documentation ([#121](https://github.com/AojdevStudio/Finance-Guru/issues/121)) ([0269048](https://github.com/AojdevStudio/Finance-Guru/commit/02690486e5dcaa175a32f302f9c7d12afe6eb499))
+* **readme:** acknowledge the September sweep, address agents directly, and drop template filler ([#163](https://github.com/AojdevStudio/Finance-Guru/issues/163)) ([a2e269b](https://github.com/AojdevStudio/Finance-Guru/commit/a2e269b6e8899249e800d0cc49ca4aa1600adbd9))
+* **readme:** rewrite the README as a story with generated architecture, guardrail, and demo assets ([#162](https://github.com/AojdevStudio/Finance-Guru/issues/162)) ([18c8fd5](https://github.com/AojdevStudio/Finance-Guru/commit/18c8fd5beb4712218e54863f6ef098fbad929d06))
+* reposition the README and setup guides for installers ([#146](https://github.com/AojdevStudio/Finance-Guru/issues/146)) ([ef04e11](https://github.com/AojdevStudio/Finance-Guru/commit/ef04e1171d2f88c37d97db648af392dc67e9e432)), closes [#131](https://github.com/AojdevStudio/Finance-Guru/issues/131)
+* **site:** add the Diátaxis documentation site on the AOJ Starlight starter ([#147](https://github.com/AojdevStudio/Finance-Guru/issues/147)) ([83077d6](https://github.com/AojdevStudio/Finance-Guru/commit/83077d60fe1b171f5fdeac2f5f10c75f5c0b7e08)), closes [#131](https://github.com/AojdevStudio/Finance-Guru/issues/131)
+* **skills:** fix the five skill and onboarding contract bugs ([#144](https://github.com/AojdevStudio/Finance-Guru/issues/144)) ([2683f1d](https://github.com/AojdevStudio/Finance-Guru/commit/2683f1d22b6e96c7989343b436af913227148c18)), closes [#137](https://github.com/AojdevStudio/Finance-Guru/issues/137)
+* **skills:** point every skill, agent, and task at the instance layout ([#136](https://github.com/AojdevStudio/Finance-Guru/issues/136)) ([d0515b1](https://github.com/AojdevStudio/Finance-Guru/commit/d0515b1d629b4e3cf663b54888f872de501eb45b)), closes [#131](https://github.com/AojdevStudio/Finance-Guru/issues/131)
+* **wiki:** ledger rows for the instance data root claims ([#143](https://github.com/AojdevStudio/Finance-Guru/issues/143)) ([f512ee4](https://github.com/AojdevStudio/Finance-Guru/commit/f512ee45b59d483b156bff048ee296d039b144fe)), closes [#131](https://github.com/AojdevStudio/Finance-Guru/issues/131)
+
+
+### Security
+
+* scrub PII from HEAD and stop the scanner passing blind ([#123](https://github.com/AojdevStudio/Finance-Guru/issues/123)) ([4939a58](https://github.com/AojdevStudio/Finance-Guru/commit/4939a58d5c1a22745e53559e319f9228f6e13e2c))
+* untrack qa PII replacement files ([bb9c5a3](https://github.com/AojdevStudio/Finance-Guru/commit/bb9c5a3ab2c6997545391f84681db897d46e975f))
+
 ## [Unreleased]
 
 ### Changed
