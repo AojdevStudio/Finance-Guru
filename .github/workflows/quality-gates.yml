@@ -9,6 +9,9 @@ concurrency:
   group: quality-gates-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   dead-code-vulture:
     name: Dead-code scan (vulture)

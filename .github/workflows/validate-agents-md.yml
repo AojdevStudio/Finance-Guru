@@ -8,6 +8,9 @@ on:
       - .github/workflows/validate-agents-md.yml
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     name: Lint AGENTS.md + CLAUDE.md
