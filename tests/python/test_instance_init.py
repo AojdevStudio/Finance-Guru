@@ -11,6 +11,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
+import pytest
 import yaml
 
 from src.cli import instance_init
@@ -86,6 +87,11 @@ def _git(root: Path, *args: str) -> str:
         check=True,
         capture_output=True,
         text=True,
+        env={
+            name: value
+            for name, value in os.environ.items()
+            if not name.startswith("GIT_")
+        },
     )
     return result.stdout.strip()
 
@@ -247,3 +253,61 @@ def test_scaffold_commit_does_not_require_user_git_identity(tmp_path: Path) -> N
     assert _git(root, "log", "-1", "--format=%an <%ae>") == (
         "Finance Guru <finance-guru@example.invalid>"
     )
+
+
+def test_scaffold_commit_ignores_inherited_git_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hook_repo = tmp_path / "hook-repo"
+    clean_env = {
+        name: value for name, value in os.environ.items() if not name.startswith("GIT_")
+    }
+    subprocess.run(
+        ["git", "init", str(hook_repo)],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=clean_env,
+    )
+    (hook_repo / "outer.txt").write_text("outer\n", encoding="utf-8")
+    subprocess.run(
+        ["git", "-C", str(hook_repo), "add", "outer.txt"],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=clean_env,
+    )
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(hook_repo),
+            "-c",
+            "user.name=Hook Repo",
+            "-c",
+            "user.email=hook@example.invalid",
+            "commit",
+            "-m",
+            "outer commit",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=clean_env,
+    )
+    git_dir = hook_repo / ".git"
+    monkeypatch.setenv("GIT_DIR", str(git_dir))
+    monkeypatch.setenv("GIT_INDEX_FILE", str(git_dir / "index"))
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+
+    result = _run_init(root, repo)
+
+    git_log = subprocess.run(
+        ["git", "-C", str(root), "log", "-1", "--format=%s"],
+        capture_output=True,
+        text=True,
+        env=clean_env,
+    )
+    assert result.returncode == 0, result.stderr
+    assert git_log.stdout.strip() == "scaffold instance"
