@@ -646,10 +646,10 @@ remaining_cash  =  current_cash − deployment_amount
 ### 16.2 Concentration
 
 ```
-new_pct  =  (existing_value + deployment[ticker]) / (portfolio_value + deployment_total)
+new_pct  =  (existing_value + deployment[ticker]) / equity_nav_pre_borrow
 ```
 
-Warn if `new_pct > 0.30`.
+The denominator is the pre-borrow equity NAV. Margin-funded deployment never inflates it. Block if `new_pct > 0.30`, and block when equity NAV is missing or non-positive.
 
 ### 16.3 Margin coverage
 

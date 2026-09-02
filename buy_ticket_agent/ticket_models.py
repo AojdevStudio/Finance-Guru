@@ -32,8 +32,8 @@ class TicketAllocation(BaseModel):
         return normalized
 
 
-class BuyTicket(BaseModel):
-    """Structured JSON representation of the buy-ticket template."""
+class TicketProposal(BaseModel):
+    """Model-authored buy-ticket fields before trusted guardrail enrichment."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -46,8 +46,6 @@ class BuyTicket(BaseModel):
     cash_available: float = Field(ge=0.0)
     remaining_cash_buffer: float
     price_snapshot_as_of: str
-    itc_applicability: Literal["supported", "unsupported", "not-run"]
-    itc_risk_score: float | None = Field(default=None, ge=0.0, le=1.0)
     allocations: list[TicketAllocation]
     strategy_rationale: list[str]
     risk_notes: list[str]
@@ -55,7 +53,6 @@ class BuyTicket(BaseModel):
     assumptions: list[str]
     progress_tracking: str
     educational_notice: str
-    advisory_block: str | None = None
 
     @field_validator(
         "strategy_name",
@@ -84,7 +81,7 @@ class BuyTicket(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def require_allocations_and_notes(self) -> BuyTicket:
+    def require_allocations_and_notes(self) -> TicketProposal:
         """Ensure the ticket carries the minimum template sections."""
         if not self.allocations:
             raise ValueError("allocations are required")
@@ -102,12 +99,24 @@ class BuyTicket(BaseModel):
         return self
 
 
+class BuyTicket(TicketProposal):
+    """Final buy ticket enriched with system-owned guardrail fields."""
+
+    itc_applicability: Literal["supported"] = "supported"
+    itc_risk_score: float = Field(ge=0.0, le=1.0)
+    advisory_block: str | None = None
+
+
 class PortfolioState(BaseModel):
     """Portfolio context needed for hard guardrail checks."""
 
     model_config = ConfigDict(extra="forbid")
 
-    portfolio_value: float = Field(ge=0.0)
+    portfolio_value: float | None = Field(
+        default=None,
+        allow_inf_nan=False,
+        description="Authoritative pre-borrow equity NAV",
+    )
     cash_available: float = Field(ge=0.0)
     monthly_dividend_income: float = Field(ge=0.0)
     monthly_margin_interest: float = Field(ge=0.0)
@@ -127,3 +136,18 @@ class PortfolioState(BaseModel):
                 raise ValueError("position market value cannot be negative")
             normalized[key] = normalized.get(key, 0.0) + market_value
         return normalized
+
+
+class GuardrailContext(BaseModel):
+    """Trusted facts supplied to the shared buy-ticket guardrails."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    portfolio: PortfolioState
+    itc_risk_score: float = Field(ge=0.0, le=1.0)
+    annual_margin_rate: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        allow_inf_nan=False,
+    )

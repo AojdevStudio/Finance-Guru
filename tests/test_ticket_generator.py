@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
+from buy_ticket_agent import config
 from buy_ticket_agent.ticket_generator import generate
 from buy_ticket_agent.ticket_models import BuyTicket, PortfolioState
+from src.config.instance_paths import InstancePaths
 
 
 def _ticket_payload() -> dict[str, Any]:
@@ -87,7 +90,13 @@ def _layer3_bundle() -> dict[str, Any]:
         "itc": {
             **tool_result,
             "key": "itc",
-            "data": {"symbol": "TSLA", "current_risk_score": 0.42},
+            "data": {
+                "symbol": "TSLA",
+                "universe": "tradfi",
+                "current_risk_score": 0.42,
+                "risk_bands": [],
+                "timestamp": "2026-06-08T15:00:00Z",
+            },
         },
         "risk": {**tool_result, "key": "risk"},
         "mom": {**tool_result, "key": "mom"},
@@ -185,6 +194,8 @@ def test_generate_calls_claude_with_prompt_cache_and_returns_valid_ticket() -> N
     input_schema = call["tools"][0]["input_schema"]
     assert "advisory_block" not in input_schema["properties"]
     assert "advisory_block" not in input_schema.get("required", [])
+    assert "itc_applicability" not in input_schema["properties"]
+    assert "itc_risk_score" not in input_schema["properties"]
     assert any(
         block.get("cache_control", {}).get("type") == "ephemeral"
         for block in call["system"]
@@ -224,3 +235,70 @@ def test_generate_clears_llm_authored_advisory_block_on_accepted_ticket() -> Non
     assert result.guardrails.status == "accepted"
     assert result.guardrails.advisory_block is None
     assert result.ticket.advisory_block is None
+
+
+def test_generate_uses_layer3_itc_score_over_understated_model_score() -> None:
+    """A lower model-authored ITC score cannot bypass the Layer 3 hard cap."""
+    bundle = _layer3_bundle()
+    bundle["itc"]["data"]["current_risk_score"] = 0.72
+    payload = {**_ticket_payload(), "itc_risk_score": 0.01}
+    client = FakeAnthropicClient(cache_reads=[0], tool_input=payload)
+
+    result = generate(bundle, _portfolio_state(), client=client)
+
+    assert result.guardrails.status == "blocked"
+    assert result.guardrails.advisory_block == "itc_risk>=0.7"
+    assert result.ticket.itc_risk_score == 0.72
+
+
+@pytest.mark.parametrize("itc_state", ["missing", "not-run", "failed"])
+def test_generate_blocks_unavailable_layer3_itc_before_model_call(
+    itc_state: str,
+) -> None:
+    """Only a successful authoritative Layer 3 ITC result permits generation."""
+    bundle = _layer3_bundle()
+    if itc_state == "missing":
+        del bundle["itc"]
+    else:
+        bundle["itc"]["status"] = itc_state
+    client = FakeAnthropicClient(cache_reads=[0])
+
+    with pytest.raises(ValueError, match="Layer 3 ITC"):
+        generate(bundle, _portfolio_state(), client=client)
+
+    assert client.messages.calls == []
+
+
+def test_resolve_annual_margin_rate_prefers_decimal_instance_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The instance environment has one decimal-first margin-rate adapter."""
+    monkeypatch.delenv("FG_MARGIN_INTEREST_RATE_DECIMAL", raising=False)
+    monkeypatch.delenv("FG_MARGIN_INTEREST_RATE", raising=False)
+    (tmp_path / ".env").write_text(
+        "FG_MARGIN_INTEREST_RATE_DECIMAL=0.12\nFG_MARGIN_INTEREST_RATE=99%\n"
+    )
+
+    rate = config.resolve_annual_margin_rate(InstancePaths(root=tmp_path))
+
+    assert rate == pytest.approx(0.12)
+
+
+def test_generate_applies_configured_rate_to_projected_interest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The production generator wires configured rate policy into guardrails."""
+    monkeypatch.setenv("FG_MARGIN_INTEREST_RATE_DECIMAL", "0.12")
+    portfolio = _portfolio_state().model_copy(
+        update={
+            "cash_available": 0.0,
+            "monthly_dividend_income": 100.0,
+            "monthly_margin_interest": 0.0,
+        }
+    )
+    client = FakeAnthropicClient(cache_reads=[0])
+
+    result = generate(_layer3_bundle(), portfolio, client=client)
+
+    assert result.guardrails.advisory_block == "coverage<2x"

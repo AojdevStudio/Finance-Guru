@@ -35,7 +35,7 @@ When creating a buy ticket, do not draft from vague strategy text alone. Confirm
 6. Risk notes relevant to sizing, concentration, volatility, or margin
 7. Sources & assumptions block plus the full disclaimer block
 
-ITC risk is advisory-only. For supported tickers, include an ITC advisory section only when upstream analysis provided a materially elevated signal. Missing ITC data must never block ticket creation.
+ITC risk is a hard cap for supported tickers. The cap reads only successful Layer 3 output, never model-returned fields; a missing, not-run, or failed Layer 3 result blocks ticket generation. Include an ITC advisory section when the Layer 3 signal is materially elevated.
 
 ## Interactive Section Processing
 

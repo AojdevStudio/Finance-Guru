@@ -9,6 +9,9 @@ from dataclasses import asdict
 
 from buy_ticket_agent.pipeline import run_smoke_for_cli
 from buy_ticket_agent.secrets import SecretAccessError
+from src.utils.log import get_logger
+
+logger = get_logger(__name__)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,11 +39,15 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result = run_smoke_for_cli()
     except SecretAccessError as exc:
-        print(f"Secret access blocker: {exc}", file=sys.stderr)
+        logger.error("buy_ticket_secret_access_failed", error=str(exc))
         return 1
 
-    print(json.dumps(asdict(result), indent=2, sort_keys=True))
-    return 0 if result.status == "completed" else 1
+    sys.stdout.write(json.dumps(asdict(result), indent=2, sort_keys=True) + "\n")
+    if result.status != "completed":
+        return 1
+    if result.notification is not None and result.notification.status == "failed":
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 from urllib.parse import quote
 
 import requests
@@ -14,7 +15,7 @@ from buy_ticket_agent.config import NotificationConfig
 class NotificationResult:
     """Result envelope for a notification attempt."""
 
-    status: str
+    status: Literal["sent", "skipped", "failed"]
     source: str | None
     error: str | None = None
 
