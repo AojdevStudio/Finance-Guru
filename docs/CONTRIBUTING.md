@@ -6,27 +6,26 @@ category: root
 
 # Contributing to Finance Guru
 
-Thanks for looking. Read the *Project State* section below before investing time — it tells you which parts of this repo are worth contributing to and which are scheduled to be retired.
+Thanks for looking. Read the _Project State_ section below before investing time — it tells you which parts of this repo accept pull requests and which are issues-only for now.
 
 ---
 
 ## Project State (Read This First)
 
-Finance Guru is in the middle of a vision pivot. The project is transitioning from a Claude Code skill/hook/agent stack into a standalone macOS native application (Tauri v2 + Bun sidecar). See `docs/VISION.md` for the full rationale.
+Finance Guru is being converted, in place, into an installable Claude Code and Codex plugin. Everything ships open under AGPL-3.0. The skills, agents, and Python engine are all part of the product; there is no withheld feature tier.
 
 What this means for contributors today:
 
 
-| Area                                   | State                            | Safe to invest in?         |
-| -------------------------------------- | -------------------------------- | -------------------------- |
-| Python analysis engine (`src/`)        | **Stable, survives the pivot**   | *Yes*                      |
-| Claude Code skills (`.claude/skills/`) | **Transitional, likely retired** | No — file an issue instead |
-| BMAD-CORE agents (`fin-guru/agents/`)  | **Transitional, likely retired** | No — file an issue instead |
-| macOS app scaffold                     | **Does not exist yet**           | Not ready for contribution |
-| Documentation (`docs/`)                | **Always safe**                  | *Yes*                      |
+| Area                                   | State                                 | Safe to invest in?         |
+| -------------------------------------- | ------------------------------------- | -------------------------- |
+| Python analysis engine (`src/`)        | **Stable**                            | _Yes_                      |
+| Claude Code skills (`.claude/skills/`) | **Active, mid plugin conversion**     | No — file an issue instead |
+| BMAD-CORE agents (`fin-guru/agents/`)  | **Active, mid plugin conversion**     | No — file an issue instead |
+| Documentation (`docs/`)                | **Always safe**                       | _Yes_                      |
 
 
-If the thing you want to work on is labelled *transitional*, open an issue — do not open a PR against it. It will likely be deleted in the pivot, and we do not want you to waste effort.
+While the plugin conversion is underway, changes to skills, agents, and hooks start as issues, not PRs. The maintainer is actively reshaping those surfaces and parallel PRs against them will conflict.
 
 ---
 
@@ -45,7 +44,7 @@ If you want something built and you are not sure we will merge it, open an issue
 Only these surfaces are in scope for PRs:
 
 1. **Documentation** — Typo fixes, broken links, corrected API information, new MCP server entries in `docs/setup/api-keys.md`, clarified setup steps in `docs/setup/SETUP.md` and `TROUBLESHOOTING.md`, README polish.
-2. **Python analysis engine** — Generic calculators and utilities under `src/analysis/`, `src/strategies/`, `src/utils/`, and their corresponding tests under `tests/python/`. Examples: `correlation.py`, `backtester.py`, `momentum.py`, `risk_metrics.py`, `screener.py`, `volatility.py`, `market_data.py`. Path-coupled calculators accept `FIN_GURU_PRIVATE_DIR` / `FIN_GURU_PORTFOLIO_DIR` environment variables; contributors do not need access to the private data to work on them.
+2. **Python analysis engine** — Generic calculators and utilities under `src/analysis/`, `src/strategies/`, `src/utils/`, and their corresponding tests under `tests/python/`. Examples: `correlation.py`, `backtester.py`, `momentum.py`, `risk_metrics.py`, `screener.py`, `volatility.py`, `market_data.py`. Path-coupled calculators resolve every private file through `src/config/instance_paths.py`; contributors do not need access to private data to work on them.
 
 ### Issues only (no PRs)
 
@@ -56,7 +55,7 @@ Everything else is issues-only. We will evaluate bug reports and feature request
 - Hooks under `.claude/hooks/`
 - `finance-guru-desktop/` (Electron POC, gitignored)
 
-These surfaces are either deeply coupled to the private user profile or scheduled for replacement in the Tauri pivot.
+These surfaces are being reshaped by the plugin conversion, and outside PRs against them will conflict with that work.
 
 ---
 
@@ -64,7 +63,7 @@ These surfaces are either deeply coupled to the private user profile or schedule
 
 ### Marketing or promotional content in documentation
 
-PRs that swap neutral capability descriptions for vendor marketing copy (superlatives like "fastest," "most accurate," "best-in-class," or direct taglines from a vendor's homepage) are closed without merge. Documentation describes *what a tool does*, not *how good it is*.
+PRs that swap neutral capability descriptions for vendor marketing copy (superlatives like "fastest," "most accurate," "best-in-class," or direct taglines from a vendor's homepage) are closed without merge. Documentation describes _what a tool does_, not _how good it is_.
 
 Example of what we reject:
 
@@ -92,7 +91,15 @@ PRs that look AI-generated and carry no disclosure will be asked to either discl
 
 ### Changes to internal data or paths
 
-Anything gitignored is internal. Do not reference gitignored paths, account identifiers, dollar amounts, or the `fin-guru-private/` directory in code you submit. If you need test data, use synthetic data (numpy / fixtures) under `tests/python/`.
+Anything gitignored is internal. Do not reference gitignored paths, account identifiers, or dollar amounts in code you submit. If you need test data, use synthetic data (numpy / fixtures) under `tests/python/`.
+
+---
+
+## Data Classification (Public Repo Rule)
+
+This is a public repository, and every tracked file is published the moment it is pushed. Code and documentation describe behaviour and never carry personal values, so evidence is written as a shape (a ratio, a percentage, a count) rather than an amount. The full policy is [DataClassification](../.claude/skills/compliance-scan/references/DataClassification.md).
+
+Test fixtures use synthetic values that do not match the privacy scanner's patterns.
 
 ---
 
@@ -108,7 +115,7 @@ Anything gitignored is internal. Do not reference gitignored paths, account iden
 
 1. **Open an issue first.** Describe the bug or enhancement. Wait for acknowledgment before writing code. This protects you from investing in a PR we would reject.
 2. Fork the repo and create a feature branch.
-3. Make the change following the *Quality Gates* below.
+3. Make the change following the _Quality Gates_ below.
 4. Open a PR referencing the issue (`Fixes #N`).
 
 ---
@@ -131,6 +138,10 @@ Additionally:
 - **Three-layer pattern.** New financial tools follow the repo architecture: Pydantic input models in `src/models/`, calculator class in `src/analysis/` (or `strategies/` or `utils/`), CLI entry point as `{tool}_cli.py`. Reference implementation: `src/analysis/risk_metrics.py` + `src/models/risk_inputs.py` + `src/analysis/risk_metrics_cli.py`.
 
 See `src/CLAUDE.md` for conventions (Pydantic + pandas gotchas, naming, typing, docstrings).
+
+### Push gates
+
+Two gates run before anything reaches GitHub. The pre-commit hooks (`.pre-commit-config.yaml`) run hygiene checks, ruff, mypy, pytest with coverage, and gitleaks. The privacy scanner (`.claude/skills/compliance-scan/scripts/scan.py`) runs in its `push` scope from the pre-push hook and also supports a `history` scope that scans every line a branch adds. A HIGH or CRITICAL finding blocks the push.
 
 ---
 
@@ -179,4 +190,4 @@ Open an issue. Tag it `question`.
 
 ---
 
-*Last updated: 2026-04-17*
+_Last updated: 2026-09-02_
