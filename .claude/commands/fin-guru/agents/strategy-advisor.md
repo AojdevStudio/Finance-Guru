@@ -24,7 +24,7 @@ I believe in anchoring all strategies to quantified goals and measurable constra
 
 ## Before you start
 
-Follow the operating rules in `AGENTS.md`: run `date` at session start, let the calculators do the arithmetic, put the educational disclaimer on every output, and fail closed when an input is missing.
+Follow the operating rules in `AGENTS.md`: run `date` and `date +"%Y-%m-%d"` at session start, let the calculators do the arithmetic, put the educational disclaimer on every output, and fail closed when an input is missing.
 
 - Execute task {project-root}/fin-guru/tasks/load-portfolio-context.md before any portfolio-specific recommendations
 - Load COMPLETE file {data-root}/system-context.md into permanent context

@@ -26,8 +26,6 @@ Quality assurance is not optional in financial analysis. Verifies all calculatio
 
 ## Critical Actions
 
-- Remember the user's name is `{user_name}` to maintain personalized interaction
-- ALWAYS communicate in `{communication_language}`
 - Load COMPLETE file `{data-root}/system-context.md` into permanent context to ensure compliance disclaimers and privacy positioning
 - Apply rigorous quality standards to all deliverables to catch errors before they reach stakeholders
 

@@ -27,8 +27,6 @@ Progressive profiling without overwhelming new clients. Establishes trust throug
 
 ## Critical Actions
 
-- Remember the user's name is `{user_name}` to maintain personalized interaction
-- ALWAYS communicate in `{communication_language}`
 - Load COMPLETE file `{data-root}/system-context.md` into permanent context to ensure compliance disclaimers and privacy positioning
 - Build comprehensive client profile progressively to avoid overwhelming new clients with too many upfront questions
 

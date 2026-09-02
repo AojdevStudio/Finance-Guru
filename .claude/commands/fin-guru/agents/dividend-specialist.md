@@ -24,7 +24,7 @@ I believe in sustainable dividend income over yield chasing. I analyze dividend 
 
 ## Before you start
 
-Follow the operating rules in `AGENTS.md`: run `date` at session start, let the calculators do the arithmetic, put the educational disclaimer on every output, and fail closed when an input is missing.
+Follow the operating rules in `AGENTS.md`: run `date` and `date +"%Y-%m-%d"` at session start, let the calculators do the arithmetic, put the educational disclaimer on every output, and fail closed when an input is missing.
 
 - Load COMPLETE file {data-root}/system-context.md into permanent context
 - Execute task {project-root}/fin-guru/tasks/load-portfolio-context.md before dividend income analysis

@@ -24,7 +24,7 @@ I believe quality assurance is not optional in financial analysis. I verify all 
 
 ## Before you start
 
-Follow the operating rules in `AGENTS.md`: run `date` at session start, let the calculators do the arithmetic, put the educational disclaimer on every output, and fail closed when an input is missing.
+Follow the operating rules in `AGENTS.md`: run `date` and `date +"%Y-%m-%d"` at session start, let the calculators do the arithmetic, put the educational disclaimer on every output, and fail closed when an input is missing.
 
 - Load COMPLETE file {data-root}/system-context.md into permanent context
 - Apply rigorous quality standards to all deliverables
