@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import subprocess
@@ -52,16 +53,24 @@ class CliEnvelope:
 
 
 @dataclass(frozen=True)
+class DraftPersistenceResult:
+    """Durability outcome for the smoke draft, independent of delivery."""
+
+    status: Literal["created", "reused", "not-created"]
+
+
+@dataclass(frozen=True)
 class SmokeResult:
     """Result envelope returned by a smoke run."""
 
     run_id: str
     ticket_id: str | None
-    status: str
+    status: Literal["completed", "layer3_failed"]
     draft_path: str | None
     log_path: str
     state_db: str
     notification: NotificationResult | None
+    persistence: DraftPersistenceResult | None = None
 
 
 @dataclass(frozen=True)
@@ -492,6 +501,25 @@ def _trigger_context_from_env() -> dict[str, str] | None:
     return context
 
 
+def _smoke_run_id(
+    now: datetime,
+    trigger_context: dict[str, str] | None,
+) -> str:
+    """Derive one logical run identity for each upstream trigger."""
+    if trigger_context is not None:
+        source = trigger_context.get("source")
+        transaction_key = trigger_context.get("transaction_key")
+        if source and transaction_key:
+            identity = json.dumps(
+                [source, transaction_key],
+                ensure_ascii=True,
+                separators=(",", ":"),
+            )
+            digest = hashlib.sha256(identity.encode()).hexdigest()[:16]
+            return f"smoke-trigger-{digest}"
+    return f"smoke-{now:%Y%m%d}-{uuid4().hex[:8]}"
+
+
 def run_layer3_smoke_cli(project_root: Path) -> CliEnvelope:
     """Invoke the existing ITC Risk CLI once for the smoke path."""
     command_args = (
@@ -549,6 +577,36 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
+def _load_persisted_smoke(
+    draft_path: Path,
+    log_path: Path,
+    *,
+    run_id: str,
+    ticket_id: str,
+) -> tuple[str, CliEnvelope]:
+    """Load and validate the durable inputs needed for a notification retry."""
+    try:
+        draft = json.loads(draft_path.read_text())
+        log = json.loads(log_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("Persisted smoke artifacts are unreadable") from exc
+    if not isinstance(draft, dict) or not isinstance(log, dict):
+        raise ValueError("Persisted smoke artifacts must be JSON objects")
+    if draft.get("run_id") != run_id or draft.get("id") != ticket_id:
+        raise ValueError("Persisted smoke draft identity does not match trigger")
+    created_at = draft.get("created_at")
+    layer3 = log.get("layer3")
+    if not isinstance(created_at, str) or not isinstance(layer3, dict):
+        raise ValueError("Persisted smoke artifacts are incomplete")
+    try:
+        cli_result = CliEnvelope(**layer3)
+    except TypeError as exc:
+        raise ValueError("Persisted Layer 3 result is malformed") from exc
+    if cli_result.status != "succeeded":
+        raise ValueError("Persisted smoke draft lacks successful Layer 3 evidence")
+    return created_at, cli_result
+
+
 def _make_ticket_payload(
     *,
     run_id: str,
@@ -586,31 +644,41 @@ def run_smoke(
     """Run the AOJ-458 end-to-end smoke path."""
     paths = _resolve_smoke_paths(instance_paths, project_root)
     now = _utc_now()
-    created_at = now.isoformat()
-    run_id = f"smoke-{now:%Y%m%d}-{uuid4().hex[:8]}"
-    ticket_id = f"ticket-{run_id}"
-
     notification_config = resolve_notification_config()
     trigger_context = _trigger_context_from_env()
+    created_at = now.isoformat()
+    run_id = _smoke_run_id(now, trigger_context)
+    ticket_id = f"ticket-{run_id}"
     initialize_state(paths.state_db)
-    cli_result = run_layer3_smoke_cli(paths.project_root)
 
     draft_path = paths.drafts_dir / f"{run_id}.json"
     log_path = paths.runs_dir / f"{run_id}.json"
     preview = f"{SMOKE_TICKER} shadow draft ready for review"
+    if draft_path.exists():
+        created_at, cli_result = _load_persisted_smoke(
+            draft_path,
+            log_path,
+            run_id=run_id,
+            ticket_id=ticket_id,
+        )
+        persistence = DraftPersistenceResult(status="reused")
+    else:
+        cli_result = run_layer3_smoke_cli(paths.project_root)
+        persistence = DraftPersistenceResult(status="not-created")
 
     if cli_result.status != "succeeded":
-        status = "layer3_failed"
+        failure_status: Literal["layer3_failed"] = "layer3_failed"
         log_payload = {
             "event": "buy_ticket_smoke_run",
             "run_id": run_id,
             "ticket_id": None,
             "created_at": created_at,
-            "status": status,
+            "status": failure_status,
             "draft_path": None,
             "state_db": _relative(paths.state_db, paths.instance_root),
             "trigger": trigger_context,
             "layer3": asdict(cli_result),
+            "persistence": asdict(persistence),
             "notification": None,
         }
         _write_json(log_path, log_payload)
@@ -618,49 +686,49 @@ def run_smoke(
             paths.state_db,
             run_id=run_id,
             created_at=created_at,
-            status=status,
+            status=failure_status,
             log_path=log_path,
         )
         return SmokeResult(
             run_id=run_id,
             ticket_id=None,
-            status=status,
+            status=failure_status,
             draft_path=None,
             log_path=_relative(log_path, paths.instance_root),
             state_db=_relative(paths.state_db, paths.instance_root),
             notification=None,
+            persistence=persistence,
         )
 
-    ticket_payload = _make_ticket_payload(
-        run_id=run_id,
-        ticket_id=ticket_id,
-        created_at=created_at,
-        cli_result=cli_result,
-        trigger_context=trigger_context,
-    )
-    _write_json(draft_path, ticket_payload)
+    if persistence.status == "not-created":
+        ticket_payload = _make_ticket_payload(
+            run_id=run_id,
+            ticket_id=ticket_id,
+            created_at=created_at,
+            cli_result=cli_result,
+            trigger_context=trigger_context,
+        )
+        _write_json(draft_path, ticket_payload)
+        persistence = DraftPersistenceResult(status="created")
 
     notification = push_ticket_preview(
         notification_config,
         ticket_id=ticket_id,
         preview=preview,
     )
-    status = (
-        "completed"
-        if notification.status in {"sent", "skipped"}
-        else "notification_failed"
-    )
+    success_status: Literal["completed"] = "completed"
 
     log_payload = {
         "event": "buy_ticket_smoke_run",
         "run_id": run_id,
         "ticket_id": ticket_id,
         "created_at": created_at,
-        "status": status,
+        "status": success_status,
         "draft_path": _relative(draft_path, paths.instance_root),
         "state_db": _relative(paths.state_db, paths.instance_root),
         "trigger": trigger_context,
         "layer3": asdict(cli_result),
+        "persistence": asdict(persistence),
         "notification": asdict(notification),
     }
     _write_json(log_path, log_payload)
@@ -670,7 +738,7 @@ def run_smoke(
         ticket_id=ticket_id,
         created_at=created_at,
         ticker=SMOKE_TICKER,
-        status=status,
+        status=success_status,
         draft_path=draft_path,
         log_path=log_path,
         preview=preview,
@@ -679,11 +747,12 @@ def run_smoke(
     return SmokeResult(
         run_id=run_id,
         ticket_id=ticket_id,
-        status=status,
+        status=success_status,
         draft_path=_relative(draft_path, paths.instance_root),
         log_path=_relative(log_path, paths.instance_root),
         state_db=_relative(paths.state_db, paths.instance_root),
         notification=notification,
+        persistence=persistence,
     )
 
 

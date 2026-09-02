@@ -2,16 +2,25 @@
 
 from __future__ import annotations
 
+import pytest
+
 from buy_ticket_agent.guardrails import check
-from buy_ticket_agent.ticket_models import BuyTicket, PortfolioState, TicketAllocation
+from buy_ticket_agent.ticket_models import (
+    GuardrailContext,
+    PortfolioState,
+    TicketAllocation,
+    TicketProposal,
+)
+
+_UNSET = object()
 
 
 def _ticket_with_allocation(
     ticker: str,
     weight: float,
     amount: float,
-) -> BuyTicket:
-    return BuyTicket(
+) -> TicketProposal:
+    return TicketProposal(
         strategy_name="AOJ-461 acceptance ticket",
         generated_on="2026-06-08",
         generated_by="strategy-advisor",
@@ -20,8 +29,6 @@ def _ticket_with_allocation(
         cash_available=100000.0,
         remaining_cash_buffer=100000.0 - amount,
         price_snapshot_as_of="2026-06-08T15:00:00Z",
-        itc_applicability="supported",
-        itc_risk_score=0.42,
         allocations=[
             TicketAllocation(
                 ticker=ticker,
@@ -45,6 +52,21 @@ def _ticket_with_allocation(
     )
 
 
+def _context(
+    portfolio: PortfolioState | dict,
+    *,
+    itc_risk_score: float = 0.42,
+    annual_margin_rate: float | None | object = _UNSET,
+) -> GuardrailContext:
+    context = {
+        "portfolio": PortfolioState.model_validate(portfolio),
+        "itc_risk_score": itc_risk_score,
+    }
+    if annual_margin_rate is not _UNSET:
+        context["annual_margin_rate"] = annual_margin_rate
+    return GuardrailContext.model_validate(context)
+
+
 def test_check_rejects_ticket_proposing_thirty_five_percent_concentration() -> None:
     """A ticket proposing 35% concentration is hard-blocked after LLM output."""
     ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=35000.0)
@@ -57,7 +79,7 @@ def test_check_rejects_ticket_proposing_thirty_five_percent_concentration() -> N
         context_date="2026-06-08",
     )
 
-    result = check(ticket, portfolio)
+    result = check(ticket, _context(portfolio))
 
     assert result.status == "blocked"
     assert result.advisory_block == "concentration>30%"
@@ -76,10 +98,49 @@ def test_check_rejects_cash_funded_deployment_above_concentration_limit() -> Non
         context_date="2026-06-08",
     )
 
-    result = check(ticket, portfolio)
+    result = check(ticket, _context(portfolio))
 
     assert result.status == "blocked"
     assert result.advisory_block == "concentration>30%"
+
+
+def test_check_rejects_margin_funded_concentration_against_pre_borrow_nav() -> None:
+    """Borrowed deployment cannot increase the concentration denominator."""
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=31000.0)
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=0.0,
+        monthly_dividend_income=500.0,
+        monthly_margin_interest=200.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(ticket, _context(portfolio))
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "concentration>30%"
+
+
+@pytest.mark.parametrize("portfolio_value", [None, 0.0, -1.0])
+def test_check_rejects_unavailable_pre_borrow_equity_nav(
+    portfolio_value: float | None,
+) -> None:
+    """Missing and non-positive pre-borrow equity NAV fail closed."""
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=1000.0)
+    portfolio = {
+        "portfolio_value": portfolio_value,
+        "cash_available": 1000.0,
+        "monthly_dividend_income": 500.0,
+        "monthly_margin_interest": 200.0,
+        "current_positions": {},
+        "context_date": "2026-06-08",
+    }
+
+    result = check(ticket, _context(portfolio))
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "equity_nav_unavailable"
 
 
 def test_check_sums_duplicate_normalized_positions_before_concentration() -> None:
@@ -94,7 +155,7 @@ def test_check_sums_duplicate_normalized_positions_before_concentration() -> Non
         context_date="2026-06-08",
     )
 
-    result = check(ticket, portfolio)
+    result = check(ticket, _context(portfolio))
 
     assert result.status == "blocked"
     assert result.advisory_block == "concentration>30%"
@@ -102,9 +163,7 @@ def test_check_sums_duplicate_normalized_positions_before_concentration() -> Non
 
 def test_check_accepts_ticket_within_all_hard_limits() -> None:
     """A ticket within every hard threshold is accepted without violations."""
-    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=20000.0).model_copy(
-        update={"advisory_block": "llm-authored advisory"}
-    )
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=20000.0)
     portfolio = PortfolioState(
         portfolio_value=100000.0,
         cash_available=20000.0,
@@ -114,7 +173,7 @@ def test_check_accepts_ticket_within_all_hard_limits() -> None:
         context_date="2026-06-08",
     )
 
-    result = check(ticket, portfolio)
+    result = check(ticket, _context(portfolio))
 
     assert result.status == "accepted"
     assert result.advisory_block is None
@@ -134,18 +193,96 @@ def test_check_rejects_ticket_when_margin_coverage_is_below_two_times() -> None:
         context_date="2026-06-08",
     )
 
-    result = check(ticket, portfolio)
+    result = check(ticket, _context(portfolio))
 
     assert result.status == "blocked"
     assert result.advisory_block == "coverage<2x"
     assert result.ticket.advisory_block == "coverage<2x"
 
 
+def test_check_rejects_new_borrowing_when_margin_rate_is_missing() -> None:
+    """Projected borrowing fails closed without an authoritative annual rate."""
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=20000.0)
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=0.0,
+        monthly_dividend_income=500.0,
+        monthly_margin_interest=0.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(ticket, _context(portfolio))
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "margin_rate_unavailable"
+
+
+def test_check_projects_interest_when_current_margin_interest_is_zero() -> None:
+    """New borrowing is covered even when the current interest bill is zero."""
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=20000.0)
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=0.0,
+        monthly_dividend_income=300.0,
+        monthly_margin_interest=0.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(
+        ticket,
+        _context(portfolio, annual_margin_rate=0.12),
+    )
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "coverage<2x"
+
+
+def test_check_accepts_healthy_projected_margin_coverage() -> None:
+    """Dividend income at 2x projected post-ticket interest remains healthy."""
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=20000.0)
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=0.0,
+        monthly_dividend_income=600.0,
+        monthly_margin_interest=100.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(
+        ticket,
+        _context(portfolio, annual_margin_rate=0.12),
+    )
+
+    assert result.status == "accepted"
+
+
+def test_check_rejects_degraded_projected_margin_coverage() -> None:
+    """Projected interest that drops coverage below 2x is hard-blocked."""
+    ticket = _ticket_with_allocation("SPY", weight=1.0, amount=10000.0)
+    portfolio = PortfolioState(
+        portfolio_value=100000.0,
+        cash_available=0.0,
+        monthly_dividend_income=400.0,
+        monthly_margin_interest=150.0,
+        current_positions={},
+        context_date="2026-06-08",
+    )
+
+    result = check(
+        ticket,
+        _context(portfolio, annual_margin_rate=0.12),
+    )
+
+    assert result.status == "blocked"
+    assert result.advisory_block == "coverage<2x"
+
+
 def test_check_rejects_ticket_when_itc_risk_is_at_hard_limit() -> None:
     """ITC risk must stay below 0.7 after the LLM response."""
-    ticket = _ticket_with_allocation("SPY", weight=0.20, amount=20000.0).model_copy(
-        update={"itc_risk_score": 0.70}
-    )
+    ticket = _ticket_with_allocation("SPY", weight=0.20, amount=20000.0)
     portfolio = PortfolioState(
         portfolio_value=100000.0,
         cash_available=100000.0,
@@ -155,77 +292,8 @@ def test_check_rejects_ticket_when_itc_risk_is_at_hard_limit() -> None:
         context_date="2026-06-08",
     )
 
-    result = check(ticket, portfolio)
+    result = check(ticket, _context(portfolio, itc_risk_score=0.70))
 
     assert result.status == "blocked"
     assert result.advisory_block == "itc_risk>=0.7"
     assert result.ticket.advisory_block == "itc_risk>=0.7"
-
-
-def test_check_rejects_ticket_when_itc_is_supported_but_score_is_missing() -> None:
-    """ITC-supported tickets require a risk score; a None score is hard-blocked.
-
-    Realistic trigger: the ITC CLI fails during Layer 3 pipeline execution so the
-    bundle carries itc.data=null.  The LLM faithfully emits
-    itc_applicability='supported' (tradfi asset) but itc_risk_score=null because no
-    score was available.  Without this guard the guardrail would silently pass.
-    """
-    ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=20000.0).model_copy(
-        update={"itc_risk_score": None}
-    )
-    # _ticket_with_allocation always sets itc_applicability="supported".
-    assert ticket.itc_applicability == "supported"
-    portfolio = PortfolioState(
-        portfolio_value=100000.0,
-        cash_available=100000.0,
-        monthly_dividend_income=500.0,
-        monthly_margin_interest=200.0,
-        current_positions={},
-        context_date="2026-06-08",
-    )
-
-    result = check(ticket, portfolio)
-
-    assert result.status == "blocked"
-    assert result.advisory_block == "itc_risk_score_missing"
-    assert result.ticket.advisory_block == "itc_risk_score_missing"
-
-
-def test_check_accepts_ticket_when_itc_is_not_supported_and_score_is_missing() -> None:
-    """Non-supported ITC applicability with a None score is not a violation."""
-    ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=20000.0).model_copy(
-        update={"itc_applicability": "not-run", "itc_risk_score": None}
-    )
-    portfolio = PortfolioState(
-        portfolio_value=100000.0,
-        cash_available=100000.0,
-        monthly_dividend_income=500.0,
-        monthly_margin_interest=200.0,
-        current_positions={},
-        context_date="2026-06-08",
-    )
-
-    result = check(ticket, portfolio)
-
-    assert result.status == "accepted"
-    assert result.advisory_block is None
-
-
-def test_check_accepts_ticket_when_itc_is_unsupported_and_score_is_missing() -> None:
-    """Unsupported ITC applicability with a None score is not a violation."""
-    ticket = _ticket_with_allocation("TSLA", weight=1.0, amount=20000.0).model_copy(
-        update={"itc_applicability": "unsupported", "itc_risk_score": None}
-    )
-    portfolio = PortfolioState(
-        portfolio_value=100000.0,
-        cash_available=100000.0,
-        monthly_dividend_income=500.0,
-        monthly_margin_interest=200.0,
-        current_positions={},
-        context_date="2026-06-08",
-    )
-
-    result = check(ticket, portfolio)
-
-    assert result.status == "accepted"
-    assert result.advisory_block is None

@@ -67,7 +67,7 @@ uv run python -m src.analysis.factors_cli TICKER --days 252 --benchmark SPY Fama
 
 uv run python -m src.utils.market_data TICKER [TICKER2 ...] Real-time market prices for quick validation Current market prices for quick validation
 
-Advisory-only ITC Risk overlay for supported tickers. Use it to enrich timing and risk notes when data is available, but never block buy-ticket generation.
+ITC Risk overlay for supported tickers. Enrich timing and risk notes with it, and note that buy-ticket generation treats the Layer 3 score as a hard cap: a missing, not-run, or failed Layer 3 result blocks the ticket.
 
 TSLA, AAPL, MSTR, NFLX, SP500, DXY, XAUUSD, XAGUSD, XPDUSD, PL, HG, NICKEL BTC, ETH, BNB, SOL, XRP, ADA, DOGE, LINK, AVAX, DOT, SHIB, LTC, AAVE, ATOM, POL, ALGO, HBAR, RENDER, VET, TRX, TON, SUI, XLM, XMR, XTZ, SKY, BTC.D, TOTAL, TOTAL6
 

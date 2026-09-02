@@ -7,7 +7,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-from src.config.instance_paths import InstancePaths
+from src.analysis.margin_metrics import parse_rate
+from src.config.instance_paths import InstancePaths, load_instance_env
 
 
 class SmokePaths(BaseModel):
@@ -53,3 +54,13 @@ def get_env(name: str, default: str | None = None) -> str | None:
         return None
     value = value.strip()
     return value or None
+
+
+def resolve_annual_margin_rate(paths: InstancePaths | None = None) -> float | None:
+    """Load the authoritative annual margin rate from the instance environment."""
+    instance_paths = paths or InstancePaths.resolve()
+    load_instance_env(instance_paths, override=False)
+    configured_rate = get_env("FG_MARGIN_INTEREST_RATE_DECIMAL") or get_env(
+        "FG_MARGIN_INTEREST_RATE"
+    )
+    return parse_rate(configured_rate) if configured_rate is not None else None

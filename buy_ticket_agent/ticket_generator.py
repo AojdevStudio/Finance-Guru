@@ -3,17 +3,27 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from buy_ticket_agent.config import resolve_annual_margin_rate
 from buy_ticket_agent.guardrails import GuardrailResult, check
-from buy_ticket_agent.ticket_models import BuyTicket, PortfolioState
+from buy_ticket_agent.ticket_models import (
+    BuyTicket,
+    GuardrailContext,
+    PortfolioState,
+    TicketProposal,
+)
+from src.models.itc_risk_inputs import ITCRiskResponse
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 TICKET_TOOL_NAME = "emit_buy_ticket"
-SYSTEM_MANAGED_TICKET_FIELDS = frozenset({"advisory_block"})
+SYSTEM_MANAGED_TICKET_FIELDS = frozenset(
+    {"advisory_block", "itc_applicability", "itc_risk_score"}
+)
 FRAMEWORK_DOC_PATHS = (
     "fin-guru/templates/buy-ticket-template.md",
     "fin-guru/data/definitions.md",
@@ -41,6 +51,10 @@ class TicketGenerationResult(BaseModel):
     guardrails: GuardrailResult
     usage: TicketUsage
     model: str = Field(default=DEFAULT_MODEL)
+
+
+class Layer3ITCError(ValueError):
+    """Raised when authoritative ITC evidence cannot support generation."""
 
 
 def _default_client() -> Any:
@@ -96,21 +110,7 @@ def _system_blocks(
 
 
 def _tool_schema() -> dict[str, Any]:
-    input_schema = BuyTicket.model_json_schema()
-    properties = input_schema.get("properties")
-    if isinstance(properties, dict):
-        input_schema["properties"] = {
-            field_name: schema
-            for field_name, schema in properties.items()
-            if field_name not in SYSTEM_MANAGED_TICKET_FIELDS
-        }
-    required = input_schema.get("required")
-    if isinstance(required, list):
-        input_schema["required"] = [
-            field_name
-            for field_name in required
-            if field_name not in SYSTEM_MANAGED_TICKET_FIELDS
-        ]
+    input_schema = TicketProposal.model_json_schema()
     return {
         "name": TICKET_TOOL_NAME,
         "description": "Emit one structured buy-ticket JSON object.",
@@ -171,6 +171,32 @@ def _usage_from_response(response: Any) -> TicketUsage:
     )
 
 
+def _authoritative_itc(bundle: Mapping[str, Any]) -> ITCRiskResponse:
+    """Validate successful Layer 3 ITC evidence before model generation."""
+    itc_result = bundle.get("itc")
+    if not isinstance(itc_result, Mapping):
+        raise Layer3ITCError("Layer 3 ITC result is missing")
+    if itc_result.get("status") != "succeeded" or itc_result.get("returncode") != 0:
+        raise Layer3ITCError("Layer 3 ITC result did not succeed")
+    data = itc_result.get("data")
+    if not isinstance(data, Mapping):
+        raise Layer3ITCError("Layer 3 ITC data is missing")
+    raw_score = data.get("current_risk_score")
+    if isinstance(raw_score, bool) or not isinstance(raw_score, (int, float)):
+        raise Layer3ITCError("Layer 3 ITC risk score is malformed")
+    try:
+        evidence = ITCRiskResponse.model_validate(data)
+    except ValidationError as exc:
+        raise Layer3ITCError("Layer 3 ITC data is malformed") from exc
+
+    primary_ticker = bundle.get("primary_ticker")
+    if not isinstance(primary_ticker, str) or (
+        evidence.symbol != primary_ticker.strip().upper()
+    ):
+        raise Layer3ITCError("Layer 3 ITC symbol does not match primary ticker")
+    return evidence
+
+
 def generate(
     bundle: dict[str, Any],
     portfolio_state: PortfolioState | dict,
@@ -182,6 +208,8 @@ def generate(
 ) -> TicketGenerationResult:
     """Generate a buy-ticket JSON object and enforce hard guardrails."""
     parsed_portfolio = PortfolioState.model_validate(portfolio_state)
+    itc = _authoritative_itc(bundle)
+    annual_margin_rate = resolve_annual_margin_rate()
     anthropic_client = client if client is not None else _default_client()
     root = project_root or Path.cwd()
 
@@ -197,8 +225,22 @@ def generate(
             "disable_parallel_tool_use": True,
         },
     )
-    ticket = BuyTicket.model_validate(_extract_tool_input(response))
-    guardrail_result = check(ticket, parsed_portfolio)
+    tool_input = _extract_tool_input(response)
+    proposal = TicketProposal.model_validate(
+        {
+            field_name: value
+            for field_name, value in tool_input.items()
+            if field_name not in SYSTEM_MANAGED_TICKET_FIELDS
+        }
+    )
+    guardrail_result = check(
+        proposal,
+        GuardrailContext(
+            portfolio=parsed_portfolio,
+            itc_risk_score=itc.current_risk_score,
+            annual_margin_rate=annual_margin_rate,
+        ),
+    )
     return TicketGenerationResult(
         ticket=guardrail_result.ticket,
         guardrails=guardrail_result,
