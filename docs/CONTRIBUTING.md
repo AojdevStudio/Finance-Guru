@@ -51,7 +51,7 @@ Only these surfaces are in scope for PRs:
 Everything else is issues-only. We will evaluate bug reports and feature requests for these areas but will close PRs against them without review:
 
 - Skills under `.claude/skills/`
-- Agents under `fin-guru/agents/` or `.claude/commands/fin-guru/agents/`
+- Agents under `.claude/commands/fin-guru/agents/` or `.claude/agents/`
 - Hooks under `.claude/hooks/`
 - `finance-guru-desktop/` (Electron POC, gitignored)
 

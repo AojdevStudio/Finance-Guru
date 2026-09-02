@@ -115,9 +115,9 @@ def print_generation_summary(
     else:
         print("Generated Files:")
         files = [
-            ("user-profile.yaml", "fin-guru/data/user-profile.yaml"),
-            ("config.yaml", "fin-guru/config.yaml"),
-            ("system-context.md", "fin-guru/data/system-context.md"),
+            ("user-profile.yaml", "user-profile.yaml"),
+            ("config.yaml", "config.yaml"),
+            ("system-context.md", "system-context.md"),
             ("CLAUDE.md", "CLAUDE.md"),
             (".env", ".env"),
         ]

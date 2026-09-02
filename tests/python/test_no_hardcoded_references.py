@@ -22,7 +22,6 @@ ALLOWED_FILES = {
     "LICENSE",  # Copyright holder
     ".git/",  # Git history
     "specs/",  # Spec docs describing migration process
-    "fin-guru/distribution-plan.md",  # Distribution planning doc
     "fin-guru/tasks/",  # Task files with examples
     "specs/archive/",  # Archived specs
     "fin-guru-private/",  # Legacy private data directory (gitignored, not distributed)
@@ -44,8 +43,6 @@ ALLOWED_FILES = {
 
 # Files that MUST NOT contain the owner's name
 CRITICAL_FILES = [
-    "fin-guru/config.yaml",
-    "fin-guru/workflows/workflow.yaml",
     "fin-guru/README.md",
 ]
 
@@ -82,44 +79,6 @@ def test_no_hardcoded_name_in_critical_files():
             error_msg += "\nReplace with template variable: {user_name}\n"
 
             raise AssertionError(error_msg)
-
-
-def test_config_uses_template_variables():
-    """Verify config.yaml uses {user_name} template variable."""
-    project_root = Path(__file__).parent.parent.parent
-    config_path = project_root / "fin-guru/config.yaml"
-
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
-
-    with open(config_path, encoding="utf-8") as f:
-        content = f.read()
-
-    # Should contain template variable
-    assert "{user_name}" in content or "user_name:" in content, (
-        "config.yaml should use {user_name} template variable"
-    )
-
-    # Should NOT contain hardcoded personal name
-    assert _OWNER_FIRST not in content, (
-        "config.yaml should not contain hardcoded personal name"
-    )
-
-
-def test_workflow_yaml_generic():
-    """Verify workflow.yaml does not hardcode personal names."""
-    project_root = Path(__file__).parent.parent.parent
-    workflow_path = project_root / "fin-guru/workflows/workflow.yaml"
-
-    if not workflow_path.exists():
-        return  # Skip if file doesn't exist
-
-    with open(workflow_path, encoding="utf-8") as f:
-        content = f.read()
-
-    assert _OWNER_FIRST not in content, (
-        "workflow.yaml should not contain hardcoded personal name"
-    )
 
 
 def test_readme_generic_author():
@@ -184,20 +143,6 @@ if __name__ == "__main__":
         print("PASS: Critical files are clean")
     except AssertionError as e:
         print(f"FAIL: Critical files check failed:\n{e}")
-        exit(1)
-
-    try:
-        test_config_uses_template_variables()
-        print("PASS: Config uses template variables")
-    except AssertionError as e:
-        print(f"FAIL: Config check failed:\n{e}")
-        exit(1)
-
-    try:
-        test_workflow_yaml_generic()
-        print("PASS: Workflow YAML is generic")
-    except AssertionError as e:
-        print(f"FAIL: Workflow YAML check failed:\n{e}")
         exit(1)
 
     try:

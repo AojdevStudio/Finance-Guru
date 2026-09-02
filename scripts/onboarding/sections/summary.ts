@@ -221,8 +221,8 @@ export async function runSummarySection(state: OnboardingState): Promise<Onboard
         console.log('');
         console.log('Files created:');
         console.log('  ✓ user-profile.yaml');
-        console.log('  ✓ fin-guru/config.yaml');
-        console.log('  ✓ fin-guru/data/system-context.md');
+        console.log('  ✓ config.yaml');
+        console.log('  ✓ system-context.md');
         console.log('');
 
         // Mark section as complete (next sections are optional: mcp_config, env_setup)
