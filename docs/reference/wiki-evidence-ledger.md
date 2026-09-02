@@ -17,7 +17,7 @@ Code and live GitHub state take precedence over older repository prose.
 | SnapTrade and SimpleFIN are external read sources that write local snapshots. | Verified | `src/integrations/snaptrade/`, `src/integrations/simplefin/`, and `apps/simplefin-sync/`. |
 | The analysis engine is CLI-first and uses Pydantic models, calculators or strategies, and CLI adapters. | Verified | `src/models/`, `src/analysis/`, `src/strategies/`, `src/utils/`, and the checked-in CLI inventory. |
 | The checked-in analysis commands are all functional. | Unknown | The CLI inventory is command-by-command; `momentum_cli` and `input_validation_cli` have open defects [#108](https://github.com/AojdevStudio/Finance-Guru/issues/108) and [#120](https://github.com/AojdevStudio/Finance-Guru/issues/120). |
-| The Claude Code skills and hooks are transitional, not a supported public installation path. | Verified | `docs/CONTRIBUTING.md` defines these surfaces as transitional. |
+| The Claude Code plugin is a supported installation path. | Verified | `README.md` Quick start, `.claude-plugin/plugin.json`, and `.claude-plugin/marketplace.json`. |
 | The standalone macOS application is available. | Planned | `docs/VISION.md` describes direction only; no checked-in release or production proof exists. |
 | Financial analysis is educational material, not investment advice. | Verified | `README.md`, `docs/CONTRIBUTING.md`, and CLI-output requirements require that boundary. |
 | A local test or CI pass does not prove a release, production deployment, or provider success. | Verified | Repository tests and GitHub checks verify repository behavior only; provider and release state require separate live evidence. |

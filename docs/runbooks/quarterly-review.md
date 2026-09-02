@@ -6,8 +6,8 @@ category: runbook
 
 # Historical quarterly-review runbook
 
-The previous quarterly-review procedure depended on the transitional
-agent/hook stack and retired file-export workflows. It is preserved only as a
+The previous quarterly-review procedure depended on retired file-export
+workflows. It is preserved only as a
 historical reference and must not be treated as a current automated process.
 
 For a current review, first refresh the configured local sources, inspect the

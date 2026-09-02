@@ -66,4 +66,4 @@ The startup script already runs `uv sync --dev` and `bun install`. `uv` lives at
 
 ## Documentation
 
-`docs/index.md` is the hub for setup, the CLI reference, live-sync credentials, runbooks, and troubleshooting. `docs/CONTRIBUTING.md` states the accepted surfaces and the privacy rules every push must pass. `CHANGELOG.md` carries every release.
+The [documentation hub](docs/index.md) covers setup, the CLI reference, live-sync credentials, runbooks, and troubleshooting. [Contributing](docs/CONTRIBUTING.md) states the accepted surfaces and the privacy rules every push must pass. The [changelog](CHANGELOG.md) carries every release.

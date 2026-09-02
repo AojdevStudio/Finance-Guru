@@ -12,7 +12,7 @@ Thanks for looking. Read the _Project State_ section below before investing time
 
 ## Project State (Read This First)
 
-Finance Guru is being converted, in place, into an installable Claude Code and Codex plugin. Everything ships open under AGPL-3.0. The skills, agents, and Python engine are all part of the product; there is no withheld feature tier.
+Finance Guru ships as a Claude Code and Codex plugin over a typed Python engine. Everything ships open under AGPL-3.0. The skills, agents, and Python engine are all part of the product; there is no withheld feature tier.
 
 What this means for contributors today:
 
@@ -20,12 +20,12 @@ What this means for contributors today:
 | Area                                   | State                                 | Safe to invest in?         |
 | -------------------------------------- | ------------------------------------- | -------------------------- |
 | Python analysis engine (`src/`)        | **Stable**                            | _Yes_                      |
-| Claude Code skills (`.claude/skills/`) | **Active, mid plugin conversion**     | No — file an issue instead |
-| BMAD-CORE agents (`fin-guru/agents/`)  | **Active, mid plugin conversion**     | No — file an issue instead |
+| Claude Code skills (`.claude/skills/`) | **Active, maintainer-owned**          | No — file an issue instead |
+| Specialist agents (`.claude/commands/fin-guru/agents/`) | **Active, maintainer-owned** | No — file an issue instead |
 | Documentation (`docs/`)                | **Always safe**                       | _Yes_                      |
 
 
-While the plugin conversion is underway, changes to skills, agents, and hooks start as issues, not PRs. The maintainer is actively reshaping those surfaces and parallel PRs against them will conflict.
+Changes to skills, agents, and hooks start as issues, not PRs. The maintainer is actively reshaping those surfaces and parallel PRs against them will conflict.
 
 ---
 

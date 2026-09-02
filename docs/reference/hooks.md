@@ -1,19 +1,18 @@
 ---
-title: "Transitional hooks"
-description: "Status of the legacy Claude Code hook implementation"
+title: "Hooks"
+description: "The Claude Code hooks the plugin ships and what each one does"
 category: reference
 ---
 
-# Transitional hooks
+# Hooks
 
-The `.claude/hooks/` implementation is transitional and not a supported public
-setup dependency. It may be useful to maintainers investigating the legacy
-agent stack, but it does not define the stable analysis-engine contract.
+`.claude/settings.json` wires four hooks. The plugin ships the same four, so a plugin-mode instance and a checkout run identical hooks.
 
-Do not add or configure hooks based on older examples without first checking
-the checked-in hook configuration and opening an issue. The public, durable
-surfaces are the Python analysis engine, local database integrations, tests,
-and the documentation linked from [the repository documentation hub](../index.md).
+| Event | Script | What it does |
+| --- | --- | --- |
+| `SessionStart` | `.claude/hooks/load-fin-core-config.ts` | Prints the `fin-core` skill, then the instance profile, configuration, and latest portfolio files from `FIN_GURU_DATA_ROOT` or the current directory. Warns when the instance files are missing. |
+| `UserPromptSubmit` | `.claude/hooks/skill-activation-prompt.ts` | Matches the prompt against `.claude/skills/skill-rules.json` and suggests the matching skill. |
+| `PostToolUse` | `.claude/hooks/post-tool-use-tracker.ts` | Records tool use for the stop check. |
+| `Stop` | `.claude/hooks/stop-build-check-enhanced.sh` | Runs the build check before the session ends. |
 
-The standalone-app direction intentionally removes the Claude Code dependency;
-see [the vision](../VISION.md).
+Start sessions from the instance directory, or export `FIN_GURU_DATA_ROOT`, so the session-start hook finds the instance files. The hooks are not required to run the Python analysis engine from a shell.

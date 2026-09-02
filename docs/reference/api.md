@@ -67,9 +67,9 @@ uv run python -m src.integrations.refresh_all --help
 | --- | --- |
 | `src/cli/fin_guru.py` | Start the Textual terminal interface. |
 
-The checked-in Python and TypeScript onboarding scaffolds are transitional and
-are not part of the supported command contract. Do not rely on them for a
-fresh setup.
+`uv run python -m src.cli.instance_init <root> --repo .` is the supported setup
+command. The TypeScript onboarding wizard under `scripts/onboarding/` predates it
+and is not part of the command contract.
 
 ## Data refresh command
 
