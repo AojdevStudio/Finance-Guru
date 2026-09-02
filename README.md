@@ -14,11 +14,11 @@
 
 _A self-hosted family office engine: typed Python calculators, a private SQLite ledger, and specialist agents that run inside Claude Code or Codex. Your data never leaves your machine unless you point it somewhere._
 
-[**Demo**](#see-it-in-action) · [**Quick Start**](#quick-start) · [**Docs**](https://aojdevstudio.github.io/Finance-Guru/) · [**How It Works**](#how-it-works)
+[**Demo**](#see-it-in-action) · [**Quick Start**](#quick-start) · [**Docs**](https://aojdevstudio.github.io/Finance-Guru/) · [**For agents**](#if-you-are-an-agent)
 
 </div>
 
-## The problem everyone ignores
+## Why this exists
 
 You have a brokerage account, maybe a margin balance, a dividend plan you wrote in a note somewhere, and a habit of pasting screenshots into a chat model to ask whether a position is too big. Every answer is plausible. None of it is checked.
 
@@ -27,12 +27,10 @@ You have a brokerage account, maybe a margin balance, a dividend plan you wrote 
 - The guardrail that should have stopped a bad ticket was a sentence in a prompt, not a line of code.
 - Nothing is repeatable, so nothing is auditable.
 
-**Sound familiar?**
-
 > _"A fully autonomous, unbiased family office with agentic personalities grounded in math and truth, helping me achieve financial freedom."_
 > The vision statement in [docs/VISION.md](docs/VISION.md), March 2026.
 
-## The insight that changed everything
+## The split
 
 Chat models are excellent at deciding what question to ask and terrible at being the calculator. So split the job.
 
@@ -51,7 +49,7 @@ Every number an agent quotes comes from a Pydantic-validated calculator with a C
 
 </div>
 
-## Introducing Finance Guru
+## What Finance Guru is
 
 Finance Guru is the open-core engine behind Keepfolio, a "claude-code for personal finance." This repo is the free, self-hosted, CLI-native experience: the whole engine, every skill, every agent, no withheld tier.
 
@@ -137,6 +135,22 @@ claude plugin install finance-guru@finance-guru
 
 Then run the `instance-onboarding` skill. It scaffolds the instance with `--plugin`, so the plugin is the single source of agents and skills and the checkout path's symlinks are skipped. The checkout path above remains the fully supported one.
 
+## What landed in the September 2026 sweep
+
+This README follows a week where the engine got stricter everywhere money is involved. Ten pull requests landed in one pass: five written by Codex workers in parallel herdr panes, the rest plus every review and merge from a Claude Code session, with CodeRabbit and CodeQL on each one. This repo is built by agents for agents, and that is the point.
+
+| Area | What changed | Why you care |
+| :--- | :--- | :--- |
+| **Buy-ticket guardrails** | Concentration divides by pre-borrow equity NAV, coverage includes the ticket's own borrowing, Layer 3 is the only ITC authority, and a persisted draft survives a failed notification (#159) | A ticket cannot pass on missing data or a model's own numbers |
+| **SnapTrade sync** | Activities keyed on the provider id with an in-place legacy migration, one date contract, cost basis over priced lots only, typed failures for missing equity or marks (#157) | Two identical same-day fills no longer collapse into one row |
+| **SimpleFIN sync** | Partial provider responses raise before any write; only settled deposits trigger automation (#154) | No more "ok" on a half ledger |
+| **Margin metrics** | Exactly one enabled `taxable_margin` account or a typed routing error; the balance generation must be complete (#155) | Enabling a second account can no longer silently swap the row |
+| **CLI and onboarding** | Broken help paths restored, atomic state writes, plugin-mode instance init (#156) | Every documented command runs again |
+| **Supply chain and CI** | 72 Dependabot alerts cleared, workflow tokens pinned to read, bun typecheck gated (#151, #152, #153, #161) | The public repo ships with zero open CodeQL findings |
+| **Docs** | Diátaxis site live on GitHub Pages | One place for tutorials, how-tos, reference, and explanation |
+
+The full list is in the [changelog](CHANGELOG.md) and the merged pull requests.
+
 ## How it works
 
 ### The guardrail loop
@@ -170,6 +184,20 @@ Every tool in the engine follows this shape, so an agent can only ever call a CL
 The engine reads every private file from an instance directory outside the repository, resolved from `FIN_GURU_DATA_ROOT` or the current working directory. The instance holds `.env`, `user-profile.yaml`, `config.yaml`, `family_office.db`, `snaptrade-accounts.yaml`, and the working directories `imports/`, `analysis/`, `tickets/`, `strategies/`, `hedging/`, `reports/`, `auto-tickets/`, and `notes/`. Tracked files describe behaviour and never carry personal values. The full rule and its enforcement live in [DataClassification](.claude/skills/compliance-scan/references/DataClassification.md) and [PRIVACY.md](PRIVACY.md).
 
 Local-first does not mean network-free. Market data, brokerage, and LLM integrations send request data to their configured providers. Configure only the integrations you intend to use.
+
+## If you are an agent
+
+You are the intended operator of this engine, not an afterthought. A few things that make you effective here:
+
+- **Read `CLAUDE.md` first.** It is the single source of truth for the skills index, the agent roster, the path variables, and the output rules. `AGENTS.md` points Codex at the same tree through the instance's `.agents` symlink.
+- **Run `date` before any market work.** Every specialist here is expected to know the current date before it searches or analyzes.
+- **Never do the arithmetic yourself.** Call the CLI with `--output json` and quote what it returned. That is the whole reason the calculators exist.
+- **Private data lives in the instance, not the repo.** Resolve `FIN_GURU_DATA_ROOT` or the working directory, read from `family_office.db`, and write artifacts into `analysis/` or `tickets/`. Tracked files never carry personal values, and the pre-push scan will stop you if you try.
+- **Every financial output carries the educational-only disclaimer,** a date stamp, and its data source. The CLIs print it; the skills expect it.
+- **Fail closed.** If a guardrail input is missing, the answer is a block with a typed reason. Do not fill the gap with an estimate.
+- **Contributing a tool means all three layers.** Pydantic input model, calculator class, CLI wrapper, plus a test that runs without a network.
+
+Skills in `.claude/skills/` are the workflows; specialists in `.claude/commands/fin-guru/agents/` are the personas; the finance orchestrator routes between them.
 
 ## The story behind Finance Guru
 
@@ -240,7 +268,7 @@ Finance Guru is educational software, not investment advice. Financial markets i
 
 **Agents propose. Typed code computes.**
 
-If this saved you from trusting a rounded number, [star the repo](https://github.com/AojdevStudio/Finance-Guru).
+If the split between judgment and arithmetic is the thing you were missing, [star the repo](https://github.com/AojdevStudio/Finance-Guru).
 
 [![Star History Chart](https://api.star-history.com/svg?repos=AojdevStudio/Finance-Guru&type=Date)](https://star-history.com/#AojdevStudio/Finance-Guru&Date)
 
