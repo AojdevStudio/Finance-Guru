@@ -19,8 +19,8 @@ Before filling source gaps in a document, follow the shared **[paid MCP capabili
 | Buy Ticket | `{project-root}/fin-guru/templates/buy-ticket-template.md` | Capital deployment authorization |
 | Compliance Memo | `{project-root}/fin-guru/templates/compliance-memo.md` | Regulatory compliance documentation |
 | Excel Model Spec | `{project-root}/fin-guru/templates/excel-model-spec.md` | Financial model specifications |
-| Presentation | no template; write from the analysis report structure | Stakeholder presentations |
-| Onboarding Report | no template; summarize the learner profile | Client onboarding summaries |
+| Presentation | `{project-root}/fin-guru/templates/presentation-format.md` | Stakeholder presentations |
+| Onboarding Report | `{project-root}/fin-guru/templates/onboarding-report.md` | Client onboarding summaries |
 
 ## Workflow
 
