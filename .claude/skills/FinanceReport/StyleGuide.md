@@ -69,7 +69,7 @@ BLACK = "#000000"      # Emphasis text
 │                    • Market Researcher (Dr. Aleksandr Petrov) │
 │                    • Quant Analyst                          │
 │                    • Strategy Advisor                       │
-│  Current Price:    $740.62                                  │
+│  Current Price:    <market price>                           │
 │  YTD Performance:  +24.89%                                  │
 │  Expense Ratio:    0.10%                                    │
 └─────────────────────────────────────────────────────────────┘

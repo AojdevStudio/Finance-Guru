@@ -47,7 +47,7 @@ describe("Gitignore Protection Integration Test", () => {
 
     // Create test CSV files
     const csvFiles = [
-      "notebooks/updates/Portfolio_Positions_Jan-12-2026.csv",
+      "notebooks/updates/Portfolio_Positions_SAMPLE.csv",
       "notebooks/updates/dividend.csv",
       "notebooks/retirement-accounts/OfxDownload.csv",
       "notebooks/transactions/History_for_Account_EXAMPLE123.csv",

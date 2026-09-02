@@ -131,7 +131,7 @@ The Compliance Officer agent is missing ITC Risk Models API integration that was
     <output_interpretation>
       Current Risk Score: 0.82 (HIGH)
       Risk Level: 🔴 HIGH (> 0.7)
-      Current Price: $445.23
+      Current Price: [market price]
       High Risk Threshold: $500 (distance: +12.3%)
 
       Compliance Decision: CONDITIONAL APPROVAL
