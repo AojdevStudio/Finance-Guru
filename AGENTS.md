@@ -6,98 +6,40 @@
 
 [System of Record] `family_office.db` (SQLite, gitignored) holds positions, balances, transactions, and bank_transactions, fed by SnapTrade (brokerage) and SimpleFIN (bank/card). The Google Sheets DataHub is retired: do not write to Sheets and do not reintroduce a gdrive MCP dependency.
 
+## What this repository is
 
+Finance Guru is a self-hosted family office engine: typed Python calculators, a private SQLite ledger, and specialist agents that run inside Claude Code or Codex. It is the open-core engine behind Keepfolio. The README describes the product. This file tells a coding agent how to work in it.
 
-## Project Overview
+## Operating rules
 
-This is **Finance Guru™** - a private AI-powered family office system built on BMAD-CORE™ v6 architecture. This repository serves as the operational center for a multi-agent financial intelligence system that provides research, quantitative analysis, strategic planning, and compliance oversight.
+- Read `CLAUDE.md` first. It is the single source of truth for the skills index, the agent roster, the path variables, and the output rules.
+- Run `date` and `date +"%Y-%m-%d"` before any market work. Store the results as `{current_datetime}` and `{current_date}`. Agent configuration files also use `{project-root}`, `{module-path}`, `{data-root}`, and `{user_name}`. Resolve every variable to a real path or value before use.
+- Never do the arithmetic yourself. Call the CLI with `--output json` and quote what it returned.
+- Private data lives in the instance, not the repo. Resolve `FIN_GURU_DATA_ROOT` or the working directory, read from `family_office.db`, and write artifacts into `analysis/` or `tickets/`. Tracked files never carry personal values. The pre-push compliance scan blocks a push that does.
+- Every financial output carries the educational-only disclaimer, a "not investment advice" statement, a recommendation to consult licensed professionals, a risk disclosure, a date stamp, and its data source. The CLIs print the disclaimer. The skills expect it.
+- Fail closed. If a guardrail input is missing, the answer is a block with a typed reason. Do not fill the gap with an estimate.
+- Contributing a tool means all three layers: Pydantic input model, calculator class, CLI wrapper, plus a test that runs without a network.
+- Research skills may call the MCP servers listed in `CLAUDE.md`. None of them are required to run the calculators or the sync.
 
-**Key Principle**: This is NOT a software product or app - this IS Finance Guru, a personal financial command center working exclusively for the user. All references should use "your" when discussing assets, strategies, and portfolios.
+## Layout
 
-# Architecture
+- `src/analysis/`, `src/utils/`, and `src/strategies/` hold 20 calculators. Each is a Pydantic model, a calculator class, and a `*_cli.py` wrapper. The full list is in `docs/reference/api.md`.
+- `src/integrations/` holds the sync layer. `refresh_all` pulls SnapTrade and SimpleFIN into `family_office.db`. Partial provider responses raise before any write.
+- `.claude/skills/` holds the workflows. `.claude/commands/fin-guru/agents/` holds the 11 specialist personas. The finance orchestrator in that directory routes between them.
+- `tests/` holds the math, tested without a network, behind an 80% coverage gate. `uv run pytest -m "not integration"` skips the tests that need real API keys.
+- `apps/simplefin-sync/` is the Bun workspace for the SimpleFIN broker sync.
 
-### Multi-Agent System
+## Toolchain
 
-Finance Guru™ uses a **specialized agent architecture** where Claude transforms into different financial specialists:
-
-**Primary Entry Point**:
-
-- **Finance Orchestrator** (Cassandra Holt) - Master coordinator located at `.claude/commands/fin-guru/agents/finance-orchestrator.md`
-
-## Path Variable System
-
-The codebase uses a variable substitution system:
-
-- `{project-root}` - Root of the repository
-- `{module-path}` - Path to fin-guru module
-- `{current_datetime}` - Current date and time
-- `{current_date}` - Current date (YYYY-MM-DD)
-- `{user_name}` - User's name from config
-
-When referencing files in agent configurations, these variables should be resolved to actual paths.
-
-## External Tool Requirements
-
-Finance Guru requires these MCP servers:
-
-- **exa** - Deep research and market intelligence
-- **bright-data** - Web scraping (search engines, markdown extraction)
-- **sequential-thinking** - Complex multi-step reasoning
-- **financial-datasets** - SEC filings, financial statements
-- **web-search** - Real-time market information
-
-## Temporal Awareness
-
-**CRITICAL REQUIREMENT**: All agents must establish temporal context before performing any market research or analysis.
-
-Required initialization:
+Python 3.12 or later, managed with `uv`. Bun for `apps/simplefin-sync/`. These gates mirror CI:
 
 ```bash
-# Agents MUST execute these commands at startup
-date                    # Store as {current_datetime}
-date +"%Y-%m-%d"       # Store as {current_date}
+uv sync --dev
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy src/
+uv run pytest -m "not integration"
 ```
-
-This ensures:
-
-- Market data searches use current year/date
-- Analysis reflects real-time conditions
-- Documents are properly date-stamped
-
-## Compliance & Disclaimers
-
-**MANDATORY**: All financial outputs must include:
-
-- Educational-only disclaimer
-- "Not investment advice" statement
-- Recommendation to consult licensed professionals
-- Risk disclosure (loss of principal possible)
-
-This positioning is enforced by the Compliance Officer agent.
-
-## Technology Stack
-
-- **Python**: 3.12+
-- **Package Manager**: `uv` (used for all Python operations)
-- **Key Dependencies**:
-  - pandas, numpy, scipy, scikit-learn (data analysis)
-  - yfinance (market data)
-  - streamlit (visualization)
-  - beautifulsoup4, requests (web scraping)
-  - pydantic (data validation)
-  - python-dotenv (configuration)
-
-## Python Tools & Utilities
-
-### Type-Safe Architecture
-
-All Python tools follow a 3-layer architecture pattern:
-
-- **Layer 1**: Pydantic Models (`src/models/`) - Data validation
-- **Layer 2**: Calculator Classes (`src/analysis/`, `src/utils/`) - Business logic
-- **Layer 3**: CLI Interface - Agent integration
-
-**Available Tools**: see `.claude/tools/python-tools.md`
 
 ## Development Commands
 
@@ -341,28 +283,6 @@ Generated Finance Guru documents use split destinations:
 - Format: Markdown with YAML frontmatter
 - Naming: `{topic}-{strategy/analysis}-{YYYY-MM-DD}.md` (analysis), `buy-ticket-{YYYY-MM-DD}-{descriptor}.md` (tickets)
 - Include: Date stamp, disclaimer, source citations
-
-## Testing & Validation
-
-The system is primarily workflow-based rather than code-based. Validation involves:
-
-- Testing agent activation sequences
-- Verifying workflow execution
-- Checking document generation
-- Ensuring compliance disclaimers are present
-- Validating market data retrieval
-
-## Version Information
-
-- **Finance Guru™**: v2.0.0
-- **BMAD-CORE™**: v6.0.0
-- **Build Date**: 2025-10-08
-- **Last Updated**: 2025-10-13
-- **Tools Built**: 7 of 11 (Risk Metrics, Momentum Indicators, Volatility Metrics, Correlation & Covariance Engine, Backtesting Framework, Moving Average Toolkit, Portfolio Optimizer)
-
----
-
-**Remember**: This is a private family office system. All work should maintain the exclusive, personalized nature of the Finance Guru service.
 
 ## Landing the Plane (Session Completion)
 
