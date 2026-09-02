@@ -79,8 +79,8 @@ mkdir -p sensitive
 mkdir -p credentials
 
 # Create test CSV files (portfolio positions)
-echo "Date,Ticker,Shares,Price,Value" > notebooks/updates/Portfolio_Positions_Jan-12-2026.csv
-echo "2026-01-12,TSLA,100,350.00,35000.00" >> notebooks/updates/Portfolio_Positions_Jan-12-2026.csv
+echo "Date,Ticker,Shares,Price,Value" > notebooks/updates/Portfolio_Positions_SAMPLE.csv
+echo "2026-01-12,TSLA,100,350.00,35000.00" >> notebooks/updates/Portfolio_Positions_SAMPLE.csv
 
 echo "Date,Ticker,Shares,Price,Value" > notebooks/updates/dividend.csv
 echo "2026-01-12,SCHD,500,75.00,37500.00" >> notebooks/updates/dividend.csv
@@ -129,7 +129,7 @@ log_success "Sensitive test files created"
 log_step "Test 3: Verifying CSV files are ignored"
 
 csv_files=(
-    "notebooks/updates/Portfolio_Positions_Jan-12-2026.csv"
+    "notebooks/updates/Portfolio_Positions_SAMPLE.csv"
     "notebooks/updates/dividend.csv"
     "notebooks/retirement-accounts/OfxDownload.csv"
     "notebooks/transactions/History_for_Account_EXAMPLE123.csv"
