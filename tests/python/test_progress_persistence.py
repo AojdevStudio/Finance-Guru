@@ -19,6 +19,8 @@ Test Categories:
 import json
 from datetime import datetime, timedelta
 
+import pytest
+
 from src.utils.progress_persistence import (
     ALL_SECTIONS,
     clear_state,
@@ -36,18 +38,21 @@ from src.utils.progress_persistence import (
 )
 
 
+@pytest.fixture(autouse=True)
+def isolated_state_file(tmp_path, monkeypatch):
+    """Give every test its own directory for the onboarding state file.
+
+    ``progress_persistence.get_state_path`` resolves ``STATE_FILE`` against
+    ``Path.cwd()``, so without this the whole suite shares one repo-root
+    ``.onboarding-state.json``. Under ``-n auto`` that file is read, written,
+    and unlinked concurrently by every xdist worker, which produces torn reads
+    and ``FileNotFoundError`` out of ``clear_state``'s check-then-unlink.
+    """
+    monkeypatch.chdir(tmp_path)
+
+
 class TestStateManagement:
     """Test state creation, save, and load operations."""
-
-    def setup_method(self):
-        """Clean up any existing state before each test."""
-        if has_existing_state():
-            clear_state()
-
-    def teardown_method(self):
-        """Clean up state after each test."""
-        if has_existing_state():
-            clear_state()
 
     def test_create_new_state(self):
         """New state should be initialized correctly."""
@@ -127,16 +132,6 @@ class TestStateManagement:
 class TestSectionTracking:
     """Test section completion tracking."""
 
-    def setup_method(self):
-        """Clean up before each test."""
-        if has_existing_state():
-            clear_state()
-
-    def teardown_method(self):
-        """Clean up after each test."""
-        if has_existing_state():
-            clear_state()
-
     def test_mark_section_complete(self):
         """Should add section to completed list."""
         state = create_new_state()
@@ -186,16 +181,6 @@ class TestSectionTracking:
 
 class TestDataPersistence:
     """Test section data save/retrieve."""
-
-    def setup_method(self):
-        """Clean up before each test."""
-        if has_existing_state():
-            clear_state()
-
-    def teardown_method(self):
-        """Clean up after each test."""
-        if has_existing_state():
-            clear_state()
 
     def test_save_section_data(self):
         """Should save data for a section."""
@@ -258,16 +243,6 @@ class TestDataPersistence:
 class TestProgressCalculation:
     """Test progress tracking and next section logic."""
 
-    def setup_method(self):
-        """Clean up before each test."""
-        if has_existing_state():
-            clear_state()
-
-    def teardown_method(self):
-        """Clean up after each test."""
-        if has_existing_state():
-            clear_state()
-
     def test_get_next_section_at_start(self):
         """Should return first section when nothing completed."""
         state = create_new_state()
@@ -321,16 +296,6 @@ class TestProgressCalculation:
 
 class TestTimeTracking:
     """Test time since last update calculations."""
-
-    def setup_method(self):
-        """Clean up before each test."""
-        if has_existing_state():
-            clear_state()
-
-    def teardown_method(self):
-        """Clean up after each test."""
-        if has_existing_state():
-            clear_state()
 
     def test_just_now(self):
         """Recent update should show 'just now'."""
@@ -396,16 +361,6 @@ class TestTimeTracking:
 
 class TestEdgeCases:
     """Edge case handling and error scenarios."""
-
-    def setup_method(self):
-        """Clean up before each test."""
-        if has_existing_state():
-            clear_state()
-
-    def teardown_method(self):
-        """Clean up after each test."""
-        if has_existing_state():
-            clear_state()
 
     def test_corrupted_state_file(self):
         """Should handle corrupted JSON gracefully."""
