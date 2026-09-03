@@ -9,9 +9,9 @@ Finance Guru handles the most sensitive data a household has, inside a repositor
 
 ## Data stays local
 
-All financial data stays on the owner's machine. There is no telemetry, no remote analytics, and no third-party data sharing. Positions, balances, transactions, and dividend events land in the local, gitignored SQLite database. The profile and every generated artifact live in the instance directory, which has its own local git repository with no remote.
+All financial data stays on the owner's machine. There is no telemetry, no remote analytics, and no third-party data sharing. Positions, balances, transactions, and dividend events land in the local, gitignored [SQLite](https://www.sqlite.org/) database. The profile and every generated artifact live in the instance directory, which has its own local git repository with no remote.
 
-Data leaves the machine in only three ways. Broker and bank reads go outbound to SnapTrade and SimpleFIN, both read-only against your own accounts. Market-data providers see which tickers you query, but not your position sizes. An agent-harness session sees whatever you paste into it, so treat it like a privileged assistant and do not paste what you would not email your accountant.
+Data leaves the machine in only three ways. Broker and bank reads go outbound to [SnapTrade](https://snaptrade.com/) and [SimpleFIN](https://www.simplefin.org/), both read-only against your own accounts. Market-data providers see which tickers you query, but not your position sizes. An agent-harness session sees whatever you paste into it, so treat it like a privileged assistant and do not paste what you would not email your accountant.
 
 ## The tree describes behaviour, never values
 

@@ -9,23 +9,23 @@ Finance Guru is converting, in place, from one owner's private system into an in
 
 ## Everything is open
 
-All skills, agents, and the Python engine ship free under the existing AGPL-3.0 license. The commercial layer is convenience, never withheld features. AGPL already prevents proprietary forks, so there is no need to hold anything back.
+All skills, agents, and the Python engine ship free under the existing [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html) license. The commercial layer is convenience, never withheld features. AGPL already prevents proprietary forks, so there is no need to hold anything back.
 
 ## Finance Guru is the free, CLI-native experience
 
-Finance Guru is the self-hosted product for people comfortable in a terminal. Keepfolio is the polished product for people who will not run one. The free plugin is the funnel toward that product, and the relationship is stated openly rather than hidden.
+Finance Guru is the self-hosted product for people comfortable in a terminal. [Keepfolio](https://keepfolio.app/) is the polished product for people who will not run one. The free plugin is the funnel toward that product, and the relationship is stated openly rather than hidden.
 
 ## CSV-first connectivity
 
-The system works on day one with broker CSV exports. SnapTrade and SimpleFIN live sync stay in the project as documented bring-your-own-credentials options for power users. There is no paid-API wall in the first hour.
+The system works on day one with broker CSV exports. [SnapTrade](https://snaptrade.com/) and [SimpleFIN](https://www.simplefin.org/) live sync stay in the project as documented bring-your-own-credentials options for power users. There is no paid-API wall in the first hour.
 
 ## Built for technical operators
 
-The first user is a technical operator already running an agent harness. Onboarding may assume CLI comfort, uv, and API-key literacy. That assumption keeps the docs honest about prerequisites instead of hiding them.
+The first user is a technical operator already running an agent harness. Onboarding may assume CLI comfort, [uv](https://docs.astral.sh/uv/), and API-key literacy. That assumption keeps the docs honest about prerequisites instead of hiding them.
 
 ## Where the transition stands
 
-The privacy foundation is done. The scanner, the push gates, and the data-classification policy are in place. The configurable data root and the instance scaffold shipped, so private data lives outside the repository. Plugin packaging for Claude Code and Codex is planned and being built in a separate effort. It is not on the default branch, so treat any plugin-install instructions as planned rather than shipped. Repositioning of the README for installers follows the packaging work.
+The privacy foundation is done. The scanner, the push gates, and the data-classification policy are in place. The configurable data root and the instance scaffold shipped, so private data lives outside the repository. Plugin packaging for [Claude Code](https://code.claude.com/) and [Codex](https://github.com/openai/codex) is planned and being built in a separate effort. It is not on the default branch, so treat any plugin-install instructions as planned rather than shipped. Repositioning of the README for installers follows the packaging work.
 
 ## Why this order
 

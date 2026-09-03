@@ -27,17 +27,17 @@ The engine checkout is public code. Private data lives in a separate instance di
 
 ## The three layers
 
-Every analysis tool follows one 3-layer pattern. Pydantic models validate inputs and outputs. Calculator classes hold the business logic. Thin CLI entry points handle input and output only. The pattern keeps calculations testable and keeps command surfaces consistent, so every tool takes a ticker, a window, and flags in the same shape.
+Every analysis tool follows one 3-layer pattern. [Pydantic](https://docs.pydantic.dev/) models validate inputs and outputs. Calculator classes hold the business logic. Thin CLI entry points handle input and output only. The pattern keeps calculations testable and keeps command surfaces consistent, so every tool takes a ticker, a window, and flags in the same shape.
 
 ## Where data comes from
 
-Two read-only integrations feed the local database. The SnapTrade modules sync brokerage positions, balances, and activities. The SimpleFIN workspace syncs bank and card transactions. Broker CSV exports remain a first-class source, dropped into the instance import directory, so the system works without any live credentials. The coordinating entry point is `src.integrations.refresh_all`, which runs every configured source and exits non-zero on a partial refresh.
+Two read-only integrations feed the local database. The [SnapTrade](https://snaptrade.com/) modules sync brokerage positions, balances, and activities. The [SimpleFIN](https://www.simplefin.org/) workspace syncs bank and card transactions. Broker CSV exports remain a first-class source, dropped into the instance import directory, so the system works without any live credentials. The coordinating entry point is `src.integrations.refresh_all`, which runs every configured source and exits non-zero on a partial refresh.
 
 ## Verified implementation seams
 
 - `src/integrations/refresh_all.py` coordinates the configured refreshes.
 - `src/integrations/snaptrade/` contains account, position, balance, and activity synchronization surfaces.
-- `src/integrations/simplefin/sync_expenses_db.py` imports configured bank and card transaction data into local SQLite.
+- `src/integrations/simplefin/sync_expenses_db.py` imports configured bank and card transaction data into local [SQLite](https://www.sqlite.org/).
 - `src/models/`, `src/analysis/`, and the CLI entry points form the checked-in validation, business-logic, and command layers.
 
 ## What sits outside the stable core

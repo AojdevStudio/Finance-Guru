@@ -18,9 +18,9 @@ These variables come from the checked-in `.env.example` sample. Copy it to a loc
 
 | Variable | Purpose |
 | --- | --- |
-| `FINNHUB_API_KEY` | Optional real-time price requests. |
+| `FINNHUB_API_KEY` | Optional real-time price requests from [Finnhub](https://finnhub.io/). |
 | `ITC_API_KEY` | ITC risk-model requests. |
-| `OPENAI_API_KEY` | Optional, for specific agent tasks. |
+| `OPENAI_API_KEY` | Optional, for specific agent tasks. Issued by [OpenAI](https://platform.openai.com/api-keys). |
 
 ## SnapTrade live sync
 
@@ -28,7 +28,7 @@ Read-only bridge. Values live only in the local `.env`.
 
 | Variable | Purpose |
 | --- | --- |
-| `SNAPTRADE_CLIENT_ID` | SnapTrade application client identifier. |
+| `SNAPTRADE_CLIENT_ID` | [SnapTrade](https://snaptrade.com/) application client identifier. |
 | `SNAPTRADE_CONSUMER_KEY` | SnapTrade consumer key. |
 | `SNAPTRADE_USER_ID` | Linked user identifier. |
 | `SNAPTRADE_USER_SECRET` | Linked user secret. |
@@ -49,7 +49,7 @@ Optional local bank and card sync.
 | --- | --- |
 | `SMTP_SERVER`, `SMTP_PORT` | SMTP server settings for report email. |
 | `EMAIL_FROM`, `EMAIL_PASSWORD` | Sending address and app password. |
-| `SLACK_WEBHOOK_URL` | Slack notification webhook. |
+| `SLACK_WEBHOOK_URL` | [Slack](https://slack.com/) notification webhook. |
 
 ## Portfolio settings
 

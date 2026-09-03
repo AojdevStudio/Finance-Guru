@@ -7,7 +7,7 @@ category: setup
 # Live sync credentials
 
 Finance Guru works CSV-first. Live sync is optional. It connects two read-only
-providers, SnapTrade for brokerage data and SimpleFIN for bank and card
+providers, [SnapTrade](https://snaptrade.com/) for brokerage data and [SimpleFIN](https://www.simplefin.org/) for bank and card
 activity. You obtain the credentials yourself and keep them in local,
 gitignored files. This guide names the variables each provider needs. Never
 write a credential value into a tracked file, an issue, or a pull request.
@@ -24,6 +24,11 @@ inside the repository checkout.
 
 SnapTrade supplies brokerage positions, balances, and transactions. The
 integration is read-only and requires four variables in the instance `.env`.
+Sign up for API access at [SnapTrade](https://snaptrade.com/) and take the
+client ID and consumer key from the
+[SnapTrade dashboard](https://dashboard.snaptrade.com/). The
+[SnapTrade API docs](https://docs.snaptrade.com/) cover registering a user,
+which returns the user ID and user secret.
 
 | Variable | Purpose |
 | --- | --- |
@@ -52,9 +57,11 @@ after you have verified the account against a broker export. Accounts left
 
 ## SimpleFIN
 
-SimpleFIN supplies bank and card transactions. The recommended single location
+SimpleFIN supplies bank and card transactions. Get a setup token from
+[SimpleFIN Bridge](https://bridge.simplefin.org/), the paid SimpleFIN service
+that connects to your bank and issues tokens. The recommended single location
 for its long-lived credential is the instance `.env`. `refresh_all` loads that
-file with override enabled before it starts Bun in `apps/simplefin-sync/`, so an
+file with override enabled before it starts [Bun](https://bun.sh/) in `apps/simplefin-sync/`, so an
 uncommented `SIMPLEFIN_ACCESS_URL` in the instance `.env` wins. Bun reads the
 workspace's `apps/simplefin-sync/.env` value only when the instance leaves
 `SIMPLEFIN_ACCESS_URL` commented out.

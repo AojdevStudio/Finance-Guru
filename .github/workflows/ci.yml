@@ -51,6 +51,9 @@ jobs:
       - name: Type check
         run: uv run mypy src/
 
+      - name: Vendor backlinks in docs
+        run: uv run python scripts/backlinks.py --check
+
       - name: Tests with coverage
         run: |
           uv run pytest \

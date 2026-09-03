@@ -8,7 +8,7 @@ Short version — before you open a pull request:
 2. Fork, clone, run `./setup.sh`
 3. Create a feature branch off `main`
 4. Run `uv run ruff format .`, `uv run ruff check .`, `uv run mypy src/`, `uv run pytest`
-5. Open a PR — CodeRabbit and the Claude review bot will comment automatically
+5. Open a PR — [CodeRabbit](https://www.coderabbit.ai/) and the Claude review bot will comment automatically
 
 ## Filing issues
 
@@ -18,8 +18,8 @@ Short version — before you open a pull request:
 
 ## Style
 
-- Python — ruff (format + lint) + mypy strict
+- Python — [ruff](https://docs.astral.sh/ruff/) (format + lint) + [mypy](https://mypy-lang.org/) strict
 - Markdown — MD049 enforced; use underscores `_text_` not asterisks for emphasis
-- Commits — conventional commits (`feat:`, `fix:`, `docs:`, `chore:`, `security:`) so release-please can cut versions
+- Commits — [conventional commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, `security:`) so [release-please](https://github.com/googleapis/release-please) can cut versions
 
 See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for everything else.

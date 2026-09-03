@@ -11,7 +11,7 @@ reads `.env` from the instance root, the directory named by
 `FIN_GURU_DATA_ROOT` or the current working directory. `instance_init`
 scaffolds that file from the checked-in `.env.example`, preserving real defaults
 and commenting out empty values and credential placeholders for you to fill in.
-The `.env` file is gitignored. The local SQLite database is committed to the
+The `.env` file is gitignored. The local [SQLite](https://www.sqlite.org/) database is committed to the
 instance's local-only repository, which has no remote, and never to the public
 engine checkout.
 
@@ -26,7 +26,7 @@ public example or CI job at a real database.
 
 ## SnapTrade
 
-The read-only SnapTrade integration requires these private values before it can
+The read-only [SnapTrade](https://snaptrade.com/) integration requires these private values before it can
 contact the provider:
 
 | Variable | Purpose |
@@ -43,7 +43,7 @@ command and the routing rules.
 
 ## SimpleFIN
 
-SimpleFIN credentials are consumed by the Bun workspace under
+[SimpleFIN](https://www.simplefin.org/) credentials are consumed by the [Bun](https://bun.sh/) workspace under
 `apps/simplefin-sync/`:
 
 | Variable | Purpose |
@@ -67,12 +67,13 @@ bun run claim
 
 ## Required research MCP integrations
 
-Finance Guru agent workflows require configured access to these MCP servers:
+Finance Guru agent workflows require configured access to these
+[Model Context Protocol](https://modelcontextprotocol.io/) (MCP) servers:
 
-- `exa` for research and market intelligence
-- `bright-data` for web scraping and extraction
-- `sequential-thinking` for multi-step reasoning
-- `financial-datasets` for SEC filings and financial statements
+- `exa` for research and market intelligence ([Exa](https://exa.ai/))
+- `bright-data` for web scraping and extraction ([Bright Data](https://brightdata.com/))
+- `sequential-thinking` for multi-step reasoning ([reference server](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking))
+- `financial-datasets` for SEC filings and financial statements ([Financial Datasets](https://www.financialdatasets.ai/))
 - `web-search` for current market information
 
 These are workflow integrations, not `.env` variables. Finance Guru
@@ -83,9 +84,9 @@ Google Sheets dependency to replace the local data boundary.
 
 | Variable | Used by |
 | --- | --- |
-| `FINNHUB_API_KEY` | Optional real-time price requests. |
+| `FINNHUB_API_KEY` | Optional real-time price requests from [Finnhub](https://finnhub.io/). |
 | `ITC_API_KEY` | ITC risk-model requests. |
-| `OPENAI_API_KEY` | Legacy or optional local agent workflows when explicitly configured. |
+| `OPENAI_API_KEY` | Legacy or optional local agent workflows when explicitly configured. Issued by [OpenAI](https://platform.openai.com/api-keys). |
 
 Market analysis can use public market-data sources without one of these keys,
 but a provider may still receive the tickers you query. See [Privacy](../../PRIVACY.md).
