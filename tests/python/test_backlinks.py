@@ -42,6 +42,27 @@ def test_existing_link_earlier_in_file_wins_and_result_is_idempotent():
     assert link_vendors(linked, SNAP) == linked
 
 
+def test_nested_fence_and_any_html_block_stay_protected():
+    text = "\n".join(
+        [
+            "````md",
+            "```bash",
+            "echo SnapTrade",
+            "```",
+            "SnapTrade inside the outer fence.",
+            "````",
+            "<section>",
+            "SnapTrade inside a section.",
+            "</section>",
+            "SnapTrade in prose.",
+        ]
+    )
+    assert link_vendors(text, SNAP).splitlines()[-1] == (
+        "[SnapTrade](https://snaptrade.com/) in prose."
+    )
+    assert link_vendors(text, SNAP).splitlines()[:-1] == text.splitlines()[:-1]
+
+
 def test_image_alt_text_is_protected_but_is_not_a_vendor_link():
     text = "![SnapTrade logo](logo.png)\nSync pulls SnapTrade data."
     assert link_vendors(text, SNAP) == (

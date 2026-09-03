@@ -93,9 +93,13 @@ DEFAULT_TARGETS: tuple[str, ...] = (
 INLINE_CODE = re.compile(r"`[^`\n]*`")
 LINK = re.compile(r"!?\[(?P<text>[^\]\n]*)\]\([^)\n]*\)")
 BARE_URL = re.compile(r"<?https?://[^\s>)]+>?")
-FENCE = re.compile(r"^\s*(```|~~~)")
-HTML_OPEN = re.compile(r"<(div|details|aside|table|p)\b[^>]*(?<!/)>")
-HTML_CLOSE = re.compile(r"</(div|details|aside|table|p)>")
+FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+BLOCK_TAGS = (
+    "div|details|summary|aside|section|article|nav|header|footer|main|figure|"
+    "table|p|pre|blockquote|script|style"
+)
+HTML_OPEN = re.compile(rf"<({BLOCK_TAGS})\b[^>]*(?<!/)>")
+HTML_CLOSE = re.compile(rf"</({BLOCK_TAGS})>")
 
 
 @dataclass(frozen=True)
@@ -123,7 +127,7 @@ def _covering(spans: list[Span], start: int, end: int) -> Span | None:
 def _prose_lines(lines: list[str]) -> list[int]:
     """Indexes of lines eligible for linking."""
     eligible: list[int] = []
-    in_fence = False
+    fence: str | None = None
     html_depth = 0
     in_front_matter = lines[:1] == ["---"]
     for i, line in enumerate(lines):
@@ -131,10 +135,18 @@ def _prose_lines(lines: list[str]) -> list[int]:
             if i > 0 and line.strip() == "---":
                 in_front_matter = False
             continue
-        if FENCE.match(line):
-            in_fence = not in_fence
+        if fence is not None:
+            marker = FENCE.match(line)
+            if (
+                marker
+                and marker.group(1)[0] == fence[0]
+                and len(marker.group(1)) >= len(fence)
+            ):
+                fence = None
             continue
-        if in_fence:
+        marker = FENCE.match(line)
+        if marker:
+            fence = marker.group(1)
             continue
         stripped = line.lstrip()
         html_depth += len(HTML_OPEN.findall(stripped)) - len(
