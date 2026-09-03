@@ -37,7 +37,7 @@ You paste a screenshot into a chat model and ask whether a position is too big. 
 
 </div>
 
-Every number an agent quotes comes from a Pydantic-validated calculator with a CLI you can run yourself. Every irreversible action passes through a guardrail that blocks when its inputs are missing rather than guessing. The AI gets judgment. The math gets a test suite.
+Every number an agent quotes comes from a [Pydantic](https://docs.pydantic.dev/)-validated calculator with a CLI you can run yourself. Every irreversible action passes through a guardrail that blocks when its inputs are missing rather than guessing. The AI gets judgment. The math gets a test suite.
 
 <div align="center">
 
@@ -49,7 +49,7 @@ Every number an agent quotes comes from a Pydantic-validated calculator with a C
 
 ### Prerequisites
 
-Python 3.12 or later, [uv](https://docs.astral.sh/uv/), and Git. Bun only if you work on the SimpleFIN sync app.
+[Python](https://www.python.org/) 3.12 or later, [uv](https://docs.astral.sh/uv/), and [Git](https://git-scm.com/). [Bun](https://bun.sh/) only if you work on the [SimpleFIN](https://www.simplefin.org/) sync app.
 
 ### Install
 
@@ -82,13 +82,13 @@ Then run the `instance-onboarding` skill. It scaffolds the instance with `--plug
 
 ## What is in the box
 
-Finance Guru is the open-core engine behind Keepfolio, a "claude-code for personal finance." This repo is the free, self-hosted, CLI-native experience: the whole engine, every skill, every agent, no withheld tier.
+Finance Guru is the open-core engine behind [Keepfolio](https://keepfolio.app/), a "claude-code for personal finance." This repo is the free, self-hosted, CLI-native experience: the whole engine, every skill, every agent, no withheld tier.
 
 | Component | What it does | Why it matters |
 | :--- | :--- | :--- |
 | **Typed calculators** (`src/`) | 20 CLIs for risk, momentum, volatility, correlation, optimization, backtesting, options, factors, hedging, total return, and margin metrics. Every one is Pydantic input, calculator class, CLI wrapper. | Calculations are testable outside any AI session. The suite is 1,100+ tests behind an 80% coverage gate. |
 | **Private instance** | A directory outside the repo holding `family_office.db`, your `.env`, broker CSVs, and every artifact the engine writes. | No spreadsheet, no cloud sync, no vendor dashboard between you and your ledger. Tracked files never carry personal values. |
-| **Sync layer** (`src/integrations/`) | `refresh_all` pulls SnapTrade (brokerage) and SimpleFIN (bank and card) into SQLite with your own read-only credentials. | Partial provider responses raise before any write. You get an error instead of a coverage ratio computed on half your accounts. |
+| **Sync layer** (`src/integrations/`) | `refresh_all` pulls [SnapTrade](https://snaptrade.com/) (brokerage) and SimpleFIN (bank and card) into [SQLite](https://www.sqlite.org/) with your own read-only credentials. | Partial provider responses raise before any write. You get an error instead of a coverage ratio computed on half your accounts. |
 | **Fail-closed guardrails** | Concentration cap, margin coverage, and ITC risk run against trusted inputs before a buy ticket persists. | A block on missing NAV, missing rate, or an unrun Layer 3 score. A bad ticket needs a number to pass, not a prompt to agree. |
 | **Skills and specialists** (`.claude/`) | Skills and 11 specialist agents coordinated by a finance orchestrator. They read the DB, run the CLIs, and write Markdown into your instance. | Every output carries its data source, date stamp, and the educational-only disclaimer. You can trace any claim back to a CLI run. |
 | **Compliance scan on push** | A pre-push hook scans history and the diff for secrets and PII. | The repo is public. Your data is not. The hook is what keeps that true. |
@@ -137,7 +137,7 @@ Local-first does not mean network-free. Market data, brokerage, and LLM integrat
 
 You are the intended operator of this engine, not an afterthought. A few things that make you effective here:
 
-- **Read `CLAUDE.md` first.** It is the single source of truth for the skills index, the agent roster, the path variables, and the output rules. `AGENTS.md` points Codex at the same tree through the instance's `.agents` symlink.
+- **Read `CLAUDE.md` first.** It is the single source of truth for the skills index, the agent roster, the path variables, and the output rules. `AGENTS.md` points [Codex](https://github.com/openai/codex) at the same tree through the instance's `.agents` symlink.
 - **Run `date` before any market work.** Every specialist here is expected to know the current date before it searches or analyzes.
 - **Never do the arithmetic yourself.** Call the CLI with `--output json` and quote what it returned. That is the whole reason the calculators exist.
 - **Private data lives in the instance, not the repo.** Resolve `FIN_GURU_DATA_ROOT` or the working directory, read from `family_office.db`, and write artifacts into `analysis/` or `tickets/`. Tracked files never carry personal values, and the pre-push scan will stop you if you try.
@@ -173,10 +173,10 @@ The repo is public because the pattern is more useful than the portfolio. The co
 - [x] Three-layer calculators for risk, momentum, volatility, correlation, optimization, backtesting, options, factors, hedging, and margin
 - [x] Local SQLite system of record fed by SnapTrade and SimpleFIN
 - [x] Fail-closed buy-ticket guardrails with Layer 3 ITC authority
-- [x] Diátaxis documentation site on GitHub Pages
-- [ ] Claude Code plugin as the primary install path ([#131](https://github.com/AojdevStudio/Finance-Guru/issues/131))
+- [x] [Diátaxis](https://diataxis.fr/) documentation site on [GitHub Pages](https://pages.github.com/)
+- [ ] [Claude Code](https://code.claude.com/) plugin as the primary install path ([#131](https://github.com/AojdevStudio/Finance-Guru/issues/131))
 - [ ] Retirement-account sync migration gate ([#74](https://github.com/AojdevStudio/Finance-Guru/issues/74))
-- [ ] Automated releases through release-please ([#112](https://github.com/AojdevStudio/Finance-Guru/issues/112))
+- [ ] Automated releases through [release-please](https://github.com/googleapis/release-please) ([#112](https://github.com/AojdevStudio/Finance-Guru/issues/112))
 
 Open items carry the `roadmap` label. Defects carry `bug`.
 

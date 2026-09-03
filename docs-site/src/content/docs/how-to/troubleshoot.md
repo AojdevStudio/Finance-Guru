@@ -16,7 +16,7 @@ python3 --version
 uv --version
 ```
 
-Finance Guru requires Python 3.12 or later. Install uv using the command from [its official installation guide](https://docs.astral.sh/uv/getting-started/installation/), then recreate the development environment.
+Finance Guru requires Python 3.12 or later. Install [uv](https://docs.astral.sh/uv/) using the command from [its official installation guide](https://docs.astral.sh/uv/getting-started/installation/), then recreate the development environment.
 
 ```bash
 uv sync --dev
@@ -62,7 +62,7 @@ uv run python -m src.integrations.refresh_all --show
 
 `--show` reads the current local snapshots; omit it to attempt a sync. The command returns a non-zero status when one source fails, even if another source succeeds. Check the individual source status before retrying.
 
-For SnapTrade, verify the required private environment variables and account routing file are configured. For SimpleFIN, verify the private access URL has been claimed and is available to the Bun workspace. Do not copy either credential into terminal history, issue text, or screenshots.
+For [SnapTrade](https://snaptrade.com/), verify the required private environment variables and account routing file are configured. For [SimpleFIN](https://www.simplefin.org/), verify the private access URL has been claimed and is available to the [Bun](https://bun.sh/) workspace. Do not copy either credential into terminal history, issue text, or screenshots.
 
 ## Bun workspace errors
 

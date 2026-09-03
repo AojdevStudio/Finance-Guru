@@ -5,13 +5,13 @@ sidebar:
   order: 3
 ---
 
-Follow this guide to refresh configured brokerage and bank data into the local, gitignored SQLite database. Credentials must already be configured. See [Configure live sync credentials](../configure-live-sync-credentials/) first.
+Follow this guide to refresh configured brokerage and bank data into the local, gitignored [SQLite](https://www.sqlite.org/) database. Credentials must already be configured. See [Configure live sync credentials](../configure-live-sync-credentials/) first.
 
 Run these commands from your instance directory so the engine resolves the instance database. Sync modules run in Python's module form so package imports resolve.
 
 ## Refresh everything
 
-The supported all-source command runs the configured SnapTrade positions and transactions sync plus the SimpleFIN expenses sync.
+The supported all-source command runs the configured [SnapTrade](https://snaptrade.com/) positions and transactions sync plus the [SimpleFIN](https://www.simplefin.org/) expenses sync.
 
 ```bash
 uv run python -m src.integrations.refresh_all
@@ -40,6 +40,6 @@ Each command supports `--help` for its full flag reference.
 
 ## Recover from a failed sync
 
-For SnapTrade, verify the required private environment variables and the account routing file are configured. For SimpleFIN, verify the private access URL has been claimed and is available to the Bun workspace. Do not copy either credential into terminal history, issue text, or screenshots. See [Troubleshoot common failures](../troubleshoot/) for the full recovery paths.
+For SnapTrade, verify the required private environment variables and the account routing file are configured. For SimpleFIN, verify the private access URL has been claimed and is available to the [Bun](https://bun.sh/) workspace. Do not copy either credential into terminal history, issue text, or screenshots. See [Troubleshoot common failures](../troubleshoot/) for the full recovery paths.
 
 _This page is built from `docs/reference/api.md` and `docs/setup/SETUP.md` in the repository._

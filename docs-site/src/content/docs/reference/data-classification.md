@@ -25,7 +25,7 @@ Evidence in a document should be written as a shape rather than an amount, becau
 
 | Class | Examples | Where it may live |
 | --- | --- | --- |
-| SECRET | API tokens, SnapTrade and SimpleFIN credentials, private keys | Secrets manager only. Never a file, not even gitignored. |
+| SECRET | API tokens, [SnapTrade](https://snaptrade.com/) and [SimpleFIN](https://www.simplefin.org/) credentials, private keys | Secrets manager only. Never a file, not even gitignored. |
 | PRIVATE | Account balances, equity, margin debt, income, spend totals, dividend amounts, account numbers and their last-four, provider account ids, employer names, payer names, household merchant names, share quantities, cost basis, addresses, phone numbers | Gitignored paths such as the local database and the instance directory. Never a tracked file. |
 | INTERNAL | Strategy layer names, bucket structure, concentration limits as percentages, category taxonomies, workflow shapes | Tracked files are acceptable. These describe method, not position. |
 | PUBLIC | Tickers, IRS bracket edges, published fund yields, library versions, round scenario values such as a `$50,000` portfolio or a `$500` contribution | Anywhere. |

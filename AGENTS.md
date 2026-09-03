@@ -1,6 +1,6 @@
 # Finance Guru
 
-Finance Guru is a self-hosted family office engine: typed Python calculators, a private SQLite ledger, and specialist agents that run inside Claude Code or Codex. It is the open-core engine behind Keepfolio. The README describes the product for people. This file is the canonical instruction set for any agent working in the repository or in an instance built from it. `CLAUDE.md` imports it and adds only what is specific to Claude Code.
+Finance Guru is a self-hosted family office engine: typed Python calculators, a private [SQLite](https://www.sqlite.org/) ledger, and specialist agents that run inside [Claude Code](https://code.claude.com/) or [Codex](https://github.com/openai/codex). It is the open-core engine behind [Keepfolio](https://keepfolio.app/). The README describes the product for people. This file is the canonical instruction set for any agent working in the repository or in an instance built from it. `CLAUDE.md` imports it and adds only what is specific to Claude Code.
 
 ## The split
 
@@ -19,7 +19,7 @@ Agents propose. Typed code computes. Every number an agent quotes comes from a c
 Private data lives in an instance directory outside the repository, resolved from `FIN_GURU_DATA_ROOT` or the current working directory. The instance holds `.env`, `user-profile.yaml`, `config.yaml`, `family_office.db`, broker CSV exports under `imports/`, and every artifact the engine writes. Tracked files in this repository never carry personal values. `uv run python -m src.cli.instance_init <root> --repo .` scaffolds an instance.
 
 - Run engine commands from the instance as `uv run python -m src.<tool>` so private paths resolve from the current directory.
-- `family_office.db` is the single source of truth for positions, balances, transactions, and bank transactions. `src.integrations.refresh_all` fills it from SnapTrade (brokerage) and SimpleFIN (bank and card) and raises on a partial provider response. CSV exports in `imports/` are an ingestion path into the database, not a second ledger.
+- `family_office.db` is the single source of truth for positions, balances, transactions, and bank transactions. `src.integrations.refresh_all` fills it from [SnapTrade](https://snaptrade.com/) (brokerage) and [SimpleFIN](https://www.simplefin.org/) (bank and card) and raises on a partial provider response. CSV exports in `imports/` are an ingestion path into the database, not a second ledger.
 - The Google Sheets DataHub is retired. Do not write to Sheets, reference a spreadsheet ID, or reintroduce a gdrive MCP dependency.
 - Write analysis to `analysis/` as `{topic}-{YYYY-MM-DD}.md` and buy tickets to `tickets/` as `buy-ticket-{YYYY-MM-DD}-{descriptor}.md`. Markdown with YAML frontmatter, date stamp, disclaimer, and citations.
 - The pre-push compliance scan blocks a push that carries secrets or PII. A fresh checkout installs it with `.claude/skills/compliance-scan/scripts/install-pre-push.sh`.
@@ -34,11 +34,11 @@ A scaffolded checkout-mode instance holds `.agents` and `.claude` symlinks to th
 
 ## Code
 
-- Every calculator is three layers: a Pydantic input model in `src/models/`, a calculator class, and a `*_cli.py` wrapper in the same directory. A new tool ships all three plus a test under `tests/python/` that runs without a network. Conventions and gotchas for the Python code are in `src/CLAUDE.md`.
+- Every calculator is three layers: a [Pydantic](https://docs.pydantic.dev/) input model in `src/models/`, a calculator class, and a `*_cli.py` wrapper in the same directory. A new tool ships all three plus a test under `tests/python/` that runs without a network. Conventions and gotchas for the Python code are in `src/CLAUDE.md`.
 - The CLI reference is `docs/reference/api.md`. Every CLI answers `--help`.
-- `apps/simplefin-sync/` is a Bun workspace. Use `bun`, never npm.
+- `apps/simplefin-sync/` is a [Bun](https://bun.sh/) workspace. Use `bun`, never npm.
 - Research skills may call the MCP servers named in their persona files. None are required to run the calculators or the sync.
-- Markdown emphasis uses underscores, `_like this_`. markdownlint rule MD049 enforces it.
+- Markdown emphasis uses underscores, `_like this_`. [markdownlint](https://github.com/DavidAnson/markdownlint) rule MD049 enforces it.
 
 ## Toolchain and gates
 
@@ -52,9 +52,9 @@ uv run mypy src/
 uv run pytest -m "not integration"
 ```
 
-- The pre-commit hook runs the full pytest suite with the 80% coverage gate on every commit, so a commit takes about ten seconds. Tests marked `integration` need real API keys.
+- The pre-commit hook runs the full [pytest](https://docs.pytest.org/) suite with the 80% coverage gate on every commit, so a commit takes about ten seconds. Tests marked `integration` need real API keys.
 - Tests assume no `.env` in the repository root. A scaffolded `.env` holds placeholder strings such as `your_monthly_dividend_income_here`, and `python-dotenv` loads them, which fails the margin-metrics tests with `could not convert string to float`. Delete the file or fill in real numbers.
-- Pull requests get CodeRabbit and Claude reviews. Verify each finding against the source before acting on it and dismiss a false positive with a written reason.
+- Pull requests get [CodeRabbit](https://www.coderabbit.ai/) and Claude reviews. Verify each finding against the source before acting on it and dismiss a false positive with a written reason.
 
 ## Session end
 
@@ -62,7 +62,7 @@ Work is not complete until `git push` succeeds. Before ending a session: file is
 
 ## Cursor Cloud
 
-The startup script already runs `uv sync --dev` and `bun install`. `uv` lives at `~/.local/bin/uv` and `bun` at `~/.bun/bin/bun`. Both are on `PATH` for interactive shells only, so a fresh non-interactive shell needs `export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"` first. There is no long-running server. Run an analysis with `uv run python -m src.analysis.risk_metrics_cli AAPL --days 252 --benchmark SPY`, which fetches live data through yfinance with no API key, or launch the dashboard with `uv run python -m src.cli.fin_guru` and quit with `q`.
+The startup script already runs `uv sync --dev` and `bun install`. `uv` lives at `~/.local/bin/uv` and `bun` at `~/.bun/bin/bun`. Both are on `PATH` for interactive shells only, so a fresh non-interactive shell needs `export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"` first. There is no long-running server. Run an analysis with `uv run python -m src.analysis.risk_metrics_cli AAPL --days 252 --benchmark SPY`, which fetches live data through [yfinance](https://github.com/ranaroussi/yfinance) with no API key, or launch the dashboard with `uv run python -m src.cli.fin_guru` and quit with `q`.
 
 ## Documentation
 

@@ -9,7 +9,7 @@ An instance is the private home for your financial data. It lives outside the en
 
 ## Before you start
 
-You need a Finance Guru engine checkout with its development environment installed. The [setup path](../../how-to/troubleshoot/) requires Python 3.12 or later and [uv](https://docs.astral.sh/uv/). In the commands below, `<repo>` is the path to your engine checkout and `<root>` is the directory where your instance will live.
+You need a Finance Guru engine checkout with its development environment installed. The [setup path](../../how-to/troubleshoot/) requires [Python](https://www.python.org/) 3.12 or later and [uv](https://docs.astral.sh/uv/). In the commands below, `<repo>` is the path to your engine checkout and `<root>` is the directory where your instance will live.
 
 ## Step 1. Create the instance
 

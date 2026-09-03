@@ -10,7 +10,7 @@ Finance Guru uses [just](https://github.com/casey/just) as a command launchpad. 
 
 ## Agent Personas
 
-Launch Claude Code pre-loaded with a specialist persona:
+Launch [Claude Code](https://code.claude.com/) pre-loaded with a specialist persona:
 
 | Recipe | Agent | Description |
 |--------|-------|-------------|
@@ -44,7 +44,7 @@ Load mermaid architecture diagrams into Claude Code context:
 ## Prerequisites
 
 - [just](https://github.com/casey/just) — `brew install just` or `cargo install just`
-- [Claude Code](https://claude.ai/claude-code) — must be installed and authenticated
+- [Claude Code](https://code.claude.com/) — must be installed and authenticated
 - Agent persona files in `.claude/agents/fg-*.md`
 
 ## Version

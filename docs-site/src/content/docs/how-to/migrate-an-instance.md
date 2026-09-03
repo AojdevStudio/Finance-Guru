@@ -37,7 +37,7 @@ Move the user profile over the empty instance template.
 command mv "<repo>/fin-guru/data/user-profile.yaml" "<root>/user-profile.yaml"
 ```
 
-Move the database and each SQLite sidecar that exists.
+Move the database and each [SQLite](https://www.sqlite.org/) sidecar that exists.
 
 ```bash
 command mv "<repo>/family_office.db" "<root>/family_office.db"
@@ -46,7 +46,7 @@ command mv "<repo>/family_office.db-shm" "<root>/family_office.db-shm"
 command mv "<repo>/family_office.db-journal" "<root>/family_office.db-journal"
 ```
 
-Move the environment and SnapTrade routing files.
+Move the environment and [SnapTrade](https://snaptrade.com/) routing files.
 
 ```bash
 command mv "<repo>/.env" "<root>/.env"

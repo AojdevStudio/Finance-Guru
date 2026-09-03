@@ -5,9 +5,9 @@ sidebar:
   order: 2
 ---
 
-Live sync is optional. Finance Guru works with broker CSV exports alone. Configure these credentials only when you want the read-only SnapTrade brokerage sync or the SimpleFIN bank and card sync.
+Live sync is optional. Finance Guru works with broker CSV exports alone. Configure these credentials only when you want the read-only [SnapTrade](https://snaptrade.com/) brokerage sync or the [SimpleFIN](https://www.simplefin.org/) bank and card sync.
 
-Keep credentials in a local `.env` file or process environment. `.env` and the local SQLite database are gitignored. That is a safeguard, not permission to print or commit their contents.
+Keep credentials in a local `.env` file or process environment. `.env` and the local [SQLite](https://www.sqlite.org/) database are gitignored. That is a safeguard, not permission to print or commit their contents.
 
 ## Prepare the environment file
 
@@ -21,7 +21,7 @@ An instance created by the initializer already has a `.env` scaffolded from the 
 
 ## SnapTrade
 
-The read-only SnapTrade integration requires these private values before it can contact the provider.
+The read-only SnapTrade integration requires these private values before it can contact the provider. Sign up for API access at [SnapTrade](https://snaptrade.com/) and take the client ID and consumer key from the [SnapTrade dashboard](https://dashboard.snaptrade.com/). The [SnapTrade API docs](https://docs.snaptrade.com/) cover registering a user, which returns the user ID and user secret.
 
 | Variable | Purpose |
 | --- | --- |
@@ -34,7 +34,7 @@ Account roles and enabled-state are stored separately in a local account-routing
 
 ## SimpleFIN
 
-SimpleFIN credentials are consumed by the Bun workspace under `apps/simplefin-sync/`.
+SimpleFIN credentials are consumed by the [Bun](https://bun.sh/) workspace under `apps/simplefin-sync/`. Get a setup token from [SimpleFIN Bridge](https://bridge.simplefin.org/), the paid SimpleFIN service that connects to your bank and issues tokens.
 
 | Variable | Purpose |
 | --- | --- |

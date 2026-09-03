@@ -28,7 +28,7 @@
    command mv "<repo>/fin-guru/data/user-profile.yaml" "<root>/user-profile.yaml"
    ```
 
-2. Move the database and each SQLite sidecar that exists.
+2. Move the database and each [SQLite](https://www.sqlite.org/) sidecar that exists.
 
    ```bash
    command mv "<repo>/family_office.db" "<root>/family_office.db"
@@ -37,7 +37,7 @@
    command mv "<repo>/family_office.db-journal" "<root>/family_office.db-journal"
    ```
 
-3. Move the environment and SnapTrade routing files.
+3. Move the environment and [SnapTrade](https://snaptrade.com/) routing files.
 
    ```bash
    command mv "<repo>/.env" "<root>/.env"

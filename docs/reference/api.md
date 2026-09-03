@@ -13,7 +13,7 @@ may require network access or private credentials.
 
 ## Command pattern
 
-Run standalone scripts from the repository root with uv:
+Run standalone scripts from the repository root with [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv run python path/to/script.py --help
@@ -75,9 +75,9 @@ and is not part of the command contract.
 
 | Command | Purpose |
 | --- | --- |
-| `uv run python -m src.integrations.refresh_all` | Refresh configured SnapTrade and SimpleFIN data into the local database. |
+| `uv run python -m src.integrations.refresh_all` | Refresh configured [SnapTrade](https://snaptrade.com/) and [SimpleFIN](https://www.simplefin.org/) data into the local database. |
 | `uv run python -m src.integrations.snaptrade.cli` | Inspect linked SnapTrade accounts, positions, balances, or activities. |
-| `uv run python -m src.integrations.snaptrade.sync_db` | Refresh SnapTrade positions and balances into local SQLite. |
+| `uv run python -m src.integrations.snaptrade.sync_db` | Refresh SnapTrade positions and balances into local [SQLite](https://www.sqlite.org/). |
 | `uv run python -m src.integrations.snaptrade.sync_transactions_db` | Refresh SnapTrade activities into local SQLite. |
 | `uv run python -m src.integrations.simplefin.sync_expenses_db` | Refresh SimpleFIN transactions into local SQLite. |
 

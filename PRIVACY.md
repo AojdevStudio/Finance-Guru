@@ -9,7 +9,7 @@ Finance Guru is a **private, single-user family-office system**. This document d
 - All financial data stays on the owner's machine
 - No telemetry, no remote analytics, no third-party data sharing
 - Nothing personally identifying is committed to the public engine repository; the separate instance repository is local-only and has no remote
-- When data _does_ leave the laptop (SnapTrade, SimpleFIN, Fidelity APIs, ITC Risk Models), it goes directly to the owner's own accounts — no intermediary
+- When data _does_ leave the laptop ([SnapTrade](https://snaptrade.com/), [SimpleFIN](https://www.simplefin.org/), [Fidelity](https://www.fidelity.com/) APIs, ITC Risk Models), it goes directly to the owner's own accounts — no intermediary
 
 ## What data Finance Guru handles
 
@@ -21,13 +21,13 @@ Finance Guru is a **private, single-user family-office system**. This document d
 | Bank / card spending | SimpleFIN | `family_office.db` (committed to local-only instance repository) | Local only; no remote |
 | Dividend events | SnapTrade activities | `family_office.db` (committed to local-only instance repository) | Local only; no remote |
 | User profile (risk tolerance, goals) | Interactive onboarding | `user-profile.yaml` under the instance root (committed to local-only instance repository) | Local only; no remote |
-| Market data | yfinance / Finnhub / ITC | In-memory during analysis | Per-provider terms |
+| Market data | [yfinance](https://github.com/ranaroussi/yfinance) / [Finnhub](https://finnhub.io/) / ITC | In-memory during analysis | Per-provider terms |
 
 ## What leaves your machine
 
 1. _Broker and bank reads_ — SnapTrade and SimpleFIN are queried outbound to pull your own accounts. Both are read-only; nothing is written back to a broker.
 2. _Market-data queries_ — yfinance, Finnhub, and ITC Risk Models APIs see which tickers you query, but not your position sizes.
-3. _Claude Code session_ — the LLM provider (Anthropic) sees conversation content including any data you paste into the session. Treat Claude Code like a privileged assistant — don't paste data you wouldn't email your accountant.
+3. _Claude Code session_ — the LLM provider ([Anthropic](https://www.anthropic.com/)) sees conversation content including any data you paste into the session. Treat [Claude Code](https://code.claude.com/) like a privileged assistant — don't paste data you wouldn't email your accountant.
 
 > The Google Sheets DataHub was retired 2026-07-31. Portfolio data no longer leaves the machine for Google Drive, and no `gdrive` MCP server is configured.
 

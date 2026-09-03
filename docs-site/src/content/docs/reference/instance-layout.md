@@ -18,9 +18,9 @@ The root is the value of `FIN_GURU_DATA_ROOT` when that variable is set and non-
 | `.env` | Instance environment file, loaded into the process environment. |
 | `user-profile.yaml` | User profile. |
 | `config.yaml` | Instance configuration. |
-| `snaptrade-accounts.yaml` | SnapTrade account-routing configuration. |
+| `snaptrade-accounts.yaml` | [SnapTrade](https://snaptrade.com/) account-routing configuration. |
 | `system-context.md` | Generated system context. |
-| `family_office.db` | Default family-office SQLite database. |
+| `family_office.db` | Default family-office [SQLite](https://www.sqlite.org/) database. |
 | `dividend-schedules.yaml` | Dividend schedule file. |
 
 ## Directories under the root

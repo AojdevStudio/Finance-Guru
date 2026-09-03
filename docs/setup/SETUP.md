@@ -6,19 +6,19 @@ category: setup
 
 # Finance Guru setup
 
-This guide installs the checked-in Python and Bun workspaces. The supported
+This guide installs the checked-in Python and [Bun](https://bun.sh/) workspaces. The supported
 data store is the local `family_office.db`, committed only to the instance's
 local-only repository; Google Sheets is not a data source and no Google Drive
 integration is required.
 
 ## Prerequisites
 
-- Python 3.12 or later
+- [Python](https://www.python.org/) 3.12 or later
 - [uv](https://docs.astral.sh/uv/)
-- Git
+- [Git](https://git-scm.com/)
 - Bun only when working on `apps/simplefin-sync/`
 
-The Claude Code plugin is not required to run the Python analysis engine from
+The [Claude Code](https://code.claude.com/) plugin is not required to run the Python analysis engine from
 a shell.
 
 ## Install
@@ -49,7 +49,7 @@ The instance is a small uv project that depends on the engine, so
 `uv run python -m src.<tool>` works from inside it with no extra flags. Run
 Finance Guru sessions and sync commands from the instance directory.
 
-For the SimpleFIN workspace, install its Bun dependencies from that workspace:
+For the [SimpleFIN](https://www.simplefin.org/) workspace, install its Bun dependencies from that workspace:
 
 ```bash
 (
@@ -77,7 +77,7 @@ any `.env` file.
 
 See [API keys](api-keys.md) for the variables consumed by the supported
 integrations and the
-[live sync credentials guide](live-sync-credentials.md) for SnapTrade and
+[live sync credentials guide](live-sync-credentials.md) for [SnapTrade](https://snaptrade.com/) and
 SimpleFIN. Keep account exports, API keys, and database files out of the public
 engine checkout. The database is committed only to the instance's local-only
 repository, which has no remote.

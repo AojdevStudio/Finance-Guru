@@ -12,7 +12,7 @@ Thanks for looking. Read the _Project State_ section below before investing time
 
 ## Project State (Read This First)
 
-Finance Guru ships as a Claude Code and Codex plugin over a typed Python engine. Everything ships open under AGPL-3.0. The skills, agents, and Python engine are all part of the product; there is no withheld feature tier.
+Finance Guru ships as a [Claude Code](https://code.claude.com/) and [Codex](https://github.com/openai/codex) plugin over a typed Python engine. Everything ships open under [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html). The skills, agents, and Python engine are all part of the product; there is no withheld feature tier.
 
 What this means for contributors today:
 
@@ -91,7 +91,7 @@ PRs that look AI-generated and carry no disclosure will be asked to either discl
 
 ### Changes to internal data or paths
 
-Anything gitignored is internal. Do not reference gitignored paths, account identifiers, or dollar amounts in code you submit. If you need test data, use synthetic data (numpy / fixtures) under `tests/python/`.
+Anything gitignored is internal. Do not reference gitignored paths, account identifiers, or dollar amounts in code you submit. If you need test data, use synthetic data ([numpy](https://numpy.org/) / fixtures) under `tests/python/`.
 
 ---
 
@@ -135,13 +135,13 @@ Additionally:
 
 - **New code requires new tests.** Any new CLI tool, calculator, or utility must ship with tests under `tests/python/` using synthetic data. Target coverage is 80%.
 - **No real API calls in tests.** Tests must run offline. Mark network-dependent tests with `@pytest.mark.integration` (they are skipped by default in CI).
-- **Three-layer pattern.** New financial tools follow the repo architecture: Pydantic input models in `src/models/`, calculator class in `src/analysis/` (or `strategies/` or `utils/`), CLI entry point as `{tool}_cli.py`. Reference implementation: `src/analysis/risk_metrics.py` + `src/models/risk_inputs.py` + `src/analysis/risk_metrics_cli.py`.
+- **Three-layer pattern.** New financial tools follow the repo architecture: [Pydantic](https://docs.pydantic.dev/) input models in `src/models/`, calculator class in `src/analysis/` (or `strategies/` or `utils/`), CLI entry point as `{tool}_cli.py`. Reference implementation: `src/analysis/risk_metrics.py` + `src/models/risk_inputs.py` + `src/analysis/risk_metrics_cli.py`.
 
-See `src/CLAUDE.md` for conventions (Pydantic + pandas gotchas, naming, typing, docstrings).
+See `src/CLAUDE.md` for conventions (Pydantic + [pandas](https://pandas.pydata.org/) gotchas, naming, typing, docstrings).
 
 ### Push gates
 
-Two gates run before anything reaches GitHub. The pre-commit hooks (`.pre-commit-config.yaml`) run hygiene checks, ruff, mypy, pytest with coverage, and gitleaks. The privacy scanner (`.claude/skills/compliance-scan/scripts/scan.py`) runs in its `push` scope from the pre-push hook and also supports a `history` scope that scans every line a branch adds. A HIGH or CRITICAL finding blocks the push.
+Two gates run before anything reaches GitHub. The pre-commit hooks (`.pre-commit-config.yaml`) run hygiene checks, [ruff](https://docs.astral.sh/ruff/), [mypy](https://mypy-lang.org/), [pytest](https://docs.pytest.org/) with coverage, and [gitleaks](https://github.com/gitleaks/gitleaks). The privacy scanner (`.claude/skills/compliance-scan/scripts/scan.py`) runs in its `push` scope from the pre-push hook and also supports a `history` scope that scans every line a branch adds. A HIGH or CRITICAL finding blocks the push.
 
 ---
 
@@ -149,7 +149,7 @@ Two gates run before anything reaches GitHub. The pre-commit hooks (`.pre-commit
 
 Every PR must pass:
 
-1. **CodeRabbit review** — Automated; typically comments within minutes of opening.
+1. **[CodeRabbit](https://www.coderabbit.ai/) review** — Automated; typically comments within minutes of opening.
 2. **Maintainer review** — The maintainer reviews every PR personally before merge.
 
 Both must approve. Respond to CodeRabbit's comments in the same way you respond to a human reviewer — accept valid feedback, push back on incorrect feedback with reasoning.
@@ -178,9 +178,9 @@ PRs that produce user-facing analysis output without the disclaimer will be aske
 
 ## Style Notes
 
-- Markdown emphasis uses underscores (`_text_`), not asterisks (`*text`*). Enforced by markdownlint (MD049).
+- Markdown emphasis uses underscores (`_text_`), not asterisks (`*text`*). Enforced by [markdownlint](https://github.com/DavidAnson/markdownlint) (MD049).
 - Docstrings use Google style.
-- Commit messages use Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
+- Commit messages use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
 
 ---
 
