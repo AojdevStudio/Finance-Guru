@@ -51,9 +51,15 @@ def test_nested_fence_and_any_html_block_stay_protected():
             "```",
             "SnapTrade inside the outer fence.",
             "````",
-            "<section>",
+            "```",
+            "```python inside a fence is content, not a closer",
+            "SnapTrade still fenced.",
+            "```",
+            "<Section>",
             "SnapTrade inside a section.",
-            "</section>",
+            "</Section>",
+            "<ul><li>SnapTrade inside a list</li></ul>",
+            "<img alt='void tags do not open a block'>",
             "SnapTrade in prose.",
         ]
     )

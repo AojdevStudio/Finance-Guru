@@ -93,13 +93,11 @@ DEFAULT_TARGETS: tuple[str, ...] = (
 INLINE_CODE = re.compile(r"`[^`\n]*`")
 LINK = re.compile(r"!?\[(?P<text>[^\]\n]*)\]\([^)\n]*\)")
 BARE_URL = re.compile(r"<?https?://[^\s>)]+>?")
-FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
-BLOCK_TAGS = (
-    "div|details|summary|aside|section|article|nav|header|footer|main|figure|"
-    "table|p|pre|blockquote|script|style"
-)
-HTML_OPEN = re.compile(rf"<({BLOCK_TAGS})\b[^>]*(?<!/)>")
-HTML_CLOSE = re.compile(rf"</({BLOCK_TAGS})>")
+FENCE_OPEN = re.compile(r"^\s*(`{3,}|~{3,})")
+FENCE_CLOSE = re.compile(r"^\s*(`{3,}|~{3,})\s*$")
+VOID_TAGS = "area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr"
+HTML_OPEN = re.compile(rf"<(?!(?:{VOID_TAGS})\b)[a-z][\w-]*\b[^>]*(?<!/)>", re.I)
+HTML_CLOSE = re.compile(r"</[a-z][\w-]*\s*>", re.I)
 
 
 @dataclass(frozen=True)
@@ -136,7 +134,7 @@ def _prose_lines(lines: list[str]) -> list[int]:
                 in_front_matter = False
             continue
         if fence is not None:
-            marker = FENCE.match(line)
+            marker = FENCE_CLOSE.match(line)
             if (
                 marker
                 and marker.group(1)[0] == fence[0]
@@ -144,7 +142,7 @@ def _prose_lines(lines: list[str]) -> list[int]:
             ):
                 fence = None
             continue
-        marker = FENCE.match(line)
+        marker = FENCE_OPEN.match(line)
         if marker:
             fence = marker.group(1)
             continue
