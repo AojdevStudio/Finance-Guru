@@ -7,7 +7,13 @@ Usage:
 
 A vendor is linked at its first mention per file, unless an earlier link in that
 file already carries the vendor name as its text. Fenced code, inline code,
-front matter, headings, HTML blocks, existing links, and bare URLs are left alone.
+front matter, headings, HTML blocks, existing links, image alt text, and bare
+URLs are left alone.
+
+The default targets are the reader-facing guides. Dated records (docs/plans,
+docs/reports, docs/solutions, docs/adr, docs/brainstorms, docs/VISION.md) are
+excluded on purpose: they are historical evidence, not setup paths, and linking
+them would churn files nobody maintains.
 """
 
 from __future__ import annotations
@@ -103,8 +109,9 @@ def protected_spans(line: str) -> list[Span]:
     spans = [Span(m.start(), m.end(), False) for m in INLINE_CODE.finditer(line)]
     spans += [Span(m.start(), m.end(), False) for m in BARE_URL.finditer(line)]
     for m in LINK.finditer(line):
+        is_image = line[m.start()] == "!"
         spans.append(Span(m.start(), m.start("text"), False))
-        spans.append(Span(m.start("text"), m.end("text"), True))
+        spans.append(Span(m.start("text"), m.end("text"), not is_image))
         spans.append(Span(m.end("text"), m.end(), False))
     return spans
 

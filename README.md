@@ -137,7 +137,7 @@ Local-first does not mean network-free. Market data, brokerage, and LLM integrat
 
 You are the intended operator of this engine, not an afterthought. A few things that make you effective here:
 
-- **Read `CLAUDE.md` first.** It is the single source of truth for the skills index, the agent roster, the path variables, and the output rules. `AGENTS.md` points Codex at the same tree through the instance's `.agents` symlink.
+- **Read `CLAUDE.md` first.** It is the single source of truth for the skills index, the agent roster, the path variables, and the output rules. `AGENTS.md` points [Codex](https://github.com/openai/codex) at the same tree through the instance's `.agents` symlink.
 - **Run `date` before any market work.** Every specialist here is expected to know the current date before it searches or analyzes.
 - **Never do the arithmetic yourself.** Call the CLI with `--output json` and quote what it returned. That is the whole reason the calculators exist.
 - **Private data lives in the instance, not the repo.** Resolve `FIN_GURU_DATA_ROOT` or the working directory, read from `family_office.db`, and write artifacts into `analysis/` or `tickets/`. Tracked files never carry personal values, and the pre-push scan will stop you if you try.
@@ -174,7 +174,7 @@ The repo is public because the pattern is more useful than the portfolio. The co
 - [x] Local SQLite system of record fed by SnapTrade and SimpleFIN
 - [x] Fail-closed buy-ticket guardrails with Layer 3 ITC authority
 - [x] [Diátaxis](https://diataxis.fr/) documentation site on [GitHub Pages](https://pages.github.com/)
-- [ ] Claude Code plugin as the primary install path ([#131](https://github.com/AojdevStudio/Finance-Guru/issues/131))
+- [ ] [Claude Code](https://code.claude.com/) plugin as the primary install path ([#131](https://github.com/AojdevStudio/Finance-Guru/issues/131))
 - [ ] Retirement-account sync migration gate ([#74](https://github.com/AojdevStudio/Finance-Guru/issues/74))
 - [ ] Automated releases through [release-please](https://github.com/googleapis/release-please) ([#112](https://github.com/AojdevStudio/Finance-Guru/issues/112))
 

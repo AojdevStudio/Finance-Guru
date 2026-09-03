@@ -42,6 +42,13 @@ def test_existing_link_earlier_in_file_wins_and_result_is_idempotent():
     assert link_vendors(linked, SNAP) == linked
 
 
+def test_image_alt_text_is_protected_but_is_not_a_vendor_link():
+    text = "![SnapTrade logo](logo.png)\nSync pulls SnapTrade data."
+    assert link_vendors(text, SNAP) == (
+        "![SnapTrade logo](logo.png)\nSync pulls [SnapTrade](https://snaptrade.com/) data."
+    )
+
+
 def test_doc_link_with_other_text_does_not_count_as_vendor_link():
     text = "See [live sync](docs/live-sync.md) for SnapTrade."
     assert link_vendors(text, SNAP) == (
