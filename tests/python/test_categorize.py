@@ -379,11 +379,20 @@ class TestEntertainment:
     def test_recreation_patterns(self, memo: str, expected: str) -> None:
         assert categorize_expense(memo, -292.24, None) == expected
 
-    def test_bounced_check_fee_is_not_entertainment(self) -> None:
-        """ "bounce" sits after the fee patterns for exactly this reason."""
-        assert categorize_expense("OVERDRAFT ITEM FEE", -35.00, None) == (
-            "Fees & Interest"
-        )
+    @pytest.mark.parametrize(
+        "memo",
+        [
+            "OVERDRAFT ITEM FEE",
+            "BOUNCED CHECK FEE",
+            "NSF FEE",
+            "RETURNED CHECK FEE",
+        ],
+    )
+    def test_bank_fees_are_not_entertainment(self, memo: str) -> None:
+        """Ordering alone does not protect these. Fees & Interest is matched
+        first, but it only wins if one of its patterns actually hits, and a
+        bounced-check memo matched none of them while containing "bounce"."""
+        assert categorize_expense(memo, -35.00, None) == "Fees & Interest"
 
 
 class TestSpaPatternFallout:

@@ -503,8 +503,11 @@ Recreation, kept separate from Dining Out so restaurants stay readable.
 
 **Patterns**: `playstation`, `andretti`, `bounce`, `gamestop`, `amc theat`, `ticketmaster`
 
-**Placed after Fees & Interest on purpose**: `bounce` would otherwise capture a
-bounced-check fee before the fee patterns run.
+**Placed after Fees & Interest on purpose**, though position alone is not the
+whole defense. An earlier category only wins if one of its patterns actually
+matches, and `BOUNCED CHECK FEE` matched nothing in Fees & Interest while
+containing `bounce`. Every returned-payment wording is therefore listed in Fees
+& Interest explicitly. Caught by CodeRabbit on PR #176.
 
 ### Business Income
 Consulting revenue. **It has no pattern list.** The payer's name is private data
@@ -525,7 +528,7 @@ reviews exclude it and business P&L includes it.
 - **Shopping**: `shopwss`, `fashion nova`, `burlington`, `uptown cheapskate`, `janie & jack`, `david yurman`, `dollar general`
 - **Bills & Utilities**: `rhythm ops`, `total wireless`, `tidal`, `prime video`
 - **Business Expense**: `greptile`, `openrouter`, `slack`, `paddle`, `ui.com`, `ubiquiti`, `newegg`, `bambula`, `connectech`, `pga frisco`, `workspace`
-- **Fees & Interest**: `adj redist`
+- **Fees & Interest**: `adj redist`, `bounced check`, `returned check`, `nsf fee`
 - **Home & Garden**: `bermuda dude`, `living spaces`, `lawn`, `wayfair`, `flower shop`
 
 Homelab and fabrication hardware is business input, and the PGA Frisco charge is

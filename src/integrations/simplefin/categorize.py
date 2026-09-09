@@ -306,9 +306,15 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "sie fee",
         # Card issuer moving a balance between purchase and cash-advance buckets.
         "adj redist",
+        # A returned-payment fee carries no other fee word, so ordering alone
+        # does not keep it out of Entertainment's "bounce" pattern.
+        "bounced check",
+        "returned check",
+        "nsf fee",
     ),
-    # Deliberately after Fees & Interest: "bounce" would otherwise capture a
-    # bounced-check fee before the fee patterns get a chance.
+    # Deliberately after Fees & Interest, though position alone is not enough:
+    # the fee patterns only win if one of them actually matches, so every
+    # returned-payment wording is listed there explicitly.
     "Entertainment": (
         "playstation",
         "andretti",
