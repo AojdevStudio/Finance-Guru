@@ -7,6 +7,18 @@ All notable changes to Finance Guru™ will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.3](https://github.com/AojdevStudio/Finance-Guru/compare/v2.3.2...v2.3.3) (2026-09-10)
+
+
+### Fixed
+
+* **simplefin:** stop three substring patterns misfiling real money ([#176](https://github.com/AojdevStudio/Finance-Guru/issues/176)) ([dee715d](https://github.com/AojdevStudio/Finance-Guru/commit/dee715d6e8100a2f23ae3dd0398f63d7ddd922d4))
+
+
+### Changed
+
+* regenerate uv.lock for v2.3.2 ([#177](https://github.com/AojdevStudio/Finance-Guru/issues/177)) ([4b95634](https://github.com/AojdevStudio/Finance-Guru/commit/4b95634d8bfb6b7849179d33fe01c163ef2341bf))
+
 ## [2.3.2](https://github.com/AojdevStudio/Finance-Guru/compare/v2.3.1...v2.3.2) (2026-09-03)
 
 
