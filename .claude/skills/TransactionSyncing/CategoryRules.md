@@ -461,8 +461,84 @@ Card interest and bank charges, kept out of merchant spend.
 - **Auto & Transport**: `vehicle registration`, `vehreg`, `dmv`
 - **Business Expense**: `anthropic`, `claude.ai`, `cursor`, `github`, `vercel`
 
+## Substring collisions fixed 2026-09-08
+
+Patterns are plain substring matches, so a short pattern can fire inside a
+longer, unrelated word. Three were silently misfiling real money:
+
+1. **`spa` matched `SPAXX`.** Fidelity's core position is the SPAXX money
+   market, so every core sweep, some of them five figures, was booked as
+   _Personal Care_. The bare pattern is gone; `day spa`, `med spa`, and
+   `massage` replace it, and a `spaxx` / `core account` guard returns `Exempt`
+   ahead of the table.
+2. **`credit card` matched a store purchase.** SimpleFIN normalizes some
+   merchant payees to `<Merchant> Credit Card`, so a Macy's shopping trip read
+   as a bill payment and was dropped from spend totals as non-spend. The bare
+   catch-all is gone. **Every pattern in Credit Card Payment must be
+   payment-specific.**
+3. **`uber` claimed `Uber Eats`.** Food delivery was booking as a rideshare.
+   `uber eats` now sits in Dining Out, which is matched before Auto & Transport.
+
+**When adding a pattern shorter than about six characters, check it against a
+real merchant list first.** Replaying the rules over the stored feed found
+`spa` had also been capturing `GOOGLE  WORKSPACE UNIF` (note the doubled space,
+which is why the pattern is the bare word `workspace`) and `LIVING SPACES
+MOBILE`. Removing a broad pattern is only safe once every merchant it had been
+carrying has an explicit pattern of its own, so **always replay before and after
+a rule change** rather than trusting the new patterns alone.
+
+## The card-payment credit leg
+
+A bill payment posts twice: a debit on the funding account and a credit on the
+card itself, worded `PAYMENT - THANK YOU` or `Payment Thank You`. Only the debit
+was recognized, so the credit leg sat in Uncategorized and inflated any income
+figure summed from credits. `thank you` now belongs to Credit Card Payment,
+which is matched before Bills & Utilities and so also reclaims the
+`AUTOPAY PAYMENT - THANK YOU` rows that `autopay` had taken.
+
+## Categories added 2026-09-08
+
+### Entertainment
+Recreation, kept separate from Dining Out so restaurants stay readable.
+
+**Patterns**: `playstation`, `andretti`, `bounce`, `gamestop`, `amc theat`, `ticketmaster`
+
+**Placed after Fees & Interest on purpose**, though position alone is not the
+whole defense. An earlier category only wins if one of its patterns actually
+matches, and `BOUNCED CHECK FEE` matched nothing in Fees & Interest while
+containing `bounce`. Every returned-payment wording is therefore listed in Fees
+& Interest explicitly. Caught by CodeRabbit on PR #176.
+
+### Business Income
+Consulting revenue. **It has no pattern list.** The payer's name is private data
+and stays out of this repository, so the account carries the signal: an
+unmatched credit on an account matching `is_business_account()` is income. The
+fallback runs _after_ the pattern table, so an explicit `Transfer` pattern still
+claims an inter-account move first. Added to `BUSINESS_CATEGORIES`, so household
+reviews exclude it and business P&L includes it.
+
+### Additions to existing categories
+
+- **Transfer**: `transfer deposit`, `transfer from`, `instant transfer`, `capital one bank`
+- **Groceries**: `halal meat`, `southwest farmers` (before Dining Out, so the butcher does not match `halal guys`)
+- **Dining Out**: `uber eats`, `doordash`, `whataburger`, `panda express`, `burger king`, `auntie anne`, `pick up stix`, `chicken salad chick`, `piada`, `nishiki`, `gringos`, `rouxpour`, `halal guys`, `broken egg`, `thai`
+- **Auto & Transport**: `texaco`, `bp gas`, `car wash`, `parkify`, `safelite`, `auto glass`
+- **Personal Care**: `clean skin`, `cloud 9 spa`, `lash`, `wax`, `face reality`
+- **Health & Wellness**: `mychart`, `methodist` (Giving matches `church` first, so a congregation still lands in Giving)
+- **Shopping**: `shopwss`, `fashion nova`, `burlington`, `uptown cheapskate`, `janie & jack`, `david yurman`, `dollar general`
+- **Bills & Utilities**: `rhythm ops`, `total wireless`, `tidal`, `prime video`
+- **Business Expense**: `greptile`, `openrouter`, `slack`, `paddle`, `ui.com`, `ubiquiti`, `newegg`, `bambula`, `connectech`, `pga frisco`, `workspace`
+- **Fees & Interest**: `adj redist`, `bounced check`, `returned check`, `nsf fee`
+- **Home & Garden**: `bermuda dude`, `living spaces`, `lawn`, `wayfair`, `flower shop`
+
+Homelab and fabrication hardware is business input, and the PGA Frisco charge is
+a business trip. Both classified by the account owner 2026-09-08.
+
 ## Deliberately left Uncategorized
 
 `Paid Check` and `Target` are ambiguous by nature: a written check or a Target
 run can be groceries, household, or shopping. Guessing is worse than a visible
 gap. Review these by hand.
+
+`School` is the same case, and so is any Apple Pay passthrough where the memo
+carries only the wallet prefix and a merchant the owner has not identified.

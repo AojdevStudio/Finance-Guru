@@ -18,8 +18,14 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "transferred to",
         "transfer to",
         "transfer withdrawal",
+        "transfer deposit",
+        "transfer from",
+        # "Instant Transfer Received From ....0000" does not contain "transfer from".
+        "instant transfer",
         "webxtransfer",
         "wire transfer",
+        # Inbound movement between the owner's own Capital One accounts.
+        "capital one bank",
     ),
     "Travel": (
         "american express travel",
@@ -51,6 +57,9 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "sam's club",
         "aldi",
         "trader joe",
+        # Precedes Dining Out so the butcher does not match "halal guys".
+        "halal meat",
+        "southwest farmers",
     ),
     "Dining Out": (
         "benihana",
@@ -69,6 +78,23 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "cafe",
         "makiin",
         "sparkly photo",
+        # Must precede Auto & Transport, whose "uber" pattern would otherwise
+        # book a food delivery as a rideshare.
+        "uber eats",
+        "doordash",
+        "whataburger",
+        "panda express",
+        "burger king",
+        "auntie anne",
+        "pick up stix",
+        "chicken salad chick",
+        "piada",
+        "nishiki",
+        "gringos",
+        "rouxpour",
+        "halal guys",
+        "broken egg",
+        "thai",
     ),
     # Must precede Bills & Utilities: a card autopay string such as
     # "Chase Credit Cautopay" contains "autopay" and would otherwise be read as a
@@ -85,7 +111,14 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "wf credit card",
         "apple credit card",
         "amex epayment",  # raw bank memo form: "DIRECT DEBIT AMEX EPAYMENT ACH PMT"
-        "credit card",
+        "chase credit card",
+        # The card-side leg of a bill payment, posted as a credit on the card.
+        # Without it the payment lands in Uncategorized and inflates income.
+        "thank you",
+        # A bare "credit card" pattern used to live here. It matched SimpleFIN
+        # payee normalizations of the form "<Merchant> Credit Card", which
+        # booked a store purchase as a bill payment and dropped it from spend
+        # totals as non-spend. Keep every pattern here payment-specific.
     ),
     "Giving": (
         "anglicanchurch",
@@ -112,10 +145,20 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "buc-ee",
         "gas station",
         "toll",
+        "texaco",
+        "bp gas",
+        "car wash",
+        "parkify",
+        "safelite",
+        "auto glass",
     ),
     "Personal Care": (
         "salon",
-        "spa",
+        # A bare "spa" pattern used to live here. It matched Fidelity's core
+        # money market, SPAXX, and booked every cash sweep as a spa visit.
+        "day spa",
+        "med spa",
+        "massage",
         "barber",
         "sephora",
         "beauty supply",
@@ -125,6 +168,11 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "hair",
         "shaving grace",
         "cash app",
+        "clean skin",
+        "cloud 9 spa",
+        "lash",
+        "wax",
+        "face reality",
     ),
     "Health & Wellness": (
         "cvs",
@@ -137,6 +185,10 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "clinic",
         "hospital",
         "urgent care",
+        "mychart",
+        # Giving matches "church" first, so a Methodist congregation still
+        # lands in Giving and only the outpatient centers arrive here.
+        "methodist",
     ),
     "Shopping": (
         "marshalls",
@@ -150,6 +202,13 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "macy",
         "best buy",
         "apple store",
+        "shopwss",
+        "fashion nova",
+        "burlington",
+        "uptown cheapskate",
+        "janie & jack",
+        "david yurman",
+        "dollar general",
     ),
     "Family Care": (
         "aqua tots",
@@ -174,6 +233,10 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "netflix",
         "spotify",
         "subscription",
+        "rhythm ops",
+        "total wireless",
+        "tidal",
+        "prime video",
     ),
     "Cash Withdrawal": ("atm", "cash withdrawal", "cash advance"),
     "Tuition": (
@@ -201,6 +264,21 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "cursor",
         "github",
         "vercel",
+        "greptile",
+        "openrouter",
+        "slack",
+        "paddle",
+        # Homelab and fabrication hardware. Classified as business input by the
+        # account owner 2026-09-08, alongside the existing developer tooling.
+        "ui.com",
+        "ubiquiti",
+        "newegg",
+        "bambula",
+        "connectech",
+        "pga frisco",
+        # "GOOGLE  WORKSPACE" contains "spa" and was landing in Personal Care.
+        # Matched on the bare word: the bank memo doubles the space after GOOGLE.
+        "workspace",
     ),
     # "credit card payment" deliberately NOT listed here: it belongs to the
     # dedicated Credit Card Payment category below. Leaving it in Loan Payment
@@ -226,6 +304,24 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "maintenance fee",
         "maintenance charge",
         "sie fee",
+        # Card issuer moving a balance between purchase and cash-advance buckets.
+        "adj redist",
+        # A returned-payment fee carries no other fee word, so ordering alone
+        # does not keep it out of Entertainment's "bounce" pattern.
+        "bounced check",
+        "returned check",
+        "nsf fee",
+    ),
+    # Deliberately after Fees & Interest, though position alone is not enough:
+    # the fee patterns only win if one of them actually matches, so every
+    # returned-payment wording is listed there explicitly.
+    "Entertainment": (
+        "playstation",
+        "andretti",
+        "bounce",
+        "gamestop",
+        "amc theat",
+        "ticketmaster",
     ),
     "Home & Garden": (
         "home depot",
@@ -235,6 +331,12 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "garden",
         "hardware",
         "furniture",
+        "bermuda dude",
+        # "LIVING SPACES" contains "spa" and was landing in Personal Care.
+        "living spaces",
+        "lawn",
+        "wayfair",
+        "flower shop",
     ),
     "Crypto Deposit": (
         "btc deposited",
@@ -254,7 +356,9 @@ NON_SPEND_CATEGORIES: frozenset[str] = frozenset(
 
 # Categories belonging to a business entity rather than the household.
 # Personal-spending reviews exclude these; business P&L includes them.
-BUSINESS_CATEGORIES: frozenset[str] = frozenset({"Payroll", "Business Expense"})
+BUSINESS_CATEGORIES: frozenset[str] = frozenset(
+    {"Payroll", "Business Expense", "Business Income"}
+)
 
 # Substrings identifying a business bank account by name. A written check means
 # different things by account: employee payroll on a business account, unknown
@@ -342,6 +446,12 @@ def categorize_expense(
     if "ifacctverify" in normalized or "verification" in normalized:
         return "Exempt"
 
+    # Fidelity's core position is the SPAXX money market, and sweeps into and
+    # out of it are the settlement mechanism rather than income or spending.
+    # Checked ahead of the table because "SPAXX" contains "spa".
+    if "spaxx" in normalized or "core account" in normalized:
+        return "Exempt"
+
     # Everything on a retirement account is savings or in-plan activity, never
     # household consumption, so the account decides before any text pattern runs.
     if is_retirement_account(account_name):
@@ -360,4 +470,12 @@ def categorize_expense(
     for category, patterns in CATEGORY_PATTERNS.items():
         if any(pattern in normalized for pattern in patterns):
             return category
+
+    # Unmatched money arriving in a business account is revenue. Running this
+    # after the table lets an explicit Transfer pattern claim an inter-account
+    # move first, and keeps client names out of the repository: the account,
+    # not the payer's name, is what identifies the income.
+    if amount is not None and amount > 0 and is_business_account(account_name):
+        return "Business Income"
+
     return "Uncategorized"
