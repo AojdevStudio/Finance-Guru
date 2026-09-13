@@ -112,9 +112,13 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "apple credit card",
         "amex epayment",  # raw bank memo form: "DIRECT DEBIT AMEX EPAYMENT ACH PMT"
         "chase credit card",
-        # The card-side leg of a bill payment, posted as a credit on the card.
-        # Without it the payment lands in Uncategorized and inflates income.
-        "thank you",
+        # Card-side payment credits often read "PAYMENT - THANK YOU". Match only
+        # payment-shaped thank-you strings: a bare "thank you" also appears in
+        # merchant memos such as "THANK YOU FOR SHOPPING", which would drop a
+        # real purchase debit from spend via NON_SPEND_CATEGORIES.
+        "payment - thank you",
+        "payment thank you",
+        "thank you for your payment",
         # A bare "credit card" pattern used to live here. It matched SimpleFIN
         # payee normalizations of the form "<Merchant> Credit Card", which
         # booked a store purchase as a bill payment and dropped it from spend

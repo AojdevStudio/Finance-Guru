@@ -325,6 +325,20 @@ class TestCardPaymentCreditLeg:
             "Credit Card Payment"
         )
 
+    @pytest.mark.parametrize(
+        "memo",
+        [
+            "THANK YOU FOR SHOPPING AT TARGET T-1234",
+            "THANK YOU FOR YOUR PURCHASE AT ACME STORE",
+        ],
+    )
+    def test_thank_you_purchase_debit_is_not_a_card_payment(self, memo: str) -> None:
+        """Bare "thank you" used to claim merchant thank-you memos as bill
+        payments, which excluded real purchase dollars from spend totals."""
+        category = categorize_expense(memo, -87.43, "Platinum Card® (3333)")
+        assert category != "Credit Card Payment"
+        assert category not in NON_SPEND_CATEGORIES
+
     def test_card_payment_is_excluded_from_spend(self) -> None:
         assert "Credit Card Payment" in NON_SPEND_CATEGORIES
 
