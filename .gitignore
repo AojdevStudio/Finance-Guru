@@ -40,6 +40,7 @@ data/processed/*
 *.xlsx
 *.xls
 .claude/hooks/node_modules
+.claude/scheduled_tasks.lock
 
 # Reports
 reports/*.html
