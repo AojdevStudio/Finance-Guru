@@ -1,5 +1,5 @@
-# CI-equivalent checks the review gate runs on a clean tree at HEAD (ci.yml quality job + unit tests).
+# CI-equivalent checks the review gate runs on a clean tree at HEAD (ci.yml quality job + the pre-commit pytest-coverage command).
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy src/
-uv run pytest tests/python -q -m "not integration"
+uv run pytest --cov=src --cov-fail-under=80 --cov-report=term-missing -q -m "not integration"

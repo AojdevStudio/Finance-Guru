@@ -101,7 +101,7 @@ GATE="$HOME/.agents/skills/review-gate/scripts/review-receipt.ts"
 if [[ -f "$GATE" ]]; then
     exec bun "$GATE" gate
 fi
-uv run ruff check . && uv run ruff format --check . && uv run mypy src/ && uv run pytest tests/python -q -m "not integration"
+uv run ruff check . && uv run ruff format --check . && uv run mypy src/ && uv run pytest --cov=src --cov-fail-under=80 --cov-report=term-missing -q -m "not integration"
 HOOK
 
 chmod +x "$HOOK_PATH"
