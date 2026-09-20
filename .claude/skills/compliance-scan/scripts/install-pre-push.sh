@@ -92,6 +92,16 @@ elif [[ "$TREE_STATUS" -ne 0 ]]; then
     echo "  Audit with: $SCAN --scope tree" >&2
     echo "  (not blocking)" >&2
 fi
+
+# Review gate (repo rule, 2026-09-20): the CI-equivalent checks plus a second-model
+# diff review recorded for this exact HEAD (skill: ~/.agents/skills/review-gate).
+# Without the skills store the checks run alone. Runs after the privacy scans so a
+# disclosure is reported before any test time is spent.
+GATE="$HOME/.agents/skills/review-gate/scripts/review-receipt.ts"
+if [[ -f "$GATE" ]]; then
+    exec bun "$GATE" gate
+fi
+uv run ruff check . && uv run ruff format --check . && uv run mypy src/ && uv run pytest tests/python -q -m "not integration"
 HOOK
 
 chmod +x "$HOOK_PATH"
