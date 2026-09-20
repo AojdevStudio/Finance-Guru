@@ -29,7 +29,8 @@ fi
 cat > "$HOOK_PATH" <<'HOOK'
 #!/usr/bin/env bash
 # Auto-installed by compliance-scan/install-pre-push.sh
-# Bypass for one-offs: git push --no-verify  (use sparingly and explain in commit message)
+# Privacy-scan bypass for one-offs: git push --no-verify (explain in the commit message).
+# The review gate below has its own switch, REVIEW_GATE_OFF=1, and only Ossie sets it.
 
 set -euo pipefail
 
@@ -98,10 +99,15 @@ fi
 # Without the skills store the checks run alone. Runs after the privacy scans so a
 # disclosure is reported before any test time is spent.
 GATE="$HOME/.agents/skills/review-gate/scripts/review-receipt.ts"
-if [[ -f "$GATE" ]]; then
+if [[ -f "$GATE" ]] && command -v bun >/dev/null 2>&1; then
     exec bun "$GATE" gate
 fi
-uv run ruff check . && uv run ruff format --check . && uv run mypy src/ && uv run pytest --cov=src --cov-fail-under=80 --cov-report=term-missing -q -m "not integration"
+# No store: run the same check list the gate would (one command per line in .review-gate).
+grep -v '^[[:space:]]*#' "$REPO_ROOT/.review-gate" | while IFS= read -r check; do
+    [[ -n "$check" ]] || continue
+    echo "review-gate: running '$check'"
+    (cd "$REPO_ROOT" && bash -c "$check") || { echo "review-gate: '$check' failed; push blocked." >&2; exit 1; }
+done
 HOOK
 
 chmod +x "$HOOK_PATH"

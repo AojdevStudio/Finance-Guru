@@ -195,3 +195,7 @@ Reads PRIVACY.md, finds the "What never leaves your machine" section, extracts e
 - `scripts/install-pre-push.sh` — idempotent installer for the git hook
 - `references/secret-patterns.md` — full pattern catalog with remediation guidance
 - `references/severity-guide.md` — when to escalate, when to ignore
+
+## Review gate
+
+The installed pre-push hook also runs the review gate (`~/.agents/skills/review-gate/SKILL.md`): the `.review-gate` check list, then a recorded second-model diff review for the exact HEAD. Existing clones pick this up only after re-running `scripts/install-pre-push.sh`.
