@@ -109,7 +109,9 @@ fi
 # No store: run the same check list the gate would (one command per line in .review-gate).
 # Each check reads from /dev/null so it cannot swallow the rest of the list from the pipe.
 if [[ -f "$REPO_ROOT/.review-gate" ]]; then
-    grep -v '^[[:space:]]*#' "$REPO_ROOT/.review-gate" | while IFS= read -r check; do
+    checks="$(grep -v '^[[:space:]]*#' "$REPO_ROOT/.review-gate" | grep -v '^[[:space:]]*$' || true)"
+    [[ -n "$checks" ]] || { echo "review-gate: .review-gate lists no checks; push blocked." >&2; exit 1; }
+    printf '%s\n' "$checks" | while IFS= read -r check; do
         [[ -n "$check" ]] || continue
         echo "review-gate: running '$check'"
         (cd "$REPO_ROOT" && bash -c "$check" </dev/null) || { echo "review-gate: '$check' failed; push blocked." >&2; exit 1; }
