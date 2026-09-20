@@ -19,6 +19,10 @@ if [[ ! -f "$REPO_ROOT/$SCAN_PATH" ]]; then
     exit 1
 fi
 
+if [[ ! -f "$REPO_ROOT/.review-gate" ]]; then
+    echo "compliance-scan: no .review-gate at the repo root; the installed hook will skip the review gate until one exists." >&2
+fi
+
 # Existing hook? back it up if it isn't ours
 if [[ -f "$HOOK_PATH" ]] && ! grep -q "compliance-scan/scripts/scan.py" "$HOOK_PATH"; then
     backup="$HOOK_PATH.backup.$(date +%s)"
@@ -29,7 +33,8 @@ fi
 cat > "$HOOK_PATH" <<'HOOK'
 #!/usr/bin/env bash
 # Auto-installed by compliance-scan/install-pre-push.sh
-# Bypass for one-offs: git push --no-verify  (use sparingly and explain in commit message)
+# Privacy-scan bypass for one-offs: git push --no-verify (explain in the commit message).
+# The review gate below has its own switch, REVIEW_GATE_OFF=1, and only Ossie sets it.
 
 set -euo pipefail
 
@@ -91,6 +96,28 @@ elif [[ "$TREE_STATUS" -ne 0 ]]; then
     echo "compliance-scan: WARNING — tree scan failed with status $TREE_STATUS." >&2
     echo "  Audit with: $SCAN --scope tree" >&2
     echo "  (not blocking)" >&2
+fi
+
+# Review gate (repo rule, 2026-09-20): the CI-equivalent checks plus a second-model
+# diff review recorded for this exact HEAD (skill: ~/.agents/skills/review-gate).
+# Without the skills store the checks run alone. Runs after the privacy scans so a
+# disclosure is reported before any test time is spent.
+GATE="$HOME/.agents/skills/review-gate/scripts/review-receipt.ts"
+if [[ -f "$GATE" ]] && command -v bun >/dev/null 2>&1; then
+    exec bun "$GATE" gate
+fi
+# No store: run the same check list the gate would (one command per line in .review-gate).
+# Each check reads from /dev/null so it cannot swallow the rest of the list from the pipe.
+if [[ -f "$REPO_ROOT/.review-gate" ]]; then
+    checks="$(grep -v '^[[:space:]]*#' "$REPO_ROOT/.review-gate" | grep -v '^[[:space:]]*$' || true)"
+    [[ -n "$checks" ]] || { echo "review-gate: .review-gate lists no checks; push blocked." >&2; exit 1; }
+    printf '%s\n' "$checks" | while IFS= read -r check; do
+        [[ -n "$check" ]] || continue
+        echo "review-gate: running '$check'"
+        (cd "$REPO_ROOT" && bash -c "$check" </dev/null) || { echo "review-gate: '$check' failed; push blocked." >&2; exit 1; }
+    done
+else
+    echo "review-gate: no .review-gate at the repo root; review gate skipped." >&2
 fi
 HOOK
 

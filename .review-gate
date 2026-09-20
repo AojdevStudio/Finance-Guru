@@ -1,0 +1,8 @@
+# Checks the review gate runs on a clean tree at HEAD: ci.yml's lint-and-test job, with
+# pytest narrowed to -m "not integration" (CI runs the integration tests too, with real keys).
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src/
+uv export --format requirements.txt --no-hashes --no-emit-project --frozen | diff -u requirements.txt -
+uv run python scripts/backlinks.py --check
+uv run pytest --cov=src --cov-fail-under=80 --cov-report=term-missing -q -m "not integration"
