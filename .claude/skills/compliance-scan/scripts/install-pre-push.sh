@@ -19,6 +19,10 @@ if [[ ! -f "$REPO_ROOT/$SCAN_PATH" ]]; then
     exit 1
 fi
 
+if [[ ! -f "$REPO_ROOT/.review-gate" ]]; then
+    echo "compliance-scan: no .review-gate at the repo root; the installed hook will skip the review gate until one exists." >&2
+fi
+
 # Existing hook? back it up if it isn't ours
 if [[ -f "$HOOK_PATH" ]] && ! grep -q "compliance-scan/scripts/scan.py" "$HOOK_PATH"; then
     backup="$HOOK_PATH.backup.$(date +%s)"
@@ -103,11 +107,16 @@ if [[ -f "$GATE" ]] && command -v bun >/dev/null 2>&1; then
     exec bun "$GATE" gate
 fi
 # No store: run the same check list the gate would (one command per line in .review-gate).
-grep -v '^[[:space:]]*#' "$REPO_ROOT/.review-gate" | while IFS= read -r check; do
-    [[ -n "$check" ]] || continue
-    echo "review-gate: running '$check'"
-    (cd "$REPO_ROOT" && bash -c "$check") || { echo "review-gate: '$check' failed; push blocked." >&2; exit 1; }
-done
+# Each check reads from /dev/null so it cannot swallow the rest of the list from the pipe.
+if [[ -f "$REPO_ROOT/.review-gate" ]]; then
+    grep -v '^[[:space:]]*#' "$REPO_ROOT/.review-gate" | while IFS= read -r check; do
+        [[ -n "$check" ]] || continue
+        echo "review-gate: running '$check'"
+        (cd "$REPO_ROOT" && bash -c "$check" </dev/null) || { echo "review-gate: '$check' failed; push blocked." >&2; exit 1; }
+    done
+else
+    echo "review-gate: no .review-gate at the repo root; review gate skipped." >&2
+fi
 HOOK
 
 chmod +x "$HOOK_PATH"
