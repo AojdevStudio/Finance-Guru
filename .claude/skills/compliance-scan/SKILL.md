@@ -198,4 +198,9 @@ Reads PRIVACY.md, finds the "What never leaves your machine" section, extracts e
 
 ## Review gate
 
-The installed pre-push hook also runs the review gate (`~/.agents/skills/review-gate/SKILL.md`): the `.review-gate` check list, then a recorded second-model diff review for the exact HEAD. Existing clones pick this up only after re-running `scripts/install-pre-push.sh`.
+The installed pre-push hook also runs the review gate (`~/.agents/skills/review-gate/SKILL.md`), after the privacy scans:
+
+- With `~/.agents/skills/review-gate/scripts/review-receipt.ts` present and `bun` on PATH, the hook execs `review-receipt.ts gate`: the `.review-gate` check list runs on a clean tree at HEAD (or a green receipt for HEAD is reused), then a recorded second-model diff review with every Act On item closed is required. `REVIEW_GATE_OFF=1` is the operator's switch and is honored by that tool.
+- Without the tool or without bun, the hook runs the `.review-gate` list itself, one command per line with stdin on `/dev/null`; no receipt is recorded and no review is required. An empty list blocks the push; a missing `.review-gate` skips the gate with a warning (the installer warns about that at install time too).
+
+Existing clones pick this up only after re-running `scripts/install-pre-push.sh`.
