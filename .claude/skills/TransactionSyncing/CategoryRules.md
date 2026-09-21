@@ -542,3 +542,26 @@ gap. Review these by hand.
 
 `School` is the same case, and so is any Apple Pay passthrough where the memo
 carries only the wallet prefix and a merchant the owner has not identified.
+
+## Merchants classified 2026-09-21
+
+A September review found 15 uncategorized debits in one month. The account
+owner classified the ambiguous ones directly; the rest matched an existing
+category on sight. `target` now defaults to Shopping instead of being left
+unmatched. `school` stays unmatched because a school fee and a school
+fundraiser land in different buckets.
+
+### Additions to existing categories
+
+- **Family Care**: `alpha omega sugar`, `pearland school`
+- **Business Expense**: `beyond inc` (Overstock furniture, owner's call), `obsidian`
+- **Shopping**: `target`, `tiktok shop`, `bath & body`, `zinae`, `goodwill`
+- **Dining Out**: `haii keii`, `jimmy changas`, `another broken` (the feed truncates the merchant to `Another Broken Epearland`, so `broken egg` never matched)
+- **Personal Care**: `pristine` (dry cleaning), `carlwillblendit`, `fresha`
+- **Travel**: `renaissance`
+- **Bills & Utilities**: `county mud`, `ownwell`
+- **Credit Card Payment**: `automatic payment` (Chase's wording for the card-side credit leg)
+- **Fees & Interest**: `returned payment`
+- **Entertainment**: `tix event`
+- **Groceries**: `tower beer wine`
+- **Health & Wellness**: `fitnfine`

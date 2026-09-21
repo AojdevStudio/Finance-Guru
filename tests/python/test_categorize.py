@@ -433,3 +433,46 @@ class TestSpaPatternFallout:
             )
             == "Transfer"
         )
+
+
+class TestSeptember2026Merchants:
+    """Merchants that sat in Uncategorized through the 2026-09-21 review."""
+
+    @pytest.mark.parametrize(
+        ("memo", "expected"),
+        [
+            ("ALPHA OMEGA SUGAR LAND", "Family Care"),
+            ("PEARLAND SCHOOL", "Family Care"),
+            ("APLPAY BEYOND INC", "Business Expense"),
+            ("OBSIDIAN", "Business Expense"),
+            ("TARGET 00012345 PEARLAND TX", "Shopping"),
+            ("TIKTOK SHOP", "Shopping"),
+            ("BATH & BODY WORKS", "Shopping"),
+            ("APLPAY ZINAE COLLECT", "Shopping"),
+            ("HAII KEII", "Dining Out"),
+            ("JIMMY CHANGAS", "Dining Out"),
+            ("ANOTHER BROKEN EPEARLAND TX VIA PAYRIX", "Dining Out"),
+            ("APLPAY PRISTINE", "Personal Care"),
+            ("CARLWILLBLENDIT PEARLAND TX", "Personal Care"),
+            ("APLPAY FRESHA", "Personal Care"),
+            ("APLPAY RENAISSANCE", "Travel"),
+            ("BRAZORIA COUNTY MUD", "Bills & Utilities"),
+            ("OWNWELL C TX AUTHID CASH", "Bills & Utilities"),
+            ("TIX EVENT TICKET", "Entertainment"),
+            ("TOWER BEER WINE SA VIA BOUNTEOUS", "Groceries"),
+            ("FITNFINE", "Health & Wellness"),
+        ],
+    )
+    def test_september_merchants(self, memo: str, expected: str) -> None:
+        assert categorize_expense(memo, -50.00, None) == expected
+
+    def test_chase_automatic_payment_is_the_card_side_of_a_bill_payment(self) -> None:
+        assert (
+            categorize_expense("Automatic Payment", 1809.12, None)
+            == "Credit Card Payment"
+        )
+
+    def test_returned_payment_is_a_fee_not_entertainment(self) -> None:
+        assert (
+            categorize_expense("Returned Payment", -220.77, None) == "Fees & Interest"
+        )

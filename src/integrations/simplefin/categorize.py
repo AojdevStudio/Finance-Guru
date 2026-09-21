@@ -43,6 +43,8 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "expedia",
         "marriott",
         "hilton",
+        # Renaissance hotels; classified as Travel by the account owner 2026-09-21.
+        "renaissance",
     ),
     "Groceries": (
         "h-e-b",
@@ -60,6 +62,7 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         # Precedes Dining Out so the butcher does not match "halal guys".
         "halal meat",
         "southwest farmers",
+        "tower beer wine",
     ),
     "Dining Out": (
         "benihana",
@@ -95,6 +98,11 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "halal guys",
         "broken egg",
         "thai",
+        "haii keii",
+        "jimmy changas",
+        # The feed truncates "Another Broken Egg" to "Another Broken Epearland",
+        # so the existing "broken egg" pattern never sees it.
+        "another broken",
     ),
     # Must precede Bills & Utilities: a card autopay string such as
     # "Chase Credit Cautopay" contains "autopay" and would otherwise be read as a
@@ -115,6 +123,8 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         # The card-side leg of a bill payment, posted as a credit on the card.
         # Without it the payment lands in Uncategorized and inflates income.
         "thank you",
+        # Chase posts the payment leg on the card as "Automatic Payment".
+        "automatic payment",
         # A bare "credit card" pattern used to live here. It matched SimpleFIN
         # payee normalizations of the form "<Merchant> Credit Card", which
         # booked a store purchase as a bill payment and dropped it from spend
@@ -173,6 +183,9 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "lash",
         "wax",
         "face reality",
+        "carlwillblendit",
+        "fresha",  # salon booking platform
+        "pristine",  # dry cleaning, per the account owner 2026-09-21
     ),
     "Health & Wellness": (
         "cvs",
@@ -189,6 +202,7 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         # Giving matches "church" first, so a Methodist congregation still
         # lands in Giving and only the outpatient centers arrive here.
         "methodist",
+        "fitnfine",
     ),
     "Shopping": (
         "marshalls",
@@ -209,6 +223,13 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "janie & jack",
         "david yurman",
         "dollar general",
+        # Target was deliberately unmatched as food-or-merchandise; the account
+        # owner chose Shopping as the default 2026-09-21.
+        "target",
+        "tiktok shop",
+        "bath & body",
+        "zinae",
+        "goodwill",
     ),
     "Family Care": (
         "aqua tots",
@@ -219,6 +240,9 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "kid",
         "children",
         "pediatric",
+        # Monthly kids enrichment and school fees, per the account owner 2026-09-21.
+        "alpha omega sugar",
+        "pearland school",
     ),
     "Bills & Utilities": (
         "autopay",
@@ -237,6 +261,8 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "total wireless",
         "tidal",
         "prime video",
+        "county mud",  # municipal utility district water bill
+        "ownwell",  # property tax appeal service
     ),
     "Cash Withdrawal": ("atm", "cash withdrawal", "cash advance"),
     "Tuition": (
@@ -279,6 +305,10 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         # "GOOGLE  WORKSPACE" contains "spa" and was landing in Personal Care.
         # Matched on the bare word: the bank memo doubles the space after GOOGLE.
         "workspace",
+        # Beyond Inc (Overstock) furniture, classified as business by the owner
+        # 2026-09-21, alongside the Obsidian note-taking subscription.
+        "beyond inc",
+        "obsidian",
     ),
     # "credit card payment" deliberately NOT listed here: it belongs to the
     # dedicated Credit Card Payment category below. Leaving it in Loan Payment
@@ -311,6 +341,7 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "bounced check",
         "returned check",
         "nsf fee",
+        "returned payment",
     ),
     # Deliberately after Fees & Interest, though position alone is not enough:
     # the fee patterns only win if one of them actually matches, so every
@@ -322,6 +353,7 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "gamestop",
         "amc theat",
         "ticketmaster",
+        "tix event",
     ),
     "Home & Garden": (
         "home depot",
@@ -419,7 +451,8 @@ def is_retirement_account(account_name: str | None) -> bool:
     return any(hint in normalized for hint in RETIREMENT_ACCOUNT_HINTS)
 
 
-# "target" and "school" are deliberately omitted because their categories are ambiguous.
+# "school" is deliberately omitted because its category is ambiguous; "target"
+# defaults to Shopping since 2026-09-21.
 
 
 def categorize_expense(
