@@ -9,9 +9,13 @@ import pytest
 
 from src.integrations.simplefin.categorize import (
     BUSINESS_CATEGORIES,
+    CATEGORY_PATTERNS,
     NON_SPEND_CATEGORIES,
+    MerchantRulesError,
     categorize_expense,
     is_business_account,
+    load_merchant_rules,
+    merge_patterns,
 )
 
 
@@ -157,10 +161,10 @@ class TestCreditCardPayments:
         assert categorize_expense(text, -9402.47) == "Credit Card Payment"
 
     def test_real_loans_still_route_to_loan_payment(self) -> None:
-        assert categorize_expense("DIRECT DEBIT AES STDNT LOAN", -4169.25) == (
+        assert categorize_expense("DIRECT DEBIT STUDENT LOAN SVC", -4169.25) == (
             "Loan Payment"
         )
-        assert categorize_expense("TRUIST MORTG TEL MTGPMT", -1500.00) == (
+        assert categorize_expense("ANYBANK MORTG TEL MTGPMT", -1500.00) == (
             "Loan Payment"
         )
 
@@ -171,7 +175,7 @@ class TestCreditCardPayments:
 
 class TestNewCategories:
     def test_church_giving(self) -> None:
-        assert categorize_expense("Anglicanchurchofpentx", -100.00) == "Giving"
+        assert categorize_expense("First Church of Anytown", -100.00) == "Giving"
 
     def test_interest_charge_is_a_fee(self) -> None:
         assert categorize_expense("Interest Charge", -267.86) == "Fees & Interest"
@@ -203,7 +207,7 @@ class TestRawBankMemos:
             ("Transfer", "TRANSFER WITHDRAWAL To ....2222", "Transfer"),
             (
                 "State of Texas Vehicle Registration",
-                "BRAZORIA VEHREG 1302ANGLETON TX",
+                "ANYCOUNTY VEHREG 1302ANYTOWN TX",
                 "Auto & Transport",
             ),
         ],
@@ -218,7 +222,7 @@ class TestRawBankMemos:
         assert categorize_expense("DIRECT DEBIT AMEX EPAYMENT ACH PMT", -9402.47) == (
             "Credit Card Payment"
         )
-        assert categorize_expense("BRAZORIA VEHREG 1302ANGLETON TX", -272.00) == (
+        assert categorize_expense("ANYCOUNTY VEHREG 1302ANYTOWN TX", -272.00) == (
             "Auto & Transport"
         )
 
@@ -250,7 +254,7 @@ class TestUnchangedBehaviour:
             ("Tesla Supercharger", "Auto & Transport"),
             ("CVS Pharmacy", "Health & Wellness"),
             ("Amazon", "Shopping"),
-            ("Brightwheel", "Family Care"),
+            ("Sunny Days Daycare", "Family Care"),
             ("Netflix subscription", "Bills & Utilities"),
             ("ATM cash withdrawal", "Cash Withdrawal"),
         ],
@@ -287,7 +291,7 @@ class TestSubstringCollisions:
         bill payment, which excluded a real purchase from spend totals."""
         assert (
             categorize_expense(
-                "Macy's Credit Card MACYS PEARLAND TWN CTR",
+                "Macy's Credit Card MACYS ANYTOWN TWN CTR",
                 -255.42,
                 "Sapphire Preferred (3333)",
             )
@@ -369,11 +373,7 @@ class TestEntertainment:
         ("memo", "expected"),
         [
             ("PlayStation Network", "Entertainment"),
-            ("CE ANDRETTIS", "Entertainment"),
             ("Bounce", "Entertainment"),
-            # The account owner classified the PGA Frisco charge as a business
-            # trip on 2026-09-08, so it belongs to the business bucket.
-            ("PGA FRISCO FRONT", "Business Expense"),
         ],
     )
     def test_recreation_patterns(self, memo: str, expected: str) -> None:
@@ -412,7 +412,6 @@ class TestSpaPatternFallout:
                 "Sapphire Preferred (3333)",
                 "Home & Garden",
             ),
-            ("CLOUD 9 SPA PEARLAND", "Rewards Card (5555)", "Personal Care"),
         ],
     )
     def test_merchants_the_spa_pattern_had_captured(
@@ -433,3 +432,52 @@ class TestSpaPatternFallout:
             )
             == "Transfer"
         )
+
+
+class TestMerchantRules:
+    """Household merchants live in the instance, never in the public table."""
+
+    def test_missing_file_means_no_household_rules(self, tmp_path) -> None:
+        assert load_merchant_rules(tmp_path / "merchant-rules.yaml") == {}
+
+    def test_rules_extend_a_category_without_reordering(self, tmp_path) -> None:
+        rules = tmp_path / "merchant-rules.yaml"
+        rules.write_text(
+            "Groceries:\n  - Corner Market\nFamily Care:\n  - little sprouts\n"
+        )
+        merged = merge_patterns(CATEGORY_PATTERNS, load_merchant_rules(rules))
+        assert list(merged) == list(CATEGORY_PATTERNS)
+        assert merged["Groceries"][-1] == "corner market"
+        assert (
+            categorize_expense("CORNER MARKET #12", -40.00, None, merged) == "Groceries"
+        )
+        assert (
+            categorize_expense("LITTLE SPROUTS", -40.00, None, merged) == "Family Care"
+        )
+        # The public table alone still knows nothing about the household.
+        assert categorize_expense("LITTLE SPROUTS", -40.00, None) == "Uncategorized"
+
+    def test_public_table_order_still_decides_ties(self, tmp_path) -> None:
+        """A household pattern in a later category cannot outrank an earlier
+        category's match; precedence stays with the public table."""
+        rules = tmp_path / "merchant-rules.yaml"
+        rules.write_text("Shopping:\n  - church store\n")
+        merged = merge_patterns(CATEGORY_PATTERNS, load_merchant_rules(rules))
+        assert categorize_expense("CHURCH STORE", -20.00, None, merged) == "Giving"
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            "Snacks:\n  - corner market\n",
+            "Groceries: corner market\n",
+            "Groceries:\n  - ''\n",
+            "- Groceries\n",
+        ],
+    )
+    def test_malformed_rules_block_instead_of_dropping(
+        self, tmp_path, body: str
+    ) -> None:
+        rules = tmp_path / "merchant-rules.yaml"
+        rules.write_text(body)
+        with pytest.raises(MerchantRulesError):
+            load_merchant_rules(rules)

@@ -44,7 +44,7 @@ SFIN_ACCOUNT_SET = {
                     "id": "TXN-pending",
                     "posted": 0,
                     "payee": "H-E-B",
-                    "description": "H-E-B #063 PEARLAND TX",
+                    "description": "H-E-B #063 ANYTOWN TX",
                     "amount": "12.34",
                 },
             ],
@@ -54,7 +54,7 @@ SFIN_ACCOUNT_SET = {
 
 
 def test_categorize_expense_patterns_and_exemptions() -> None:
-    assert categorize_expense("H-E-B #063 PEARLAND TX") == "Groceries"
+    assert categorize_expense("H-E-B #063 ANYTOWN TX") == "Groceries"
     assert categorize_expense("CHUCK E CHEESE 578") == "Dining Out"
     assert categorize_expense("Tesla SUPERCHA 123") == "Auto & Transport"
     assert categorize_expense("OPENAI *CHATGPT SUBSCR") == "Business Expense"
@@ -83,7 +83,7 @@ def test_resolve_direction_prefers_feed_wording_over_sign() -> None:
     # A debit marker with an unexpectedly positive amount still reads as outflow.
     assert resolve_direction("DIRECT DEBIT CHASE CREDIT CAUTOPAY", 600.00) == "debit"
     # No marker falls back to sign.
-    assert resolve_direction("H-E-B #063 PEARLAND TX", -54.13) == "debit"
+    assert resolve_direction("H-E-B #063 ANYTOWN TX", -54.13) == "debit"
     assert resolve_direction("Capital One", 2000.00) == "credit"
     assert resolve_direction(None, None) == "credit"
 
@@ -181,7 +181,7 @@ def test_resolve_direction_handles_fidelity_card_and_transfer_wording() -> None:
     # Outflows the feed reported as positive.
     assert (
         resolve_direction(
-            "CASH ADVANCE *SEDONA LAKES MANVEL TX 081826 AUTHID:624330 (Cash)", 654.00
+            "CASH ADVANCE *LAKESIDE ANYTOWN TX 081826 AUTHID:624330 (Cash)", 654.00
         )
         == "debit"
     )
@@ -193,7 +193,7 @@ def test_resolve_direction_handles_fidelity_card_and_transfer_wording() -> None:
     )
     assert (
         resolve_direction(
-            "DEBIT CARD PURCHASE CASH APP*ANGLICAN CHUR cash.app TX 082726", 20.00
+            "DEBIT CARD PURCHASE CASH APP*FIRST CHURCH cash.app TX 082726", 20.00
         )
         == "debit"
     )

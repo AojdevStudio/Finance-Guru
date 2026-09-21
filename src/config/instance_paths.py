@@ -55,6 +55,11 @@ class InstancePaths(BaseModel):
         return self.root / "snaptrade-accounts.yaml"
 
     @property
+    def merchant_rules(self) -> Path:
+        """Return the household merchant-rules file for expense categorization."""
+        return self.root / "merchant-rules.yaml"
+
+    @property
     def system_context(self) -> Path:
         """Return the generated system context path."""
         return self.root / "system-context.md"

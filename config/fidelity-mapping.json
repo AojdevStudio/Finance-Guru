@@ -279,13 +279,6 @@
       },
       "DIRECT_DEBIT_BILL": {
         "patterns": [
-          "DIRECT DEBIT AES STDNT LOAN",
-          "DIRECT DEBIT REGENT UNIVERS",
-          "DIRECT DEBIT BMOBNK",
-          "DIRECT DEBIT CPENERGY",
-          "DIRECT DEBIT BRAZORIA",
-          "DIRECT DEBIT SAFEPOINT",
-          "DIRECT DEBIT CLICKPAY",
           "DIRECT DEBIT"
         ],
         "sign": "negative",

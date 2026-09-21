@@ -13,7 +13,13 @@ from pathlib import Path
 from typing import Any
 
 from src.config.instance_paths import InstancePaths, _db_path, load_instance_env
-from src.integrations.simplefin.categorize import categorize_expense
+from src.integrations.simplefin.categorize import (
+    CATEGORY_PATTERNS,
+    PatternTable,
+    categorize_expense,
+    load_merchant_rules,
+    merge_patterns,
+)
 
 
 class SimpleFinSyncError(RuntimeError):
@@ -160,7 +166,10 @@ def resolve_direction(text: str | None, amount: float | None) -> str:
 
 
 def normalize_transaction(
-    account: dict[str, Any], txn: dict[str, Any], now: str
+    account: dict[str, Any],
+    txn: dict[str, Any],
+    now: str,
+    patterns: PatternTable | None = None,
 ) -> tuple[Any, ...]:
     """Normalize a SimpleFIN transaction into database column order.
 
@@ -168,6 +177,8 @@ def normalize_transaction(
         account: SimpleFIN account containing the transaction.
         txn: SimpleFIN transaction payload.
         now: ISO timestamp for the current sync.
+        patterns: Category table, the public table merged with the household
+            rules. Defaults to the public table alone.
 
     Returns:
         A tuple matching the ``bank_transactions`` column order.
@@ -202,7 +213,7 @@ def normalize_transaction(
         txn.get("description"),
         amount,
         direction,
-        categorize_expense(category_text, amount, account.get("name")),
+        categorize_expense(category_text, amount, account.get("name"), patterns),
         now,
     )
 
@@ -213,6 +224,7 @@ def sync(
     months: int = 12,
     app_dir: Path = DEFAULT_APP_DIR,
     dump_provider: Callable[[int, Path], dict[str, Any]] = run_dump,
+    merchant_rules: Path | None = None,
 ) -> dict[str, Any]:
     """Sync SimpleFIN transactions into the shared SQLite database.
 
@@ -221,6 +233,8 @@ def sync(
         months: Number of months of history to request.
         app_dir: Directory containing the SimpleFIN Bun application.
         dump_provider: Callable that returns a SimpleFIN account-set payload.
+        merchant_rules: Household ``merchant-rules.yaml``; ``None`` categorizes
+            with the public table alone.
 
     Returns:
         Counts and metadata describing the completed sync.
@@ -229,6 +243,10 @@ def sync(
         SimpleFinSyncError: If the provider returns an invalid payload.
     """
     db = _db_path(database_url)
+    patterns = merge_patterns(
+        CATEGORY_PATTERNS,
+        load_merchant_rules(merchant_rules) if merchant_rules else {},
+    )
     now = datetime.now(UTC).replace(microsecond=0).isoformat()
     payload = dump_provider(months, app_dir)
     if not isinstance(payload, dict) or "accounts" not in payload:
@@ -257,7 +275,7 @@ def sync(
             if not txn.get("id"):
                 skipped_missing_id += 1
                 continue
-            row = normalize_transaction(account, txn, now)
+            row = normalize_transaction(account, txn, now, patterns)
             rows.append(row)
             category = str(row[10])
             by_category[category] = by_category.get(category, 0) + 1
@@ -345,7 +363,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
-        summary = sync(database_url, months=args.months)
+        summary = sync(
+            database_url, months=args.months, merchant_rules=paths.merchant_rules
+        )
     except (SimpleFinSyncError, ValueError, RuntimeError, OSError) as exc:
         print(f"Sync error: {exc}", file=sys.stderr)
         return 1
