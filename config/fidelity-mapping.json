@@ -271,11 +271,11 @@
         "notes": "Credit-card payoff. The spending was already captured at the merchant via the CC statement. Counting these as expenses double-counts spending. Only treat as 'spending' if you are NOT also importing CC statements."
       },
       "AUTO_LOAN_PAYMENT": {
-        "patterns": ["DIRECT DEBIT WELLS FARGO AUDRAFT"],
+        "patterns": ["AUDRAFT"],
         "sign": "negative",
         "true_spending": true,
         "expense_category": "Loan Payment",
-        "notes": "Wells Fargo 'AUDRAFT' = auto loan payment (not overdraft). Real recurring expense — keep separate from CC pass-throughs."
+        "notes": "'AUDRAFT' = auto loan payment (not overdraft). Real recurring expense — keep separate from CC pass-throughs."
       },
       "DIRECT_DEBIT_BILL": {
         "patterns": [

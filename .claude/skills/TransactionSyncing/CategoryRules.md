@@ -84,6 +84,13 @@ encodes, each of which was a live bug once:
   every returned-payment wording is listed in fees explicitly.
 - `credit card payment` is deliberately absent from `Loan Payment`.
 
+## Household patterns cannot change precedence
+
+A household pattern only wins from its own category's position. A merchant
+whose memo contains an earlier public pattern (a butcher called "Halal Guys"
+when `halal guys` sits in Dining Out) cannot be reclaimed from the instance;
+that needs a change to the public table, raised as an issue.
+
 ## Substring collisions
 
 Patterns are plain substrings, so a short one fires inside unrelated words.
@@ -119,8 +126,8 @@ merchant to `merchant-rules.yaml`.
 
 ## Public table
 
-Generated from `CATEGORY_PATTERNS` in table order. Regenerate rather than edit
-by hand.
+Mirrors `CATEGORY_PATTERNS` in table order; `tests/python/test_categorize.py`
+asserts the two match, so edit the code first and this list second.
 
 ### Transfer
 

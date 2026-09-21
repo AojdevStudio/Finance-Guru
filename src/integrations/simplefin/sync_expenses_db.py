@@ -241,6 +241,7 @@ def sync(
 
     Raises:
         SimpleFinSyncError: If the provider returns an invalid payload.
+        MerchantRulesError: If ``merchant_rules`` is malformed.
     """
     db = _db_path(database_url)
     patterns = merge_patterns(

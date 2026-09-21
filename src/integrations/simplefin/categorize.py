@@ -328,7 +328,10 @@ def load_merchant_rules(path: Path) -> PatternTable:
     """
     if not path.is_file():
         return {}
-    loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    try:
+        loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        raise MerchantRulesError(f"{path} is not valid YAML: {exc}") from exc
     if not isinstance(loaded, dict):
         raise MerchantRulesError(f"{path} must be a mapping of category to patterns")
     rules: PatternTable = {}

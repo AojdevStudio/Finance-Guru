@@ -170,6 +170,7 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
         root / ".gitignore",
         paths.env_file,
         paths.profile,
+        paths.merchant_rules,
         root / "AGENTS.md",
         root / "CLAUDE.md",
     )
