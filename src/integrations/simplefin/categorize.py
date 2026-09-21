@@ -43,8 +43,12 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "expedia",
         "marriott",
         "hilton",
-        # Renaissance hotels; classified as Travel by the account owner 2026-09-21.
-        "renaissance",
+        # The Renaissance Atlanta hotel stay, classified as Travel by the account
+        # owner 2026-09-21. Kept city-qualified: Travel is matched second, so a bare
+        # "renaissance" would claim the Texas Renaissance Festival ahead of
+        # Entertainment and Renaissance Learning ahead of Family Care.
+        "renaissance atlanta",
+        "renaissance aatlanta",  # Apple Pay doubles the A: "RENAISSANCE AATLANTA GA"
     ),
     "Groceries": (
         "h-e-b",
@@ -123,8 +127,18 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         # The card-side leg of a bill payment, posted as a credit on the card.
         # Without it the payment lands in Uncategorized and inflates income.
         "thank you",
-        # Chase posts the payment leg on the card as "Automatic Payment".
-        "automatic payment",
+        # Chase truncates the card-side credit at 25 characters, "AUTOMATIC
+        # PAYMENT - THANK", so "thank you" never sees it. "payment - thank" also
+        # covers "ONLINE PAYMENT - THANK YOU" and stays payment-specific, which a
+        # bare "automatic payment" would not: a utility autopay would land here
+        # and vanish from spend as non-spend.
+        "payment - thank",
+        # A bounced card payment posts as a "Returned Payment" debit for the same
+        # amount as the credit it unwinds. It is the mirror of a non-spend event,
+        # so it nets here rather than reading as a fee. The issuer's penalty is a
+        # separate "RETURNED PAYMENT FEE" row, caught by the guard ahead of the
+        # table in categorize_expense.
+        "returned payment",
         # A bare "credit card" pattern used to live here. It matched SimpleFIN
         # payee normalizations of the form "<Merchant> Credit Card", which
         # booked a store purchase as a bill payment and dropped it from spend
@@ -185,7 +199,10 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "face reality",
         "carlwillblendit",
         "fresha",  # salon booking platform
-        "pristine",  # dry cleaning, per the account owner 2026-09-21
+        # Dry cleaner in Manvel, per the account owner 2026-09-21. The memo reads
+        # "PRISTINE CAREMANVEL TX"; a bare "pristine" would take "Pristine Lawn
+        # Care" away from Home & Garden.
+        "pristine care",
     ),
     "Health & Wellness": (
         "cvs",
@@ -226,10 +243,9 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         # Target was deliberately unmatched as food-or-merchandise; the account
         # owner chose Shopping as the default 2026-09-21.
         "target",
-        "tiktok shop",
-        "bath & body",
+        "tiktok sho",  # raw memo truncates to "BT*TIKTOK SHOCULVER CITY CA"
+        "body works",  # raw memo spells "BATH AND BODY WORKS"; payee uses "&"
         "zinae",
-        "goodwill",
     ),
     "Family Care": (
         "aqua tots",
@@ -241,7 +257,7 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "children",
         "pediatric",
         # Monthly kids enrichment and school fees, per the account owner 2026-09-21.
-        "alpha omega sugar",
+        "alpha omega",  # memo is "ALPHA OMEGA SUGAR LAND TX"; do not bind the city
         "pearland school",
     ),
     "Bills & Utilities": (
@@ -308,6 +324,7 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         # Beyond Inc (Overstock) furniture, classified as business by the owner
         # 2026-09-21, alongside the Obsidian note-taking subscription.
         "beyond inc",
+        "beyond, inc",  # raw memo form: "APLPAY BEYOND, INC. UNION UT"
         "obsidian",
     ),
     # "credit card payment" deliberately NOT listed here: it belongs to the
@@ -341,7 +358,6 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "bounced check",
         "returned check",
         "nsf fee",
-        "returned payment",
     ),
     # Deliberately after Fees & Interest, though position alone is not enough:
     # the fee patterns only win if one of them actually matches, so every
@@ -354,6 +370,7 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "amc theat",
         "ticketmaster",
         "tix event",
+        "renaissance fest",
     ),
     "Home & Garden": (
         "home depot",
@@ -451,10 +468,6 @@ def is_retirement_account(account_name: str | None) -> bool:
     return any(hint in normalized for hint in RETIREMENT_ACCOUNT_HINTS)
 
 
-# "school" is deliberately omitted because its category is ambiguous; "target"
-# defaults to Shopping since 2026-09-21.
-
-
 def categorize_expense(
     text: str | None,
     amount: float | None = None,
@@ -484,6 +497,12 @@ def categorize_expense(
     # Checked ahead of the table because "SPAXX" contains "spa".
     if "spaxx" in normalized or "core account" in normalized:
         return "Exempt"
+
+    # "RETURNED PAYMENT FEE" contains "returned payment", which Credit Card
+    # Payment claims for the reversal itself. The fee is real spend, so it is
+    # decided before the table can reach that pattern.
+    if "returned payment fee" in normalized:
+        return "Fees & Interest"
 
     # Everything on a retirement account is savings or in-plan activity, never
     # household consumption, so the account decides before any text pattern runs.

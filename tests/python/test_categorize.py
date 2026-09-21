@@ -436,26 +436,32 @@ class TestSpaPatternFallout:
 
 
 class TestSeptember2026Merchants:
-    """Merchants that sat in Uncategorized through the 2026-09-21 review."""
+    """Merchants that sat in Uncategorized through the 2026-09-21 review.
+
+    Memos are the raw feed descriptions, not SimpleFIN's cleaned payee, so a
+    pattern that only matches the payee form fails here."""
 
     @pytest.mark.parametrize(
         ("memo", "expected"),
         [
-            ("ALPHA OMEGA SUGAR LAND", "Family Care"),
+            ("ALPHA OMEGA SUGAR LAND TX", "Family Care"),
+            ("ALPHA OMEGA HOUSTON TX", "Family Care"),
             ("PEARLAND SCHOOL", "Family Care"),
+            ("APLPAY BEYOND, INC. UNION UT", "Business Expense"),
             ("APLPAY BEYOND INC", "Business Expense"),
             ("OBSIDIAN", "Business Expense"),
-            ("TARGET 00012345 PEARLAND TX", "Shopping"),
-            ("TIKTOK SHOP", "Shopping"),
+            ("TARGET T-1459 PEARLAND TX", "Shopping"),
+            ("BT*TIKTOK SHOCULVER CITY CA", "Shopping"),
+            ("BATH AND BODY WORKS PEARLAND TX", "Shopping"),
             ("BATH & BODY WORKS", "Shopping"),
             ("APLPAY ZINAE COLLECT", "Shopping"),
             ("HAII KEII", "Dining Out"),
             ("JIMMY CHANGAS", "Dining Out"),
             ("ANOTHER BROKEN EPEARLAND TX VIA PAYRIX", "Dining Out"),
-            ("APLPAY PRISTINE", "Personal Care"),
+            ("APLPAY PRISTINE CAREMANVEL TX", "Personal Care"),
             ("CARLWILLBLENDIT PEARLAND TX", "Personal Care"),
             ("APLPAY FRESHA", "Personal Care"),
-            ("APLPAY RENAISSANCE", "Travel"),
+            ("APLPAY RENAISSANCE AATLANTA GA", "Travel"),
             ("BRAZORIA COUNTY MUD", "Bills & Utilities"),
             ("OWNWELL C TX AUTHID CASH", "Bills & Utilities"),
             ("TIX EVENT TICKET", "Entertainment"),
@@ -466,13 +472,50 @@ class TestSeptember2026Merchants:
     def test_september_merchants(self, memo: str, expected: str) -> None:
         assert categorize_expense(memo, -50.00, None) == expected
 
-    def test_chase_automatic_payment_is_the_card_side_of_a_bill_payment(self) -> None:
+    def test_hotel_memo_with_a_college_park_address_is_travel_not_tuition(self) -> None:
+        """Travel precedes Tuition, so "college" in the city name does not win.
+        Locks the ordering the pattern silently depends on."""
         assert (
-            categorize_expense("Automatic Payment", 1809.12, None)
+            categorize_expense("RENAISSANCE ATLANTA COLLEGE PARK GA", -1000.00, None)
+            == "Travel"
+        )
+
+    @pytest.mark.parametrize(
+        ("memo", "expected"),
+        [
+            # Generic words must not outrank the category that already owned them.
+            ("PRISTINE LAWN CARE PEARLAND", "Home & Garden"),
+            ("TEXAS RENAISSANCE FESTIVAL TODD MISSION TX", "Entertainment"),
+            ("NETFLIX AUTOMATIC PAYMENT", "Bills & Utilities"),
+            # Only the credit leg is a card payment; a biller's autopay is not.
+            ("STATE FARM AUTOMATIC PAYMENT AUTO INS", "Uncategorized"),
+            # An issuer's courtesy credit is not a Goodwill store purchase.
+            ("SAKS BENEFIT GOODWILL", "Uncategorized"),
+        ],
+    )
+    def test_generic_words_do_not_capture_other_merchants(
+        self, memo: str, expected: str
+    ) -> None:
+        assert categorize_expense(memo, -100.00, None) == expected
+
+    def test_truncated_chase_credit_leg_is_a_card_payment(self) -> None:
+        assert (
+            categorize_expense(
+                "Automatic Payment AUTOMATIC PAYMENT - THANK", 1000.00, None
+            )
             == "Credit Card Payment"
         )
 
-    def test_returned_payment_is_a_fee_not_entertainment(self) -> None:
+    def test_returned_payment_reversal_nets_against_the_card_payment(self) -> None:
+        """A bounced payment posts as a debit of the same amount as the credit it
+        unwinds. Both are non-spend, so a spend review nets them to zero."""
         assert (
-            categorize_expense("Returned Payment", -220.77, None) == "Fees & Interest"
+            categorize_expense("Returned Payment", -1000.00, None)
+            == "Credit Card Payment"
+        )
+
+    def test_returned_payment_fee_is_still_a_fee(self) -> None:
+        assert (
+            categorize_expense("RETURNED PAYMENT FEE", -40.00, None)
+            == "Fees & Interest"
         )

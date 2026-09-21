@@ -31,7 +31,6 @@ Supermarkets, grocery stores, food supplies
 - `wal-mart`, `walmart`
 - `wholefds`, `whole foods`
 - `makola`
-- `target` (when food context)
 - `sam's club`
 - `aldi`
 - `trader joe`
@@ -146,7 +145,7 @@ Retail, clothing, general merchandise
 
 **Patterns**:
 - `marshalls`
-- `target` (non-food)
+- `target` (Shopping by default since 2026-09-21; the code has no food context)
 - `amazon`
 - `skims`
 - `tj maxx`
@@ -172,7 +171,6 @@ Childcare, family activities, kids
 - `brightwheel`, `brghtwhl`
 - `daycare`
 - `childcare`
-- `school`
 - `kid`
 - `children`
 - `pediatric`
@@ -227,7 +225,6 @@ Education expenses
 - `university`
 - `college`
 - `tuition`
-- `school`
 - `education`
 - `coursera`
 - `udemy`
@@ -536,32 +533,44 @@ a business trip. Both classified by the account owner 2026-09-08.
 
 ## Deliberately left Uncategorized
 
-`Paid Check` and `Target` are ambiguous by nature: a written check or a Target
-run can be groceries, household, or shopping. Guessing is worse than a visible
-gap. Review these by hand.
+`Paid Check` is ambiguous by nature: a written check can be groceries,
+household, or shopping. Guessing is worse than a visible gap. Review it by hand.
 
 `School` is the same case, and so is any Apple Pay passthrough where the memo
 carries only the wallet prefix and a merchant the owner has not identified.
+`Target` used to sit here; the owner chose Shopping as its default 2026-09-21.
 
 ## Merchants classified 2026-09-21
 
 A September review found 15 uncategorized debits in one month. The account
 owner classified the ambiguous ones directly; the rest matched an existing
-category on sight. `target` now defaults to Shopping instead of being left
-unmatched. `school` stays unmatched because a school fee and a school
-fundraiser land in different buckets.
+category on sight. The per-category lists above carry the patterns; this
+section records the decisions and the traps found in review.
 
-### Additions to existing categories
-
-- **Family Care**: `alpha omega sugar`, `pearland school`
-- **Business Expense**: `beyond inc` (Overstock furniture, owner's call), `obsidian`
-- **Shopping**: `target`, `tiktok shop`, `bath & body`, `zinae`, `goodwill`
+- **Family Care**: `alpha omega` (the memo is `ALPHA OMEGA SUGAR LAND TX`; the city is not part of the pattern), `pearland school`
+- **Business Expense**: `beyond inc` and `beyond, inc` (Overstock furniture, owner's call), `obsidian`
+- **Shopping**: `target`, `tiktok sho` (the raw memo truncates to `BT*TIKTOK SHOCULVER CITY CA`), `body works` (raw memo spells `BATH AND BODY WORKS`), `zinae`
 - **Dining Out**: `haii keii`, `jimmy changas`, `another broken` (the feed truncates the merchant to `Another Broken Epearland`, so `broken egg` never matched)
-- **Personal Care**: `pristine` (dry cleaning), `carlwillblendit`, `fresha`
-- **Travel**: `renaissance`
+- **Personal Care**: `pristine care` (dry cleaning; a bare `pristine` would take `Pristine Lawn Care` from Home & Garden), `carlwillblendit`, `fresha`
+- **Travel**: `renaissance atlanta`, `renaissance aatlanta` (Apple Pay doubles the A; Travel is matched second, so a bare `renaissance` would claim the Texas Renaissance Festival and Renaissance Learning)
+- **Entertainment**: `tix event`, `renaissance fest`
 - **Bills & Utilities**: `county mud`, `ownwell`
-- **Credit Card Payment**: `automatic payment` (Chase's wording for the card-side credit leg)
-- **Fees & Interest**: `returned payment`
-- **Entertainment**: `tix event`
 - **Groceries**: `tower beer wine`
 - **Health & Wellness**: `fitnfine`
+
+### The card-payment leg, again
+
+Chase truncates the card-side credit at 25 characters to `AUTOMATIC PAYMENT -
+THANK`, so `thank you` never saw it. `payment - thank` now sits in Credit Card
+Payment. It stays payment-specific on purpose: a bare `automatic payment` would
+have booked any biller's autopay as non-spend and dropped it from the review.
+
+A bounced card payment posts as a `Returned Payment` debit for the same amount
+as the credit it unwinds. It is the mirror of a non-spend event, so it lives in
+Credit Card Payment and nets to zero, not in Fees & Interest where it would
+read as spend (two reversals in March 2026 were five figures each). The
+issuer's penalty is a separate `RETURNED PAYMENT FEE` row, decided by a guard
+ahead of the table so the reversal pattern cannot claim it.
+
+`goodwill` was proposed for Shopping and dropped: the only rows carrying the
+word are `SAKS BENEFIT GOODWILL`, an Amex statement credit, not the store.
