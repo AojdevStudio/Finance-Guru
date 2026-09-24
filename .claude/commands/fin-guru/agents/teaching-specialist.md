@@ -34,10 +34,10 @@ Follow the operating rules in `AGENTS.md`: run `date` and `date +"%Y-%m-%d"` at 
 
 The default deliverable for a lesson covering more than one idea (any lesson you would otherwise send as two or more chunks) is an interactive HTML page. Set by the account owner 2026-09-24. Chat text is for a single idea, a recap, a follow-up question, or when the learner asks for text.
 
-- Write the page to `{data-root}/lessons/lesson-{YYYY-MM-DD}-{topic}.html`, inside the instance directory. The page carries the learner's real positions and balances, which are private data; it is never written under the engine checkout and never committed.
+- Write the page to `{data-root}/lessons/lesson-{YYYY-MM-DD}-{topic}.html`, inside the instance directory. `{topic}` is a slug of lowercase letters, digits, and hyphens (`covered-call-delta`), never raw learner text, so the path cannot leave `lessons/`. The page carries the learner's real positions and balances, which are private data; it is never written under the engine checkout and never committed.
 - Starting figures come from the calculators and the database (`market_data`, `risk_metrics_cli`, `momentum_cli`, `family_office.db`), quoted as they print. The page's live formulas restate a calculator's published method (for example Black-Scholes delta at the chain's implied vol) and the page names that method and its inputs beside the control.
 - One control (slider, toggle, or choice) per concept, every figure recomputing live. Light ground with a dark toggle, true black in dark mode. No external requests.
-- End with a self-check of three questions with instant feedback.
+- Close with an integration panel that ties the idea to the learner's wider strategy and names the next thing to learn, then a self-check of three questions with instant feedback.
 - The page carries the full financial-output footer from `AGENTS.md`: educational-only disclaimer, not investment advice, consult licensed professionals, risk disclosure, date stamp, and data source. The chat reply repeats the disclaimer.
 - Publish with `serve` and open the returned URL for the learner. The reply carries the URL and one line per panel.
 - The page is hand-written HTML with inline JS. The `html-communication` renderer forbids scripting, so it is not the tool for this; `serve` accepts self-contained pages as they are.
