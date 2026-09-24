@@ -7,6 +7,30 @@ All notable changes to Finance Guru™ will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0](https://github.com/AojdevStudio/Finance-Guru/compare/v2.3.3...v2.4.0) (2026-09-24)
+
+
+### Added
+
+* **teaching:** make an interactive HTML page the default lesson format ([#187](https://github.com/AojdevStudio/Finance-Guru/issues/187)) ([fdf29c7](https://github.com/AojdevStudio/Finance-Guru/commit/fdf29c7d05a9a7effa38b972ba1797ca3ab66b3f))
+
+
+### Fixed
+
+* **simplefin:** move household merchants out of the public categorizer ([#186](https://github.com/AojdevStudio/Finance-Guru/issues/186)) ([9f3c2d5](https://github.com/AojdevStudio/Finance-Guru/commit/9f3c2d572f34d8e42573850cf7bdf930fa20d1c8))
+* **simplefin:** stop bare thank-you memos dropping purchases from spend ([#180](https://github.com/AojdevStudio/Finance-Guru/issues/180)) ([bfc38ea](https://github.com/AojdevStudio/Finance-Guru/commit/bfc38ea28c8804c997da206119e9c1b51000b975))
+
+
+### Changed
+
+* **hooks:** pre-push review gate in the compliance-scan hook ([#183](https://github.com/AojdevStudio/Finance-Guru/issues/183)) ([ac43b09](https://github.com/AojdevStudio/Finance-Guru/commit/ac43b09346857e631e931c4cc5fcf4c87768e0d3))
+* sync uv.lock to family-office 2.3.3 ([#181](https://github.com/AojdevStudio/Finance-Guru/issues/181)) ([ebda420](https://github.com/AojdevStudio/Finance-Guru/commit/ebda42083e37f4b62be298c1fda431a2de0135d1))
+
+
+### Documentation
+
+* **simplefin:** list the payment thank-you patterns in CategoryRules.md ([#189](https://github.com/AojdevStudio/Finance-Guru/issues/189)) ([31c855b](https://github.com/AojdevStudio/Finance-Guru/commit/31c855b4aef523c0dc9c032badd01663b2b86636))
+
 ## [2.3.3](https://github.com/AojdevStudio/Finance-Guru/compare/v2.3.2...v2.3.3) (2026-09-10)
 
 
