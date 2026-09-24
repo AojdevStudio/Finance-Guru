@@ -8,7 +8,7 @@ Short version — before you open a pull request:
 2. Fork, clone, run `./setup.sh`
 3. Create a feature branch off `main`
 4. Run `uv run ruff format .`, `uv run ruff check .`, `uv run mypy src/`, `uv run pytest`
-5. Open a PR — [CodeRabbit](https://www.coderabbit.ai/) and the Claude review bot will comment automatically
+5. Open a PR — [Pullfrog](https://pullfrog.com/) and [CodeRabbit](https://www.coderabbit.ai/) review it automatically
 
 ## Filing issues
 

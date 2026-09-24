@@ -54,7 +54,7 @@ uv run pytest -m "not integration"
 
 - The pre-commit hook runs the full [pytest](https://docs.pytest.org/) suite with the 80% coverage gate on every commit, so a commit takes about ten seconds. Tests marked `integration` need real API keys.
 - Tests assume no `.env` in the repository root. A scaffolded `.env` holds placeholder strings such as `your_monthly_dividend_income_here`, and `python-dotenv` loads them, which fails the margin-metrics tests with `could not convert string to float`. Delete the file or fill in real numbers.
-- Pull requests get [CodeRabbit](https://www.coderabbit.ai/) and Claude reviews. Verify each finding against the source before acting on it and dismiss a false positive with a written reason.
+- Pull requests get a [Pullfrog](https://pullfrog.com/) review and a [CodeRabbit](https://www.coderabbit.ai/) review. Pullfrog's `pullfrog-approval` check on the current head is the merge gate; CodeRabbit is advisory. Verify each finding against the source before acting on it and dismiss a false positive with a written reason.
 
 ## Session end
 
