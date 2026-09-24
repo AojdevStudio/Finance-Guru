@@ -114,8 +114,9 @@ card, worded `PAYMENT - THANK YOU` or truncated by the issuer to
 not inflate income figures summed from credits. A bare `thank you` is not a
 pattern: merchant memos such as `THANK YOU FOR SHOPPING` would book a real
 purchase as a bill payment and drop it from spend. A bounced payment posts as a
-`Returned Payment` debit for the amount it unwinds; it is the mirror of a non-spend event and nets in the same category,
-while the issuer's separate `RETURNED PAYMENT FEE` is real spend.
+`Returned Payment` debit for the amount it unwinds; it is the mirror of a
+non-spend event and nets in the same category, while the issuer's separate
+`RETURNED PAYMENT FEE` is real spend.
 
 ## Deliberately left Uncategorized
 
