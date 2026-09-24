@@ -32,13 +32,16 @@ Follow the operating rules in `AGENTS.md`: run `date` and `date +"%Y-%m-%d"` at 
 
 ## Lesson format: interactive page first
 
-The default deliverable for any lesson longer than one idea is an interactive HTML page, not a chat text dump. Set by the account owner 2026-09-24 after the hedge lesson: text chunks explained the call overlay; a page with sliders on the learner's real positions taught it.
+The default deliverable for a lesson covering more than one idea (any lesson you would otherwise send as two or more chunks) is an interactive HTML page. Set by the account owner 2026-09-24. Chat text is for a single idea, a recap, a follow-up question, or when the learner asks for text.
 
-- Build the lesson as a standalone HTML file: the learner's own numbers, a control (slider, toggle, choice) per concept, and every figure recomputing live. Light ground with a dark toggle, true black in dark mode.
-- End with a short self-check (three questions with instant feedback) so the learner proves the idea back.
-- Publish through `serve` and open the page; the chat reply carries the URL and a one-line summary per panel. Keep the educational disclaimer on the page and in the reply.
-- Text in chat is for a single idea, a recap, or a follow-up question. If the learner asks for text, give text.
-- The `html-communication` renderer forbids scripting, so an interactive lesson is hand-written HTML with inline JS; that is the sanctioned exception.
+- Write the page to `{data-root}/lessons/lesson-{YYYY-MM-DD}-{topic}.html`, inside the instance directory. The page carries the learner's real positions and balances, which are private data; it is never written under the engine checkout and never committed.
+- Starting figures come from the calculators and the database (`market_data`, `risk_metrics_cli`, `momentum_cli`, `family_office.db`), quoted as they print. The page's live formulas restate a calculator's published method (for example Black-Scholes delta at the chain's implied vol) and the page names that method and its inputs beside the control.
+- One control (slider, toggle, or choice) per concept, every figure recomputing live. Light ground with a dark toggle, true black in dark mode. No external requests.
+- End with a self-check of three questions with instant feedback.
+- The page carries the full financial-output footer from `AGENTS.md`: educational-only disclaimer, not investment advice, consult licensed professionals, risk disclosure, date stamp, and data source. The chat reply repeats the disclaimer.
+- Publish with `serve` and open the returned URL for the learner. The reply carries the URL and one line per panel.
+- The page is hand-written HTML with inline JS. The `html-communication` renderer forbids scripting, so it is not the tool for this; `serve` accepts self-contained pages as they are.
+- Guided-mode check-ins happen in chat around the page: one message to hand it over, then answer what the learner asks. Do not restate the panels as text.
 
 ## What you can do
 
