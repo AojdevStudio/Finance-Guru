@@ -109,11 +109,14 @@ because the sync upserts the category on every row it touches.
 
 A bill payment posts twice: a debit on the funding account and a credit on the
 card, worded `PAYMENT - THANK YOU` or truncated by the issuer to
-`AUTOMATIC PAYMENT - THANK`. `thank you` and `payment - thank` sit in Credit
-Card Payment so the credit leg does not inflate income figures summed from
-credits. A bounced payment posts as a `Returned Payment` debit for the amount
-it unwinds; it is the mirror of a non-spend event and nets in the same category,
-while the issuer's separate `RETURNED PAYMENT FEE` is real spend.
+`AUTOMATIC PAYMENT - THANK`. `payment - thank you`, `payment thank you`, and
+`thank you for your payment` sit in Credit Card Payment so the credit leg does
+not inflate income figures summed from credits. A bare `thank you` is not a
+pattern: merchant memos such as `THANK YOU FOR SHOPPING` would book a real
+purchase as a bill payment and drop it from spend. A bounced payment posts as a
+`Returned Payment` debit for the amount it unwinds; it is the mirror of a
+non-spend event and nets in the same category, while the issuer's separate
+`RETURNED PAYMENT FEE` is real spend.
 
 ## Deliberately left Uncategorized
 
@@ -147,7 +150,7 @@ asserts the two match, so edit the code first and this list second.
 
 ### Credit Card Payment
 
-`applecard`, `gsbapayment`, `chase payment`, `amex payment`, `discover payment`, `credit card payment`, `american express credit card`, `chase credit ca`, `wf credit card`, `apple credit card`, `amex epayment`, `chase credit card`, `thank you`
+`applecard`, `gsbapayment`, `chase payment`, `amex payment`, `discover payment`, `credit card payment`, `american express credit card`, `chase credit ca`, `wf credit card`, `apple credit card`, `amex epayment`, `chase credit card`, `payment - thank you`, `payment thank you`, `thank you for your payment`
 
 ### Giving
 
