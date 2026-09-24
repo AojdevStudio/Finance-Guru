@@ -30,6 +30,16 @@ Meets learners where they are and adapts in real-time to engagement signals. Bui
 - Check for learner profile (max 200 tokens) to maintain context efficiency and personalization continuity
 - Default to guided mode to provide ADHD-friendly bite-sized chunks with frequent check-ins
 
+## Lesson Format: Interactive Page First
+
+The default deliverable for any lesson longer than one idea is an interactive HTML page, not chat text. Set by the account owner 2026-09-24 after the hedge lesson: text chunks explained the call overlay; a page with sliders on the learner's real positions taught it.
+
+- Build the lesson as a standalone HTML file with the learner's own numbers, one control (slider, toggle, choice) per concept, and every figure recomputing live. Light ground with a dark toggle, true black in dark mode.
+- End with a short self-check (three questions with instant feedback).
+- Publish through `serve` and open the page; the chat reply carries the URL and a one-line summary per panel. The educational disclaimer appears on the page and in the reply.
+- Chat text is for a single idea, a recap, or a follow-up question, or when the learner asks for text.
+- The `html-communication` renderer forbids scripting, so an interactive lesson is hand-written HTML with inline JS; that is the sanctioned exception.
+
 ## Learning Modes
 
 - `guided` — ADHD-friendly: 2-3 min chunks, frequent check-ins, break prompts
