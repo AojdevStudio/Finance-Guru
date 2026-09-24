@@ -23,11 +23,17 @@ def refresh(database_url: str | None, *, months: int = 12) -> dict[str, Any]:
     Returns:
         Per-source statuses and the refresh timestamp.
     """
-    account_config = InstancePaths.resolve().snaptrade_accounts
+    paths = InstancePaths.resolve()
+    account_config = paths.snaptrade_accounts
     operations: tuple[tuple[str, Callable[[], dict[str, Any]]], ...] = (
         ("positions", lambda: sync_positions(account_config, database_url)),
         ("transactions", lambda: sync_transactions(account_config, database_url)),
-        ("expenses", lambda: sync_expenses(database_url, months=months)),
+        (
+            "expenses",
+            lambda: sync_expenses(
+                database_url, months=months, merchant_rules=paths.merchant_rules
+            ),
+        ),
     )
     sources: list[dict[str, Any]] = []
     for name, operation in operations:

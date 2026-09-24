@@ -36,6 +36,7 @@ Finance Guru is a **private, single-user family-office system**. This document d
 - Raw Fidelity CSVs (gitignored)
 - SSNs, account numbers, and API keys (scrubbed by `src/utils/log.py:ScrubPIIProcessor` before they reach any log)
 - `.env` contents
+- `merchant-rules.yaml`, your household merchant names (the engine ships only national brands)
 - `finance-guru-desktop/` runtime state (also gitignored)
 
 ## Security checklist (before publishing the fork)

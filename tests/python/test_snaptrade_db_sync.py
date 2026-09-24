@@ -119,8 +119,8 @@ def test_categorize_matches_and_prioritizes_transfers() -> None:
     """Merchant text maps to the right category; transfers win over merchant reads."""
     from src.integrations.simplefin.categorize import categorize_expense as categorize
 
-    assert categorize("H-E-B #063 Pearland TX") == "Groceries"
-    assert categorize("CVS/PHARMACY # MANVEL TX") == "Health & Wellness"
+    assert categorize("H-E-B #063 Anytown TX") == "Groceries"
+    assert categorize("CVS/PHARMACY # ANYTOWN TX") == "Health & Wellness"
     assert categorize("Delta Airlines") == "Travel"
     # "American Express Travel" must read as Travel, not a bank/transfer
     assert categorize("American Express Travel") == "Travel"

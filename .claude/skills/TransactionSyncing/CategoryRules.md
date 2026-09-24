@@ -2,543 +2,209 @@
 
 Pattern matching rules for auto-categorizing card and bank purchases.
 
-> **Executable source of truth:** these rules are implemented in code at
-> `src/integrations/simplefin/categorize.py` (`categorize_expense(text, amount)`),
-> which the SimpleFIN expense sync runs so every `bank_transactions` row arrives
-> pre-categorized. This document is the human-readable mirror. When you add or
-> change a pattern here, update `categorize.py` (and its test) to match.
-
-## How to Add New Patterns
-
-To add a new categorization rule:
-
-1. Identify the merchant name pattern from Fidelity descriptions
-2. Add to the appropriate category section below
-3. Patterns are **case-insensitive**
-4. Use partial matches (e.g., "h-e-b" matches "H-E-B #063 Pearland TX")
-
----
-
-## Category Patterns
-
-### Groceries
-Supermarkets, grocery stores, food supplies
-
-**Patterns**:
-- `h-e-b`, `heb`
-- `kroger`
-- `costco`
-- `wal-mart`, `walmart`
-- `wholefds`, `whole foods`
-- `makola`
-- `target` (when food context)
-- `sam's club`
-- `aldi`
-- `trader joe`
-
-**Examples**:
-- "H-E-B #063 Pearland TX" -> Groceries
-- "COSTCO WHSE #1 PEARLAND TX" -> Groceries
-- "MAKOLA IMPORTS HOUSTON TX" -> Groceries
-
----
-
-### Dining Out
-Restaurants, fast food, entertainment dining
-
-**Patterns**:
-- `benihana`
-- `golden corral`
-- `papa john`
-- `chuck e cheese`
-- `wingstop`
-- `cinemark`
-- `mcdonald`
-- `chick-fil-a`
-- `chipotle`
-- `starbucks`
-- `coffee`
-- `restaurant`
-- `grill`
-- `cafe`
-- `makiin`
-- `sparkly photo` (event dining)
-
-**Examples**:
-- "BENIHANA SUGAR LAND" -> Dining Out
-- "TST*MAKIIN Houston TX" -> Dining Out
-- "PAPA JOHN'S #2 PEARLAND TX" -> Dining Out
-
----
-
-### Auto & Transport
-Vehicle expenses, fuel, parking, transportation
-
-**Patterns**:
-- `tesla`
-- `supercha` (Tesla Supercharger)
-- `parking`
-- `fastpark`
-- `uber`
-- `lyft`
-- `shell`
-- `exxon`
-- `chevron`
-- `valero`
-- `buc-ee`
-- `gas station`
-- `toll`
-
-**Examples**:
-- "Tesla, Inc. SUPERCHA600118984238637" -> Auto & Transport
-- "FASTPARKHOU HOUSTON TX" -> Auto & Transport
-- "Tesla Property Casual Fremont CA" -> Auto & Transport
-
----
-
-### Personal Care
-Grooming, beauty, self-care
-
-**Patterns**:
-- `salon`
-- `spa`
-- `barber`
-- `sephora`
-- `beauty supply`
-- `supreme beauty`
-- `ulta`
-- `nail`
-- `hair`
-- `shaving grace`
-- `gloss* skin`
-- `cash app*` (often personal transfers)
-
-**Examples**:
-- "K STAR SALON & SPA MANVEL TX" -> Personal Care
-- "A SHAVING GRACE BARBER PEARLAND TX" -> Personal Care
-- "SEPHORA PEACHT PEACHTREE CI GA" -> Personal Care
-
----
-
-### Health & Wellness
-Medical, pharmacy, fitness
-
-**Patterns**:
-- `cvs`
-- `pharmacy`
-- `walgreens`
-- `life time` (gym)
-- `doctor`
-- `medical`
-- `dental`
-- `clinic`
-- `hospital`
-- `urgent care`
-
-**Examples**:
-- "CVS/PHARMACY # MANVEL TX" -> Health & Wellness
-- "LIFE TIME #320" -> Health & Wellness
-
----
-
-### Shopping
-Retail, clothing, general merchandise
-
-**Patterns**:
-- `marshalls`
-- `target` (non-food)
-- `amazon`
-- `skims`
-- `tj maxx`
-- `ross`
-- `old navy`
-- `gap`
-- `nordstrom`
-- `macy`
-- `best buy`
-- `apple store`
-
-**Examples**:
-- "MARSHALLS #877 PEARLAND TX" -> Shopping
-- "SP SKIMS CHECKOUT.SKIM CA" -> Shopping
-
----
-
-### Family Care
-Childcare, family activities, kids
-
-**Patterns**:
-- `aqua tots`
-- `brightwheel`, `brghtwhl`
-- `daycare`
-- `childcare`
-- `school`
-- `kid`
-- `children`
-- `pediatric`
-
-**Examples**:
-- "AQUA TOTS - PEARLAND" -> Family Care
-- "BRGHTWHL R* REDEEMER" -> Family Care
-
----
-
-### Bills & Utilities
-Recurring bills, subscriptions, utilities
-
-**Patterns**:
-- `autopay`
-- `acctverify`
-- `electric`
-- `water`
-- `internet`
-- `comcast`
-- `att`
-- `verizon`
-- `t-mobile`
-- `netflix`
-- `spotify`
-- `subscription`
-
-**Examples**:
-- "BMO ACCTVERIFY" -> Bills & Utilities
-
----
-
-### Cash Withdrawal
-ATM and cash transactions
-
-**Patterns**:
-- `atm`
-- `cash withdrawal`
-- `cash advance`
-
-**Examples**:
-- "ATM0043 11555 MAGNOLIA PEARLAND TX" -> Cash Withdrawal
-- "ATMXD10 *SEDONA LAKES MANVEL TX" -> Cash Withdrawal
-
----
-
-### Tuition
-Education expenses
-
-**Patterns**:
-- `regent univer`
-- `university`
-- `college`
-- `tuition`
-- `school`
-- `education`
-- `coursera`
-- `udemy`
-
-**Examples**:
-- "REGENT UNIVERSPURCHASE" -> Tuition
-
----
-
-### Business Expense
-Work-related purchases
-
-**Patterns**:
-- `gumroad`
-- `ups`
-- `fedex`
-- `office depot`
-- `staples`
-- `postal`
-- `usps`
-- `business`
-- `linkedin`
-- `zoom`
-
-**Examples**:
-- "GUMROAD* SHAWN GRADY" -> Business Expense
-- "POSTAL COPY CENTER-931 PEARLAND TX" -> Business Expense
-
----
-
-### Loan Payment
-Debt payments
-
-**Patterns**:
-- `wells fargo` + `draft` or `audraft`
-- `loan payment`
-- `mortgage`
-- `car payment`
-- `student loan`
-
-**Examples**:
-- "WELLS FARGO AUDRAFT" -> Loan Payment
-
----
-
-### Home & Garden
-Home improvement, garden, maintenance
-
-**Patterns**:
-- `home depot`
-- `lowes`
-- `sawyer`
-- `smart core`
-- `garden`
-- `hardware`
-- `furniture`
-
-**Examples**:
-- "SAWYER + S* SMART CORE" -> Home & Garden
-
----
-
-### Crypto Deposit
-Cryptocurrency deposits and transfers
-
-**Patterns**:
-- `btc deposited`
-- `bitcoin`
-- `fidelity crypto`
-- `eth deposited`
-- `crypto`
-
-**Examples**:
-- "0.17713256 BTC deposited" -> Crypto Deposit
-- "Fidelity Crypto® 8449251033" -> Crypto Deposit
-
----
-
-### Credit Card Payment
-Credit card bill payments
-
-**Patterns**:
-- `applecard`
-- `gsbapayment`
-- `chase payment`
-- `amex payment`
-- `discover payment`
-
-**Examples**:
-- "DIRECT DEBIT APPLECARD GSBAPAYMENT" -> Credit Card Payment
-
----
-
-### Exempt
-Verification transactions, zero amounts
-
-**Patterns**:
-- `ifacctverify`
-- `verification`
-- Amount = $0.00 or < $1.00
-
-**Examples**:
-- "WELLS FARGO IFACCTVERIFY" -> Exempt
-
----
-
-## Uncategorized
-
-Any transaction not matching the above patterns is marked as **"Uncategorized"** and flagged for manual review in the sync summary.
-
-**Common uncategorized reasons**:
-- New merchant not in patterns
-- Unusual description format
-- One-time or rare purchase
-
-**To resolve**: Add the pattern to the appropriate category above.
-
----
-
-## Pattern Matching Algorithm
-
-```python
-def categorize_expense(description: str) -> str:
-    desc = description.lower()
-
-    # Check each category's patterns
-    for category, patterns in CATEGORY_PATTERNS.items():
-        for pattern in patterns:
-            if pattern in desc:
-                return category
-
-    return "Uncategorized"
-
-CATEGORY_PATTERNS = {
-    "Groceries": ["h-e-b", "heb", "kroger", "costco", "wal-mart", "walmart", ...],
-    "Dining Out": ["benihana", "golden corral", "papa john", ...],
-    "Auto & Transport": ["tesla", "supercha", "parking", "fastpark", ...],
-    # ... etc
-}
+> **Executable source of truth:** the rules live in code at
+> `src/integrations/simplefin/categorize.py` (`categorize_expense`), which the
+> SimpleFIN expense sync runs so every `bank_transactions` row arrives
+> pre-categorized. This document mirrors that table and records the lessons
+> behind its ordering. When you change a pattern, change the code and its test
+> first, then this file.
+
+## Two tables: public brands and household merchants
+
+The public table in `categorize.py` holds **national brands and generic
+wording only**. Anything that identifies a household (a local restaurant, the
+daycare, the church, a lender, a county utility) is private data under
+`DataClassification.md` and never goes in a tracked file.
+
+Household merchants live in the instance directory as **`merchant-rules.yaml`**,
+a mapping of category name to a list of lowercase substrings. The sync loads it
+with `load_merchant_rules()` and appends each list to its category with
+`merge_patterns()`, so household patterns extend a category but never create or
+reorder one. A missing file is fine; a typo in a category name blocks the sync
+with a typed error rather than silently dropping rules.
+
+```yaml
+# merchant-rules.yaml (instance directory, never committed to the engine)
+Groceries:
+  - corner market
+Family Care:
+  - little sprouts daycare
 ```
 
----
+## How to add a pattern
 
-## Extending Categories
+1. Decide whether the merchant is a national brand (public table) or a
+   household merchant (`merchant-rules.yaml`). When in doubt, it is household.
+2. Copy the substring from the **raw bank memo**, not from SimpleFIN's cleaned
+   payee. Memos are truncated and abbreviated; a pattern that only matches the
+   payee form fails on the description alone.
+3. Patterns are case-insensitive substrings. Anything shorter than about six
+   characters, or a common English word, needs a collision check against the
+   stored feed before it ships (see below).
+4. For the public table, add a test in `tests/python/test_categorize.py` using
+   a placeholder memo and a round amount.
 
-When the user wants to add new categories or patterns:
+## Matching algorithm
 
-1. **Add to existing category**: Update the patterns list above
-2. **Create new category**: Add a new section with patterns and examples
-3. **Expense Tracker sync**: Ensure the category name matches Budget Planner
+- Amounts under $1.00 and verification memos are `Exempt` before any pattern
+  runs, as are SPAXX core sweeps and a `RETURNED PAYMENT FEE`.
+- A retirement account returns `Retirement` for every row.
+- Payroll wording, and checks on a business account, return `Payroll`.
+- Then the table runs in order and **the first category with a hit wins**.
+- An unmatched credit on a business account is `Business Income`.
+- Everything else is `Uncategorized`.
 
-**Budget Planner categories** (must match exactly):
-- Groceries
-- Dining Out
-- Auto & Transport
-- Personal Care
-- Health & Wellness
-- Shopping
-- Family Care
-- Bills & Utilities
-- Cash Withdrawal
-- Tuition
-- Business Expense
-- Loan Payment
-- Home & Garden
-- Crypto Deposit
-- Credit Card Payment
-- Exempt
-- Software & Tech
-- Cell Phone
-- Gas
-- Water
-- Light Bill
-- Mortgage
+The sync matches against **payee and description joined**. Matching only the
+description missed every payee-shaped pattern and left most debit volume
+uncategorized (2026-08-04).
 
----
+## Non-spend and business categories
 
-**Last Updated**: 2026-08-31
-**Maintainer**: Finance Guru TransactionSyncing skill
+Categories that move money rather than consume it are excluded from spend
+totals, otherwise a card purchase is counted twice: once on the card and again
+when the bill is paid. Non-spend: `Credit Card Payment`, `Crypto Deposit`, `Exempt`, `Retirement`, `Transfer`.
+Business (excluded from household reviews, included in business P&L):
+`Business Expense`, `Business Income`, `Payroll`.
 
----
+## Ordering rules
 
-## Ordering rules (2026-08-04)
+Order in the table is the whole precedence mechanism. The invariants it
+encodes, each of which was a live bug once:
 
-`CATEGORY_PATTERNS` is an ordered dict and **the first match wins**, so placement
-is behavior, not style. Three orderings are load-bearing:
+- `Transfer` and `Travel` come first so an explicit remittance is not read as a
+  merchant and "American Express Travel" is Travel, not a card payment.
+- `Dining Out` precedes `Auto & Transport` so `uber eats` beats `uber`.
+- `Credit Card Payment` precedes `Bills & Utilities` so a card autopay memo is
+  not read as a utility. **Every pattern in that category must be
+  payment-specific**: a bare `credit card` once booked store purchases as bill
+  payments, and a bare `automatic payment` would book any biller's autopay as
+  non-spend.
+- `Fees & Interest` precedes `Entertainment`, but position alone is not
+  enough: an earlier category only wins if one of its patterns matches, so
+  every returned-payment wording is listed in fees explicitly.
+- `credit card payment` is deliberately absent from `Loan Payment`.
 
-1. **Travel before Credit Card Payment** so "American Express Travel" is a trip,
-   not a card payment.
-2. **Credit Card Payment before Bills & Utilities.** A card autopay memo reads
-   "Chase Credit Cautopay", which contains the substring `autopay`. With Bills &
-   Utilities first, every card payment was mis-filed as a utility bill.
-3. **`credit card payment` belongs to Credit Card Payment, not Loan Payment.**
-   It used to sit in Loan Payment, which is matched earlier, so card payments
-   never reached their own category.
+## Household patterns cannot change precedence
 
-## Match against payee AND description
+A household pattern only wins from its own category's position. A merchant
+whose memo contains an earlier public pattern (a butcher called "Halal Guys"
+when `halal guys` sits in Dining Out) cannot be reclaimed from the instance;
+that needs a change to the public table, raised as an issue.
 
-The sync joins both fields before categorizing. `description` is the raw bank
-memo (`DIRECT DEBIT AMEX EPAYMENT ACH PMT`); `payee` is SimpleFIN's normalized
-merchant name (`American Express Credit Card`). Matching description alone left
-67% of debit volume Uncategorized. **When adding a pattern, cover the
-abbreviated memo form too**, for example `vehreg` alongside
-`vehicle registration`, and `amex epayment` alongside `amex payment`.
+## Substring collisions
 
-## Non-spend categories
+Patterns are plain substrings, so a short one fires inside unrelated words.
+Three that misfiled real money: `spa` matched `SPAXX` (every core sweep became
+Personal Care), `credit card` matched `<Merchant> Credit Card` payees, and
+`uber` claimed `Uber Eats`. Fixes: `day spa` and `med spa` replace `spa`, a
+SPAXX guard runs ahead of the table, and `GOOGLE  WORKSPACE` (doubled space)
+and `LIVING SPACES` carry explicit patterns.
 
-`NON_SPEND_CATEGORIES` in `categorize.py` holds `Transfer`,
-`Credit Card Payment`, `Crypto Deposit`, `Exempt`, and `Retirement`. These move money rather
-than consume it and **must be excluded from spend totals**. Including them
-double-counts: once when a purchase hits the card, again when the card bill is
-paid. On 2026-08-04 that inflated a 30-day review roughly 3x.
-
-## Categories added 2026-08-04
-
-### Giving
-Church and ministry contributions.
-
-**Patterns**: `anglicanchurch`, `church`, `tithe`, `offering`, `ministry`, `missions`
-
-### Fees & Interest
-Card interest and bank charges, kept out of merchant spend.
-
-**Patterns**: `interest charge`, `finance charge`, `annual fee`, `late fee`, `overdraft`, `service charge`, `maintenance fee`
-
-### Additions to existing categories
-
-- **Transfer**: `transferred to`, `transfer to`, `transfer withdrawal`, `webxtransfer`, `wire transfer`
-- **Credit Card Payment**: `credit card payment`, `american express credit card`, `chase credit ca`, `wf credit card`, `apple credit card`, `amex epayment`, `credit card`
-- **Loan Payment**: `mortg`, `mtgpmt`, `aes stdnt` (bank memos abbreviate)
-- **Auto & Transport**: `vehicle registration`, `vehreg`, `dmv`
-- **Business Expense**: `anthropic`, `claude.ai`, `cursor`, `github`, `vercel`
-
-## Substring collisions fixed 2026-09-08
-
-Patterns are plain substring matches, so a short pattern can fire inside a
-longer, unrelated word. Three were silently misfiling real money:
-
-1. **`spa` matched `SPAXX`.** Fidelity's core position is the SPAXX money
-   market, so every core sweep, some of them five figures, was booked as
-   _Personal Care_. The bare pattern is gone; `day spa`, `med spa`, and
-   `massage` replace it, and a `spaxx` / `core account` guard returns `Exempt`
-   ahead of the table.
-2. **`credit card` matched a store purchase.** SimpleFIN normalizes some
-   merchant payees to `<Merchant> Credit Card`, so a Macy's shopping trip read
-   as a bill payment and was dropped from spend totals as non-spend. The bare
-   catch-all is gone. **Every pattern in Credit Card Payment must be
-   payment-specific.**
-3. **`uber` claimed `Uber Eats`.** Food delivery was booking as a rideshare.
-   `uber eats` now sits in Dining Out, which is matched before Auto & Transport.
-
-**When adding a pattern shorter than about six characters, check it against a
-real merchant list first.** Replaying the rules over the stored feed found
-`spa` had also been capturing `GOOGLE  WORKSPACE UNIF` (note the doubled space,
-which is why the pattern is the bare word `workspace`) and `LIVING SPACES
-MOBILE`. Removing a broad pattern is only safe once every merchant it had been
-carrying has an explicit pattern of its own, so **always replay before and after
-a rule change** rather than trusting the new patterns alone.
+**Always replay the rules over the stored feed before and after a change.**
+Removing a broad pattern is only safe once every merchant it carried has a
+pattern of its own, and adding a generic word can silently reclassify history,
+because the sync upserts the category on every row it touches.
 
 ## The card-payment credit leg
 
 A bill payment posts twice: a debit on the funding account and a credit on the
-card itself, worded `PAYMENT - THANK YOU` or `Payment Thank You`. Only the debit
-was recognized, so the credit leg sat in Uncategorized and inflated any income
-figure summed from credits. `thank you` now belongs to Credit Card Payment,
-which is matched before Bills & Utilities and so also reclaims the
-`AUTOPAY PAYMENT - THANK YOU` rows that `autopay` had taken.
-
-## Categories added 2026-09-08
-
-### Entertainment
-Recreation, kept separate from Dining Out so restaurants stay readable.
-
-**Patterns**: `playstation`, `andretti`, `bounce`, `gamestop`, `amc theat`, `ticketmaster`
-
-**Placed after Fees & Interest on purpose**, though position alone is not the
-whole defense. An earlier category only wins if one of its patterns actually
-matches, and `BOUNCED CHECK FEE` matched nothing in Fees & Interest while
-containing `bounce`. Every returned-payment wording is therefore listed in Fees
-& Interest explicitly. Caught by CodeRabbit on PR #176.
-
-### Business Income
-Consulting revenue. **It has no pattern list.** The payer's name is private data
-and stays out of this repository, so the account carries the signal: an
-unmatched credit on an account matching `is_business_account()` is income. The
-fallback runs _after_ the pattern table, so an explicit `Transfer` pattern still
-claims an inter-account move first. Added to `BUSINESS_CATEGORIES`, so household
-reviews exclude it and business P&L includes it.
-
-### Additions to existing categories
-
-- **Transfer**: `transfer deposit`, `transfer from`, `instant transfer`, `capital one bank`
-- **Groceries**: `halal meat`, `southwest farmers` (before Dining Out, so the butcher does not match `halal guys`)
-- **Dining Out**: `uber eats`, `doordash`, `whataburger`, `panda express`, `burger king`, `auntie anne`, `pick up stix`, `chicken salad chick`, `piada`, `nishiki`, `gringos`, `rouxpour`, `halal guys`, `broken egg`, `thai`
-- **Auto & Transport**: `texaco`, `bp gas`, `car wash`, `parkify`, `safelite`, `auto glass`
-- **Personal Care**: `clean skin`, `cloud 9 spa`, `lash`, `wax`, `face reality`
-- **Health & Wellness**: `mychart`, `methodist` (Giving matches `church` first, so a congregation still lands in Giving)
-- **Shopping**: `shopwss`, `fashion nova`, `burlington`, `uptown cheapskate`, `janie & jack`, `david yurman`, `dollar general`
-- **Bills & Utilities**: `rhythm ops`, `total wireless`, `tidal`, `prime video`
-- **Business Expense**: `greptile`, `openrouter`, `slack`, `paddle`, `ui.com`, `ubiquiti`, `newegg`, `bambula`, `connectech`, `pga frisco`, `workspace`
-- **Fees & Interest**: `adj redist`, `bounced check`, `returned check`, `nsf fee`
-- **Home & Garden**: `bermuda dude`, `living spaces`, `lawn`, `wayfair`, `flower shop`
-
-Homelab and fabrication hardware is business input, and the PGA Frisco charge is
-a business trip. Both classified by the account owner 2026-09-08.
+card, worded `PAYMENT - THANK YOU` or truncated by the issuer to
+`AUTOMATIC PAYMENT - THANK`. `thank you` and `payment - thank` sit in Credit
+Card Payment so the credit leg does not inflate income figures summed from
+credits. A bounced payment posts as a `Returned Payment` debit for the amount
+it unwinds; it is the mirror of a non-spend event and nets in the same category,
+while the issuer's separate `RETURNED PAYMENT FEE` is real spend.
 
 ## Deliberately left Uncategorized
 
-`Paid Check` and `Target` are ambiguous by nature: a written check or a Target
-run can be groceries, household, or shopping. Guessing is worse than a visible
-gap. Review these by hand.
-
-`School` is the same case, and so is any Apple Pay passthrough where the memo
+`Paid Check` is ambiguous by nature: a written check can be groceries,
+household, or shopping. `School` is the same case (a fee and a fundraiser land
+in different buckets), and so is any Apple Pay passthrough where the memo
 carries only the wallet prefix and a merchant the owner has not identified.
+Guessing is worse than a visible gap. Review these by hand, then add the
+merchant to `merchant-rules.yaml`.
+
+## Public table
+
+Mirrors `CATEGORY_PATTERNS` in table order; `tests/python/test_categorize.py`
+asserts the two match, so edit the code first and this list second.
+
+### Transfer
+
+`amex send`, `taptap send`, `cashed check`, `zelle`, `venmo`, `cash app`, `transferred to`, `transfer to`, `transfer withdrawal`, `transfer deposit`, `transfer from`, `instant transfer`, `webxtransfer`, `wire transfer`
+
+### Travel
+
+`american express travel`, `amex travel`, `delta`, `southwest air`, `united airlines`, `american airlines`, `airline`, `enterprise`, `hertz`, `avis`, `hotel`, `airbnb`, `expedia`, `marriott`, `hilton`
+
+### Groceries
+
+`h-e-b`, `heb`, `kroger`, `costco`, `wal-mart`, `walmart`, `wholefds`, `whole foods`, `sam's club`, `aldi`, `trader joe`
+
+### Dining Out
+
+`benihana`, `golden corral`, `papa john`, `chuck e cheese`, `wingstop`, `cinemark`, `mcdonald`, `chick-fil-a`, `chipotle`, `starbucks`, `coffee`, `restaurant`, `grill`, `cafe`, `uber eats`, `doordash`, `whataburger`, `panda express`, `burger king`, `auntie anne`, `thai`
+
+### Credit Card Payment
+
+`applecard`, `gsbapayment`, `chase payment`, `amex payment`, `discover payment`, `credit card payment`, `american express credit card`, `chase credit ca`, `wf credit card`, `apple credit card`, `amex epayment`, `chase credit card`, `thank you`
+
+### Giving
+
+`church`, `tithe`, `offering`, `ministry`, `missions`
+
+### Auto & Transport
+
+`tesla`, `supercha`, `vehicle registration`, `vehreg`, `dmv`, `parking`, `uber`, `lyft`, `shell`, `exxon`, `chevron`, `valero`, `gas station`, `toll`, `texaco`, `bp gas`, `car wash`, `safelite`, `auto glass`
+
+### Personal Care
+
+`salon`, `day spa`, `med spa`, `massage`, `barber`, `sephora`, `beauty supply`, `ulta`, `nail`, `hair`, `lash`, `wax`
+
+### Health & Wellness
+
+`cvs`, `pharmacy`, `walgreens`, `doctor`, `medical`, `dental`, `clinic`, `hospital`, `urgent care`
+
+### Shopping
+
+`marshalls`, `amazon`, `skims`, `tj maxx`, `ross`, `old navy`, `gap`, `nordstrom`, `macy`, `best buy`, `apple store`, `fashion nova`, `burlington`, `janie & jack`, `david yurman`, `dollar general`
+
+### Family Care
+
+`daycare`, `childcare`, `kid`, `children`, `pediatric`
+
+### Bills & Utilities
+
+`autopay`, `acctverify`, `electric`, `water`, `internet`, `comcast`, `att`, `verizon`, `t-mobile`, `netflix`, `spotify`, `subscription`, `prime video`
+
+### Cash Withdrawal
+
+`atm`, `cash withdrawal`, `cash advance`
+
+### Tuition
+
+`university`, `college`, `tuition`, `coursera`, `udemy`
+
+### Business Expense
+
+`gumroad`, `ups`, `fedex`, `office depot`, `staples`, `postal`, `usps`, `linkedin`, `zoom`, `openai`, `chatgpt`, `anthropic`, `claude.ai`, `cursor`, `github`, `vercel`, `greptile`, `openrouter`, `slack`, `paddle`, `ui.com`, `ubiquiti`, `newegg`, `workspace`
+
+### Loan Payment
+
+`loan payment`, `mortgage`, `mortg`, `mtgpmt`, `car payment`, `student loan`
+
+### Fees & Interest
+
+`interest charge`, `finance charge`, `annual fee`, `annual membership fee`, `membership fee`, `late fee`, `overdraft`, `service charge`, `maintenance fee`, `maintenance charge`, `sie fee`, `adj redist`, `bounced check`, `returned check`, `nsf fee`
+
+### Entertainment
+
+`playstation`, `bounce`, `gamestop`, `amc theat`, `ticketmaster`
+
+### Home & Garden
+
+`home depot`, `lowes`, `garden`, `hardware`, `furniture`, `living spaces`, `lawn`, `wayfair`
+
+### Crypto Deposit
+
+`btc deposited`, `bitcoin`, `fidelity crypto`, `eth deposited`, `crypto`

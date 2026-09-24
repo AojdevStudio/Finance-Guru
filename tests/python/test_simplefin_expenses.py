@@ -44,7 +44,7 @@ SFIN_ACCOUNT_SET = {
                     "id": "TXN-pending",
                     "posted": 0,
                     "payee": "H-E-B",
-                    "description": "H-E-B #063 PEARLAND TX",
+                    "description": "H-E-B #063 ANYTOWN TX",
                     "amount": "12.34",
                 },
             ],
@@ -54,7 +54,7 @@ SFIN_ACCOUNT_SET = {
 
 
 def test_categorize_expense_patterns_and_exemptions() -> None:
-    assert categorize_expense("H-E-B #063 PEARLAND TX") == "Groceries"
+    assert categorize_expense("H-E-B #063 ANYTOWN TX") == "Groceries"
     assert categorize_expense("CHUCK E CHEESE 578") == "Dining Out"
     assert categorize_expense("Tesla SUPERCHA 123") == "Auto & Transport"
     assert categorize_expense("OPENAI *CHATGPT SUBSCR") == "Business Expense"
@@ -73,7 +73,7 @@ def test_resolve_direction_prefers_feed_wording_over_sign() -> None:
         == "credit"
     )
     assert (
-        resolve_direction("DIRECT DEPOSIT Ridgeline SerPAYROLL (Cash)", -2273.03)
+        resolve_direction("DIRECT DEPOSIT Ridgeline SerPAYROLL (Cash)", -2300.00)
         == "credit"
     )
     assert (
@@ -83,7 +83,7 @@ def test_resolve_direction_prefers_feed_wording_over_sign() -> None:
     # A debit marker with an unexpectedly positive amount still reads as outflow.
     assert resolve_direction("DIRECT DEBIT CHASE CREDIT CAUTOPAY", 600.00) == "debit"
     # No marker falls back to sign.
-    assert resolve_direction("H-E-B #063 PEARLAND TX", -54.13) == "debit"
+    assert resolve_direction("H-E-B #063 ANYTOWN TX", -54.13) == "debit"
     assert resolve_direction("Capital One", 2000.00) == "credit"
     assert resolve_direction(None, None) == "credit"
 
@@ -181,7 +181,7 @@ def test_resolve_direction_handles_fidelity_card_and_transfer_wording() -> None:
     # Outflows the feed reported as positive.
     assert (
         resolve_direction(
-            "CASH ADVANCE *SEDONA LAKES MANVEL TX 081826 AUTHID:624330 (Cash)", 654.00
+            "CASH ADVANCE *LAKESIDE ANYTOWN TX 081826 AUTHID:624330 (Cash)", 654.00
         )
         == "debit"
     )
@@ -193,7 +193,7 @@ def test_resolve_direction_handles_fidelity_card_and_transfer_wording() -> None:
     )
     assert (
         resolve_direction(
-            "DEBIT CARD PURCHASE CASH APP*ANGLICAN CHUR cash.app TX 082726", 20.00
+            "DEBIT CARD PURCHASE CASH APP*FIRST CHURCH cash.app TX 082726", 20.00
         )
         == "debit"
     )
@@ -227,9 +227,9 @@ def test_retirement_account_activity_is_not_household_spending() -> None:
     too generic to match on (a charitable contribution is real spending).
     """
     retirement = "EXAMPLE EMPLOYER 401(K) RETIREMENT PLAN"
-    assert categorize_expense("contribution", -123.08, retirement) == "Retirement"
-    assert categorize_expense("contribution", -30.77, retirement) == "Retirement"
-    assert categorize_expense("dividend", 7.84, retirement) == "Retirement"
+    assert categorize_expense("contribution", -120.00, retirement) == "Retirement"
+    assert categorize_expense("contribution", -30.00, retirement) == "Retirement"
+    assert categorize_expense("dividend", 8.00, retirement) == "Retirement"
     # Retirement must be excluded from household spending totals.
     assert "Retirement" in NON_SPEND_CATEGORIES
     # A contribution on a normal account is still ordinary spending, not Retirement.
@@ -252,20 +252,58 @@ def test_inbound_direct_deposits_are_payroll_regardless_of_employer_memo() -> No
     """
     cma = "Cash Management (Joint WROS) (0001)"
     assert (
-        categorize_expense("DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)", 2207.38, cma)
+        categorize_expense("DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)", 2200.00, cma)
         == "Payroll"
     )
     assert (
-        categorize_expense("DIRECT DEPOSIT Ridgeline SerACH (Cash)", 2273.03, cma)
+        categorize_expense("DIRECT DEPOSIT Ridgeline SerACH (Cash)", 2300.00, cma)
         == "Payroll"
     )
     # Already-working variants must not regress.
     assert (
-        categorize_expense("DIRECT DEPOSIT NORTHFIELD COLLPAYROLL (Cash)", 2431.51, cma)
+        categorize_expense("DIRECT DEPOSIT NORTHFIELD COLLPAYROLL (Cash)", 2400.00, cma)
         == "Payroll"
     )
     # Sub-dollar bank verification deposits stay Exempt, not payroll.
     assert (
-        categorize_expense("DIRECT DEPOSIT WELLS FARGO ACCTVERIFY", 0.29, cma)
+        categorize_expense("DIRECT DEPOSIT WELLS FARGO ACCTVERIFY", 0.25, cma)
         == "Exempt"
+    )
+
+
+def test_sync_applies_household_merchant_rules(tmp_path) -> None:
+    """A merchant known only to merchant-rules.yaml reaches the database with
+    its household category; without the file it stays Uncategorized."""
+    rules = tmp_path / "merchant-rules.yaml"
+    rules.write_text("Family Care:\n  - little sprouts\n", encoding="utf-8")
+    database_url = f"sqlite:///{tmp_path / 'fo.db'}"
+
+    def fake_dump(months: int, app_dir) -> dict:
+        return {
+            "accounts": [
+                {
+                    "id": "acct-1",
+                    "name": "Rewards Card (5555)",
+                    "org": {"name": "Any Bank"},
+                    "transactions": [
+                        {
+                            "id": "t1",
+                            "posted": 1755000000,
+                            "amount": "-40.00",
+                            "payee": "Little Sprouts",
+                            "description": "LITTLE SPROUTS ANYTOWN TX",
+                        }
+                    ],
+                }
+            ]
+        }
+
+    sync(database_url, dump_provider=fake_dump)
+    conn = sqlite3.connect(tmp_path / "fo.db")
+    assert conn.execute("SELECT category FROM bank_transactions").fetchone() == (
+        "Uncategorized",
+    )
+    sync(database_url, dump_provider=fake_dump, merchant_rules=rules)
+    assert conn.execute("SELECT category FROM bank_transactions").fetchone() == (
+        "Family Care",
     )

@@ -5,13 +5,20 @@ Covers the patterns added 2026-08-04 after a spending review found 72% of
 credit card payments to Loan Payment.
 """
 
+import re
+from pathlib import Path
+
 import pytest
 
 from src.integrations.simplefin.categorize import (
     BUSINESS_CATEGORIES,
+    CATEGORY_PATTERNS,
     NON_SPEND_CATEGORIES,
+    MerchantRulesError,
     categorize_expense,
     is_business_account,
+    load_merchant_rules,
+    merge_patterns,
 )
 
 
@@ -128,7 +135,7 @@ class TestTransfers:
         [
             "Transferred to Z Cash",
             "Transfer to brokerage",
-            "DIRECT DEBIT BMOBNK CK WEBXTRANSFER",
+            "DIRECT DEBIT ANYBANK CK WEBXTRANSFER",
             "Outgoing wire transfer",
         ],
     )
@@ -154,27 +161,27 @@ class TestCreditCardPayments:
         ],
     )
     def test_card_payments_are_credit_card_payment(self, text: str) -> None:
-        assert categorize_expense(text, -9402.47) == "Credit Card Payment"
+        assert categorize_expense(text, -9400.00) == "Credit Card Payment"
 
     def test_real_loans_still_route_to_loan_payment(self) -> None:
-        assert categorize_expense("DIRECT DEBIT AES STDNT LOAN", -4169.25) == (
+        assert categorize_expense("DIRECT DEBIT STUDENT LOAN SVC", -4200.00) == (
             "Loan Payment"
         )
-        assert categorize_expense("TRUIST MORTG TEL MTGPMT", -1500.00) == (
+        assert categorize_expense("ANYBANK MORTG TEL MTGPMT", -1500.00) == (
             "Loan Payment"
         )
 
     def test_amex_travel_still_beats_card_payment(self) -> None:
         """Travel is matched before Credit Card Payment on purpose."""
-        assert categorize_expense("American Express Travel", -813.44) == "Travel"
+        assert categorize_expense("American Express Travel", -800.00) == "Travel"
 
 
 class TestNewCategories:
     def test_church_giving(self) -> None:
-        assert categorize_expense("Anglicanchurchofpentx", -100.00) == "Giving"
+        assert categorize_expense("First Church of Anytown", -100.00) == "Giving"
 
     def test_interest_charge_is_a_fee(self) -> None:
-        assert categorize_expense("Interest Charge", -267.86) == "Fees & Interest"
+        assert categorize_expense("Interest Charge", -270.00) == "Fees & Interest"
 
     def test_vehicle_registration_is_transport(self) -> None:
         assert (
@@ -183,7 +190,7 @@ class TestNewCategories:
         )
 
     def test_ai_tooling_is_a_business_expense(self) -> None:
-        assert categorize_expense("Anthropic", -210.80) == "Business Expense"
+        assert categorize_expense("Anthropic", -210.00) == "Business Expense"
 
 
 class TestRawBankMemos:
@@ -203,7 +210,7 @@ class TestRawBankMemos:
             ("Transfer", "TRANSFER WITHDRAWAL To ....2222", "Transfer"),
             (
                 "State of Texas Vehicle Registration",
-                "BRAZORIA VEHREG 1302ANGLETON TX",
+                "ANYCOUNTY VEHREG 1302ANYTOWN TX",
                 "Auto & Transport",
             ),
         ],
@@ -215,10 +222,10 @@ class TestRawBankMemos:
 
     def test_raw_memo_alone_still_matches(self) -> None:
         """Even without the payee, the abbreviated memo must categorize."""
-        assert categorize_expense("DIRECT DEBIT AMEX EPAYMENT ACH PMT", -9402.47) == (
+        assert categorize_expense("DIRECT DEBIT AMEX EPAYMENT ACH PMT", -9400.00) == (
             "Credit Card Payment"
         )
-        assert categorize_expense("BRAZORIA VEHREG 1302ANGLETON TX", -272.00) == (
+        assert categorize_expense("ANYCOUNTY VEHREG 1302ANYTOWN TX", -272.00) == (
             "Auto & Transport"
         )
 
@@ -233,8 +240,8 @@ class TestNonSpendSet:
 
     def test_double_count_case_is_excluded(self) -> None:
         """An Amex purchase and the Amex bill payment must not both count."""
-        purchase = categorize_expense("Amazon", -329.83)
-        bill = categorize_expense("American Express Credit Card", -9402.47)
+        purchase = categorize_expense("Amazon", -330.00)
+        bill = categorize_expense("American Express Credit Card", -9400.00)
         assert purchase not in NON_SPEND_CATEGORIES
         assert bill in NON_SPEND_CATEGORIES
 
@@ -250,7 +257,7 @@ class TestUnchangedBehaviour:
             ("Tesla Supercharger", "Auto & Transport"),
             ("CVS Pharmacy", "Health & Wellness"),
             ("Amazon", "Shopping"),
-            ("Brightwheel", "Family Care"),
+            ("Sunny Days Daycare", "Family Care"),
             ("Netflix subscription", "Bills & Utilities"),
             ("ATM cash withdrawal", "Cash Withdrawal"),
         ],
@@ -276,7 +283,7 @@ class TestSubstringCollisions:
     )
     def test_spaxx_sweep_is_exempt_not_personal_care(self, memo: str) -> None:
         """ "SPAXX" contains "spa", so every core sweep was booked as a spa visit."""
-        assert categorize_expense(memo, 7716.47, "Cash Management (4444)") == "Exempt"
+        assert categorize_expense(memo, 7700.00, "Cash Management (4444)") == "Exempt"
 
     def test_real_spa_still_reaches_personal_care(self) -> None:
         assert categorize_expense("SERENITY DAY SPA", -120.00, None) == "Personal Care"
@@ -287,8 +294,8 @@ class TestSubstringCollisions:
         bill payment, which excluded a real purchase from spend totals."""
         assert (
             categorize_expense(
-                "Macy's Credit Card MACYS PEARLAND TWN CTR",
-                -255.42,
+                "Macy's Credit Card MACYS ANYTOWN TWN CTR",
+                -255.00,
                 "Sapphire Preferred (3333)",
             )
             == "Shopping"
@@ -296,14 +303,14 @@ class TestSubstringCollisions:
 
     def test_actual_card_payment_still_classified(self) -> None:
         assert (
-            categorize_expense("Chase Credit Card CHASE CREDIT CRD", -38.19, None)
+            categorize_expense("Chase Credit Card CHASE CREDIT CRD", -38.00, None)
             == "Credit Card Payment"
         )
 
     def test_food_delivery_is_dining_not_rideshare(self) -> None:
         """ "Uber Eats" contains "uber"; Auto & Transport was claiming it."""
         assert categorize_expense("Uber Eats", -1.84, None) == "Dining Out"
-        assert categorize_expense("Uber", -36.94, None) == "Auto & Transport"
+        assert categorize_expense("Uber", -37.00, None) == "Auto & Transport"
 
 
 class TestCardPaymentCreditLeg:
@@ -321,7 +328,7 @@ class TestCardPaymentCreditLeg:
         ],
     )
     def test_thank_you_credit_is_a_card_payment(self, memo: str) -> None:
-        assert categorize_expense(memo, 20009.65, "Platinum Card® (3333)") == (
+        assert categorize_expense(memo, 20000.00, "Platinum Card® (3333)") == (
             "Credit Card Payment"
         )
 
@@ -351,12 +358,12 @@ class TestBusinessIncome:
     PERSONAL = "360 Checking (2222)"
 
     def test_unmatched_credit_on_business_account_is_income(self) -> None:
-        assert categorize_expense("CGSOPERATING", 12320.00, self.BIZ) == (
+        assert categorize_expense("ACME OPERATING", 12000.00, self.BIZ) == (
             "Business Income"
         )
 
     def test_unmatched_credit_on_personal_account_is_not_income(self) -> None:
-        assert categorize_expense("SOME MERCHANT", 12320.00, self.PERSONAL) == (
+        assert categorize_expense("SOME MERCHANT", 12000.00, self.PERSONAL) == (
             "Uncategorized"
         )
 
@@ -383,15 +390,11 @@ class TestEntertainment:
         ("memo", "expected"),
         [
             ("PlayStation Network", "Entertainment"),
-            ("CE ANDRETTIS", "Entertainment"),
             ("Bounce", "Entertainment"),
-            # The account owner classified the PGA Frisco charge as a business
-            # trip on 2026-09-08, so it belongs to the business bucket.
-            ("PGA FRISCO FRONT", "Business Expense"),
         ],
     )
     def test_recreation_patterns(self, memo: str, expected: str) -> None:
-        assert categorize_expense(memo, -292.24, None) == expected
+        assert categorize_expense(memo, -290.00, None) == expected
 
     @pytest.mark.parametrize(
         "memo",
@@ -426,7 +429,6 @@ class TestSpaPatternFallout:
                 "Sapphire Preferred (3333)",
                 "Home & Garden",
             ),
-            ("CLOUD 9 SPA PEARLAND", "Rewards Card (5555)", "Personal Care"),
         ],
     )
     def test_merchants_the_spa_pattern_had_captured(
@@ -434,7 +436,7 @@ class TestSpaPatternFallout:
     ) -> None:
         """Removing the bare "spa" pattern must not drop these into
         Uncategorized: each one needs its own explicit pattern."""
-        assert categorize_expense(memo, -202.75, account) == expected
+        assert categorize_expense(memo, -200.00, account) == expected
 
     def test_inbound_transfer_is_not_business_income(self) -> None:
         """ "Instant Transfer Received From ...." does not contain "transfer
@@ -447,3 +449,73 @@ class TestSpaPatternFallout:
             )
             == "Transfer"
         )
+
+
+class TestMerchantRules:
+    """Household merchants live in the instance, never in the public table."""
+
+    def test_missing_file_means_no_household_rules(self, tmp_path) -> None:
+        assert load_merchant_rules(tmp_path / "merchant-rules.yaml") == {}
+
+    def test_rules_extend_a_category_without_reordering(self, tmp_path) -> None:
+        rules = tmp_path / "merchant-rules.yaml"
+        rules.write_text(
+            "Groceries:\n  - Corner Market\nFamily Care:\n  - little sprouts\n"
+        )
+        merged = merge_patterns(CATEGORY_PATTERNS, load_merchant_rules(rules))
+        assert list(merged) == list(CATEGORY_PATTERNS)
+        assert merged["Groceries"][-1] == "corner market"
+        assert (
+            categorize_expense("CORNER MARKET #12", -40.00, None, merged) == "Groceries"
+        )
+        assert (
+            categorize_expense("LITTLE SPROUTS", -40.00, None, merged) == "Family Care"
+        )
+        # The public table alone still knows nothing about the household.
+        assert categorize_expense("LITTLE SPROUTS", -40.00, None) == "Uncategorized"
+
+    def test_public_table_order_still_decides_ties(self, tmp_path) -> None:
+        """A household pattern in a later category cannot outrank an earlier
+        category's match; precedence stays with the public table."""
+        rules = tmp_path / "merchant-rules.yaml"
+        rules.write_text("Shopping:\n  - church store\n")
+        merged = merge_patterns(CATEGORY_PATTERNS, load_merchant_rules(rules))
+        assert categorize_expense("CHURCH STORE", -20.00, None, merged) == "Giving"
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            "Snacks:\n  - corner market\n",
+            "Groceries: corner market\n",
+            "Groceries:\n  - ''\n",
+            "- Groceries\n",
+            "Groceries:\n  - corner market\nGroceries:\n  - farm stand\n",
+            "[]\n",
+            "false\n",
+            "? [Groceries, Shopping]\n: [corner market]\n",
+        ],
+    )
+    def test_malformed_rules_block_instead_of_dropping(
+        self, tmp_path, body: str
+    ) -> None:
+        rules = tmp_path / "merchant-rules.yaml"
+        rules.write_text(body)
+        with pytest.raises(MerchantRulesError):
+            load_merchant_rules(rules)
+
+
+def test_category_rules_doc_mirrors_the_public_table() -> None:
+    """CategoryRules.md lists every public pattern per category, in table order."""
+    doc = (
+        Path(__file__).resolve().parents[2]
+        / ".claude"
+        / "skills"
+        / "TransactionSyncing"
+        / "CategoryRules.md"
+    ).read_text(encoding="utf-8")
+    listed = doc.split("## Public table", 1)[1]
+    documented: dict[str, tuple[str, ...]] = {}
+    for block in listed.split("### ")[1:]:
+        heading, _, body = block.partition("\n")
+        documented[heading.strip()] = tuple(re.findall(r"`([^`]+)`", body))
+    assert documented == CATEGORY_PATTERNS

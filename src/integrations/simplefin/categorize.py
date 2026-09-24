@@ -1,14 +1,25 @@
-"""Categorize SimpleFIN transactions using ordered merchant patterns."""
+"""Categorize SimpleFIN transactions using ordered merchant patterns.
+
+The table in this module holds only national brands and generic wording. A
+household's own merchants (the local dry cleaner, the daycare, the church) are
+private data and live in the instance directory as ``merchant-rules.yaml``,
+loaded at sync time by :func:`load_merchant_rules` and appended to the public
+table by :func:`merge_patterns`.
+"""
 
 import os
+from collections.abc import Hashable, Mapping
+from pathlib import Path
+
+import yaml
 
 # Order matters: the first matching category wins. Transfer and Travel come
 # first so an explicit remittance is not read as a merchant, and so
 # "American Express Travel" lands in Travel rather than Credit Card Payment.
 CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
     "Transfer": (
-        "taptap send",
         "amex send",
+        "taptap send",
         "cashed check",
         "zelle",
         "venmo",
@@ -24,8 +35,6 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "instant transfer",
         "webxtransfer",
         "wire transfer",
-        # Inbound movement between the owner's own Capital One accounts.
-        "capital one bank",
     ),
     "Travel": (
         "american express travel",
@@ -53,13 +62,9 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "walmart",
         "wholefds",
         "whole foods",
-        "makola",
         "sam's club",
         "aldi",
         "trader joe",
-        # Precedes Dining Out so the butcher does not match "halal guys".
-        "halal meat",
-        "southwest farmers",
     ),
     "Dining Out": (
         "benihana",
@@ -76,8 +81,6 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "restaurant",
         "grill",
         "cafe",
-        "makiin",
-        "sparkly photo",
         # Must precede Auto & Transport, whose "uber" pattern would otherwise
         # book a food delivery as a rideshare.
         "uber eats",
@@ -86,14 +89,6 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "panda express",
         "burger king",
         "auntie anne",
-        "pick up stix",
-        "chicken salad chick",
-        "piada",
-        "nishiki",
-        "gringos",
-        "rouxpour",
-        "halal guys",
-        "broken egg",
         "thai",
     ),
     # Must precede Bills & Utilities: a card autopay string such as
@@ -125,7 +120,6 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         # totals as non-spend. Keep every pattern here payment-specific.
     ),
     "Giving": (
-        "anglicanchurch",
         "church",
         "tithe",
         "offering",
@@ -139,20 +133,17 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "vehreg",
         "dmv",
         "parking",
-        "fastpark",
         "uber",
         "lyft",
         "shell",
         "exxon",
         "chevron",
         "valero",
-        "buc-ee",
         "gas station",
         "toll",
         "texaco",
         "bp gas",
         "car wash",
-        "parkify",
         "safelite",
         "auto glass",
     ),
@@ -166,33 +157,22 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "barber",
         "sephora",
         "beauty supply",
-        "supreme beauty",
         "ulta",
         "nail",
         "hair",
-        "shaving grace",
-        "cash app",
-        "clean skin",
-        "cloud 9 spa",
         "lash",
         "wax",
-        "face reality",
     ),
     "Health & Wellness": (
         "cvs",
         "pharmacy",
         "walgreens",
-        "life time",
         "doctor",
         "medical",
         "dental",
         "clinic",
         "hospital",
         "urgent care",
-        "mychart",
-        # Giving matches "church" first, so a Methodist congregation still
-        # lands in Giving and only the outpatient centers arrive here.
-        "methodist",
     ),
     "Shopping": (
         "marshalls",
@@ -206,18 +186,13 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "macy",
         "best buy",
         "apple store",
-        "shopwss",
         "fashion nova",
         "burlington",
-        "uptown cheapskate",
         "janie & jack",
         "david yurman",
         "dollar general",
     ),
     "Family Care": (
-        "aqua tots",
-        "brightwheel",
-        "brghtwhl",
         "daycare",
         "childcare",
         "kid",
@@ -237,14 +212,10 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "netflix",
         "spotify",
         "subscription",
-        "rhythm ops",
-        "total wireless",
-        "tidal",
         "prime video",
     ),
     "Cash Withdrawal": ("atm", "cash withdrawal", "cash advance"),
     "Tuition": (
-        "regent univer",
         "university",
         "college",
         "tuition",
@@ -272,14 +243,9 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "openrouter",
         "slack",
         "paddle",
-        # Homelab and fabrication hardware. Classified as business input by the
-        # account owner 2026-09-08, alongside the existing developer tooling.
         "ui.com",
         "ubiquiti",
         "newegg",
-        "bambula",
-        "connectech",
-        "pga frisco",
         # "GOOGLE  WORKSPACE" contains "spa" and was landing in Personal Care.
         # Matched on the bare word: the bank memo doubles the space after GOOGLE.
         "workspace",
@@ -290,11 +256,10 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
     "Loan Payment": (
         "loan payment",
         "mortgage",
-        "mortg",  # Fidelity/Truist abbreviate: "TRUIST MORTG TEL MTGPMT"
+        "mortg",  # bank memos abbreviate: "ANYBANK MORTG TEL MTGPMT"
         "mtgpmt",
         "car payment",
         "student loan",
-        "aes stdnt",
     ),
     "Fees & Interest": (
         "interest charge",
@@ -321,7 +286,6 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
     # returned-payment wording is listed there explicitly.
     "Entertainment": (
         "playstation",
-        "andretti",
         "bounce",
         "gamestop",
         "amc theat",
@@ -330,17 +294,13 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
     "Home & Garden": (
         "home depot",
         "lowes",
-        "sawyer",
-        "smart core",
         "garden",
         "hardware",
         "furniture",
-        "bermuda dude",
         # "LIVING SPACES" contains "spa" and was landing in Personal Care.
         "living spaces",
         "lawn",
         "wayfair",
-        "flower shop",
     ),
     "Crypto Deposit": (
         "btc deposited",
@@ -350,6 +310,94 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         "crypto",
     ),
 }
+
+PatternTable = dict[str, tuple[str, ...]]
+
+
+class MerchantRulesError(ValueError):
+    """The instance merchant-rules file is malformed."""
+
+
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """SafeLoader that rejects a repeated mapping key.
+
+    Plain ``safe_load`` keeps only the last value for a repeated key, so a
+    second ``Groceries:`` block would silently drop the first one's patterns.
+    """
+
+    def construct_mapping(
+        self, node: yaml.MappingNode, deep: bool = False
+    ) -> dict[object, object]:
+        seen: set[object] = set()
+        for key_node, _ in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if not isinstance(key, Hashable):
+                raise yaml.constructor.ConstructorError(
+                    None, None, "found unhashable key", key_node.start_mark
+                )
+            if key in seen:
+                raise yaml.constructor.ConstructorError(
+                    None, None, f"duplicate key {key!r}", key_node.start_mark
+                )
+            seen.add(key)
+        return super().construct_mapping(node, deep=deep)
+
+
+def load_merchant_rules(path: Path) -> PatternTable:
+    """Read household merchant patterns from the instance.
+
+    The file maps a category name to a list of lowercase substrings, for
+    example ``Family Care: [little sprouts daycare]``. A missing file means
+    the household has no private rules yet and is not an error.
+
+    Raises:
+        MerchantRulesError: On a category the public table does not define, a
+            category listed twice, or a value that is not a list of strings,
+            so a typo blocks the sync instead of silently dropping rules.
+    """
+    if not path.is_file():
+        return {}
+    try:
+        text = path.read_text(encoding="utf-8")
+        loaded = yaml.load(text, Loader=_UniqueKeyLoader)
+    except yaml.YAMLError as exc:
+        raise MerchantRulesError(f"{path} is not valid YAML: {exc}") from exc
+    if loaded is None:
+        return {}
+    if not isinstance(loaded, dict):
+        raise MerchantRulesError(f"{path} must be a mapping of category to patterns")
+    rules: PatternTable = {}
+    for category, patterns in loaded.items():
+        if category not in CATEGORY_PATTERNS:
+            raise MerchantRulesError(
+                f"{path}: unknown category {category!r}; "
+                f"choose one of {', '.join(CATEGORY_PATTERNS)}"
+            )
+        if patterns is None:
+            continue
+        if not isinstance(patterns, list) or not all(
+            isinstance(item, str) and item.strip() for item in patterns
+        ):
+            raise MerchantRulesError(
+                f"{path}: {category!r} must be a list of non-empty strings"
+            )
+        rules[category] = tuple(item.strip().lower() for item in patterns)
+    return rules
+
+
+def merge_patterns(
+    base: Mapping[str, tuple[str, ...]], extra: Mapping[str, tuple[str, ...]]
+) -> PatternTable:
+    """Append household patterns to each category of the public table.
+
+    Category order, and so match precedence, comes from ``base``. Household
+    patterns only extend a category; they never create or reorder one.
+    """
+    return {
+        category: patterns + tuple(extra.get(category, ()))
+        for category, patterns in base.items()
+    }
+
 
 # Categories that move money rather than consume it. Expense reviews should
 # exclude these from spend totals, otherwise a card purchase is counted twice:
@@ -430,6 +478,7 @@ def categorize_expense(
     text: str | None,
     amount: float | None = None,
     account_name: str | None = None,
+    patterns: Mapping[str, tuple[str, ...]] | None = None,
 ) -> str:
     """Return the first matching expense category.
 
@@ -439,6 +488,9 @@ def categorize_expense(
         account_name: Owning account name. Required to distinguish business
             payroll from personal spending, because identical memo text
             ("Paid Check") means different things by account.
+        patterns: Pattern table to match against. Defaults to the public
+            table; the sync passes the public table merged with the
+            household's ``merchant-rules.yaml``.
 
     Returns:
         The matching category, ``Exempt``, or ``Uncategorized``.
@@ -471,8 +523,9 @@ def categorize_expense(
     ):
         return "Payroll"
 
-    for category, patterns in CATEGORY_PATTERNS.items():
-        if any(pattern in normalized for pattern in patterns):
+    table = CATEGORY_PATTERNS if patterns is None else patterns
+    for category, category_patterns in table.items():
+        if any(pattern in normalized for pattern in category_patterns):
             return category
 
     # Unmatched money arriving in a business account is revenue. Running this

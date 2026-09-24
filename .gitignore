@@ -83,6 +83,7 @@ notebooks/
 # User's financial profile (any location in repo tree)
 fin-guru/data/user-profile.yaml
 **/user-profile.yaml
+**/merchant-rules.yaml
 # Onboarding state and progress (may contain sensitive configuration)
 .onboarding-state.json
 # Setup progress tracking (user-specific)
@@ -170,3 +171,7 @@ reports/
 # Instance notes and meeting records (household data; live in the instance directory)
 /.memory/
 /.dev/meeting-notes/
+
+# graft's local graph cache: regenerable, and it mirrors pre-scrub source text.
+/graft/
+.claude/skills/graft/

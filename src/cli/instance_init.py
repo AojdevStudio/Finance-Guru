@@ -31,6 +31,21 @@ GITIGNORE = """.env
 __pycache__/
 """
 
+MERCHANT_RULES = """# Household merchant patterns for expense categorization.
+#
+# The engine's public table only knows national brands. Your own merchants (the
+# local dry cleaner, the daycare, the church) go here so they never leave this
+# directory. Each key is a category from src/integrations/simplefin/categorize.py
+# and each value is a list of lowercase substrings matched against the joined
+# payee and bank memo. Within a category, order does not matter; across
+# categories, the engine's table order decides ties.
+#
+# Groceries:
+#   - corner market
+# Family Care:
+#   - little sprouts daycare
+"""
+
 USER_PROFILE = """# Add instance-specific values after creating the instance.
 system_ownership: {}
 orientation_status: {}
@@ -268,6 +283,7 @@ def _build_plan(
             ),
             PlanStep(paths.env_file, _write_text(env_content)),
             PlanStep(paths.profile, _write_text(USER_PROFILE)),
+            PlanStep(paths.merchant_rules, _write_text(MERCHANT_RULES)),
         )
     )
     if not plugin_mode:

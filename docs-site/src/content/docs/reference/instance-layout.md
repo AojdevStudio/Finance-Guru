@@ -19,6 +19,7 @@ The root is the value of `FIN_GURU_DATA_ROOT` when that variable is set and non-
 | `user-profile.yaml` | User profile. |
 | `config.yaml` | Instance configuration. |
 | `snaptrade-accounts.yaml` | [SnapTrade](https://snaptrade.com/) account-routing configuration. |
+| `merchant-rules.yaml` | Household merchant patterns for expense categorization, merged into the engine's public brand table at sync time. |
 | `system-context.md` | Generated system context. |
 | `family_office.db` | Default family-office [SQLite](https://www.sqlite.org/) database. |
 | `dividend-schedules.yaml` | Dividend schedule file. |

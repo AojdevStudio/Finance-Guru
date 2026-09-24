@@ -199,7 +199,10 @@ SnapTrade activities            SimpleFIN dump (bun run src/dump.ts)
 ### Smart Categorization
 
 Categorization is executable and runs inside the expense adapter, so the
-`category` column arrives pre-filled on every `bank_transactions` row. The rules
+`category` column arrives pre-filled on every `bank_transactions` row.
+Household merchants (local businesses, the daycare, the church) are private
+and live in the instance as `merchant-rules.yaml`, merged into the public table
+at sync time; the public table holds national brands only. The rules
 live in code at `src/integrations/simplefin/categorize.py`
 (`categorize_expense(text, amount)`), which is the source of truth mirroring the
 human-readable `CategoryRules.md`. Keep the two in sync when adding patterns.
