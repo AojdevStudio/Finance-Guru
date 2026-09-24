@@ -476,6 +476,9 @@ class TestMerchantRules:
             "Groceries:\n  - ''\n",
             "- Groceries\n",
             "Groceries:\n  - corner market\nGroceries:\n  - farm stand\n",
+            "[]\n",
+            "false\n",
+            "? [Groceries, Shopping]\n: [corner market]\n",
         ],
     )
     def test_malformed_rules_block_instead_of_dropping(

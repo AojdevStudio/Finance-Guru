@@ -8,7 +8,7 @@ table by :func:`merge_patterns`.
 """
 
 import os
-from collections.abc import Mapping
+from collections.abc import Hashable, Mapping
 from pathlib import Path
 
 import yaml
@@ -327,6 +327,10 @@ class _UniqueKeyLoader(yaml.SafeLoader):
         seen: set[object] = set()
         for key_node, _ in node.value:
             key = self.construct_object(key_node, deep=deep)
+            if not isinstance(key, Hashable):
+                raise yaml.constructor.ConstructorError(
+                    None, None, "found unhashable key", key_node.start_mark
+                )
             if key in seen:
                 raise yaml.constructor.ConstructorError(
                     None, None, f"duplicate key {key!r}", key_node.start_mark
@@ -351,9 +355,11 @@ def load_merchant_rules(path: Path) -> PatternTable:
         return {}
     try:
         text = path.read_text(encoding="utf-8")
-        loaded = yaml.load(text, Loader=_UniqueKeyLoader) or {}
+        loaded = yaml.load(text, Loader=_UniqueKeyLoader)
     except yaml.YAMLError as exc:
         raise MerchantRulesError(f"{path} is not valid YAML: {exc}") from exc
+    if loaded is None:
+        return {}
     if not isinstance(loaded, dict):
         raise MerchantRulesError(f"{path} must be a mapping of category to patterns")
     rules: PatternTable = {}
