@@ -314,6 +314,27 @@ class MerchantRulesError(ValueError):
     """The instance merchant-rules file is malformed."""
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """SafeLoader that rejects a repeated mapping key.
+
+    Plain ``safe_load`` keeps only the last value for a repeated key, so a
+    second ``Groceries:`` block would silently drop the first one's patterns.
+    """
+
+    def construct_mapping(
+        self, node: yaml.MappingNode, deep: bool = False
+    ) -> dict[object, object]:
+        seen: set[object] = set()
+        for key_node, _ in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in seen:
+                raise yaml.constructor.ConstructorError(
+                    None, None, f"duplicate key {key!r}", key_node.start_mark
+                )
+            seen.add(key)
+        return super().construct_mapping(node, deep=deep)
+
+
 def load_merchant_rules(path: Path) -> PatternTable:
     """Read household merchant patterns from the instance.
 
@@ -322,14 +343,15 @@ def load_merchant_rules(path: Path) -> PatternTable:
     the household has no private rules yet and is not an error.
 
     Raises:
-        MerchantRulesError: On a category the public table does not define or
-            a value that is not a list of strings, so a typo blocks the sync
-            instead of silently dropping rules.
+        MerchantRulesError: On a category the public table does not define, a
+            category listed twice, or a value that is not a list of strings,
+            so a typo blocks the sync instead of silently dropping rules.
     """
     if not path.is_file():
         return {}
     try:
-        loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        text = path.read_text(encoding="utf-8")
+        loaded = yaml.load(text, Loader=_UniqueKeyLoader) or {}
     except yaml.YAMLError as exc:
         raise MerchantRulesError(f"{path} is not valid YAML: {exc}") from exc
     if not isinstance(loaded, dict):
