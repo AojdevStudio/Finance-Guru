@@ -18,6 +18,10 @@ The Finance Guru Teaching Workflow transforms complex financial concepts into ac
 - **Progressive Complexity**: Building from fundamentals to advanced applications
 - **Real-World Context**: All examples grounded in practical financial scenarios
 
+## Delivery format
+
+Since 2026-09-24 the phases below are delivered as one interactive HTML page when a lesson covers more than one idea, per the teaching specialist's "Lesson format" section: concept introduction becomes a panel with a control on the learner's real figures, the worked example is the page's live recomputation, the mini-task is the learner moving the control, concept integration (Phase 4) is a closing panel that connects the idea to the broader strategy and names next learning steps, and validation is the self-check after it. Chat carries the hand-over, the disclaimer, and follow-up questions. Single-idea questions, recaps, and explicit requests for text stay in chat and follow the phases as written.
+
 ## Usage Scenarios
 
 ### Scenario 1: Financial Concept Exploration
