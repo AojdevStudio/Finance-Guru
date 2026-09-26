@@ -30,6 +30,12 @@ jobs:
         run: |
           uv export --format requirements.txt --no-hashes --no-emit-project --frozen | diff -u requirements.txt -
 
+      - name: Check uv.lock matches pyproject.toml
+        # Fails instead of relocking, so a stale lockfile cannot pass CI.
+        env:
+          UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
+        run: uv lock --check
+
       - name: Set up Bun
         # Needed by tests that shell out to bun for the onboarding
         # TypeScript sections (test_cash_flow_section, test_debt_profile_section,
@@ -40,7 +46,7 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --locked --dev
 
       - name: Ruff lint
         run: uv run ruff check .

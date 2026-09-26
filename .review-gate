@@ -1,5 +1,6 @@
 # Checks the review gate runs on a clean tree at HEAD: ci.yml's lint-and-test job, with
 # pytest narrowed to -m "not integration" (CI runs the integration tests too, with real keys).
+uv lock --check
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy src/
