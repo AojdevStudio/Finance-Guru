@@ -10,7 +10,6 @@
       "name": "finance-guru",
       "source": ".",
       "description": "Private, self-hosted family-office workflows for research, quantitative analysis, portfolio strategy, and financial operations.",
-      "version": "2.3.0",
       "author": {
         "name": "AojdevStudio"
       },
