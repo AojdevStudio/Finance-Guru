@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
       - name: Install deps
-        run: uv sync --dev
+        run: uv sync --locked --dev
       - name: Run vulture
         run: |
           echo "### Dead-code report" >> "$GITHUB_STEP_SUMMARY"
@@ -74,7 +74,7 @@ jobs:
         with:
           bun-version: latest
       - name: Install deps
-        run: uv sync --dev
+        run: uv sync --locked --dev
       - name: Run tests with retry + benchmark durations (flaky detection, timing)
         run: |
           uv run pytest \
@@ -96,7 +96,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
       - name: Install deps
-        run: uv sync --dev
+        run: uv sync --locked --dev
       - name: Run deptry
         run: |
           echo "### Unused-dependency report (deptry)" >> "$GITHUB_STEP_SUMMARY"
@@ -109,7 +109,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
       - name: Install deps
-        run: uv sync --dev
+        run: uv sync --locked --dev
       - name: Run import-linter
         run: |
           echo "### Import-graph contracts (import-linter)" >> "$GITHUB_STEP_SUMMARY"
@@ -122,7 +122,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
       - name: Install deps
-        run: uv sync --dev
+        run: uv sync --locked --dev
       - name: Profile a representative CLI with py-spy-equivalent (pyinstrument)
         run: |
           echo "### Profiling report (pyinstrument)" >> "$GITHUB_STEP_SUMMARY"

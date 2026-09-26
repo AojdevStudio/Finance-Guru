@@ -45,7 +45,8 @@ A scaffolded checkout-mode instance holds `.agents` and `.claude` symlinks to th
 Python 3.12 or later, managed with `uv`. These gates mirror CI and the pre-commit hook:
 
 ```bash
-uv sync --dev
+uv lock --check
+uv sync --locked --dev
 uv run ruff format --check .
 uv run ruff check .
 uv run mypy src/
