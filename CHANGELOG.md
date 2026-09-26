@@ -7,6 +7,18 @@ All notable changes to Finance Guru™ will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1](https://github.com/AojdevStudio/Finance-Guru/compare/v2.4.0...v2.4.1) (2026-09-26)
+
+
+### Fixed
+
+* **release:** bump the plugin manifest and uv.lock with every release ([#191](https://github.com/AojdevStudio/Finance-Guru/issues/191)) ([b88d477](https://github.com/AojdevStudio/Finance-Guru/commit/b88d477f7946032c0a2ef7c533d7ff8978204c7a))
+
+
+### Changed
+
+* **deps:** bump anyio from 4.13.0 to 4.14.2 in the uv group across 1 directory ([#182](https://github.com/AojdevStudio/Finance-Guru/issues/182)) ([4d344aa](https://github.com/AojdevStudio/Finance-Guru/commit/4d344aaea20b5e2bf972e110fdca50737421f3e9))
+
 ## [2.4.0](https://github.com/AojdevStudio/Finance-Guru/compare/v2.3.3...v2.4.0) (2026-09-24)
 
 
