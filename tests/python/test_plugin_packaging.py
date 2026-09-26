@@ -87,6 +87,11 @@ def test_plugin_version_matches_the_released_package() -> None:
 
     assert _json(PLUGIN_MANIFEST)["version"] == version
     assert _json(RELEASE_MANIFEST)["."] == version
+    lock = tomllib.loads((REPO_ROOT / "uv.lock").read_text("utf-8"))
+    locked = [
+        pkg["version"] for pkg in lock["package"] if pkg["name"] == "family-office"
+    ]
+    assert locked == [version]
 
 
 def test_release_please_bumps_the_plugin_manifest_and_lockfile() -> None:
