@@ -149,10 +149,10 @@ Two gates run before anything reaches GitHub. The pre-commit hooks (`.pre-commit
 
 Every PR must pass:
 
-1. **[CodeRabbit](https://www.coderabbit.ai/) review** — Automated; typically comments within minutes of opening.
+1. **[Pullfrog](https://pullfrog.com/) review** — Automated; its `pullfrog-approval` check must pass on the current head.
 2. **Maintainer review** — The maintainer reviews every PR personally before merge.
 
-Both must approve. Respond to CodeRabbit's comments in the same way you respond to a human reviewer — accept valid feedback, push back on incorrect feedback with reasoning.
+[CodeRabbit](https://www.coderabbit.ai/) also reviews pull requests, but its result is advisory. Verify every automated finding against the source before acting on it, and respond to false positives with a written reason.
 
 There is no SLA. If a PR sits without review for more than two weeks, ping the issue thread.
 
