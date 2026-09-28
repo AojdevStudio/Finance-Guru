@@ -17,12 +17,12 @@ Finance Guru ships as a [Claude Code](https://code.claude.com/) and [Codex](http
 What this means for contributors today:
 
 
-| Area                                   | State                                 | Safe to invest in?         |
-| -------------------------------------- | ------------------------------------- | -------------------------- |
-| Python analysis engine (`src/`)        | **Stable**                            | _Yes_                      |
-| Claude Code skills (`.claude/skills/`) | **Active, maintainer-owned**          | No — file an issue instead |
-| Specialist agents (`.claude/commands/fin-guru/agents/`) | **Active, maintainer-owned** | No — file an issue instead |
-| Documentation (`docs/`)                | **Always safe**                       | _Yes_                      |
+| Area                                                     | State                               | Safe to invest in?         |
+| -------------------------------------------------------- | ----------------------------------- | -------------------------- |
+| Python analysis engine (`src/`)                          | **Stable**                          | _Yes_                      |
+| Claude Code skills (`.claude/skills/`)                   | **Active, maintainer-owned**        | No — file an issue instead |
+| Specialist agents (`.claude/commands/fin-guru/agents/`)  | **Active, maintainer-owned**        | No — file an issue instead |
+| Documentation (`docs/`)                                  | **Always safe**                     | _Yes_                      |
 
 
 Changes to skills, agents, and hooks start as issues, not PRs. The maintainer is actively reshaping those surfaces and parallel PRs against them will conflict.
