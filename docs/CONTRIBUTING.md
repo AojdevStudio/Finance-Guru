@@ -17,12 +17,12 @@ Finance Guru ships as a [Claude Code](https://code.claude.com/) and [Codex](http
 What this means for contributors today:
 
 
-| Area                                   | State                                 | Safe to invest in?         |
-| -------------------------------------- | ------------------------------------- | -------------------------- |
-| Python analysis engine (`src/`)        | **Stable**                            | _Yes_                      |
-| Claude Code skills (`.claude/skills/`) | **Active, maintainer-owned**          | No — file an issue instead |
-| Specialist agents (`.claude/commands/fin-guru/agents/`) | **Active, maintainer-owned** | No — file an issue instead |
-| Documentation (`docs/`)                | **Always safe**                       | _Yes_                      |
+| Area                                                     | State                               | Safe to invest in?         |
+| -------------------------------------------------------- | ----------------------------------- | -------------------------- |
+| Python analysis engine (`src/`)                          | **Stable**                          | _Yes_                      |
+| Claude Code skills (`.claude/skills/`)                   | **Active, maintainer-owned**        | No — file an issue instead |
+| Specialist agents (`.claude/commands/fin-guru/agents/`)  | **Active, maintainer-owned**        | No — file an issue instead |
+| Documentation (`docs/`)                                  | **Always safe**                     | _Yes_                      |
 
 
 Changes to skills, agents, and hooks start as issues, not PRs. The maintainer is actively reshaping those surfaces and parallel PRs against them will conflict.
@@ -149,10 +149,10 @@ Two gates run before anything reaches GitHub. The pre-commit hooks (`.pre-commit
 
 Every PR must pass:
 
-1. **[CodeRabbit](https://www.coderabbit.ai/) review** — Automated; typically comments within minutes of opening.
+1. **[Pullfrog](https://pullfrog.com/) review** — Automated; its `pullfrog-approval` check must pass on the current head.
 2. **Maintainer review** — The maintainer reviews every PR personally before merge.
 
-Both must approve. Respond to CodeRabbit's comments in the same way you respond to a human reviewer — accept valid feedback, push back on incorrect feedback with reasoning.
+[CodeRabbit](https://www.coderabbit.ai/) also reviews pull requests, but its result is advisory. Verify every automated finding against the source before acting on it, and respond to false positives with a written reason.
 
 There is no SLA. If a PR sits without review for more than two weeks, ping the issue thread.
 
