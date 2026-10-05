@@ -1,6 +1,6 @@
 ---
 name: fin-guru-create-doc
-description: Create institutional-grade financial documents from templates. Handles analysis reports, buy tickets, compliance memos, Excel model specs, presentations, and onboarding reports.
+description: "Write a Finance Guru document from a template in fin-guru/templates/, such as an analysis report, buy ticket, compliance memo, Excel model spec, presentation, or onboarding report. Use when finished analysis must become a dated file in analysis/ or tickets/. Not for the analysis itself (use fin-guru-quant-analysis or fin-guru-research) or a PDF ticker report (use finance-report)."
 ---
 
 # Document Creation Skill

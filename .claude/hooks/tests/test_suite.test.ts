@@ -273,7 +273,6 @@ describe("Bun Test Suite Infrastructure", () => {
       const testFiles = [
         "test_load_fin_core_config.test.ts",
         "test_post_tool_use_tracker.test.ts",
-        "test_skill_activation_prompt.test.ts",
         "test_suite.test.ts"
       ];
 

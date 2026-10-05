@@ -1,6 +1,6 @@
 ---
 name: fin-guru-strategize
-description: Develop comprehensive portfolio strategies from quantitative analysis. Integrates margin, dividend, and cash-flow tactics into actionable wealth-building plans.
+description: "Turn research and quantitative results into a portfolio strategy with allocation changes, entry timing, position sizing, margin and dividend tactics, and an implementation plan with triggers. Use when the owner asks what to buy, sell, trim, or rotate, how much to put into a position, or how to deploy monthly income across portfolio layers. Not for raw risk numbers (use fin-guru-quant-analysis) or a margin dashboard update (use margin-management)."
 ---
 
 # Strategy Integration Skill

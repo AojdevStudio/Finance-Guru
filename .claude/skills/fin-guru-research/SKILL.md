@@ -1,6 +1,6 @@
 ---
 name: fin-guru-research
-description: Execute comprehensive market research workflows. Covers market intelligence gathering, sector analysis, security research, and competitive intelligence with temporal validation.
+description: "Market research on a ticker, sector, or theme with dated sources, plus technical screening through the screener, moving-average, momentum, and volatility calculators. Use when the owner asks what is happening with a company, wants catalysts, risks, sector context, or a competitor comparison, or wants a screen for setups. Not for risk statistics (use fin-guru-quant-analysis) or position sizing (use fin-guru-strategize)."
 ---
 
 # Research Workflow Skill
