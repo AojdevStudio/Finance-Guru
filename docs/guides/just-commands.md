@@ -50,3 +50,7 @@ Load mermaid architecture diagrams into Claude Code context:
 ## Version
 
 - **Last Updated**: 2026-02-18
+
+## Plugin evals
+
+`just eval` scores the plugin against the cases in `evals/` with `claude plugin eval`, once with the plugin and once without it, and writes the results and an HTML report to `evals/results/<timestamp>/`. Pass a run count, as in `just eval 3`, for a steadier score. Each run spends model usage, and the recipe stops at a $10 list-price estimate.
