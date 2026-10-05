@@ -12,8 +12,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
-import { join } from "path";
+import { basename, dirname, join } from "path";
 import { spawn } from "child_process";
+import { Database } from "bun:sqlite";
 
 const HOOK_PATH = join(import.meta.dir, "../load-fin-core-config.ts");
 const TEST_INSTANCE_ROOT = mkdtempSync(join(tmpdir(), "finance-guru-hook-test-"));
@@ -113,8 +114,7 @@ describe("load-fin-core-config hook with Bun", () => {
     expect(result.stdout).toContain("SYSTEM CONFIGURATION");
     expect(result.stdout).toContain("USER PROFILE");
     expect(result.stdout).toContain("SYSTEM CONTEXT");
-    expect(result.stdout).toContain("LATEST PORTFOLIO BALANCES");
-    expect(result.stdout).toContain("LATEST PORTFOLIO POSITIONS");
+    expect(result.stdout).toContain("PORTFOLIO LEDGER");
   });
 
   it("should output properly formatted system-reminder", async () => {
@@ -207,6 +207,91 @@ describe("load-fin-core-config hook with Bun", () => {
     } finally {
       rmSync(checkout, { recursive: true, force: true });
     }
+  });
+
+  it("should point at the ledger instead of broker CSV downloads", async () => {
+    const result = await runHook({ session_id: "test-no-ledger", event: "session_start" });
+    const ledgerSection = result.stdout.split("PORTFOLIO LEDGER")[1];
+
+    expect(ledgerSection).toContain(`Ledger not found at ${join(TEST_INSTANCE_ROOT, "family_office.db")}`);
+    expect(ledgerSection).toContain("instance-onboarding");
+    expect(ledgerSection).not.toContain("Fidelity");
+  });
+
+  it("should report the last balance sync from the ledger", async () => {
+    const ledger = join(TEST_INSTANCE_ROOT, "family_office.db");
+    const db = new Database(ledger);
+    db.run("CREATE TABLE balances (account_id TEXT PRIMARY KEY, synced_at TEXT NOT NULL)");
+    db.run("INSERT INTO balances VALUES ('a', '2026-01-02T03:04:05+00:00')");
+    db.close();
+    try {
+      const result = await runHook({ session_id: "test-ledger", event: "session_start" });
+
+      expect(result.stdout).toContain(`Ledger: ${ledger}`);
+      expect(result.stdout).toContain("Balances last synced 2026-01-02T03:04:05+00:00");
+      expect(result.stdout).toContain("older than 7 days");
+    } finally {
+      rmSync(ledger);
+    }
+  });
+
+  it("should report no balance sync for a ledger with no balances table", async () => {
+    const ledger = join(TEST_INSTANCE_ROOT, "family_office.db");
+    writeFileSync(ledger, "");
+    try {
+      const result = await runHook({ session_id: "test-empty-ledger", event: "session_start" });
+
+      expect(result.stdout).toContain("has no balance sync yet");
+      expect(result.stdout).toContain("portfolio-syncing");
+    } finally {
+      rmSync(ledger);
+    }
+  });
+
+  it("should check the ledger that DATABASE_URL in the instance .env names", async () => {
+    const envFile = join(TEST_INSTANCE_ROOT, ".env");
+    writeFileSync(envFile, "DATABASE_URL=sqlite:///custom/ledger.db\n");
+    try {
+      const result = await runHook({ session_id: "test-db-url", event: "session_start" });
+
+      expect(result.stdout).toContain(join(TEST_INSTANCE_ROOT, "custom/ledger.db"));
+    } finally {
+      rmSync(envFile);
+    }
+  });
+
+  it("should flag a ledger it cannot read instead of calling it fresh", async () => {
+    const ledger = join(TEST_INSTANCE_ROOT, "family_office.db");
+    writeFileSync(ledger, "this is not a sqlite database, it is plain text padding ".repeat(20));
+    try {
+      const result = await runHook({ session_id: "test-corrupt-ledger", event: "session_start" });
+
+      expect(result.stdout).toContain("could not be read");
+      expect(result.stdout).not.toContain("Balances last synced");
+    } finally {
+      rmSync(ledger);
+    }
+  });
+
+  it("should read an export-style DATABASE_URL line the way python-dotenv does", async () => {
+    const envFile = join(TEST_INSTANCE_ROOT, ".env");
+    writeFileSync(envFile, "export DATABASE_URL = custom/exported.db\n");
+    try {
+      const result = await runHook({ session_id: "test-export-env", event: "session_start" });
+
+      expect(result.stdout).toContain(join(TEST_INSTANCE_ROOT, "custom/exported.db"));
+    } finally {
+      rmSync(envFile);
+    }
+  });
+
+  it("should expand ~ in FIN_GURU_DATA_ROOT the way InstancePaths does", async () => {
+    const result = await runHook({ session_id: "test-tilde", event: "session_start" }, false, {
+      HOME: dirname(TEST_INSTANCE_ROOT),
+      FIN_GURU_DATA_ROOT: `~/${basename(TEST_INSTANCE_ROOT)}`,
+    });
+
+    expect(result.stdout).toContain("profile: test-fixture");
   });
 
   it("should include completion footer", async () => {

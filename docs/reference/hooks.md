@@ -10,7 +10,7 @@ A checkout-mode instance runs the three hooks that `.claude/settings.json` wires
 
 | Event | Script | What it does |
 | --- | --- | --- |
-| `SessionStart` | `.claude/hooks/load-fin-core-config.ts` | Prints the `fin-core` skill, then the instance profile, configuration, and latest portfolio files from the instance directory. Prints nothing outside an instance. Warns when the instance files are missing. |
+| `SessionStart` | `.claude/hooks/load-fin-core-config.ts` | Prints the `fin-core` skill, the instance profile and configuration, and the ledger's last balance sync. Prints nothing outside an instance. |
 | `PostToolUse` | `.claude/hooks/post-tool-use-tracker.ts` | Records tool use for the stop check. |
 | `Stop` | `.claude/hooks/stop-build-check-enhanced.sh` | Runs the build check before the session ends. |
 

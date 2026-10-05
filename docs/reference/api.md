@@ -34,7 +34,7 @@ uv run python -m src.integrations.refresh_all --help
 | `src/analysis/hedge_comparison_cli.py` | Compare hedge approaches. |
 | `src/analysis/hedge_sizer_cli.py` | Calculate hedge sizing. |
 | `src/analysis/itc_risk_cli.py` | Query ITC risk-model data. |
-| `src/analysis/margin_metrics.py` | Calculate margin metrics from configured local data. |
+| `src/analysis/margin_metrics_cli.py` | Calculate margin metrics from configured local data. Prints JSON and has no `--output` flag. |
 | `src/analysis/options_chain_cli.py` | Inspect options-chain data. |
 | `src/analysis/options_cli.py` | Run options calculations. |
 | `src/analysis/risk_metrics_cli.py` | Calculate risk and benchmark metrics. |
