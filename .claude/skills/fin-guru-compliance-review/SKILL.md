@@ -45,6 +45,8 @@ uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi --full-table
 
 ## Decision Rules
 
+[ITC divergence and decision rules](itc-divergence.md) holds the full rules, the worked example, the divergence scenarios, and the escalation matrix.
+
 - DR-1: Low Risk Approval (ITC <0.3 AND VaR within limits)
 - DR-2: Medium Risk Note (ITC 0.3-0.7)
 - DR-3: High Risk Review (ITC 0.7-0.85)

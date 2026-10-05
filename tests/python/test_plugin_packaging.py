@@ -135,7 +135,9 @@ def test_six_skills_and_six_agents_run_the_shared_capability_probe() -> None:
     for agent in MCP_AGENTS:
         content = (REPO_ROOT / ".claude" / "agents" / agent).read_text(encoding="utf-8")
         assert "capability probe" in content.lower()
-        assert "../skills/_shared/PaidMcpCapabilityProbe.md" in content
+        assert (
+            "{project-root}/.claude/skills/_shared/PaidMcpCapabilityProbe.md" in content
+        )
 
 
 def test_onboarding_skill_covers_the_first_instance_run() -> None:
@@ -161,3 +163,41 @@ def test_root_agents_instructions_explain_instance_skill_discovery() -> None:
     assert "### Codex instance skill discovery" in content
     assert "./.agents/skills" in content
     assert "single `.claude` tree" in content
+
+
+READ_ONLY_REVIEWERS = {"fg-compliance-officer", "fg-qa-advisor"}
+SPECIALIST_AGENTS = sorted(
+    path
+    for path in (REPO_ROOT / ".claude" / "agents").glob("fg-*.md")
+    if path.stem != "fg-finance-orchestrator"
+)
+
+
+def _agent(path: Path) -> tuple[dict[str, object], str]:
+    _, frontmatter, body = path.read_text(encoding="utf-8").split("---\n", 2)
+    return yaml.safe_load(frontmatter), body
+
+
+def test_specialists_are_delegated_subagents_not_chat_personas() -> None:
+    assert SPECIALIST_AGENTS
+    for path in SPECIALIST_AGENTS:
+        fields, body = _agent(path)
+
+        # A subagent cannot ask the user, so a wait-for-input step stalls it.
+        for marker in ("BLOCKING", "AWAIT", "*help"):
+            assert marker not in body, f"{path.name}: {marker}"
+        assert "## Return" in body, path.name
+        assert {"model", "effort", "maxTurns"} <= fields.keys(), path.name
+        # An allowlist hides the instance's MCP servers from the capability probe.
+        assert "tools" not in fields, path.name
+        disallowed = {
+            tool.strip() for tool in str(fields["disallowedTools"]).split(",")
+        }
+        assert "Agent" in disallowed, path.name
+        if path.stem in READ_ONLY_REVIEWERS:
+            assert {"Write", "Edit", "NotebookEdit"} <= disallowed, path.name
+        # The same file also runs as the main session through `claude --agent`.
+        assert "When you run as the main session" in body, path.name
+        assert "](../" not in body, (
+            f"{path.name}: relative links resolve from the instance"
+        )

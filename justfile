@@ -37,43 +37,43 @@ load keyword:
 
 # Launch Claude Code as Finance Orchestrator (Cassandra Holt)
 orchestrator:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-finance-orchestrator.md)"
+  {{cc}} --agent fg-finance-orchestrator
 
 # Launch Claude Code as Quant Analyst
 quant:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-quant-analyst.md)"
+  {{cc}} --agent fg-quant-analyst
 
 # Launch Claude Code as Strategy Advisor
 strategy:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-strategy-advisor.md)"
+  {{cc}} --agent fg-strategy-advisor
 
 # Launch Claude Code as Market Researcher
 market:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-market-researcher.md)"
+  {{cc}} --agent fg-market-researcher
 
 # Launch Claude Code as Compliance Officer
 compliance:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-compliance-officer.md)"
+  {{cc}} --agent fg-compliance-officer
 
 # Launch Claude Code as Margin Specialist
 margin:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-margin-specialist.md)"
+  {{cc}} --agent fg-margin-specialist
 
 # Launch Claude Code as Dividend Specialist
 dividend:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-dividend-specialist.md)"
+  {{cc}} --agent fg-dividend-specialist
 
 # Launch Claude Code as Teaching Specialist
 teaching:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-teaching-specialist.md)"
+  {{cc}} --agent fg-teaching-specialist
 
 # Launch Claude Code as Builder
 builder:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-builder.md)"
+  {{cc}} --agent fg-builder
 
 # Launch Claude Code as QA Advisor
 qa:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-qa-advisor.md)"
+  {{cc}} --agent fg-qa-advisor
 
 # --- Quality gates ---
 

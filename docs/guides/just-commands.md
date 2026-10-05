@@ -27,7 +27,7 @@ Launch [Claude Code](https://code.claude.com/) pre-loaded with a specialist pers
 
 Each recipe runs:
 ```bash
-claude --dangerously-skip-permissions --append-system-prompt "$(cat .claude/agents/fg-{agent}.md)"
+claude --dangerously-skip-permissions --agent fg-{agent}
 ```
 
 ## Context Loading
