@@ -8,8 +8,8 @@ Finance Guru™ - {{possessive_name}} private family office: a Claude Code and C
 
 ## Architecture
 
-**Multi-Agent System**: Claude transforms into specialized financial agents
-**Entry Point**: Finance Orchestrator (Cassandra Holt) - `.claude/commands/fin-guru/agents/finance-orchestrator.md`
+**Multi-Agent System**: The orchestrator delegates to specialist subagents
+**Entry Point**: Finance Orchestrator (Cassandra Holt) - `.claude/agents/fg-finance-orchestrator.md`
 
 **Path Variables**: `{project-root}`, `{module-path}`, `{current_datetime}`, `{current_date}`, `{user_name}`
 

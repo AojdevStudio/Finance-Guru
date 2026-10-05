@@ -49,15 +49,13 @@ def test_plugin_manifest_exposes_the_canonical_component_trees() -> None:
 
     assert manifest["name"] == "finance-guru"
     assert manifest["license"] == "AGPL-3.0-only"
-    expected_commands = {
-        f"./{path.relative_to(REPO_ROOT)}"
-        for path in (REPO_ROOT / ".claude" / "commands").rglob("*.md")
-    }
+    # Specialists ship once, as agents. Duplicate command personas drifted.
+    assert "commands" not in manifest
+    assert not list((REPO_ROOT / ".claude" / "commands").rglob("*.md"))
     expected_agents = {
         f"./{path.relative_to(REPO_ROOT)}"
         for path in (REPO_ROOT / ".claude" / "agents").glob("*.md")
     }
-    assert set(manifest["commands"]) == expected_commands
     assert set(manifest["agents"]) == expected_agents
 
     skill_paths = set(manifest["skills"])
@@ -201,3 +199,16 @@ def test_specialists_are_delegated_subagents_not_chat_personas() -> None:
         assert "](../" not in body, (
             f"{path.name}: relative links resolve from the instance"
         )
+
+
+def test_plugin_instances_start_the_shipped_orchestrator() -> None:
+    from src.cli.instance_init import PLUGIN_INSTANCE_SETTINGS
+
+    manifest = _json(PLUGIN_MANIFEST)
+    orchestrator = REPO_ROOT / ".claude" / "agents" / "fg-finance-orchestrator.md"
+    fields, _ = _agent(orchestrator)
+
+    assert f"./{orchestrator.relative_to(REPO_ROOT)}" in manifest["agents"]
+    assert json.loads(PLUGIN_INSTANCE_SETTINGS) == {
+        "agent": f"{manifest['name']}:{fields['name']}"
+    }

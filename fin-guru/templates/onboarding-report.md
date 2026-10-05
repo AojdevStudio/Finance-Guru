@@ -41,7 +41,7 @@
 
 Your profile has been created and stored. To begin working with Finance Guru:
 
-1. Use `/finance-orchestrator` to access the main system
+1. Start the finance orchestrator: `just orchestrator` in a checkout, or start Claude Code in a plugin-mode instance
 2. Your personalized data will automatically load
 3. All specialists will have access to your profile
 

@@ -4,7 +4,9 @@ The scaffold commit runs before uv sync so it cannot include a partial virtual
 environment, and the later migration commit owns ``uv.lock``.
 
 An installed Finance Guru plugin is the source of truth for agents, skills, and
-hooks, so plugin-mode instances omit ``.claude`` and ``.agents`` symlinks.
+hooks, so plugin-mode instances omit ``.claude`` and ``.agents`` symlinks. They
+get a real ``.claude/settings.json`` that makes the plugin's orchestrator the
+main agent in that instance only.
 Checkout-mode instances link both paths to the checkout's ``.claude`` tree.
 """
 
@@ -60,6 +62,10 @@ opportunities: {}
 recommended_workflows: {}
 session_context: {}
 """
+PLUGIN_INSTANCE_SETTINGS = """{
+  "agent": "finance-guru:fg-finance-orchestrator"
+}
+"""
 SCAFFOLD_GIT_NAME = "Finance Guru"
 SCAFFOLD_GIT_EMAIL = "finance-guru@example.invalid"
 
@@ -82,6 +88,14 @@ def _create_directory(path: Path) -> StepResult:
         return "exists"
     path.mkdir(parents=True)
     return "created"
+
+
+def _create_real_directory(path: Path) -> StepResult:
+    if path.is_symlink():
+        raise FileExistsError(
+            f"{path} is a symlink from a checkout-mode scaffold; remove it to use --plugin"
+        )
+    return _create_directory(path)
 
 
 def _write_text(content: str) -> StepAction:
@@ -213,7 +227,8 @@ Example: `uv run python -m src.integrations.refresh_all --show`
 def _instance_agent_instructions(repo: Path, *, plugin_mode: bool) -> str:
     if plugin_mode:
         discovery_instructions = """The installed Finance Guru plugin is the source of truth for agents, skills, and hooks.
-This instance intentionally omits `.claude` and `.agents` symlinks.
+This instance intentionally omits `.claude` and `.agents` symlinks. Its
+`.claude/settings.json` makes the plugin's finance orchestrator the main agent.
 """
     else:
         discovery_instructions = f"""This instance's `.agents` symlink points to
@@ -286,7 +301,17 @@ def _build_plan(
             PlanStep(paths.merchant_rules, _write_text(MERCHANT_RULES)),
         )
     )
-    if not plugin_mode:
+    if plugin_mode:
+        plan.extend(
+            (
+                PlanStep(paths.root / ".claude", _create_real_directory),
+                PlanStep(
+                    paths.root / ".claude" / "settings.json",
+                    _write_text(PLUGIN_INSTANCE_SETTINGS),
+                ),
+            )
+        )
+    else:
         plan.extend(
             (
                 PlanStep(paths.root / ".agents", _create_symlink(repo / ".claude")),

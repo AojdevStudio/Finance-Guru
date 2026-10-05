@@ -29,6 +29,15 @@ import pytest
 from src.analysis.itc_risk import ITCRiskCalculator
 from src.models.itc_risk_inputs import ITCRiskResponse, RiskBand
 
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+ITC_REFERENCE = (
+    PROJECT_ROOT
+    / ".claude"
+    / "skills"
+    / "fin-guru-compliance-review"
+    / "itc-divergence.md"
+)
+
 
 class TestAgentPromptConfiguration:
     """Verify the Compliance Officer agent has correct ITC configuration."""
@@ -36,15 +45,12 @@ class TestAgentPromptConfiguration:
     @pytest.fixture
     def agent_prompt_path(self) -> Path:
         """Path to the Compliance Officer agent prompt."""
-        project_root = Path(__file__).parent.parent.parent
-        return (
-            project_root
-            / ".claude"
-            / "commands"
-            / "fin-guru"
-            / "agents"
-            / "compliance-officer.md"
-        )
+        return PROJECT_ROOT / ".claude" / "agents" / "fg-compliance-officer.md"
+
+    @pytest.fixture
+    def content(self, agent_prompt_path: Path) -> str:
+        """The agent prompt plus the ITC reference it links."""
+        return agent_prompt_path.read_text() + ITC_REFERENCE.read_text()
 
     def test_agent_prompt_exists(self, agent_prompt_path: Path):
         """The Compliance Officer agent prompt file must exist."""
@@ -52,42 +58,25 @@ class TestAgentPromptConfiguration:
             f"Agent prompt not found at {agent_prompt_path}"
         )
 
-    def test_agent_prompt_contains_itc_risk_integration(self, agent_prompt_path: Path):
-        """Agent prompt must contain ITC risk integration section."""
-        content = agent_prompt_path.read_text()
-
-        assert "market-implied risk assessment" in content, (
-            "Missing the ITC risk monitoring rule"
+    def test_agent_prompt_links_the_itc_reference(self, agent_prompt_path: Path):
+        """The agent must link the ITC rules it no longer restates."""
+        assert "fin-guru-compliance-review/itc-divergence.md" in (
+            agent_prompt_path.read_text()
         )
-        assert "itc_risk_cli.py" in content, "Missing itc_risk_cli.py reference"
+        assert ITC_REFERENCE.is_file()
 
-    def test_agent_prompt_contains_itc_integration_section(
-        self, agent_prompt_path: Path
-    ):
-        """Agent prompt must contain the ITC risk integration section."""
-        content = agent_prompt_path.read_text()
+    def test_agent_prompt_contains_itc_risk_integration(self, content: str):
+        """The ITC rules must name the market-implied check and its CLI."""
+        assert "market-implied" in content, "Missing the ITC risk monitoring rule"
+        assert "itc_risk_cli" in content, "Missing itc_risk_cli reference"
 
-        assert "## ITC risk integration" in content, (
-            "Missing ITC risk integration section"
-        )
+    def test_agent_prompt_contains_supported_tickers(self, content: str):
+        """The ITC rules must list supported tickers for tradfi and crypto."""
+        for ticker in ("TSLA", "AAPL", "MSTR", "BTC", "ETH"):
+            assert ticker in content, f"Missing {ticker} in supported tickers"
 
-    def test_agent_prompt_contains_supported_tickers(self, agent_prompt_path: Path):
-        """Agent prompt must list supported tickers for tradfi and crypto."""
-        content = agent_prompt_path.read_text()
-
-        # TradFi tickers
-        assert "TSLA" in content, "Missing TSLA in supported tickers"
-        assert "AAPL" in content, "Missing AAPL in supported tickers"
-        assert "MSTR" in content, "Missing MSTR in supported tickers"
-
-        # Crypto tickers
-        assert "BTC" in content, "Missing BTC in supported tickers"
-        assert "ETH" in content, "Missing ETH in supported tickers"
-
-    def test_agent_prompt_contains_risk_thresholds(self, agent_prompt_path: Path):
-        """Agent prompt must define risk thresholds (0.3, 0.7)."""
-        content = agent_prompt_path.read_text()
-
+    def test_agent_prompt_contains_risk_thresholds(self, content: str):
+        """The ITC rules must define risk thresholds (0.3, 0.7)."""
         assert "0.0-0.3" in content or "0-0.3" in content, (
             "Missing LOW risk threshold (0.3)"
         )
@@ -96,36 +85,19 @@ class TestAgentPromptConfiguration:
             "Missing HIGH risk threshold (0.7)"
         )
 
-    def test_agent_prompt_contains_validation_workflow(self, agent_prompt_path: Path):
-        """Agent prompt must contain ITC Risk Validation Workflow."""
-        content = agent_prompt_path.read_text()
+    def test_agent_prompt_contains_validation_workflow(self, content: str):
+        """The ITC rules must contain the validation workflow."""
+        assert "## ITC risk validation workflow" in content
+        assert "### Steps" in content, "Missing steps in workflow"
+        assert "## Decision rules" in content, "Missing decision rules"
+        for rule in ("DR-1", "DR-2", "DR-3", "DR-4", "DR-5"):
+            assert rule in content, f"Missing {rule}"
 
-        assert "## ITC risk validation workflow" in content, (
-            "Missing ITC risk validation workflow section"
-        )
-        assert "Execution steps" in content, "Missing execution steps in workflow"
-        assert "Decision rules" in content, "Missing decision rules in workflow"
-
-    def test_agent_prompt_contains_divergence_guidance(self, agent_prompt_path: Path):
-        """Agent prompt must contain divergence analysis guidance."""
-        content = agent_prompt_path.read_text()
-
-        assert "## ITC internal divergence guidance" in content, (
-            "Missing ITC internal divergence guidance section"
-        )
-        assert "ITC HIGH, Internal LOW" in content or "DIV-1" in content, (
-            "Missing high ITC/low internal scenario"
-        )
-        assert "ITC LOW, Internal HIGH" in content or "DIV-2" in content, (
-            "Missing low ITC/high internal scenario"
-        )
-
-    def test_agent_prompt_contains_menu_commands(self, agent_prompt_path: Path):
-        """Agent prompt must include *itc-validate and *itc-check menu items."""
-        content = agent_prompt_path.read_text()
-
-        assert "*itc-validate" in content, "Missing *itc-validate menu command"
-        assert "*itc-check" in content, "Missing *itc-check menu command"
+    def test_agent_prompt_contains_divergence_guidance(self, content: str):
+        """The ITC rules must contain divergence analysis guidance."""
+        assert "## Divergence between ITC and internal metrics" in content
+        assert "DIV-1" in content, "Missing high ITC/low internal scenario"
+        assert "DIV-2" in content, "Missing low ITC/high internal scenario"
 
 
 class TestScenarioNormalFlow:
