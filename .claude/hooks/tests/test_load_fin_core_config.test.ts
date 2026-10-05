@@ -36,17 +36,22 @@ afterAll(() => {
 async function runHook(
   input: { session_id: string; event: string },
   useWorkingDirectory = false,
+  extraEnv: Record<string, string> = {},
+  cwd?: string,
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   return new Promise((resolve, reject) => {
-    const env = { ...process.env };
+    const env: Record<string, string | undefined> = { ...process.env };
+    delete env.CLAUDE_PLUGIN_ROOT;
+    delete env.CLAUDE_PROJECT_DIR;
     if (useWorkingDirectory) {
       delete env.FIN_GURU_DATA_ROOT;
     } else {
       env.FIN_GURU_DATA_ROOT = TEST_INSTANCE_ROOT;
     }
+    Object.assign(env, extraEnv);
 
     const proc = spawn("bun", [HOOK_PATH], {
-      cwd: useWorkingDirectory ? TEST_INSTANCE_ROOT : undefined,
+      cwd: cwd ?? (useWorkingDirectory ? TEST_INSTANCE_ROOT : undefined),
       env,
     });
 
@@ -168,6 +173,40 @@ describe("load-fin-core-config hook with Bun", () => {
     expect(result.stdout).toContain('module_name: "Finance Guru™"');
     expect(result.stdout).toContain("profile: test-fixture");
     expect(result.stdout).toContain("# Test system context");
+  });
+
+  it("should print nothing outside an instance", async () => {
+    const outside = mkdtempSync(join(tmpdir(), "finance-guru-not-instance-"));
+    try {
+      const result = await runHook(
+        { session_id: "test-outside", event: "session_start" },
+        true,
+        {},
+        outside,
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toBe("");
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("should let a checkout's own hook copy run instead of the plugin copy", async () => {
+    const checkout = mkdtempSync(join(tmpdir(), "finance-guru-checkout-"));
+    mkdirSync(join(checkout, ".claude/hooks"), { recursive: true });
+    writeFileSync(join(checkout, ".claude/hooks/load-fin-core-config.ts"), "");
+    try {
+      const result = await runHook({ session_id: "test-dup", event: "session_start" }, false, {
+        CLAUDE_PLUGIN_ROOT: join(import.meta.dir, "../../.."),
+        CLAUDE_PROJECT_DIR: checkout,
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toBe("");
+    } finally {
+      rmSync(checkout, { recursive: true, force: true });
+    }
   });
 
   it("should include completion footer", async () => {

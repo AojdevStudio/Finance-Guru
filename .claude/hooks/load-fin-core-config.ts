@@ -13,13 +13,26 @@
  * Refactored to use Bun runtime for improved performance.
  */
 
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 
 // Bun provides import.meta.dir directly
 const __dirname = import.meta.dir;
 const PROJECT_ROOT = resolve(__dirname, '../..');
+// The same rule as InstancePaths.resolve: FIN_GURU_DATA_ROOT, else the session directory.
 const DATA_ROOT = resolve(process.env.FIN_GURU_DATA_ROOT?.trim() || process.cwd());
+
+// A user-scope plugin hook runs in every session, so it stays silent outside an instance.
+function isInstance(root: string): boolean {
+  return existsSync(join(root, 'user-profile.yaml')) || existsSync(join(root, 'config.yaml'));
+}
+
+// A checkout instance or the engine repo runs its own copy through .claude/settings.json.
+function checkoutCopyRuns(): boolean {
+  const projectDir = process.env.CLAUDE_PROJECT_DIR;
+  if (!process.env.CLAUDE_PLUGIN_ROOT || !projectDir) return false;
+  return existsSync(join(projectDir, '.claude/hooks/load-fin-core-config.ts'));
+}
 
 interface HookInput {
   session_id: string;
@@ -155,6 +168,9 @@ function main() {
 function processHook(inputData: string) {
   try {
     const input: HookInput = JSON.parse(inputData);
+    if (checkoutCopyRuns() || !isInstance(DATA_ROOT)) {
+      process.exit(0);
+    }
     // The skill ships with the project; private inputs belong to the instance.
     const skillPath = join(PROJECT_ROOT, '.claude/skills/fin-core/SKILL.md');
     const configPath = join(DATA_ROOT, 'config.yaml');

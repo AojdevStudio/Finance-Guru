@@ -1,5 +1,9 @@
 # Install the Finance Guru plugin
 
+## Before you start
+
+The plugin's session-start hook runs with [Bun](https://bun.sh/). Install Bun and confirm that `bun --version` works in the shell that starts [Claude Code](https://code.claude.com/).
+
 ## Add the marketplace
 
 ```bash
