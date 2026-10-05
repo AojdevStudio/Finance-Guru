@@ -31,17 +31,21 @@ Before adding current external assumptions, follow the shared **[paid MCP capabi
 
 ```bash
 # Pre-trade risk validation
-uv run python -m src.analysis.risk_metrics_cli TICKER --days 252 --benchmark SPY
+uv run python -m src.analysis.risk_metrics_cli TICKER --days 252 --benchmark SPY --output json
 
 # Entry timing analysis
-uv run python -m src.utils.momentum_cli TICKER --days 90
+uv run python -m src.utils.momentum_cli TICKER --days 90 --output json
 
 # Volatility-based position sizing
-uv run python -m src.utils.volatility_cli TICKER --days 90
+uv run python -m src.utils.volatility_cli TICKER --days 90 --output json
 
 # Portfolio optimization
-uv run python -m src.strategies.optimizer_cli TICKERS --method max_sharpe
+uv run python -m src.strategies.optimizer_cli TICKERS --method max_sharpe --output json
 ```
+
+## Output
+
+Return the [shared analysis output contract](../_shared/AnalysisOutput.md). The Numbers table carries Sharpe, Sortino, and max drawdown for every position the strategy adds or changes. A recommendation without those three numbers is incomplete. Add an implementation plan after the Numbers table, with the amount, the entry trigger, and the exit trigger for each change.
 
 ## Requirements
 

@@ -29,6 +29,10 @@ Before data collection, follow the shared **[paid MCP capability probe](../_shar
 - `data_validator_cli.py` — Data integrity verification (100% quality required)
 - `itc_risk_cli.py` — Market-implied risk scores for supported tickers
 
+## Output
+
+Return the [shared analysis output contract](../_shared/AnalysisOutput.md). Cite each web source under Evidence with its publisher, date, and URL. A claim without a dated source goes under Assumptions and gaps, not under Bottom line.
+
 ## Requirements
 
 - ALL web searches MUST include temporal qualifiers using current date context

@@ -27,26 +27,30 @@ Before collecting external fundamentals or filings, follow the shared **[paid MC
 
 ```bash
 # Risk metrics
-uv run python -m src.analysis.risk_metrics_cli TICKER --days 252 --benchmark SPY
+uv run python -m src.analysis.risk_metrics_cli TICKER --days 252 --benchmark SPY --output json
 
 # Momentum confluence
-uv run python -m src.utils.momentum_cli TICKER --days 90
+uv run python -m src.utils.momentum_cli TICKER --days 90 --output json
 
 # Volatility regime
-uv run python -m src.utils.volatility_cli TICKER --days 90
+uv run python -m src.utils.volatility_cli TICKER --days 90 --output json
 
 # Correlation matrix
-uv run python -m src.analysis.correlation_cli TICKER1 TICKER2 --days 90
+uv run python -m src.analysis.correlation_cli TICKER1 TICKER2 --days 90 --output json
 
 # Factor analysis
-uv run python -m src.analysis.factors_cli TICKER --days 252 --benchmark SPY
+uv run python -m src.analysis.factors_cli TICKER --days 252 --benchmark SPY --output json
 
 # Backtesting
-uv run python -m src.strategies.backtester_cli TICKER --days 252 --strategy rsi
+uv run python -m src.strategies.backtester_cli TICKER --days 252 --strategy rsi --output json
 
 # Portfolio optimization
-uv run python -m src.strategies.optimizer_cli TICKERS --days 252 --method max_sharpe
+uv run python -m src.strategies.optimizer_cli TICKERS --days 252 --method max_sharpe --output json
 ```
+
+## Output
+
+Return the [shared analysis output contract](../_shared/AnalysisOutput.md). In the Numbers table, give each metric its lookback window, such as `Sharpe (252d)`. When fewer than 90 days of data exist, return the Blocked block from that contract instead of a statistic.
 
 ## Requirements
 
