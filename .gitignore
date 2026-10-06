@@ -41,6 +41,9 @@ data/processed/*
 *.xls
 .claude/hooks/node_modules
 .claude/scheduled_tasks.lock
+# Per-checkout Claude Code opt-in. Checkout instances inherit .claude/ through a
+# symlink, so a personal plugin belongs here or in ~/.claude/settings.json.
+.claude/settings.local.json
 
 # Reports
 reports/*.html
