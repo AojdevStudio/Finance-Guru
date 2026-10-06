@@ -4,8 +4,10 @@ Reference for the `fin-guru-compliance-review` skill and the compliance officer 
 
 ## Supported tickers
 
-- TradFi: `TSLA, AAPL, MSTR, NFLX, SP500, DXY, XAUUSD, XAGUSD, XPDUSD, PL, HG, NICKEL`
-- Crypto: `BTC, ETH, BNB, SOL, XRP, ADA, DOGE, LINK, AVAX, DOT, SHIB, LTC, AAVE, ATOM, POL, ALGO, HBAR, RENDER, VET, TRX, TON, SUI, XLM, XMR, XTZ, SKY, BTC.D, TOTAL, TOTAL6`
+Read the lists from the CLI.
+
+- TradFi: `uv run python -m src.analysis.itc_risk_cli --list-supported tradfi`
+- Crypto: `uv run python -m src.analysis.itc_risk_cli --list-supported crypto`
 
 For an unsupported ticker, record "ITC: N/A - internal metrics only".
 
