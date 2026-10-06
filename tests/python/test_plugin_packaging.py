@@ -210,13 +210,11 @@ def test_shared_checkout_settings_omit_personal_plugins() -> None:
     assert set(settings) == {"hooks"}
     assert "imessage" not in shared_text
     assert "codegraph" not in shared_text
-    assert ".claude/settings.local.json" in (
-        REPO_ROOT / ".gitignore"
-    ).read_text(encoding="utf-8")
-
-    opt_in = (REPO_ROOT / "docs" / "reference" / "hooks.md").read_text(
+    assert ".claude/settings.local.json" in (REPO_ROOT / ".gitignore").read_text(
         encoding="utf-8"
     )
+
+    opt_in = (REPO_ROOT / "docs" / "reference" / "hooks.md").read_text(encoding="utf-8")
     assert "~/.claude/settings.json" in opt_in
     assert ".claude/settings.local.json" in opt_in
     assert "imessage@claude-plugins-official" in opt_in
