@@ -399,15 +399,27 @@ def test_public_policies_match_the_compliance_verdicts() -> None:
         / "fin-guru-compliance-review"
         / "itc-divergence.md"
     ).read_text(encoding="utf-8")
+    definitions = (REPO_ROOT / "fin-guru" / "data" / "definitions.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "Single-position clearance limit" in risk
-    assert "20% of the total portfolio" in risk
+    assert "including exactly 20%" in risk
+    assert "Exactly 20% is the clearance ceiling." in risk
+    assert (
+        "A post-increase weight above 20% fails clearance and is a level 3 breach."
+        in risk
+    )
     assert "10% monitoring target" in risk
     assert "30% deployment cap" in risk
     assert "15.5%" in risk
     assert "APPROVE WITH NOTE" in risk
-    # A breach of the monitoring target is a note. Level 3 is reserved for hard gates.
-    assert "Weight above the 10% monitoring target is a level 1 note." in risk
+
+    assert "Single position (monitoring)" in definitions
+    assert "Single position (clearance)" in definitions
+    assert "Exactly 20% is approved on concentration grounds" in definitions
+    assert "≤ 10% of total portfolio" not in definitions
+    assert "fin-guru/data/risk-framework.md" in definitions
 
     assert "DR-4 is a mandatory BLOCK" in policy
     assert "above 0.85" in policy

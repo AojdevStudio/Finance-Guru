@@ -17,8 +17,8 @@ A position increase uses the 20% clearance limit below. The 10% target and the 3
 | Limit | Rule | What it governs |
 | --- | --- | --- |
 | Single-position monitoring target | 10% of the total portfolio | A balanced-book watch level. Weight above 10% is a note on the review. |
-| Single-position clearance limit | 20% of the total portfolio | A position increase. Approve it on concentration grounds when the post-increase weight is at or under 20%. |
-| Deployment cap | 30% of pre-borrow equity NAV | A new buy-ticket deployment. Weight from 20% to 30% still fails a position-increase clearance. |
+| Single-position clearance limit | 20% of the total portfolio | A position increase. Approve it on concentration grounds when the post-increase weight is at or under 20%, including exactly 20%. |
+| Deployment cap | 30% of pre-borrow equity NAV | A new buy-ticket deployment. A post-increase weight above 20% and at or under 30% still fails clearance. The deployment gate itself blocks only above 30%. |
 | Portfolio 1-day VaR | 2% of portfolio value at 95% confidence | The whole portfolio. A single name's daily VaR uses the 5% threshold in the ITC workflow. |
 | Maximum drawdown | 15% peak to trough | The portfolio. |
 | Leverage | 2:1 maximum for a conservative strategy | Gross leverage. |
@@ -39,15 +39,15 @@ An instance file may name a tighter cap or a named exception. Cite that record i
 
 ## Escalation
 
-Measure a hard gate against its own limit. Hard gates are the 20% clearance limit, the 30% deployment cap, portfolio VaR, maximum drawdown, and the leverage limit.
+Reaching a hard gate is the ceiling. A breach starts only above the gate. Hard gates are the 20% clearance limit, the 30% deployment cap, portfolio VaR, maximum drawdown, and the leverage limit.
 
 | Level | Utilization | Action |
 | --- | --- | --- |
-| 1 — Alert | 75% of a hard gate, or any weight above the 10% monitoring target | Name the limit and the metric. Increase monitoring. |
-| 2 — Warning | 90% of a hard gate | Stop adding exposure that consumes that gate until the review is done. |
-| 3 — Breach | 100% of a hard gate | Immediate corrective action. Do not wait for the next review. |
+| 1 — Alert | Above the 10% monitoring target, or 75% of a hard gate while still under that gate | Name the limit and the metric. Increase monitoring. |
+| 2 — Warning | From 90% of a hard gate through 100% of that gate | Stop adding exposure that consumes that gate. |
+| 3 — Breach | Above 100% of a hard gate | Immediate corrective action. Do not wait for the next review. |
 
-Weight above the 10% monitoring target is a level 1 note. It stays a note while the post-increase weight is at or under the 20% clearance limit and the ITC rule is DR-1 or DR-2.
+Exactly 20% is the clearance ceiling. A position increase that ends at 20% is approved on concentration grounds when the ITC rule is DR-1 or DR-2, and the escalation for that name is a level 2 warning: add no more. A post-increase weight above 20% fails clearance and is a level 3 breach.
 
 An emergency is a systematic loss that threatens the portfolio's ability to meet its liquidity floor. Preserve cash, reduce the position that breached, and record the hedge decision separately under `hedging-strategies.md`.
 

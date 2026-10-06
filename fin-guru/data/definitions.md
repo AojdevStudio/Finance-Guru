@@ -369,16 +369,18 @@ All formulas from `src/analysis/risk_metrics.py`. Annualization factor `√252` 
 | 6.9 | **Beta** | `Cov(asset, benchmark) / Var(benchmark)` | <0.5 low · 0.5–1.5 average · >1.5 high · negative = hedge |
 | 6.10 | **Alpha (CAPM)** | `R_asset − [R_f + β × (R_bench − R_f)]`; annualized = `α_daily × 252` | Significance via t-stat: |t| > 2.0 |
 
-**Portfolio-level risk targets** (`fin-guru/data/risk-framework.md:149-153`):
+**Portfolio-level risk targets** (`fin-guru/data/risk-framework.md`):
 - Max 1-day VaR @ 95%: 2% of portfolio.
 - Max drawdown limit: 15% peak-to-trough.
-- Single-position cap: 10% (general); see § 15 for deployment-specific 30% cap.
+- Single-position monitoring target: 10%. Weight above 10% is a note.
+- Single-position clearance limit: 20%. A position increase at or equal to 20% is approved on concentration grounds. Above 20% fails clearance.
+- Deployment cap: 30%. See § 15. This is a separate buy-ticket gate.
 - Max leverage ratio: 2:1 for conservative strategies.
 
-**Risk escalation levels** (`risk-framework.md:169-174`):
-- Level 1: 75% of risk-limit utilization.
-- Level 2: 90%.
-- Level 3 (breach): 100% — immediate corrective action.
+**Risk escalation levels** (`fin-guru/data/risk-framework.md`):
+- Level 1: above the 10% monitoring target, or 75% of a hard gate while still under it.
+- Level 2: from 90% of a hard gate through 100% of that gate. Exactly 20% concentration is level 2, the approved ceiling.
+- Level 3 (breach): above the hard gate. Above 20% concentration requires immediate corrective action.
 
 ---
 
@@ -615,8 +617,9 @@ See § 3.3 for primary formulas. Key invariants worth restating:
 
 | Scope | Rule | Source |
 |---|---|---|
-| **Single position (general risk)** | ≤ 10% of total portfolio | `risk-framework.md:149-153` |
-| **Single position (deployment cap)** | ≤ 30% post-deploy; warn above | `fin-guru-buy-ticket/SKILL.md:129` |
+| **Single position (monitoring)** | Note when weight is above 10%. At or under 20% remains inside clearance. | `fin-guru/data/risk-framework.md` |
+| **Single position (clearance)** | ≤ 20% after a position increase. Exactly 20% is approved on concentration grounds (level 2: add no more). Above 20% fails clearance and is a level 3 breach. | `fin-guru/data/risk-framework.md` |
+| **Single position (deployment cap)** | ≤ 30% post-deploy; block above 30% | `fin-guru-buy-ticket/SKILL.md`, `fin-guru/data/risk-framework.md` |
 | **Approved Layer 1 exceptions** | A small list of growth tickers may exceed 30% temporarily, with natural dilution expected as the portfolio grows | `concentration-limits.json` (private) |
 | **Tactical caps (single-name)** | Volatility-prone single-names carry tighter caps (e.g., ≤ 15%); breaches trigger a trim | `concentration-limits.json` (private) |
 | **Single Layer 2 fund** | ≤ 5% of Layer 2 | `concentration-limits.json` |
@@ -987,7 +990,7 @@ Where to look for canonical authority on each topic. The first row of each clust
 - Architecture rules → `src/CLAUDE.md`
 
 ### Agent reference data (`fin-guru/data/`)
-- Risk framework → `risk-framework.md`
+- Risk framework (10% monitoring, 20% clearance, 30% deployment cap) → `risk-framework.md`
 - Margin strategy (tier framework) → `margin-strategy.md`
 - Modern income vehicles (classifier source) → `modern-income-vehicles.md`
 - Tax optimization → `tax-optimization.md`
