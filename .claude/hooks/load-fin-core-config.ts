@@ -42,10 +42,17 @@ interface HookInput {
 function isInstance(root: string): boolean {
   if (!existsSync(join(root, 'user-profile.yaml'))) return false;
   if (CONFIGURED_ROOT) return true;
-  const pyproject = join(root, 'pyproject.toml');
-  const scaffolded =
-    existsSync(pyproject) && readFileSync(pyproject, 'utf-8').includes('name = "finance-guru-instance"');
-  return scaffolded || existsSync(join(root, 'family_office.db'));
+  return scaffoldedProject(join(root, 'pyproject.toml')) || existsSync(join(root, 'family_office.db'));
+}
+
+// instance_init writes a pyproject.toml whose project is named finance-guru-instance.
+function scaffoldedProject(pyproject: string): boolean {
+  try {
+    return /^\s*name\s*=\s*["']finance-guru-instance["']/m.test(readFileSync(pyproject, 'utf-8'));
+  } catch {
+    // A missing or unreadable file means this is not a scaffolded instance.
+    return false;
+  }
 }
 
 // A checkout instance or the engine repo runs its own copy through .claude/settings.json.
@@ -55,20 +62,28 @@ function checkoutCopyRuns(): boolean {
   return existsSync(join(projectDir, '.claude/hooks/load-fin-core-config.ts'));
 }
 
+// The value python-dotenv assigns to key, or undefined when no line sets it.
+// The last assignment wins, quotes are removed, an unquoted " #" starts a comment,
+// and an empty value still counts as set. ${VAR} expansion is not modeled.
+function dotenvValue(envFile: string, key: string): string | undefined {
+  if (!existsSync(envFile)) return undefined;
+  const assignment = new RegExp(`^\\s*(?:export\\s+)?${key}\\s*=\\s*(.*)$`);
+  let value: string | undefined;
+  for (const line of readFileSync(envFile, 'utf-8').split('\n')) {
+    const raw = assignment.exec(line)?.[1];
+    if (raw === undefined) continue;
+    const quoted = /^(["'])(.*?)\1/.exec(raw);
+    value = quoted ? quoted[2] : raw.replace(/\s+#.*$/, '').trim();
+  }
+  return value;
+}
+
 // Finds the ledger refresh_all writes: it loads the instance .env with
 // override=True, so DATABASE_URL there wins over the process environment.
 // A relative SQLite path resolves under the instance root, as in InstancePaths.database_url.
 function ledgerPath(root: string): string | null {
-  const envFile = join(root, '.env');
-  const assignment = /^\s*(?:export\s+)?DATABASE_URL\s*=\s*(.*)$/;
-  const match = existsSync(envFile)
-    ? readFileSync(envFile, 'utf-8')
-        .split('\n')
-        .map((entry) => assignment.exec(entry))
-        .find((found) => found !== null)
-    : undefined;
-  const configured =
-    match?.[1].trim().replace(/^["']|["']$/g, '') || (process.env.DATABASE_URL?.trim() ?? '');
+  const fromEnvFile = dotenvValue(join(root, '.env'), 'DATABASE_URL');
+  const configured = (fromEnvFile ?? process.env.DATABASE_URL ?? '').trim();
   if (!configured) return join(root, 'family_office.db');
   if (configured.startsWith('sqlite:///')) {
     const path = configured.slice('sqlite:///'.length);
