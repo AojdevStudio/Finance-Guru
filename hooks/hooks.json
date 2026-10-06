@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun",
+            "args": ["run", "${CLAUDE_PLUGIN_ROOT}/.claude/hooks/load-fin-core-config.ts"]
+          }
+        ]
+      }
+    ]
+  }
+}
