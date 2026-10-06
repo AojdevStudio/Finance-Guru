@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 import pytest
 
+from src.analysis.margin_metrics import FidelityBalances
+from src.analysis.margin_metrics_cli import main as margin_metrics_main
 from src.config import InstancePaths
 from src.config.instance_paths import _db_path, load_instance_env
+from src.integrations import refresh_all
 
 
 def test_default_root_is_current_working_directory(tmp_path: Path) -> None:
@@ -89,20 +93,117 @@ def test_db_path_rejects_non_sqlite_urls(tmp_path: Path) -> None:
         _db_path("postgresql://database.example/finance", paths)
 
 
-def test_load_instance_env_preserves_process_values_by_default(
+def test_load_instance_env_lets_the_file_replace_the_process(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A key in the instance file wins, and a key the file omits stays put."""
+    paths = InstancePaths(root=tmp_path)
+    paths.env_file.write_text("DATABASE_URL=sqlite:///instance.db\n", encoding="utf-8")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///process.db")
+    monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "5000")
+
+    load_instance_env(paths)
+
+    assert os.environ["DATABASE_URL"] == "sqlite:///instance.db"
+    assert os.environ["FG_MARGIN_JUMP_ALERT_THRESHOLD"] == "5000"
+
+
+def test_load_instance_env_empty_value_replaces_the_process(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An empty assignment still counts as set, matching the session-start hook."""
+    paths = InstancePaths(root=tmp_path)
+    paths.env_file.write_text("DATABASE_URL=\n", encoding="utf-8")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///process.db")
+
+    load_instance_env(paths)
+
+    assert os.environ["DATABASE_URL"] == ""
+
+
+def test_load_instance_env_keeps_the_process_when_the_file_is_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     paths = InstancePaths(root=tmp_path)
-    paths.env_file.write_text("DATABASE_URL=sqlite:///instance.db\n", encoding="utf-8")
     monkeypatch.setenv("DATABASE_URL", "sqlite:///process.db")
 
     load_instance_env(paths)
 
     assert os.environ["DATABASE_URL"] == "sqlite:///process.db"
 
-    load_instance_env(paths, override=True)
 
-    assert os.environ["DATABASE_URL"] == "sqlite:///instance.db"
+def _refresh_ledger(monkeypatch: pytest.MonkeyPatch, process_url: str) -> Path:
+    """Return the ledger ``refresh_all`` would write, from a fresh process env."""
+    monkeypatch.setenv("DATABASE_URL", process_url)
+    found: list[Path] = []
+
+    def fake_refresh(database_url: str | None, *, months: int = 12) -> dict[str, Any]:
+        found.append(_db_path(database_url))
+        return {"synced_at": "2026-10-06T00:00:00+00:00", "sources": []}
+
+    monkeypatch.setattr(refresh_all, "refresh", fake_refresh)
+    assert refresh_all.main([]) == 0
+    return found[0]
+
+
+def _margin_ledger(monkeypatch: pytest.MonkeyPatch, process_url: str) -> Path:
+    """Return the ledger ``margin_metrics_cli`` would read, from a fresh process env."""
+    monkeypatch.setenv("DATABASE_URL", process_url)
+    found: list[Path] = []
+
+    def fake_read_db_balances(
+        database_url: str | None = None,
+        config_path: str | Path | None = None,
+    ) -> FidelityBalances:
+        ledger = _db_path(database_url)
+        found.append(ledger)
+        return FidelityBalances(
+            source_file=f"db:{ledger}",
+            total_account_value=100_000.0,
+            total_account_day_change=None,
+            margin_buying_power=1_000.0,
+            margin_buying_power_day_change=None,
+            net_debit=-10_000.0,
+            net_debit_day_change=None,
+            margin_interest_accrued_this_month=None,
+        )
+
+    monkeypatch.setattr(
+        "src.analysis.margin_metrics.read_db_balances", fake_read_db_balances
+    )
+    assert margin_metrics_main([]) == 0
+    return found[0]
+
+
+@pytest.mark.parametrize(
+    ("env_line", "expected_relative"),
+    [
+        ("DATABASE_URL=sqlite:///from-env-file.db", "from-env-file.db"),
+        ("DATABASE_URL=", "family_office.db"),
+        ("OTHER=1", None),
+    ],
+)
+def test_refresh_all_and_margin_metrics_cli_resolve_the_same_ledger(
+    env_line: str,
+    expected_relative: str | None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sync and margin metrics share one ledger when the process env disagrees."""
+    process_ledger = tmp_path / "from-process.db"
+    (tmp_path / ".env").write_text(f"{env_line}\n", encoding="utf-8")
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("FG_MARGIN_INTEREST_RATE_DECIMAL", "0.12")
+    monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "5000")
+    process_url = f"sqlite:///{process_ledger}"
+    expected = (
+        process_ledger if expected_relative is None else tmp_path / expected_relative
+    )
+
+    sync_ledger = _refresh_ledger(monkeypatch, process_url)
+    margin_ledger = _margin_ledger(monkeypatch, process_url)
+
+    assert sync_ledger.resolve() == margin_ledger.resolve() == expected.resolve()
 
 
 def test_snaptrade_accounts_file_is_under_instance_root(tmp_path: Path) -> None:
