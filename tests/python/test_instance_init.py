@@ -280,6 +280,38 @@ def test_plugin_flag_adds_the_agent_to_existing_settings(tmp_path: Path) -> None
     }
 
 
+def test_plugin_flag_converts_a_checkout_scaffold_end_to_end(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    assert _run_init(root, repo).returncode == 0
+    (root / ".claude").unlink()
+    (root / ".agents").unlink()
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode == 0, result.stderr
+    agents_text = (root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "plugin is the source of truth for agents, skills, and hooks" in agents_text
+    assert ".agents/skills/" not in agents_text
+    settings = json.loads((root / ".claude" / "settings.json").read_text("utf-8"))
+    assert settings["agent"] == "finance-guru:fg-finance-orchestrator"
+
+
+def test_plugin_flag_refuses_a_symlinked_settings_file(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    shared = tmp_path / "shared-settings.json"
+    shared.write_text("{}\n", encoding="utf-8")
+    (root / ".claude").mkdir(parents=True)
+    (root / ".claude" / "settings.json").symlink_to(shared)
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode != 0
+    assert "settings.json is a symlink" in result.stderr
+    assert shared.read_text(encoding="utf-8") == "{}\n"
+
+
 def test_matching_plugin_root_omits_harness_symlinks(tmp_path: Path) -> None:
     repo = _fake_repo(tmp_path)
     root = tmp_path / "instance"
