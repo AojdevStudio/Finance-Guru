@@ -45,7 +45,7 @@ uv run python -m src.strategies.optimizer_cli TICKERS --method max_sharpe --outp
 
 ## Output
 
-Return the [shared analysis output contract](../_shared/AnalysisOutput.md). The Numbers table carries Sharpe, Sortino, and max drawdown for every position the strategy adds or changes. A recommendation without those three numbers is incomplete. Add an implementation plan after the Numbers table, with the amount, the entry trigger, and the exit trigger for each change.
+Return the [`fin-guru-output-contract`](../fin-guru-output-contract/SKILL.md) skill. The Numbers table carries Sharpe, Sortino, and max drawdown for every position the strategy adds or changes. A recommendation without those three numbers is incomplete. Add an implementation plan after the Numbers table, with the amount, the entry trigger, and the exit trigger for each change.
 
 ## Requirements
 

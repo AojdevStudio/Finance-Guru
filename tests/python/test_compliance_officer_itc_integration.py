@@ -70,10 +70,11 @@ class TestAgentPromptConfiguration:
         assert "market-implied" in content, "Missing the ITC risk monitoring rule"
         assert "itc_risk_cli" in content, "Missing itc_risk_cli reference"
 
-    def test_agent_prompt_contains_supported_tickers(self, content: str):
-        """The ITC rules must list supported tickers for tradfi and crypto."""
-        for ticker in ("TSLA", "AAPL", "MSTR", "BTC", "ETH"):
-            assert ticker in content, f"Missing {ticker} in supported tickers"
+    def test_agent_prompt_reads_supported_tickers_from_the_cli(self, content: str):
+        """Supported tickers come from itc_risk_cli, not a copied list."""
+        assert "itc_risk_cli --list-supported tradfi" in content
+        assert "itc_risk_cli --list-supported crypto" in content
+        assert "TSLA, AAPL, MSTR" not in content
 
     def test_agent_prompt_contains_risk_thresholds(self, content: str):
         """The ITC rules must define risk thresholds (0.3, 0.7)."""

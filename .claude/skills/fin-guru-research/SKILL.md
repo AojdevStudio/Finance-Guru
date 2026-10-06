@@ -31,7 +31,7 @@ Before data collection, follow the shared **[paid MCP capability probe](../_shar
 
 ## Output
 
-Return the [shared analysis output contract](../_shared/AnalysisOutput.md). Cite each web source under Evidence with its publisher, date, and URL. A claim without a dated source goes under Assumptions and gaps, not under Bottom line.
+Return the [`fin-guru-output-contract`](../fin-guru-output-contract/SKILL.md) skill. Cite each web source under Evidence with its publisher, date, and URL. A claim without a dated source goes under Assumptions and gaps, not under Bottom line.
 
 ## Requirements
 
