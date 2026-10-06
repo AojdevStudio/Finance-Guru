@@ -13,6 +13,7 @@ Checkout-mode instances link both paths to the checkout's ``.claude`` tree.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 from collections.abc import Callable, Sequence
@@ -66,10 +67,11 @@ PLUGIN_INSTANCE_SETTINGS = """{
   "agent": "finance-guru:fg-finance-orchestrator"
 }
 """
+PLUGIN_AGENT = json.loads(PLUGIN_INSTANCE_SETTINGS)["agent"]
 SCAFFOLD_GIT_NAME = "Finance Guru"
 SCAFFOLD_GIT_EMAIL = "finance-guru@example.invalid"
 
-type StepResult = Literal["created", "exists"]
+type StepResult = Literal["created", "exists", "updated"]
 type StepAction = Callable[[Path], StepResult]
 
 
@@ -91,11 +93,26 @@ def _create_directory(path: Path) -> StepResult:
 
 
 def _create_real_directory(path: Path) -> StepResult:
-    if path.is_symlink():
-        raise FileExistsError(
-            f"{path} is a symlink from a checkout-mode scaffold; remove it to use --plugin"
-        )
+    for leftover in (path, path.parent / ".agents"):
+        if leftover.is_symlink():
+            raise FileExistsError(
+                f"{leftover} is a symlink from a checkout-mode scaffold; "
+                "remove .claude and .agents to use --plugin"
+            )
     return _create_directory(path)
+
+
+def _merge_agent_setting(path: Path) -> StepResult:
+    """Write the plugin settings, or add the agent key to settings the owner already has."""
+    if not path.exists():
+        path.write_text(PLUGIN_INSTANCE_SETTINGS, encoding="utf-8")
+        return "created"
+    settings = json.loads(path.read_text(encoding="utf-8"))
+    if "agent" in settings:
+        return "exists"
+    settings["agent"] = PLUGIN_AGENT
+    path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    return "updated"
 
 
 def _write_text(content: str) -> StepAction:
@@ -306,8 +323,7 @@ def _build_plan(
             (
                 PlanStep(paths.root / ".claude", _create_real_directory),
                 PlanStep(
-                    paths.root / ".claude" / "settings.json",
-                    _write_text(PLUGIN_INSTANCE_SETTINGS),
+                    paths.root / ".claude" / "settings.json", _merge_agent_setting
                 ),
             )
         )
