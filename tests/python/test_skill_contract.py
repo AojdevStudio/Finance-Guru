@@ -59,3 +59,40 @@ def test_fallback_targets_include_every_alternative() -> None:
 
     assert _fallback_targets(text) == {"fin-guru-research", "nonexistent-skill"}
     assert not _fallback_targets(text) <= _skill_names()
+
+
+REPO_ROOT = SKILLS_DIR.parents[1]
+OUTPUT_CONTRACT_SKILLS = (
+    "fin-guru-compliance-review",
+    "fin-guru-quant-analysis",
+    "fin-guru-research",
+    "fin-guru-strategize",
+)
+CLI_CALL = re.compile(r"uv run python -m (src(?:\.\w+)+)([^\n`]*)")
+
+
+@pytest.mark.parametrize("skill", OUTPUT_CONTRACT_SKILLS)
+def test_analysis_skill_links_the_shared_output_contract(skill: str) -> None:
+    text = (SKILLS_DIR / skill / "SKILL.md").read_text(encoding="utf-8")
+
+    assert "](../_shared/AnalysisOutput.md)" in text, skill
+
+
+def test_every_skill_cli_call_names_a_real_module_and_flag() -> None:
+    calls = [
+        (path, match)
+        for path in SKILLS_DIR.rglob("*.md")
+        for match in CLI_CALL.finditer(path.read_text(encoding="utf-8"))
+    ]
+    assert calls
+
+    for path, match in calls:
+        module = REPO_ROOT / Path(*match.group(1).split("."))
+        source = module.with_suffix(".py")
+        if not source.is_file():
+            source = module / "__main__.py"
+        assert source.is_file(), f"{path}: {match.group(0)}"
+        if "--output json" in match.group(2):
+            assert '"--output"' in source.read_text(encoding="utf-8"), (
+                f"{path}: {match.group(1)} has no --output flag"
+            )

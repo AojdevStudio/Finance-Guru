@@ -26,13 +26,13 @@ For portfolio positions with ITC coverage:
 
 ```bash
 # Single ticker check
-uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi
+uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi --output json
 
 # Batch processing
-uv run python -m src.analysis.itc_risk_cli TSLA AAPL MSTR --universe tradfi
+uv run python -m src.analysis.itc_risk_cli TSLA AAPL MSTR --universe tradfi --output json
 
 # Full risk band analysis
-uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi --full-table
+uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi --full-table --output json
 ```
 
 ## Risk Thresholds
@@ -50,6 +50,10 @@ uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi --full-table
 - DR-3: High Risk Review (ITC 0.7-0.85)
 - DR-4: Critical Risk Block (ITC >0.85 OR divergence >30%)
 - DR-5: Unsupported Ticker (internal metrics only)
+
+## Output
+
+Return the [shared analysis output contract](../_shared/AnalysisOutput.md). The Bottom line is the verdict, one of PASS, CONDITIONAL PASS, or REVISIONS REQUIRED, with the decision rule that produced it. The Numbers table carries the ITC score and band for each supported ticker.
 
 ## Requirements
 
