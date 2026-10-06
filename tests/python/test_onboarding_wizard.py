@@ -391,7 +391,17 @@ class TestGenerateConfigFiles:
         mcp_path = tmp_path / ".claude" / "mcp.json"
         assert mcp_path.exists()
         content = mcp_path.read_text()
-        assert len(content) > 0
+        parsed = json.loads(content)
+        servers = parsed["mcpServers"]
+        assert isinstance(servers, dict)
+        assert "gdrive" not in servers
+        assert "@google/gdrive-mcp" not in content
+        for server in ("exa", "perplexity", "context7", "financial-datasets"):
+            assert server in servers
+        assert "bright-data" not in servers
+
+        claude_md = (tmp_path / "CLAUDE.md").read_text()
+        assert "gdrive" not in claude_md
 
 
 # ---------------------------------------------------------------------------

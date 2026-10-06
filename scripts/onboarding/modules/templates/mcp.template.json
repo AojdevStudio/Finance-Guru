@@ -10,11 +10,6 @@
       "args": ["-y", "@perplexity/mcp-server"],
       "description": "Research and reasoning (required)"
     },
-    "gdrive": {
-      "command": "npx",
-      "args": ["-y", "@google/gdrive-mcp"],
-      "description": "Google Sheets integration (required)"
-    },
     "context7": {
       "command": "npx",
       "args": ["-y", "@context7/mcp-server"],
