@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tomllib
 from pathlib import Path
 
@@ -307,6 +308,81 @@ def test_itc_ticker_lists_are_read_from_the_cli() -> None:
         text = (REPO_ROOT / relative).read_text(encoding="utf-8")
         assert "itc_risk_cli --list-supported tradfi" in text, relative
         assert "itc_risk_cli --list-supported crypto" in text, relative
+
+
+# Agents, skills, and prompts name a file under fin-guru/data either as a full
+# path (`fin-guru/data/risk-framework.md`) or as a directory plus a backtick
+# list (`fin-guru/data/`: `risk-framework.md`). Both must exist on disk.
+_EXPLICIT_DATA_FILE = re.compile(r"fin-guru/data/([A-Za-z0-9_.-]+\.md)")
+_LISTED_DATA_FILES = re.compile(
+    r"fin-guru/data/[`}\s]*[:,]\s*"
+    r"((?:`[A-Za-z0-9_.-]+\.md`\s*(?:\([^)]*\))?\s*[,.]?\s*(?:and\s+)?)*)"
+)
+_BACKTICK_MD = re.compile(r"`([A-Za-z0-9_.-]+\.md)`")
+_INSTRUCTION_ROOTS = (
+    REPO_ROOT / ".claude" / "agents",
+    REPO_ROOT / ".claude" / "skills",
+    REPO_ROOT / ".claude" / "commands",
+    REPO_ROOT / "evals",
+    REPO_ROOT / "fin-guru" / "tasks",
+)
+
+
+def cited_fin_guru_data_files(text: str) -> set[str]:
+    """Collect fin-guru/data markdown filenames an instruction text tells an agent to open."""
+    names = set(_EXPLICIT_DATA_FILE.findall(text))
+    for listed in _LISTED_DATA_FILES.findall(text):
+        names.update(_BACKTICK_MD.findall(listed))
+    return names
+
+
+def _instruction_markdown() -> list[Path]:
+    files: list[Path] = []
+    for root in _INSTRUCTION_ROOTS:
+        if root.is_dir():
+            files.extend(path for path in root.rglob("*.md") if path.is_file())
+    return files
+
+
+def test_listed_data_directory_references_are_detected() -> None:
+    sample = (
+        "Read the policy files in `{project-root}/fin-guru/data/`: "
+        "`margin-strategy.md` (leverage limits), `cashflow-policy.md`."
+    )
+
+    assert cited_fin_guru_data_files(sample) == {
+        "margin-strategy.md",
+        "cashflow-policy.md",
+    }
+    assert cited_fin_guru_data_files(
+        "Read `{project-root}/fin-guru/data/risk-framework.md`."
+    ) == {"risk-framework.md"}
+    assert cited_fin_guru_data_files(
+        "from `{project-root}/fin-guru/data/`, `compliance-policy.md`, "
+        "`risk-framework.md`, and `modern-income-vehicles.md`"
+    ) == {
+        "compliance-policy.md",
+        "risk-framework.md",
+        "modern-income-vehicles.md",
+    }
+    assert (
+        cited_fin_guru_data_files(
+            "touches `fin-guru/data/` and `{project-root}/fin-guru/checklists/margin-strategy.md`"
+        )
+        == set()
+    )
+
+
+def test_fin_guru_data_references_from_agents_skills_and_prompts_exist() -> None:
+    missing: list[str] = []
+    for path in _instruction_markdown():
+        text = path.read_text(encoding="utf-8")
+        for name in sorted(cited_fin_guru_data_files(text)):
+            target = REPO_ROOT / "fin-guru" / "data" / name
+            if not target.is_file():
+                missing.append(f"{path.relative_to(REPO_ROOT)} -> fin-guru/data/{name}")
+
+    assert missing == []
 
 
 def test_plugin_instances_start_the_shipped_orchestrator() -> None:

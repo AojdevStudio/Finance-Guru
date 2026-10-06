@@ -22,10 +22,10 @@ Before adding current external assumptions, follow the shared **[paid MCP capabi
 
 ## Integration Points
 
-- Load `margin-strategy.md` for margin tactics
-- Load `dividend-framework.md` for income strategies
-- Load `cashflow-policy.md` for cash flow optimization
-- Load `modern-income-vehicles.md` for Layer 2 evaluation criteria
+- Load `{project-root}/fin-guru/checklists/margin-strategy.md` for margin tactics
+- Load `{project-root}/fin-guru/checklists/dividend-framework.md` for income strategies
+- Load `{project-root}/fin-guru/checklists/cashflow-policy.md` for cash flow optimization
+- Load `{project-root}/fin-guru/data/modern-income-vehicles.md` for Layer 2 evaluation criteria
 
 ## Risk Validation Tools
 
