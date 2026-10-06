@@ -23,9 +23,9 @@ description: |
 
 ---
 
-## Essential Files (Auto-Loaded)
+## Instance Files
 
-These files are automatically loaded into context at session start:
+The session-start hook prints the first, second, and fourth files, and reports the ledger's last sync:
 
 ### 1. System Configuration
 **Path**: `config.yaml`
@@ -35,15 +35,11 @@ These files are automatically loaded into context at session start:
 **Path**: `user-profile.yaml`
 **Contains**: Portfolio structure (${FG_PORTFOLIO_STRUCTURE}), investment capacity (${FG_W2_MONTHLY_INCOME}/month W2), risk profile (aggressive), Layer 2 Income strategy
 
-### 3. Portfolio Updates
-**Path**: `imports/`
-**Live source**: Positions + balances now sync **live from SnapTrade** (issue 71) — the position/balance CSVs are a fallback/re-verification source only, not the source of truth. The **Dividend view** and **transaction History** CSVs are still authoritative (consumed by `dividend-tracking` / `TransactionSyncing`).
+### 3. Portfolio Ledger
+**Path**: `family_office.db`
+**Contains**: Positions, balances, transactions, and bank transactions. Positions and balances sync live from SnapTrade, and bank and card activity syncs from SimpleFIN. Run the `portfolio-syncing` skill before you quote a position or a balance. The session-start hook reports the last balance sync.
 
-**File Patterns** (fallback + dividend/history):
-- Balances: `Balances_for_Account_{account_id}.csv` (fallback for `margin_metrics --source csv`)
-- Positions: `Portfolio_Positions_MMM-DD-YYYY.csv` (fallback / re-verification)
-- Dividend: `Dividend_Positions_MMM-DD-YYYY.csv` · History: `History_for_Account_{account_id}.csv`
-- The 7-day staleness alert is meaningful only for the dividend/history CSVs now (positions/balances are live)
+Some calculators still read broker CSVs in `imports/`: `total_return_cli` reads the newest positions CSV, `hedge_sizer_cli` falls back to the balances CSV, and `margin_metrics_cli --source csv` reads it on request. Check the CSV's date before you quote their dollar figures. The Dividend view and transaction History exports feed `dividend-tracking` and `TransactionSyncing`.
 
 ### 4. System Context
 **Path**: `system-context.md`
@@ -51,35 +47,15 @@ These files are automatically loaded into context at session start:
 
 ---
 
-## Production-Ready Tools (7 Available)
+## Calculators
 
-All tools use 3-layer type-safe architecture (Pydantic → Calculator → CLI):
+Every calculator is a Pydantic model, a calculator class, and a CLI. Run each one with `uv run python -m` and the module name below, pass `--output json` where the CLI offers it, and quote its output instead of your own arithmetic. `{project-root}/docs/reference/api.md` lists every command, and every CLI answers `--help`.
 
-### Risk & Performance
-1. **Risk Metrics** (`src/analysis/risk_metrics_cli.py`)
-   VaR, CVaR, Sharpe, Sortino, Max Drawdown, Beta, Alpha
-
-2. **Volatility Metrics** (`src/utils/volatility_cli.py`)
-   Bollinger Bands, ATR, Historical Vol, Keltner Channels, regime assessment
-
-### Technical Analysis
-3. **Momentum Indicators** (`src/utils/momentum_cli.py`)
-   RSI, MACD, Stochastic, Williams %R, ROC, confluence analysis
-
-4. **Moving Averages** (`src/utils/moving_averages_cli.py`)
-   SMA, EMA, WMA, HMA, Golden Cross/Death Cross detection
-
-### Portfolio Construction
-5. **Correlation & Covariance** (`src/analysis/correlation_cli.py`)
-   Pearson correlation, covariance matrices, diversification scoring
-
-6. **Portfolio Optimizer** (`src/strategies/optimizer_cli.py`)
-   Mean-Variance, Risk Parity, Min Variance, Max Sharpe, Black-Litterman
-
-7. **Backtesting Framework** (`src/strategies/backtester_cli.py`)
-   Strategy validation, performance metrics, deployment recommendations
-
-**Documentation**: See `CLAUDE.md` for usage examples and agent workflows
+- _Risk and performance:_ `src.analysis.risk_metrics_cli`, `src.analysis.factors_cli`, `src.analysis.total_return_cli`, `src.analysis.rolling_tracker_cli`, `src.analysis.itc_risk_cli`.
+- _Technical analysis:_ `src.utils.momentum_cli`, `src.utils.moving_averages_cli`, `src.utils.volatility_cli`, `src.utils.screener_cli`.
+- _Portfolio construction:_ `src.analysis.correlation_cli`, `src.strategies.optimizer_cli`, `src.strategies.backtester_cli`.
+- _Margin, options, and hedging:_ `src.analysis.margin_metrics_cli`, `src.analysis.options_cli`, `src.analysis.options_chain_cli`, `src.analysis.hedge_sizer_cli`, `src.analysis.hedge_comparison_cli`.
+- _Data checks:_ `src.utils.data_validator_cli`, `src.utils.input_validation_cli`, `src.utils.yaml_generator_cli`.
 
 ---
 

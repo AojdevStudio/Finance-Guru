@@ -10,7 +10,7 @@ import yaml
 
 SKILLS_DIR = Path(__file__).resolve().parents[2] / ".claude" / "skills"
 
-ANALYSIS_SKILLS = (
+ROUTED_SKILLS = (
     "fin-guru-checklist",
     "fin-guru-compliance-review",
     "fin-guru-create-doc",
@@ -33,7 +33,7 @@ def _skill_names() -> set[str]:
     }
 
 
-@pytest.mark.parametrize("skill", ANALYSIS_SKILLS)
+@pytest.mark.parametrize("skill", ROUTED_SKILLS)
 def test_description_says_when_to_route_and_where_else_to_go(skill: str) -> None:
     description = _frontmatter(skill)["description"]
 
@@ -68,6 +68,7 @@ OUTPUT_CONTRACT_SKILLS = (
     "fin-guru-research",
     "fin-guru-strategize",
 )
+OUTPUT_JSON_FLAG = re.compile(r'"--output",[^)]*choices=\[[^\]]*"json"', re.S)
 CLI_CALL = re.compile(r"uv run python -m (src(?:\.\w+)+)([^\n`]*)")
 
 
@@ -93,6 +94,19 @@ def test_every_skill_cli_call_names_a_real_module_and_flag() -> None:
             source = module / "__main__.py"
         assert source.is_file(), f"{path}: {match.group(0)}"
         if "--output json" in match.group(2):
-            assert '"--output"' in source.read_text(encoding="utf-8"), (
-                f"{path}: {match.group(1)} has no --output flag"
+            assert OUTPUT_JSON_FLAG.search(source.read_text(encoding="utf-8")), (
+                f"{path}: {match.group(1)} has no --output json choice"
             )
+
+
+def test_fin_core_lists_every_calculator_cli() -> None:
+    fin_core = (SKILLS_DIR / "fin-core" / "SKILL.md").read_text(encoding="utf-8")
+    clis = sorted((REPO_ROOT / "src").rglob("*_cli.py"))
+    assert clis
+
+    modules = [
+        "`" + ".".join(cli.relative_to(REPO_ROOT).with_suffix("").parts) + "`"
+        for cli in clis
+    ]
+    missing = [module for module in modules if module not in fin_core]
+    assert not missing, missing
