@@ -63,11 +63,8 @@ opportunities: {}
 recommended_workflows: {}
 session_context: {}
 """
-PLUGIN_INSTANCE_SETTINGS = """{
-  "agent": "finance-guru:fg-finance-orchestrator"
-}
-"""
-PLUGIN_AGENT = json.loads(PLUGIN_INSTANCE_SETTINGS)["agent"]
+PLUGIN_AGENT = "finance-guru:fg-finance-orchestrator"
+CHECKOUT_DISCOVERY_MARKER = "`.agents` symlink points to"
 SCAFFOLD_GIT_NAME = "Finance Guru"
 SCAFFOLD_GIT_EMAIL = "finance-guru@example.invalid"
 
@@ -103,16 +100,35 @@ def _create_real_directory(path: Path) -> StepResult:
 
 
 def _merge_agent_setting(path: Path) -> StepResult:
-    """Write the plugin settings, or add the agent key to settings the owner already has."""
-    if not path.exists():
-        path.write_text(PLUGIN_INSTANCE_SETTINGS, encoding="utf-8")
-        return "created"
-    settings = json.loads(path.read_text(encoding="utf-8"))
+    """Add the orchestrator as the main agent, keeping settings the owner already has."""
+    if path.is_symlink():
+        raise FileExistsError(
+            f"{path} is a symlink; --plugin will not write through it to a shared file"
+        )
+    existed = path.exists()
+    settings = json.loads(path.read_text(encoding="utf-8")) if existed else {}
     if "agent" in settings:
         return "exists"
     settings["agent"] = PLUGIN_AGENT
-    path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
-    return "updated"
+    path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n", "utf-8")
+    return "updated" if existed else "created"
+
+
+def _replace_checkout_instructions(content: str) -> StepAction:
+    """Write plugin-mode AGENTS.md, replacing one a checkout-mode scaffold left behind."""
+
+    def write(path: Path) -> StepResult:
+        if path.is_symlink():
+            return "exists"
+        if path.exists():
+            if CHECKOUT_DISCOVERY_MARKER not in path.read_text(encoding="utf-8"):
+                return "exists"
+            path.write_text(content, encoding="utf-8")
+            return "updated"
+        path.write_text(content, encoding="utf-8")
+        return "created"
+
+    return write
 
 
 def _write_text(content: str) -> StepAction:
@@ -342,7 +358,7 @@ def _build_plan(
             ),
             PlanStep(
                 paths.root / "AGENTS.md",
-                _write_text(
+                (_replace_checkout_instructions if plugin_mode else _write_text)(
                     _instance_agent_instructions(repo, plugin_mode=plugin_mode)
                 ),
             ),

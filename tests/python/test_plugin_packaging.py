@@ -202,13 +202,11 @@ def test_specialists_are_delegated_subagents_not_chat_personas() -> None:
 
 
 def test_plugin_instances_start_the_shipped_orchestrator() -> None:
-    from src.cli.instance_init import PLUGIN_INSTANCE_SETTINGS
+    from src.cli.instance_init import PLUGIN_AGENT
 
     manifest = _json(PLUGIN_MANIFEST)
     orchestrator = REPO_ROOT / ".claude" / "agents" / "fg-finance-orchestrator.md"
     fields, _ = _agent(orchestrator)
 
     assert f"./{orchestrator.relative_to(REPO_ROOT)}" in manifest["agents"]
-    assert json.loads(PLUGIN_INSTANCE_SETTINGS) == {
-        "agent": f"{manifest['name']}:{fields['name']}"
-    }
+    assert f"{manifest['name']}:{fields['name']}" == PLUGIN_AGENT
