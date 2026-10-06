@@ -12,7 +12,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
-import { join } from "path";
+import { basename, dirname, join } from "path";
 import { spawn } from "child_process";
 
 const HOOK_PATH = join(import.meta.dir, "../load-fin-core-config.ts");
@@ -26,6 +26,10 @@ beforeAll(() => {
   );
   writeFileSync(join(TEST_INSTANCE_ROOT, "user-profile.yaml"), "profile: test-fixture\n");
   writeFileSync(join(TEST_INSTANCE_ROOT, "system-context.md"), "# Test system context\n");
+  writeFileSync(
+    join(TEST_INSTANCE_ROOT, "pyproject.toml"),
+    '[project]\nname = "finance-guru-instance"\n',
+  );
 });
 
 afterAll(() => {
@@ -207,6 +211,29 @@ describe("load-fin-core-config hook with Bun", () => {
     } finally {
       rmSync(checkout, { recursive: true, force: true });
     }
+  });
+
+  it("should print nothing in an unrelated repo that has a config.yaml", async () => {
+    const repo = mkdtempSync(join(tmpdir(), "finance-guru-unrelated-"));
+    writeFileSync(join(repo, "config.yaml"), "api_key: not-for-the-model\n");
+    writeFileSync(join(repo, "user-profile.yaml"), "name: someone else\n");
+    try {
+      const result = await runHook({ session_id: "test-unrelated", event: "session_start" }, true, {}, repo);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toBe("");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  it("should expand ~ in FIN_GURU_DATA_ROOT the way InstancePaths does", async () => {
+    const result = await runHook({ session_id: "test-tilde", event: "session_start" }, false, {
+      HOME: dirname(TEST_INSTANCE_ROOT),
+      FIN_GURU_DATA_ROOT: `~/${basename(TEST_INSTANCE_ROOT)}`,
+    });
+
+    expect(result.stdout).toContain("profile: test-fixture");
   });
 
   it("should include completion footer", async () => {

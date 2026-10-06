@@ -19,12 +19,26 @@ import { join, resolve } from 'path';
 // Bun provides import.meta.dir directly
 const __dirname = import.meta.dir;
 const PROJECT_ROOT = resolve(__dirname, '../..');
-// The same rule as InstancePaths.resolve: FIN_GURU_DATA_ROOT, else the session directory.
-const DATA_ROOT = resolve(process.env.FIN_GURU_DATA_ROOT?.trim() || process.cwd());
+// Path.expanduser for a leading "~", which InstancePaths applies to the root.
+function expandHome(path: string): string {
+  if (path !== '~' && !path.startsWith('~/')) return path;
+  return join(process.env.HOME ?? '~', path.slice(1));
+}
 
-// A user-scope plugin hook runs in every session, so it stays silent outside an instance.
+// The same rule as InstancePaths.resolve: FIN_GURU_DATA_ROOT, else the session directory.
+const CONFIGURED_ROOT = expandHome(process.env.FIN_GURU_DATA_ROOT?.trim() ?? '');
+const DATA_ROOT = resolve(CONFIGURED_ROOT || process.cwd());
+
+// A user-scope plugin hook runs in every session, and config.yaml is common in
+// unrelated repos, so the session directory needs a Finance Guru marker before
+// any private file is read. A root the owner named in FIN_GURU_DATA_ROOT needs only a profile.
 function isInstance(root: string): boolean {
-  return existsSync(join(root, 'user-profile.yaml')) || existsSync(join(root, 'config.yaml'));
+  if (!existsSync(join(root, 'user-profile.yaml'))) return false;
+  if (CONFIGURED_ROOT) return true;
+  const pyproject = join(root, 'pyproject.toml');
+  const scaffolded =
+    existsSync(pyproject) && readFileSync(pyproject, 'utf-8').includes('name = "finance-guru-instance"');
+  return scaffolded || existsSync(join(root, 'family_office.db'));
 }
 
 // A checkout instance or the engine repo runs its own copy through .claude/settings.json.
