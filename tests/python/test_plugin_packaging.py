@@ -385,6 +385,41 @@ def test_fin_guru_data_references_from_agents_skills_and_prompts_exist() -> None
     assert missing == []
 
 
+def test_public_policies_match_the_compliance_verdicts() -> None:
+    risk = (REPO_ROOT / "fin-guru" / "data" / "risk-framework.md").read_text(
+        encoding="utf-8"
+    )
+    policy = (REPO_ROOT / "fin-guru" / "data" / "compliance-policy.md").read_text(
+        encoding="utf-8"
+    )
+    example = (
+        REPO_ROOT
+        / ".claude"
+        / "skills"
+        / "fin-guru-compliance-review"
+        / "itc-divergence.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Single-position clearance limit" in risk
+    assert "20% of the total portfolio" in risk
+    assert "10% monitoring target" in risk
+    assert "30% deployment cap" in risk
+    assert "15.5%" in risk
+    assert "APPROVE WITH NOTE" in risk
+    # A breach of the monitoring target is a note. Level 3 is reserved for hard gates.
+    assert "Weight above the 10% monitoring target is a level 1 note." in risk
+
+    assert "DR-4 is a mandatory BLOCK" in policy
+    assert "above 0.85" in policy
+    assert "divergence is above 30%" in policy
+    assert (
+        "While a specialist drafts a buy ticket, ITC is an advisory overlay." in policy
+    )
+
+    assert "15.5% (inside the 20% clearance limit" in example
+    assert "Action: BLOCK" in example
+
+
 def test_plugin_instances_start_the_shipped_orchestrator() -> None:
     from src.cli.instance_init import PLUGIN_AGENT
 

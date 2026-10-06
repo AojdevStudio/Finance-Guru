@@ -12,16 +12,20 @@ Personal dollar thresholds, concentration exceptions, and account-specific buffe
 
 ## Portfolio-level limits
 
-Apply these to a balanced portfolio unless the instance records a tighter cap.
+A position increase uses the 20% clearance limit below. The 10% target and the 30% deployment cap govern different decisions.
 
-| Limit | Rule |
-| --- | --- |
-| Maximum 1-day VaR | 2% of portfolio value at 95% confidence |
-| Maximum drawdown | 15% peak to trough |
-| Single position | 10% of the total portfolio |
-| Leverage | 2:1 maximum for a conservative strategy |
+| Limit | Rule | What it governs |
+| --- | --- | --- |
+| Single-position monitoring target | 10% of the total portfolio | A balanced-book watch level. Weight above 10% is a note on the review. |
+| Single-position clearance limit | 20% of the total portfolio | A position increase. Approve it on concentration grounds when the post-increase weight is at or under 20%. |
+| Deployment cap | 30% of pre-borrow equity NAV | A new buy-ticket deployment. Weight from 20% to 30% still fails a position-increase clearance. |
+| Portfolio 1-day VaR | 2% of portfolio value at 95% confidence | The whole portfolio. A single name's daily VaR uses the 5% threshold in the ITC workflow. |
+| Maximum drawdown | 15% peak to trough | The portfolio. |
+| Leverage | 2:1 maximum for a conservative strategy | Gross leverage. |
 
-A deployment cap of 30% on one position, and any approved exception to it, is an instance rule. This framework's general cap stays at 10%.
+The worked increase in `.claude/skills/fin-guru-compliance-review/itc-divergence.md` finishes at 15.5%. That weight is inside the 20% clearance limit and above the 10% monitoring target, so the record notes the target and the verdict stays APPROVE WITH NOTE under DR-2.
+
+An instance file may name a tighter cap or a named exception. Cite that record in the compliance record. This file does not list those names or amounts. With no citation, the 20% clearance limit stands. A cited exception is the approval path for an increase whose post-increase weight is above 20%.
 
 ## Asset-class ranges
 
@@ -35,13 +39,15 @@ A deployment cap of 30% on one position, and any approved exception to it, is an
 
 ## Escalation
 
-Measure utilization against the limit above, not against a private dollar target.
+Measure a hard gate against its own limit. Hard gates are the 20% clearance limit, the 30% deployment cap, portfolio VaR, maximum drawdown, and the leverage limit.
 
 | Level | Utilization | Action |
 | --- | --- | --- |
-| 1 — Alert | 75% of the limit | Name the limit and the metric. Increase monitoring. |
-| 2 — Warning | 90% of the limit | Stop adding exposure that consumes the same limit. |
-| 3 — Breach | 100% of the limit | Immediate corrective action. Do not wait for the next review. |
+| 1 — Alert | 75% of a hard gate, or any weight above the 10% monitoring target | Name the limit and the metric. Increase monitoring. |
+| 2 — Warning | 90% of a hard gate | Stop adding exposure that consumes that gate until the review is done. |
+| 3 — Breach | 100% of a hard gate | Immediate corrective action. Do not wait for the next review. |
+
+Weight above the 10% monitoring target is a level 1 note. It stays a note while the post-increase weight is at or under the 20% clearance limit and the ITC rule is DR-1 or DR-2.
 
 An emergency is a systematic loss that threatens the portfolio's ability to meet its liquidity floor. Preserve cash, reduce the position that breached, and record the hedge decision separately under `hedging-strategies.md`.
 
