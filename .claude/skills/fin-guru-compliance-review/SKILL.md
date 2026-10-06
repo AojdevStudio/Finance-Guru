@@ -55,7 +55,7 @@ uv run python -m src.analysis.itc_risk_cli TICKER --universe tradfi --full-table
 
 ## Output
 
-Return the [shared analysis output contract](../_shared/AnalysisOutput.md). The Bottom line is the verdict, one of PASS, CONDITIONAL PASS, or REVISIONS REQUIRED, with the decision rule that produced it. The Numbers table carries the ITC score and band for each supported ticker.
+Return the [`fin-guru-output-contract`](../fin-guru-output-contract/SKILL.md) skill. The Bottom line is the verdict, one of PASS, CONDITIONAL PASS, or REVISIONS REQUIRED, with the decision rule that produced it. The Numbers table carries the ITC score and band for each supported ticker.
 
 ## Requirements
 

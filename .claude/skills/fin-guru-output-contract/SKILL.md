@@ -1,6 +1,11 @@
-# Analysis output contract (shared pattern)
+---
+name: fin-guru-output-contract
+description: "The six-part shape of every Finance Guru analysis answer: bottom line, a numbers table that names the source command, assumptions and gaps, confidence, evidence, and the disclaimer. Use when you write an analysis, a review, a strategy, a lesson, an onboarding update, or a merged answer. Not for filling a document template (use fin-guru-create-doc) or running the calculators (use fin-guru-quant-analysis)."
+---
 
-Every answer from an analysis skill or specialist has these six parts, in this order. A skill may add its own named section after Numbers, such as an implementation plan. The skills link here instead of restating it.
+# Analysis output contract
+
+Every answer from an analysis skill or specialist has these six parts, in this order. A skill or agent may add a named section after Numbers, such as an implementation plan. Role-specific rules stay in that skill or in the agent's Return section.
 
 1. _Bottom line._ One or two sentences that answer the question asked.
 2. _Numbers._ A table with the columns Metric, Value, and Source command. Copy each value from a command you ran in this session. Pass `--output json` where the CLI offers it. A number you cannot trace to a command does not go in the table.

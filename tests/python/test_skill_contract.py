@@ -15,6 +15,7 @@ ROUTED_SKILLS = (
     "fin-guru-compliance-review",
     "fin-guru-create-doc",
     "fin-guru-learner-profile",
+    "fin-guru-output-contract",
     "fin-guru-quant-analysis",
     "fin-guru-research",
     "fin-guru-strategize",
@@ -73,10 +74,11 @@ CLI_CALL = re.compile(r"uv run python -m (src(?:\.\w+)+)([^\n`]*)")
 
 
 @pytest.mark.parametrize("skill", OUTPUT_CONTRACT_SKILLS)
-def test_analysis_skill_links_the_shared_output_contract(skill: str) -> None:
+def test_analysis_skill_follows_the_output_contract_skill(skill: str) -> None:
     text = (SKILLS_DIR / skill / "SKILL.md").read_text(encoding="utf-8")
 
-    assert "](../_shared/AnalysisOutput.md)" in text, skill
+    assert "fin-guru-output-contract" in text, skill
+    assert "](../fin-guru-output-contract/SKILL.md)" in text, skill
 
 
 def test_every_skill_and_agent_cli_call_names_a_real_module_and_flag() -> None:

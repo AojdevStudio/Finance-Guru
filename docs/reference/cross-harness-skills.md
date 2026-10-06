@@ -10,4 +10,6 @@ Skills live in one place, `.claude/skills/<name>/SKILL.md`, and ship in the plug
 
 This repository tracks no `.agents/` or `.pi/` tree. Do not create one. A harness that needs a different discovery path gets an issue, not a second copy of the skills.
 
+Agents preload a skill by listing its directory name under `skills:` in `.claude/agents/`. Claude Code injects the full `SKILL.md` at startup, which requires the skill to stay model-invocable (`disable-model-invocation` stays unset). Every agent preloads `fin-guru-output-contract`, so the six-part answer shape is already in context and each Return section adds only that role's rules. Codex reads the same file through the `.agents` symlink when the agent names the skill.
+
 See [AGENTS.md](../../AGENTS.md) for the operating rules every harness follows.
