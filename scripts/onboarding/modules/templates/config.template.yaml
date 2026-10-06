@@ -25,7 +25,7 @@ workflow_pipeline:
   - artifacts
 
 # Module settings
-primary_agent: finance-orchestrator
+primary_agent: fg-finance-orchestrator
 default_mode: consultative
 compliance_required: true
 educational_only: true

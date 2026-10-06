@@ -4,13 +4,16 @@ The scaffold commit runs before uv sync so it cannot include a partial virtual
 environment, and the later migration commit owns ``uv.lock``.
 
 An installed Finance Guru plugin is the source of truth for agents, skills, and
-hooks, so plugin-mode instances omit ``.claude`` and ``.agents`` symlinks.
+hooks, so plugin-mode instances omit ``.claude`` and ``.agents`` symlinks. They
+get a real ``.claude/settings.json`` that makes the plugin's orchestrator the
+main agent in that instance only.
 Checkout-mode instances link both paths to the checkout's ``.claude`` tree.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 from collections.abc import Callable, Sequence
@@ -60,10 +63,12 @@ opportunities: {}
 recommended_workflows: {}
 session_context: {}
 """
+PLUGIN_AGENT = "finance-guru:fg-finance-orchestrator"
+CHECKOUT_DISCOVERY_MARKER = "`.agents` symlink points to"
 SCAFFOLD_GIT_NAME = "Finance Guru"
 SCAFFOLD_GIT_EMAIL = "finance-guru@example.invalid"
 
-type StepResult = Literal["created", "exists"]
+type StepResult = Literal["created", "exists", "updated"]
 type StepAction = Callable[[Path], StepResult]
 
 
@@ -82,6 +87,54 @@ def _create_directory(path: Path) -> StepResult:
         return "exists"
     path.mkdir(parents=True)
     return "created"
+
+
+def _create_real_directory(path: Path) -> StepResult:
+    for leftover in (path, path.parent / ".agents"):
+        if leftover.is_symlink():
+            raise FileExistsError(
+                f"{leftover} is a symlink from a checkout-mode scaffold; "
+                "remove .claude and .agents to use --plugin"
+            )
+    return _create_directory(path)
+
+
+def _merge_agent_setting(path: Path) -> StepResult:
+    """Add the orchestrator as the main agent, keeping settings the owner already has."""
+    if path.is_symlink():
+        raise FileExistsError(
+            f"{path} is a symlink; --plugin will not write through it to a shared file"
+        )
+    existed = path.exists()
+    settings = json.loads(path.read_text(encoding="utf-8")) if existed else {}
+    if "agent" in settings:
+        return "exists"
+    settings["agent"] = PLUGIN_AGENT
+    path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n", "utf-8")
+    return "updated" if existed else "created"
+
+
+def _replace_checkout_instructions(content: str, checkout_content: str) -> StepAction:
+    """Write plugin-mode AGENTS.md, replacing an unedited checkout-mode scaffold."""
+
+    def write(path: Path) -> StepResult:
+        if path.is_symlink():
+            return "exists"
+        if not path.exists():
+            path.write_text(content, encoding="utf-8")
+            return "created"
+        current = path.read_text(encoding="utf-8")
+        if CHECKOUT_DISCOVERY_MARKER not in current:
+            return "exists"
+        if current != checkout_content:
+            raise FileExistsError(
+                f"{path} has checkout-mode discovery text and your own edits; "
+                "remove its .agents paragraph or delete the file, then rerun --plugin"
+            )
+        path.write_text(content, encoding="utf-8")
+        return "updated"
+
+    return write
 
 
 def _write_text(content: str) -> StepAction:
@@ -213,7 +266,8 @@ Example: `uv run python -m src.integrations.refresh_all --show`
 def _instance_agent_instructions(repo: Path, *, plugin_mode: bool) -> str:
     if plugin_mode:
         discovery_instructions = """The installed Finance Guru plugin is the source of truth for agents, skills, and hooks.
-This instance intentionally omits `.claude` and `.agents` symlinks.
+This instance intentionally omits `.claude` and `.agents` symlinks. Its
+`.claude/settings.json` makes the plugin's finance orchestrator the main agent.
 """
     else:
         discovery_instructions = f"""This instance's `.agents` symlink points to
@@ -286,7 +340,16 @@ def _build_plan(
             PlanStep(paths.merchant_rules, _write_text(MERCHANT_RULES)),
         )
     )
-    if not plugin_mode:
+    if plugin_mode:
+        plan.extend(
+            (
+                PlanStep(paths.root / ".claude", _create_real_directory),
+                PlanStep(
+                    paths.root / ".claude" / "settings.json", _merge_agent_setting
+                ),
+            )
+        )
+    else:
         plan.extend(
             (
                 PlanStep(paths.root / ".agents", _create_symlink(repo / ".claude")),
@@ -301,9 +364,12 @@ def _build_plan(
             ),
             PlanStep(
                 paths.root / "AGENTS.md",
-                _write_text(
-                    _instance_agent_instructions(repo, plugin_mode=plugin_mode)
-                ),
+                _replace_checkout_instructions(
+                    _instance_agent_instructions(repo, plugin_mode=True),
+                    _instance_agent_instructions(repo, plugin_mode=False),
+                )
+                if plugin_mode
+                else _write_text(_instance_agent_instructions(repo, plugin_mode=False)),
             ),
             PlanStep(paths.root / ".git", _initialize_git),
             PlanStep(paths.root / ".venv", _sync_environment),

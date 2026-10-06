@@ -1,6 +1,6 @@
 # fin-guru
 
-The shared material the specialist personas and skills read at runtime. The personas live in `.claude/commands/fin-guru/agents/` and `.claude/agents/`; this directory holds what they load.
+The shared material the specialist personas and skills read at runtime. The specialist agents live in `.claude/agents/`; this directory holds what they load.
 
 | Path | What it holds | Who reads it |
 | --- | --- | --- |

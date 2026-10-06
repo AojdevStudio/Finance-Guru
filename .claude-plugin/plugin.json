@@ -17,19 +17,6 @@
     "quantitative-analysis",
     "self-hosted"
   ],
-  "commands": [
-    "./.claude/commands/fin-guru/agents/builder.md",
-    "./.claude/commands/fin-guru/agents/compliance-officer.md",
-    "./.claude/commands/fin-guru/agents/dividend-specialist.md",
-    "./.claude/commands/fin-guru/agents/finance-orchestrator.md",
-    "./.claude/commands/fin-guru/agents/margin-specialist.md",
-    "./.claude/commands/fin-guru/agents/market-researcher.md",
-    "./.claude/commands/fin-guru/agents/onboarding-specialist.md",
-    "./.claude/commands/fin-guru/agents/qa-advisor.md",
-    "./.claude/commands/fin-guru/agents/quant-analyst.md",
-    "./.claude/commands/fin-guru/agents/strategy-advisor.md",
-    "./.claude/commands/fin-guru/agents/teaching-specialist.md"
-  ],
   "agents": [
     "./.claude/agents/fg-builder.md",
     "./.claude/agents/fg-compliance-officer.md",

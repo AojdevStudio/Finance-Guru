@@ -145,7 +145,7 @@ You are the intended operator of this engine, not an afterthought. A few things 
 - **Fail closed.** If a guardrail input is missing, the answer is a block with a typed reason. Do not fill the gap with an estimate.
 - **Contributing a tool means all three layers.** Pydantic input model, calculator class, CLI wrapper, plus a test that runs without a network.
 
-Skills in `.claude/skills/` are the workflows; specialists in `.claude/commands/fin-guru/agents/` are the personas; the finance orchestrator routes between them.
+Skills in `.claude/skills/` are the workflows; specialists in `.claude/agents/` are the subagents; the finance orchestrator is the main session and routes between them.
 
 ## Why this exists
 
