@@ -217,7 +217,12 @@ def test_shared_checkout_settings_omit_personal_plugins() -> None:
     opt_in = (REPO_ROOT / "docs" / "reference" / "hooks.md").read_text(encoding="utf-8")
     assert "~/.claude/settings.json" in opt_in
     assert ".claude/settings.local.json" in opt_in
-    assert "imessage@claude-plugins-official" in opt_in
+    assert (
+        "claude plugin enable imessage@claude-plugins-official --scope user" in opt_in
+    )
+    assert (
+        "claude plugin enable imessage@claude-plugins-official --scope local" in opt_in
+    )
 
 
 def test_plugin_instances_start_the_shipped_orchestrator() -> None:

@@ -28,6 +28,13 @@ Enable a personal plugin for yourself in user settings at `~/.claude/settings.js
 }
 ```
 
-`claude plugin enable imessage@claude-plugins-official` writes that entry when you choose user scope or local scope. User scope writes `~/.claude/settings.json`. Local scope writes `.claude/settings.local.json`. Project scope writes the shared `.claude/settings.json`, which every checkout-mode instance inherits.
+These commands write that entry. The shell command does not prompt for a scope, so pass one:
+
+```bash
+claude plugin enable imessage@claude-plugins-official --scope user
+claude plugin enable imessage@claude-plugins-official --scope local
+```
+
+`--scope user` writes `~/.claude/settings.json`, which applies across your projects. `--scope local` writes `.claude/settings.local.json` for this checkout. Without `--scope`, the command uses the most specific settings file that already mentions the plugin, checking local, then project, then user. A project declaration selects the shared `.claude/settings.json`, which every checkout-mode instance inherits. A user declaration selects `~/.claude/settings.json` and applies the plugin in every project.
 
 The session-start hook resolves the instance the same way the engine does: `FIN_GURU_DATA_ROOT`, else the directory you start the session in. It treats the session directory as an instance only when it holds `user-profile.yaml` plus a Finance Guru marker, the scaffolded `pyproject.toml` or `family_office.db`, so a plugin installed at user scope stays silent in every other repo. A root named in `FIN_GURU_DATA_ROOT` needs only `user-profile.yaml`. When a checkout runs its own copy through `.claude/settings.json`, the plugin copy steps aside, so the hook runs once. Skills load from each `SKILL.md` description, so no hook routes prompts to skills. The hooks are not required to run the Python analysis engine from a shell.
