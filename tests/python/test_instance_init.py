@@ -249,6 +249,37 @@ def test_plugin_flag_refuses_a_checkout_mode_claude_symlink(tmp_path: Path) -> N
     assert (root / ".claude").is_symlink()
 
 
+def test_plugin_flag_refuses_a_leftover_agents_symlink(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    assert _run_init(root, repo).returncode == 0
+    (root / ".claude").unlink()
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode != 0
+    assert ".agents" in result.stderr
+    assert not (root / ".claude").exists()
+
+
+def test_plugin_flag_adds_the_agent_to_existing_settings(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    (root / ".claude").mkdir(parents=True)
+    (root / ".claude" / "settings.json").write_text(
+        '{"permissions": {"allow": ["Read"]}}\n', encoding="utf-8"
+    )
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode == 0, result.stderr
+    settings = json.loads((root / ".claude" / "settings.json").read_text("utf-8"))
+    assert settings == {
+        "permissions": {"allow": ["Read"]},
+        "agent": "finance-guru:fg-finance-orchestrator",
+    }
+
+
 def test_matching_plugin_root_omits_harness_symlinks(tmp_path: Path) -> None:
     repo = _fake_repo(tmp_path)
     root = tmp_path / "instance"

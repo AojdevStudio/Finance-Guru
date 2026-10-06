@@ -40,9 +40,25 @@ def test_description_says_when_to_route_and_where_else_to_go(skill: str) -> None
     assert "Use when" in description, skill
     not_for = description.split("Not for", 1)
     assert len(not_for) == 2, skill
-    alternatives = re.findall(r"use ([a-z][a-z0-9-]+)", not_for[1])
+    alternatives = _fallback_targets(not_for[1])
     assert alternatives, skill
-    assert set(alternatives) <= _skill_names(), skill
+    assert alternatives <= _skill_names(), skill
+
+
+def _fallback_targets(text: str) -> set[str]:
+    """Every skill named in a "(use a or b)" clause, not only the first."""
+    return {
+        name
+        for clause in re.findall(r"\(use ([^)]*)\)", text)
+        for name in re.split(r"\s+or\s+|,\s*", clause.strip())
+    }
+
+
+def test_fallback_targets_include_every_alternative() -> None:
+    text = "the analysis itself (use fin-guru-research or nonexistent-skill)"
+
+    assert _fallback_targets(text) == {"fin-guru-research", "nonexistent-skill"}
+    assert not _fallback_targets(text) <= _skill_names()
 
 
 REPO_ROOT = SKILLS_DIR.parents[1]

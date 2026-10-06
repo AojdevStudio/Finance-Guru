@@ -27,7 +27,8 @@ function expandHome(path: string): string {
 }
 
 // The same rule as InstancePaths.resolve: FIN_GURU_DATA_ROOT, else the session directory.
-const DATA_ROOT = resolve(expandHome(process.env.FIN_GURU_DATA_ROOT?.trim() ?? '') || process.cwd());
+const CONFIGURED_ROOT = expandHome(process.env.FIN_GURU_DATA_ROOT?.trim() ?? '');
+const DATA_ROOT = resolve(CONFIGURED_ROOT || process.cwd());
 const STALE_AFTER_DAYS = 7;
 
 interface HookInput {
@@ -35,9 +36,16 @@ interface HookInput {
   event: string;
 }
 
-// A user-scope plugin hook runs in every session, so it stays silent outside an instance.
+// A user-scope plugin hook runs in every session, and config.yaml is common in
+// unrelated repos, so the session directory needs a Finance Guru marker before
+// any private file is read. A root the owner named in FIN_GURU_DATA_ROOT needs only a profile.
 function isInstance(root: string): boolean {
-  return existsSync(join(root, 'user-profile.yaml')) || existsSync(join(root, 'config.yaml'));
+  if (!existsSync(join(root, 'user-profile.yaml'))) return false;
+  if (CONFIGURED_ROOT) return true;
+  const pyproject = join(root, 'pyproject.toml');
+  const scaffolded =
+    existsSync(pyproject) && readFileSync(pyproject, 'utf-8').includes('name = "finance-guru-instance"');
+  return scaffolded || existsSync(join(root, 'family_office.db'));
 }
 
 // A checkout instance or the engine repo runs its own copy through .claude/settings.json.
@@ -47,21 +55,20 @@ function checkoutCopyRuns(): boolean {
   return existsSync(join(projectDir, '.claude/hooks/load-fin-core-config.ts'));
 }
 
-// Mirrors InstancePaths.database_url: DATABASE_URL from the environment or the
-// instance .env, with a relative SQLite path resolved under the instance root.
+// Finds the ledger refresh_all writes: it loads the instance .env with
+// override=True, so DATABASE_URL there wins over the process environment.
+// A relative SQLite path resolves under the instance root, as in InstancePaths.database_url.
 function ledgerPath(root: string): string | null {
-  let configured = process.env.DATABASE_URL?.trim() ?? '';
-  if (!configured) {
-    const envFile = join(root, '.env');
-    const assignment = /^\s*(?:export\s+)?DATABASE_URL\s*=\s*(.*)$/;
-    const match = existsSync(envFile)
-      ? readFileSync(envFile, 'utf-8')
-          .split('\n')
-          .map((entry) => assignment.exec(entry))
-          .find((found) => found !== null)
-      : undefined;
-    configured = match?.[1].trim().replace(/^["']|["']$/g, '') ?? '';
-  }
+  const envFile = join(root, '.env');
+  const assignment = /^\s*(?:export\s+)?DATABASE_URL\s*=\s*(.*)$/;
+  const match = existsSync(envFile)
+    ? readFileSync(envFile, 'utf-8')
+        .split('\n')
+        .map((entry) => assignment.exec(entry))
+        .find((found) => found !== null)
+    : undefined;
+  const configured =
+    match?.[1].trim().replace(/^["']|["']$/g, '') || (process.env.DATABASE_URL?.trim() ?? '');
   if (!configured) return join(root, 'family_office.db');
   if (configured.startsWith('sqlite:///')) {
     const path = configured.slice('sqlite:///'.length);
