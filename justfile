@@ -4,6 +4,9 @@ set dotenv-load := false
 # Claude Code with skip permissions (mirrors `cc` shell alias)
 cc := "claude --dangerously-skip-permissions"
 
+# Persona sessions read the instance named by FIN_GURU_DATA_ROOT, never this checkout.
+persona := 'test -n "${FIN_GURU_DATA_ROOT:-}" || { echo "Export FIN_GURU_DATA_ROOT=<your instance> first, so the agent reads your instance, not this checkout." >&2; exit 1; } && ' + cc
+
 # Diagram paths
 diagrams := ".dev/specs/backlog/diagrams"
 
@@ -37,43 +40,43 @@ load keyword:
 
 # Launch Claude Code as Finance Orchestrator (Cassandra Holt)
 orchestrator:
-  {{cc}} --agent fg-finance-orchestrator
+  {{persona}} --agent fg-finance-orchestrator
 
 # Launch Claude Code as Quant Analyst
 quant:
-  {{cc}} --agent fg-quant-analyst
+  {{persona}} --agent fg-quant-analyst
 
 # Launch Claude Code as Strategy Advisor
 strategy:
-  {{cc}} --agent fg-strategy-advisor
+  {{persona}} --agent fg-strategy-advisor
 
 # Launch Claude Code as Market Researcher
 market:
-  {{cc}} --agent fg-market-researcher
+  {{persona}} --agent fg-market-researcher
 
 # Launch Claude Code as Compliance Officer
 compliance:
-  {{cc}} --agent fg-compliance-officer
+  {{persona}} --agent fg-compliance-officer
 
 # Launch Claude Code as Margin Specialist
 margin:
-  {{cc}} --agent fg-margin-specialist
+  {{persona}} --agent fg-margin-specialist
 
 # Launch Claude Code as Dividend Specialist
 dividend:
-  {{cc}} --agent fg-dividend-specialist
+  {{persona}} --agent fg-dividend-specialist
 
 # Launch Claude Code as Teaching Specialist
 teaching:
-  {{cc}} --agent fg-teaching-specialist
+  {{persona}} --agent fg-teaching-specialist
 
 # Launch Claude Code as Builder
 builder:
-  {{cc}} --agent fg-builder
+  {{persona}} --agent fg-builder
 
 # Launch Claude Code as QA Advisor
 qa:
-  {{cc}} --agent fg-qa-advisor
+  {{persona}} --agent fg-qa-advisor
 
 # --- Quality gates ---
 
