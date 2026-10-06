@@ -312,6 +312,20 @@ describe("load-fin-core-config hook with Bun", () => {
     expect(result.stdout).toContain("profile: test-fixture");
   });
 
+  it("should let the instance .env DATABASE_URL win, as refresh_all does", async () => {
+    const envFile = join(TEST_INSTANCE_ROOT, ".env");
+    writeFileSync(envFile, "DATABASE_URL=sqlite:///from-env-file.db\n");
+    try {
+      const result = await runHook({ session_id: "test-env-wins", event: "session_start" }, false, {
+        DATABASE_URL: "sqlite:///from-process.db",
+      });
+
+      expect(result.stdout).toContain(join(TEST_INSTANCE_ROOT, "from-env-file.db"));
+    } finally {
+      rmSync(envFile);
+    }
+  });
+
   it("should include completion footer", async () => {
     const result = await runHook({
       session_id: "test-footer",

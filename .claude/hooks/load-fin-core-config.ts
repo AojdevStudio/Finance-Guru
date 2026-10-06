@@ -55,21 +55,20 @@ function checkoutCopyRuns(): boolean {
   return existsSync(join(projectDir, '.claude/hooks/load-fin-core-config.ts'));
 }
 
-// Mirrors InstancePaths.database_url: DATABASE_URL from the environment or the
-// instance .env, with a relative SQLite path resolved under the instance root.
+// Finds the ledger refresh_all writes: it loads the instance .env with
+// override=True, so DATABASE_URL there wins over the process environment.
+// A relative SQLite path resolves under the instance root, as in InstancePaths.database_url.
 function ledgerPath(root: string): string | null {
-  let configured = process.env.DATABASE_URL?.trim() ?? '';
-  if (!configured) {
-    const envFile = join(root, '.env');
-    const assignment = /^\s*(?:export\s+)?DATABASE_URL\s*=\s*(.*)$/;
-    const match = existsSync(envFile)
-      ? readFileSync(envFile, 'utf-8')
-          .split('\n')
-          .map((entry) => assignment.exec(entry))
-          .find((found) => found !== null)
-      : undefined;
-    configured = match?.[1].trim().replace(/^["']|["']$/g, '') ?? '';
-  }
+  const envFile = join(root, '.env');
+  const assignment = /^\s*(?:export\s+)?DATABASE_URL\s*=\s*(.*)$/;
+  const match = existsSync(envFile)
+    ? readFileSync(envFile, 'utf-8')
+        .split('\n')
+        .map((entry) => assignment.exec(entry))
+        .find((found) => found !== null)
+    : undefined;
+  const configured =
+    match?.[1].trim().replace(/^["']|["']$/g, '') || (process.env.DATABASE_URL?.trim() ?? '');
   if (!configured) return join(root, 'family_office.db');
   if (configured.startsWith('sqlite:///')) {
     const path = configured.slice('sqlite:///'.length);
