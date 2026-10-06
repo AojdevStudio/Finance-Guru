@@ -17,7 +17,8 @@ This test suite validates that:
 | `test_suite.test.ts` | **Self-testing suite** - validates test infrastructure |
 | `test_load_fin_core_config.test.ts` | Tests SessionStart hook (Finance Guru context loader) |
 | `test_post_tool_use_tracker.test.ts` | Tests PostToolUse hook (file tracking) |
-| `test_skill_activation_prompt.test.ts` | Tests UserPromptSubmit hook (skill activation) |
+| `test_plugin_paths.test.ts` | Tests the plugin and checkout hook paths |
+| `test_hook_performance.test.ts` | Tests hook run time |
 
 ## Running Tests
 
@@ -175,8 +176,7 @@ Current test coverage:
 - **Test Infrastructure**: 100% (self-testing)
 - **load-fin-core-config.ts**: 8 tests
 - **post-tool-use-tracker.ts**: 33 tests
-- **skill-activation-prompt.ts**: 15 tests
-- **Total Tests**: 97+ tests across 4 files
+- **Total Tests**: 97+ tests across 5 files
 
 ## Adding New Tests
 

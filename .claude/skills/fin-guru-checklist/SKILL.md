@@ -1,6 +1,6 @@
 ---
 name: fin-guru-checklist
-description: Execute quality and compliance checklists for Finance Guru deliverables. Supports margin strategy, dividend framework, and general quality checklists.
+description: "Run a pass or fail checklist from fin-guru/checklists/ against a deliverable, such as the margin strategy, dividend framework, or cash-flow policy checklist. Use when a deliverable needs a final quality gate or the owner asks whether an analysis is complete. Not for a full compliance review with ITC risk (use fin-guru-compliance-review)."
 ---
 
 # Checklist Execution Skill

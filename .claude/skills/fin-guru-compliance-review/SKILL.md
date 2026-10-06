@@ -1,6 +1,6 @@
 ---
 name: fin-guru-compliance-review
-description: Execute comprehensive compliance reviews for Finance Guru deliverables. Validates disclaimers, data handling, risk disclosures, and regulatory positioning.
+description: "Compliance review of a Finance Guru deliverable or a proposed position. Checks disclaimers, source citations, and risk disclosures, and runs the ITC market-implied risk check with decision rules DR-1 to DR-5. Use when an analysis or buy ticket is about to be final, or when the owner asks whether a position passes risk review. Not for scanning the repository for secrets or PII before a push (use compliance-scan)."
 ---
 
 # Compliance Review Skill

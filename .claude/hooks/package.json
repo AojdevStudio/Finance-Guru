@@ -1,16 +1,14 @@
 {
     "name": "claude-hooks",
     "version": "1.0.0",
-    "description": "TypeScript hooks for Claude Code skill auto-activation",
+    "description": "TypeScript hooks for Finance Guru Claude Code sessions",
     "private": true,
     "type": "module",
     "scripts": {
-        "check": "tsc --noEmit",
-        "test": "tsx skill-activation-prompt.ts < test-input.json"
+        "check": "tsc --noEmit"
     },
     "dependencies": {
         "@types/node": "^20.11.0",
-        "tsx": "^4.7.0",
         "typescript": "^5.3.3"
     }
 }

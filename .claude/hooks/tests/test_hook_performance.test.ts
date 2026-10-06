@@ -75,21 +75,6 @@ describe("Hook Performance (< 500ms)", () => {
     expect(result.durationMs).toBeLessThan(MAX_EXECUTION_MS);
   });
 
-  it("skill-activation-prompt.ts completes in < 500ms", async () => {
-    const result = await timeHook(
-      join(HOOKS_DIR, "skill-activation-prompt.ts"),
-      {
-        session_id: "perf-test",
-        transcript_path: "/tmp/test-transcript.txt",
-        cwd: PROJECT_ROOT,
-        permission_mode: "normal",
-        prompt: "test prompt for performance measurement",
-      }
-    );
-    expect(result.exitCode).toBe(0);
-    expect(result.durationMs).toBeLessThan(MAX_EXECUTION_MS);
-  });
-
   it("post-tool-use-tracker.ts completes in < 500ms", async () => {
     const result = await timeHook(
       join(HOOKS_DIR, "post-tool-use-tracker.ts"),

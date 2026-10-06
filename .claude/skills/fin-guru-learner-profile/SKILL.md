@@ -1,6 +1,6 @@
 ---
 name: fin-guru-learner-profile
-description: Build and manage learner profiles for Finance Guru teaching and onboarding. Progressive profiling with ADHD-aware assessment and personalized learning paths.
+description: "Build or update the owner's learner profile for teaching and onboarding, covering literacy level, learning preferences, risk tolerance, goals, time limits, and ADHD-friendly pacing. Use when the owner starts learning sessions, asks to be taught a concept from scratch, or wants the teaching pace changed. Not for the instance setup itself (use instance-onboarding)."
 ---
 
 # Learner Profile Skill

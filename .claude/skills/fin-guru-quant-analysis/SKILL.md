@@ -1,6 +1,6 @@
 ---
 name: fin-guru-quant-analysis
-description: Perform quantitative analysis of returns, correlations, risk factors, and portfolio optimization. Statistical modeling with institutional-grade rigor.
+description: "Quantitative analysis of tickers or the portfolio through the engine's calculators. Covers risk metrics (VaR, CVaR, Sharpe, Sortino, drawdown, beta), momentum, volatility regime, correlation, factor models, backtests, and portfolio optimization. Use when the owner asks how risky a holding is, wants risk or return statistics, compares tickers on risk, asks for an optimal allocation, or wants a strategy backtested. Not for news and catalysts (use fin-guru-research) or buy and sell decisions (use fin-guru-strategize)."
 ---
 
 # Quantitative Analysis Skill

@@ -21,16 +21,6 @@ Create or update `.claude/settings.json` in your project root:
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun run $CLAUDE_PROJECT_DIR/.claude/hooks/skill-activation-prompt.ts"
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Edit|MultiEdit|Write",
@@ -226,25 +216,6 @@ Stop hooks run in the order specified in `settings.json`:
 ## Selective Hook Enabling
 
 You don't need all hooks. Choose what works for your project:
-
-### Minimal Setup (Skill Activation Only)
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun run $CLAUDE_PROJECT_DIR/.claude/hooks/skill-activation-prompt.ts"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
 
 ### Build Checking Only (No Formatting)
 
