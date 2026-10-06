@@ -297,6 +297,23 @@ def test_plugin_flag_converts_a_checkout_scaffold_end_to_end(tmp_path: Path) -> 
     assert settings["agent"] == "finance-guru:fg-finance-orchestrator"
 
 
+def test_plugin_flag_keeps_an_owner_edited_agents_file(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    assert _run_init(root, repo).returncode == 0
+    (root / ".claude").unlink()
+    (root / ".agents").unlink()
+    agents = root / "AGENTS.md"
+    edited = agents.read_text(encoding="utf-8") + "\n## My household notes\n"
+    agents.write_text(edited, encoding="utf-8")
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode != 0
+    assert "AGENTS.md" in result.stderr
+    assert agents.read_text(encoding="utf-8") == edited
+
+
 def test_plugin_flag_refuses_a_symlinked_settings_file(tmp_path: Path) -> None:
     repo = _fake_repo(tmp_path)
     root = tmp_path / "instance"
