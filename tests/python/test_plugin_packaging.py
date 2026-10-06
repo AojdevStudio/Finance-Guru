@@ -201,6 +201,30 @@ def test_specialists_are_delegated_subagents_not_chat_personas() -> None:
         )
 
 
+def test_shared_checkout_settings_omit_personal_plugins() -> None:
+    """Checkout instances inherit .claude/settings.json, so it wires hooks only."""
+    settings_path = REPO_ROOT / ".claude" / "settings.json"
+    settings = _json(settings_path)
+    shared_text = settings_path.read_text(encoding="utf-8")
+
+    assert set(settings) == {"hooks"}
+    assert "imessage" not in shared_text
+    assert "codegraph" not in shared_text
+    assert ".claude/settings.local.json" in (REPO_ROOT / ".gitignore").read_text(
+        encoding="utf-8"
+    )
+
+    opt_in = (REPO_ROOT / "docs" / "reference" / "hooks.md").read_text(encoding="utf-8")
+    assert "~/.claude/settings.json" in opt_in
+    assert ".claude/settings.local.json" in opt_in
+    assert (
+        "claude plugin enable imessage@claude-plugins-official --scope user" in opt_in
+    )
+    assert (
+        "claude plugin enable imessage@claude-plugins-official --scope local" in opt_in
+    )
+
+
 def test_plugin_instances_start_the_shipped_orchestrator() -> None:
     from src.cli.instance_init import PLUGIN_AGENT
 
