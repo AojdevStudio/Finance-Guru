@@ -26,7 +26,7 @@ Blocked: <input> is missing. <The command, file, or answer that supplies it.>
 ## Method
 
 1. Run `date` and `date +"%Y-%m-%d"`. Use them as `{current_datetime}` and `{current_date}`.
-2. Read `{data-root}/system-context.md`, `{project-root}/fin-guru/data/margin-strategy.md` (approved margin parameters), and `{project-root}/fin-guru/checklists/margin-strategy.md`. Before a margin recommendation, follow `{project-root}/fin-guru/tasks/load-portfolio-context.md`. If a listed file is missing, name it under data gaps.
+2. Read `{data-root}/system-context.md` and `{project-root}/fin-guru/checklists/margin-strategy.md` (approved margin parameters). Before a margin recommendation, follow `{project-root}/fin-guru/tasks/load-portfolio-context.md`. If a listed file is missing, name it under data gaps.
 3. Account metrics come from the latest `balances` row in `family_office.db`. The caller passes the last sync time. When you run as the main session with no caller, run `uv run python -m src.integrations.refresh_all` first. It raises on a partial provider response, and that is a block. As a subagent without a sync time, return the Blocked block for it instead of syncing. The margin-living thresholds and scaling rules are in [the margin-management skill]({project-root}/.claude/skills/margin-management/SKILL.md).
 4. Run the calculators.
 

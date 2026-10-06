@@ -95,7 +95,7 @@ Context: the owner requests a $5,000 increase to the TSLA position.
    ```text
    ITC Score: 0.52 → MEDIUM band
    Internal VaR: Within policy limits (max 5%)
-   Concentration after increase: 15.5% (below 20% single-position limit)
+   Concentration after increase: 15.5% (inside the 20% clearance limit in fin-guru/data/risk-framework.md). The 10% monitoring target is recorded as a note.
    Decision Rule Applied: DR-2 (Medium Risk Note)
    ```
 
@@ -107,7 +107,7 @@ Context: the owner requests a $5,000 increase to the TSLA position.
    Request: Increase position by $5,000
    ITC Risk Score: 0.52 (MEDIUM)
    Internal VaR (95%): -3.8%
-   Post-increase concentration: 15.5%
+   Post-increase concentration: 15.5% (inside the 20% clearance limit)
    Decision: APPROVE WITH NOTE
    Action: Approve position increase with 30-day review reminder
    Reviewer: Marcus Allen (Compliance Officer)
