@@ -387,6 +387,18 @@ describe("load-fin-core-config hook with Bun", () => {
     }
   });
 
+  it("should read DATABASE_URL from a .env with CRLF line endings", async () => {
+    const envFile = join(TEST_INSTANCE_ROOT, ".env");
+    writeFileSync(envFile, "DATABASE_URL=sqlite:///crlf.db\r\nOTHER=1\r\n");
+    try {
+      const result = await runHook({ session_id: "test-crlf", event: "session_start" });
+
+      expect(result.stdout).toContain(`Ledger not found at ${join(TEST_INSTANCE_ROOT, "crlf.db")}.`);
+    } finally {
+      rmSync(envFile);
+    }
+  });
+
   it("should include completion footer", async () => {
     const result = await runHook({
       session_id: "test-footer",
