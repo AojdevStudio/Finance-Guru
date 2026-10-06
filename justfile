@@ -4,8 +4,9 @@ set dotenv-load := false
 # Claude Code with skip permissions (mirrors `cc` shell alias)
 cc := "claude --dangerously-skip-permissions"
 
-# Persona sessions read the instance named by FIN_GURU_DATA_ROOT, never this checkout.
-persona := 'test -n "${FIN_GURU_DATA_ROOT:-}" || { echo "Export FIN_GURU_DATA_ROOT=<your instance> first, so the agent reads your instance, not this checkout." >&2; exit 1; } && ' + cc
+# Persona sessions start inside the instance named by FIN_GURU_DATA_ROOT, so reads,
+# syncs, and every relative write (tickets/, analysis/) land there, never in this checkout.
+persona := 'test -f "${FIN_GURU_DATA_ROOT:-}/user-profile.yaml" || { echo "Export FIN_GURU_DATA_ROOT=<your instance directory> first. It must hold user-profile.yaml." >&2; exit 1; } && cd "$FIN_GURU_DATA_ROOT" && ' + cc
 
 # Diagram paths
 diagrams := ".dev/specs/backlog/diagrams"

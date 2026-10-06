@@ -114,19 +114,25 @@ def _merge_agent_setting(path: Path) -> StepResult:
     return "updated" if existed else "created"
 
 
-def _replace_checkout_instructions(content: str) -> StepAction:
-    """Write plugin-mode AGENTS.md, replacing one a checkout-mode scaffold left behind."""
+def _replace_checkout_instructions(content: str, checkout_content: str) -> StepAction:
+    """Write plugin-mode AGENTS.md, replacing an unedited checkout-mode scaffold."""
 
     def write(path: Path) -> StepResult:
         if path.is_symlink():
             return "exists"
-        if path.exists():
-            if CHECKOUT_DISCOVERY_MARKER not in path.read_text(encoding="utf-8"):
-                return "exists"
+        if not path.exists():
             path.write_text(content, encoding="utf-8")
-            return "updated"
+            return "created"
+        current = path.read_text(encoding="utf-8")
+        if CHECKOUT_DISCOVERY_MARKER not in current:
+            return "exists"
+        if current != checkout_content:
+            raise FileExistsError(
+                f"{path} has checkout-mode discovery text and your own edits; "
+                "remove its .agents paragraph or delete the file, then rerun --plugin"
+            )
         path.write_text(content, encoding="utf-8")
-        return "created"
+        return "updated"
 
     return write
 
@@ -358,9 +364,12 @@ def _build_plan(
             ),
             PlanStep(
                 paths.root / "AGENTS.md",
-                (_replace_checkout_instructions if plugin_mode else _write_text)(
-                    _instance_agent_instructions(repo, plugin_mode=plugin_mode)
-                ),
+                _replace_checkout_instructions(
+                    _instance_agent_instructions(repo, plugin_mode=True),
+                    _instance_agent_instructions(repo, plugin_mode=False),
+                )
+                if plugin_mode
+                else _write_text(_instance_agent_instructions(repo, plugin_mode=False)),
             ),
             PlanStep(paths.root / ".git", _initialize_git),
             PlanStep(paths.root / ".venv", _sync_environment),
