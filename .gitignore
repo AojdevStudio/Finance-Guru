@@ -126,9 +126,12 @@ scripts/qa/author-mailmap.txt
 fin-guru/data/*
 
 # Methodology files that ARE tracked (not personal data):
+!fin-guru/data/compliance-policy.md
 !fin-guru/data/definitions.md
 !fin-guru/data/hedging-strategies.md
+!fin-guru/data/modern-income-vehicles.md
 !fin-guru/data/options-insurance-framework.md
+!fin-guru/data/risk-framework.md
 
 # Private docs (buy tickets, analysis, strategies)
 # Note: fin-guru-private/ is already ignored above
