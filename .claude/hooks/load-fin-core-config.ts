@@ -35,10 +35,17 @@ const DATA_ROOT = resolve(CONFIGURED_ROOT || process.cwd());
 function isInstance(root: string): boolean {
   if (!existsSync(join(root, 'user-profile.yaml'))) return false;
   if (CONFIGURED_ROOT) return true;
-  const pyproject = join(root, 'pyproject.toml');
-  const scaffolded =
-    existsSync(pyproject) && readFileSync(pyproject, 'utf-8').includes('name = "finance-guru-instance"');
-  return scaffolded || existsSync(join(root, 'family_office.db'));
+  return scaffoldedProject(join(root, 'pyproject.toml')) || existsSync(join(root, 'family_office.db'));
+}
+
+// instance_init writes a pyproject.toml whose project is named finance-guru-instance.
+function scaffoldedProject(pyproject: string): boolean {
+  try {
+    return /^\s*name\s*=\s*["']finance-guru-instance["']/m.test(readFileSync(pyproject, 'utf-8'));
+  } catch {
+    // A missing or unreadable file means this is not a scaffolded instance.
+    return false;
+  }
 }
 
 // A checkout instance or the engine repo runs its own copy through .claude/settings.json.

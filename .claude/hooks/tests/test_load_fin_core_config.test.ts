@@ -227,6 +227,19 @@ describe("load-fin-core-config hook with Bun", () => {
     }
   });
 
+  it("should accept any TOML spelling of the scaffolded project name", async () => {
+    const instance = mkdtempSync(join(tmpdir(), "finance-guru-toml-"));
+    writeFileSync(join(instance, "user-profile.yaml"), "profile: toml-variant\n");
+    writeFileSync(join(instance, "pyproject.toml"), "[project]\nname='finance-guru-instance'\n");
+    try {
+      const result = await runHook({ session_id: "test-toml", event: "session_start" }, true, {}, instance);
+
+      expect(result.stdout).toContain("profile: toml-variant");
+    } finally {
+      rmSync(instance, { recursive: true, force: true });
+    }
+  });
+
   it("should expand ~ in FIN_GURU_DATA_ROOT the way InstancePaths does", async () => {
     const result = await runHook({ session_id: "test-tilde", event: "session_start" }, false, {
       HOME: dirname(TEST_INSTANCE_ROOT),
