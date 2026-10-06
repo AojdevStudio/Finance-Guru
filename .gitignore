@@ -176,3 +176,6 @@ reports/
 # graft's local graph cache: regenerable, and it mirrors pre-scrub source text.
 /graft/
 .claude/skills/graft/
+
+# claude plugin eval output
+evals/results/

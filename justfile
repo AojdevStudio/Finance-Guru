@@ -85,3 +85,18 @@ qa:
 # Verify fin-guru/data/definitions.md stays in sync with src/ constants and skill files
 check-definitions:
   uv run pytest tests/python/test_definitions_sync.py -v --no-cov
+
+# Score the plugin against its eval suite, with and without the plugin (spends model usage).
+# The eval runner refuses a plugin directory over 20000 entries, so it scores a copy of the tracked files.
+eval runs="1":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  scratch="$(mktemp -d)"
+  trap 'rm -rf "$scratch"' EXIT
+  export_dir="$scratch/finance-guru"
+  results="$PWD/evals/results/$(date +%Y%m%dT%H%M%S)"
+  mkdir -p "$export_dir" "$results"
+  git ls-files -z --cached \
+    | while IFS= read -r -d '' path; do [ -e "$path" ] && printf '%s\0' "$path"; done \
+    | rsync -a --from0 --files-from=- ./ "$export_dir/"
+  claude plugin eval "$export_dir" --trust-plugin --runs {{runs}} --judge-model sonnet --max-cost-usd 10 --no-publish --output-dir "$results" --report "$results/report.html"
