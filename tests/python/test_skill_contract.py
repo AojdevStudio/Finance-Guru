@@ -79,10 +79,10 @@ def test_analysis_skill_links_the_shared_output_contract(skill: str) -> None:
     assert "](../_shared/AnalysisOutput.md)" in text, skill
 
 
-def test_every_skill_cli_call_names_a_real_module_and_flag() -> None:
+def test_every_skill_and_agent_cli_call_names_a_real_module_and_flag() -> None:
     calls = [
         (path, match)
-        for path in SKILLS_DIR.rglob("*.md")
+        for path in (REPO_ROOT / ".claude").rglob("*.md")
         for match in CLI_CALL.finditer(path.read_text(encoding="utf-8"))
     ]
     assert calls
