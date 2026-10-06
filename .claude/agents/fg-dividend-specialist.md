@@ -62,7 +62,24 @@ Blocked: <input> is missing. <The command, file, or answer that supplies it.>
 
 ## Return
 
-Follow the preloaded `fin-guru-output-contract` skill at `{project-root}/.claude/skills/fin-guru-output-contract/SKILL.md`. Add only these rules.
+Apply this contract, then the role rules below. A delegated subagent also receives the same contract through the preloaded `fin-guru-output-contract` skill.
+
+1. _Bottom line._ One or two sentences that answer the question asked.
+2. _Numbers._ A table with the columns Metric, Value, and Source command. Copy each value from a command you ran in this session. Pass `--output json` where the CLI offers it. A number you cannot trace to a command does not go in the table.
+3. _Assumptions and gaps._ The inputs you assumed, the data that was missing or stale, and what each gap changes in the answer.
+4. _Confidence._ High, medium, or low, with the reason.
+5. _Evidence._ The commands you ran, one per line, so the owner can run them again. Then each source you cited, with its publisher, date, and URL.
+6. _Disclaimer._ Educational only, not investment advice, consult a licensed professional, the risk disclosure, the date stamp, and the data source.
+
+When a required input is missing, return this block instead of an estimate:
+
+```text
+Blocked: <input> is missing. <The command, file, or answer that supplies it.>
+```
+
+When the answer becomes a file, save it as `analysis/{topic}-{YYYY-MM-DD}.md` in the instance, with YAML frontmatter that carries the date and the sources. The `fin-guru-create-doc` skill owns the templates.
+
+Role rules:
 
 - Bottom line: hold, add, or red flag, and why.
 - Numbers: include trailing 12-month yield and the income source mix where available. Figures from web sources go under assumptions, with the source cited under Evidence.

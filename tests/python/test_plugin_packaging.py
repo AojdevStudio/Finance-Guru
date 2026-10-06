@@ -226,7 +226,18 @@ def test_shared_checkout_settings_omit_personal_plugins() -> None:
 
 
 OUTPUT_CONTRACT = "fin-guru-output-contract"
-RESTATED_CONTRACT = "6. The educational-only disclaimer"
+# Sentences the main-session --agent prompt must carry. Claude Code 2.1.289
+# does not inject skills: into that launch, so the Return section is the copy.
+MAIN_SESSION_CONTRACT = (
+    "1. _Bottom line._",
+    "A number you cannot trace to a command does not go in the table.",
+    "3. _Assumptions and gaps._",
+    "4. _Confidence._",
+    "5. _Evidence._",
+    "consult a licensed professional, the risk disclosure",
+    "Blocked: <input> is missing.",
+    "analysis/{topic}-{YYYY-MM-DD}.md",
+)
 HAND_COPIED_ITC_LISTS = (
     "TSLA, AAPL, MSTR, NFLX, SP500",
     "BTC, ETH, BNB, SOL, XRP",
@@ -266,15 +277,19 @@ def test_output_contract_skill_is_packaged_and_preloaded() -> None:
         "Disclaimer",
     ):
         assert part in body
+    for sentence in MAIN_SESSION_CONTRACT:
+        assert sentence in body, sentence
 
     agents = sorted((REPO_ROOT / ".claude" / "agents").glob("fg-*.md"))
     assert len(agents) == 11
     for path in agents:
         agent_fields, agent_body = _agent(path)
         assert OUTPUT_CONTRACT in agent_fields["skills"], path.name
+        assert "## Return" in agent_body, path.name
         return_section = agent_body.split("## Return", 1)[1]
         assert OUTPUT_CONTRACT in return_section, path.name
-        assert RESTATED_CONTRACT not in agent_body, path.name
+        for sentence in MAIN_SESSION_CONTRACT:
+            assert sentence in return_section, f"{path.name}: {sentence}"
 
 
 def test_itc_ticker_lists_are_read_from_the_cli() -> None:

@@ -14,4 +14,4 @@ Each directory holds one skill as `<name>/SKILL.md`. Claude Code and Codex pick 
 
 `_shared/` holds patterns that several skills link to instead of restating, such as the sync-first database read and the paid MCP capability probe.
 
-The analysis answer shape is the `fin-guru-output-contract` skill. It is model-invocable, and every agent preloads it by listing `fin-guru-output-contract` under `skills:` in its frontmatter. Claude Code injects the full skill at startup. Each Return section adds only that role's rules.
+The analysis answer shape is the `fin-guru-output-contract` skill. It is model-invocable. A delegated subagent preloads it when the agent lists `fin-guru-output-contract` under `skills:`. Claude Code 2.1.289 does not inject that list for a main-session `--agent` launch, so each agent's Return section also carries the six parts, with that role's rules after them.

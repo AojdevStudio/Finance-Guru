@@ -5,7 +5,9 @@ description: "The six-part shape of every Finance Guru analysis answer: bottom l
 
 # Analysis output contract
 
-Every answer from an analysis skill or specialist has these six parts, in this order. A skill or agent may add a named section after Numbers, such as an implementation plan. Role-specific rules stay in that skill or in the agent's Return section.
+Every answer from an analysis skill or specialist has these six parts, in this order. A skill or agent may add a named section after Numbers, such as an implementation plan. Role-specific rules follow this contract.
+
+Delegated subagents receive this file through `skills:`. Claude Code 2.1.289 does not inject `skills:` when the same agent is the main session (`--agent`), so each agent's Return section carries these six parts too.
 
 1. _Bottom line._ One or two sentences that answer the question asked.
 2. _Numbers._ A table with the columns Metric, Value, and Source command. Copy each value from a command you ran in this session. Pass `--output json` where the CLI offers it. A number you cannot trace to a command does not go in the table.
