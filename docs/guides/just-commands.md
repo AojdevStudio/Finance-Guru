@@ -30,7 +30,7 @@ Each recipe runs:
 claude --dangerously-skip-permissions --agent fg-{agent}
 ```
 
-The persona recipes refuse to start until you export `FIN_GURU_DATA_ROOT`, so the agent reads and syncs your instance, not the engine checkout:
+The persona recipes refuse to start until `FIN_GURU_DATA_ROOT` names a directory that holds `user-profile.yaml`. They then start Claude Code inside that instance, so reads, syncs, tickets, and analysis all land there, not in the engine checkout:
 
 ```bash
 export FIN_GURU_DATA_ROOT=~/finance-guru-instance
