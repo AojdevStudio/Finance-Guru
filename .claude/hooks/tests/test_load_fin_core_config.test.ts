@@ -339,6 +339,54 @@ describe("load-fin-core-config hook with Bun", () => {
     }
   });
 
+  it("should take the last DATABASE_URL line, as python-dotenv does", async () => {
+    const envFile = join(TEST_INSTANCE_ROOT, ".env");
+    writeFileSync(envFile, "DATABASE_URL=sqlite:///first.db\nDATABASE_URL=sqlite:///second.db\n");
+    try {
+      const result = await runHook({ session_id: "test-dotenv-0", event: "session_start" }, false, {});
+
+      expect(result.stdout).toContain(`Ledger not found at ${join(TEST_INSTANCE_ROOT, "second.db")}.`);
+    } finally {
+      rmSync(envFile);
+    }
+  });
+
+  it("should strip an inline comment from an unquoted DATABASE_URL", async () => {
+    const envFile = join(TEST_INSTANCE_ROOT, ".env");
+    writeFileSync(envFile, "DATABASE_URL=sqlite:///commented.db # main ledger\n");
+    try {
+      const result = await runHook({ session_id: "test-dotenv-1", event: "session_start" }, false, {});
+
+      expect(result.stdout).toContain(`Ledger not found at ${join(TEST_INSTANCE_ROOT, "commented.db")}.`);
+    } finally {
+      rmSync(envFile);
+    }
+  });
+
+  it("should treat an empty DATABASE_URL in .env as the default ledger", async () => {
+    const envFile = join(TEST_INSTANCE_ROOT, ".env");
+    writeFileSync(envFile, "DATABASE_URL=\n");
+    try {
+      const result = await runHook({ session_id: "test-dotenv-2", event: "session_start" }, false, { DATABASE_URL: "sqlite:///from-process.db" });
+
+      expect(result.stdout).toContain(`Ledger not found at ${join(TEST_INSTANCE_ROOT, "family_office.db")}.`);
+    } finally {
+      rmSync(envFile);
+    }
+  });
+
+  it("should fall back to the process DATABASE_URL when .env has no such line", async () => {
+    const envFile = join(TEST_INSTANCE_ROOT, ".env");
+    writeFileSync(envFile, "OTHER=1\n");
+    try {
+      const result = await runHook({ session_id: "test-dotenv-3", event: "session_start" }, false, { DATABASE_URL: "sqlite:///from-process.db" });
+
+      expect(result.stdout).toContain(`Ledger not found at ${join(TEST_INSTANCE_ROOT, "from-process.db")}.`);
+    } finally {
+      rmSync(envFile);
+    }
+  });
+
   it("should include completion footer", async () => {
     const result = await runHook({
       session_id: "test-footer",
