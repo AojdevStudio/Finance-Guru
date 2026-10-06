@@ -63,13 +63,14 @@ function checkoutCopyRuns(): boolean {
 }
 
 // The value python-dotenv assigns to key, or undefined when no line sets it.
-// The last assignment wins, quotes are removed, an unquoted " #" starts a comment,
-// and an empty value still counts as set. ${VAR} expansion is not modeled.
+// Modeled: the last assignment wins, quotes are removed, an unquoted " #" starts a
+// comment, an empty value still counts as set, and CRLF files parse. Not modeled:
+// ${VAR} expansion, escapes inside quotes, multi-line values, and a leading BOM.
 function dotenvValue(envFile: string, key: string): string | undefined {
   if (!existsSync(envFile)) return undefined;
   const assignment = new RegExp(`^\\s*(?:export\\s+)?${key}\\s*=\\s*(.*)$`);
   let value: string | undefined;
-  for (const line of readFileSync(envFile, 'utf-8').split('\n')) {
+  for (const line of readFileSync(envFile, 'utf-8').split(/\r?\n/)) {
     const raw = assignment.exec(line)?.[1];
     if (raw === undefined) continue;
     const quoted = /^(["'])(.*?)\1/.exec(raw);
