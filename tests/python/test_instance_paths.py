@@ -192,6 +192,10 @@ def test_refresh_all_and_margin_metrics_cli_resolve_the_same_ledger(
     """Sync and margin metrics share one ledger when the process env disagrees."""
     process_ledger = tmp_path / "from-process.db"
     (tmp_path / ".env").write_text(f"{env_line}\n", encoding="utf-8")
+    # load_dotenv can add OTHER. delenv(raising=False) does not record a missing
+    # key, so setenv records the prior value or its absence before the removal.
+    monkeypatch.setenv("OTHER", os.environ.get("OTHER", ""))
+    monkeypatch.delenv("OTHER", raising=False)
     monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
     monkeypatch.setenv("FG_MARGIN_INTEREST_RATE_DECIMAL", "0.12")
     monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "5000")
