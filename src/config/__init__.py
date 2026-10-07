@@ -7,7 +7,7 @@ Re-exports:
     HedgeConfig: Hedging strategy configuration model
     InstancePaths: Resolved private instance layout
     load_hedge_config: Load and merge hedging config from YAML + CLI overrides
-    load_instance_env: Load the instance-specific .env file
+    load_instance_env: Load the instance .env; file values replace the process
 """
 
 from src.config.config_loader import HedgeConfig, load_hedge_config

@@ -445,7 +445,7 @@ def metrics_from_runtime(
         raise UnsupportedMarginSourceError(
             f"Unsupported margin source {source!r}; expected one of: {supported}"
         )
-    load_instance_env(InstancePaths.resolve(), override=False)
+    load_instance_env(InstancePaths.resolve())
     if csv_path is not None or source == "csv":
         balances = read_fidelity_balances(csv_path)
     elif source == "snaptrade":
