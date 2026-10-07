@@ -9,140 +9,148 @@
 
 ## Purpose
 
-Load current portfolio positions and key metrics into the agent's working memory to ensure all recommendations and analysis are based on real-time portfolio state.
+Load your current positions, balances, and margin health into working memory from `family_office.db`. That ledger is the single source of truth for positions and balances. Broker CSV exports under `imports/` are an ingestion path, not a second ledger, and this task does not read them.
+
+Run the commands below from your instance directory, or with `FIN_GURU_DATA_ROOT` set, so the CLIs resolve `family_office.db`. The shared rule is `{project-root}/.claude/skills/_shared/SyncFirstDbRead.md`.
 
 ---
 
 ## Execution Steps
 
-### 1. Locate Latest Portfolio Export
+### 1. Refresh the ledger
 
-Find the most recent portfolio CSV within `imports/` (lists every match so you can confirm the latest export):
-
-```bash
-find imports -name "Portfolio_Positions*.csv" -type f 2>/dev/null
-```
-
-Expected format: `Portfolio_Positions_[YYYY-MM-DD].csv` or `Portfolio_Positions_[MonthName-DD-YYYY].csv`
-
-### 2. Load Portfolio Data
-
-Read the latest CSV file using the Read tool.
-
-### 2a. Load Account Balance Data
-
-Check for margin and balance information:
+Refresh before any read. Portfolio context depends on the positions sync, which writes `positions` and `balances`.
 
 ```bash
-ls imports/Balances_for_Account_{account_id}.csv 2>/dev/null
+uv run python -m src.integrations.refresh_all
 ```
 
-If the balance file exists, read it using the Read tool. This file contains:
-- Total account value
-- Cash available
-- Margin debit balance (amount borrowed)
-- Buying power
-- Margin maintenance requirement
-- Other balance-related metrics
+Read each `source: ok` or `source: error` line.
 
-**Note:** If balance file is not found, agent should note this and proceed with positions-only analysis. The balance file is optional but highly recommended for margin strategy analysis.
+- If `positions` is `error`, stop. Surface the error. Do not quote positions or balances as fresh, and do not open a CSV to fill the gap.
+- If `transactions` or `expenses` is `error`, record that under data gaps. Those sources do not replace the positions snapshot.
+- `positions: ok` only means the positions sync did not raise. An instance with no enabled, routed account still prints `ok` and writes no rows. Step 2 is what shows whether a snapshot landed.
 
-### 3. Extract Key Metrics
+_Completion criterion:_ the `positions` and `balances` tables carry this run's `synced_at` before any read.
 
-Calculate and store in session memory:
+### 2. Read the positions snapshot
 
-**Portfolio Summary:**
-- Total portfolio value (sum of Current Value column)
-- Cash available (SPAXX** Current Value)
-- Invested capital (Total - Cash)
-- Today's gain/loss (sum of Today's Gain/Loss Dollar)
-- Total gain/loss (sum of Total Gain/Loss Dollar)
-- All-time return percentage
+```bash
+uv run python -m src.integrations.snaptrade.sync_db --show
+```
 
-**Position Breakdown:**
-- Margin positions: Sum all rows where Type = "Margin"
-- Cash positions: Sum all rows where Type = "Cash"
-- Margin/Cash ratio
+Quote that output. It prints, per account, `account_equity`, settled cash, margin debt, `synced_at`, and each position (`symbol`, `instrument`, `quantity`, `avg_cost`).
 
-**Top Holdings (Top 5 by Current Value):**
-- Ticker
-- Current Value
-- Percent of Account
-- Total Gain/Loss %
+If it prints only the database path and no account block, stop. Name `snaptrade-accounts.yaml` under data gaps: the instance has no enabled account with a role, so there is nothing to load.
 
-**Pending Activity:**
-- Check for "Pending activity" row
-- Note amount if present
+Cash available is `settled_cash` on the `balances` row. A `SPAXX` position is settled money-market shares, not the cash figure. The ledger has no Fidelity "Margin" versus "Cash" type column and no pending-activity row. A position printed with `avg=None` has no cost basis. Record that lot under data gaps and do not invent one.
 
-**Margin & Balance Data (if balance file available):**
-- Margin debit balance (amount borrowed)
-- Buying power available
-- Margin maintenance requirement
-- Portfolio-to-margin ratio (Total Value / Margin Debit)
-- Margin utilization percentage
+### 3. Read margin health from the calculator
 
-### 4. Validation Checks
+```bash
+uv run python -m src.analysis.margin_metrics --pretty
+```
 
-Before proceeding, verify:
-- ✅ Total portfolio value > $0
-- ✅ At least 5 positions found
-- ✅ Data downloaded today or yesterday (check date in filename or footer)
-- ⚠️ If data is >2 days old, warn user
+Leave the source flag off so the command reads the ledger. Do not point it at a live API call or a broker export. Quote the JSON, including its `disclaimer`. Do not recompute ratios.
 
-### 5. Store Context
+Use these fields as printed:
 
-Create a structured summary in working memory:
+- `source_file` must start with `db:`
+- `portfolio_value` is account equity
+- `margin_balance` is the derived margin debit
+- `margin_buying_power`
+- `portfolio_margin_ratio`
+- `alert_status`
+- `as_of_date`
+
+`margin_day_change` and `margin_interest_accrued_this_month` are null on the ledger path. Record them as data gaps. Do not substitute zero, and do not read a balances CSV to obtain them.
+
+If this command fails because a required `.env` value is missing (`FG_MARGIN_INTEREST_RATE_DECIMAL`, `FG_MARGIN_JUMP_ALERT_THRESHOLD`), keep the position snapshot from step 2 and record the typed error under data gaps. Do not estimate the missing input.
+
+### 4. Check freshness
+
+```bash
+sqlite3 family_office.db "SELECT 'positions', MAX(synced_at) FROM positions
+  UNION ALL SELECT 'balances', MAX(synced_at) FROM balances;"
+```
+
+Compare `synced_at` with `{current_date}` from `date +"%Y-%m-%d"`.
+
+- Same calendar day as this refresh: proceed.
+- More than two days behind `{current_date}`: the refresh did not land a current snapshot. Warn with the timestamp and ask the owner whether to proceed on those rows or fix the refresh first.
+- SnapTrade `price`, `account_equity`, and `gross_market_value` lag one session even when `synced_at` is current. Holdings, quantities, cost basis, settled cash, and margin debt do not. Say so whenever you quote a dollar value that comes from price.
+
+### 5. Validate before proceeding
+
+- The refresh printed `positions: ok` for this run.
+- `--show` printed at least one balances row and at least one position.
+- `portfolio_value` from the margin JSON is greater than 0 when that command succeeded.
+- `source_file` starts with `db:`.
+
+A snapshot with fewer than five positions is still valid. Do not reject it, and do not go looking for a CSV that has more rows.
+
+### 6. Store context
+
+Keep the CLI text. Fill this summary only with values those commands printed. Leave every unknown under data gaps. If the margin command failed, omit the overview lines it did not print.
 
 ```
-PORTFOLIO CONTEXT LOADED: [Date from filename]
+PORTFOLIO CONTEXT LOADED: [synced_at]
+
+SOURCE:
+- Ledger: family_office.db
+- Refresh: positions ok at [synced_at]
+- Margin source_file: [db:... from the JSON]
 
 OVERVIEW:
-- Total Value: $XXX,XXX
-- Cash Available: $X,XXX
-- Today's Performance: +/- $X,XXX (+/- X.XX%)
-- All-Time Return: +$XX,XXX (+XX.XX%)
+- Portfolio value (account equity): [portfolio_value]
+- Settled cash: [settled_cash from --show]
+- Buying power: [margin_buying_power]
+- Margin debit: [margin_balance]
+- Portfolio-to-margin ratio: [portfolio_margin_ratio]
+- Alert status: [alert_status]
 
-POSITION STRUCTURE:
-- Margin Positions: $XXX,XXX (XX%)
-- Cash Positions: $XX,XXX (XX%)
+HOLDINGS:
+[position lines from sync_db --show, unchanged]
 
-MARGIN STATUS (if balance file loaded):
-- Margin Debit Balance: $XX,XXX (amount borrowed)
-- Buying Power: $XX,XXX
-- Portfolio-to-Margin Ratio: X.XX:1
-- ⚠️ Margin Utilization: XX%
+DATA GAPS:
+- Today's gain/loss: not in the ledger
+- All-time gain/loss and return: not in the ledger
+- Margin versus cash position split: not in the ledger
+- Pending activity: not in the ledger
+- Accrued margin interest and day change: null on the db source
+- Position weights and concentration: these commands do not emit them
+- Price lag: account equity and position prices can be one session behind
+- [any refresh warning, missing .env value, or transactions/expenses error]
 
-TOP 5 HOLDINGS:
-1. TICKER ($XX,XXX, XX% of portfolio, +XX% gain)
-2. TICKER ($XX,XXX, XX% of portfolio, +XX% gain)
-3. TICKER ($XX,XXX, XX% of portfolio, +XX% gain)
-4. TICKER ($XX,XXX, XX% of portfolio, +XX% gain)
-5. TICKER ($XX,XXX, XX% of portfolio, +XX% gain)
-
-CONCENTRATION RISK:
-- Top 2 positions: XX% combined
-- Top 5 positions: XX% combined
-
-PENDING ACTIVITY: $X,XXX (if any)
+DISCLAIMER:
+[disclaimer field from the margin JSON, copied verbatim]
 
 ✅ Portfolio context ready for analysis
 ```
+
+Do not rank holdings, multiply `quantity` by `price`, or sum gain/loss in this task. Later analysis that needs weights or concentration runs a calculator and quotes that output.
+
+When a buy ticket asks for the portfolio context source, cite `family_office.db` and this `synced_at`.
 
 ---
 
 ## Error Handling
 
-**If no CSV found:**
-- Alert user: "No portfolio export found in imports/. Please download latest positions from Fidelity."
-- Provide instructions for export location
+**No ledger, or the positions sync failed:**
 
-**If CSV is malformed:**
-- Alert user: "Portfolio CSV format unexpected. Please verify export is from Fidelity positions download."
-- Show first few rows for debugging
+Tell the owner the ledger has no current snapshot and that the next step is `uv run python -m src.integrations.refresh_all` from the instance. If the instance itself is missing, scaffold it with `uv run python -m src.cli.instance_init`. Do not ask for a Fidelity positions download.
 
-**If data is stale (>2 days old):**
-- ⚠️ Warning: "Portfolio data is from [date], which is X days old. Recommendations may not reflect current positions."
-- Ask user if they want to proceed or update data first
+**Margin command failed on a missing input:**
+
+Keep the position snapshot. Name the typed error. Do not invent the ratio.
+
+**Snapshot older than two days:**
+
+Warn with the `synced_at` value. Recommendations from that snapshot do not describe a current book. Ask whether to proceed or to fix the refresh first.
+
+**CSV fallback:**
+
+A broker CSV is an explicit opt-in on the `portfolio-syncing` skill, used only when you ask for it or when a live source is down and you choose that fallback. This task does not run that path.
 
 ---
 
@@ -155,37 +163,37 @@ PENDING ACTIVITY: $X,XXX (if any)
 ```
 
 **When to skip:**
-- User is asking general educational questions (not portfolio-specific)
-- User is asking about market news/events (not their positions)
-- User explicitly says "don't load my portfolio"
+
+- You are asking a general educational question, not about your portfolio
+- You are asking about market news, not your positions
+- You explicitly say not to load your portfolio
 
 **When mandatory:**
-- Making buy/sell recommendations
-- Analyzing risk exposure
-- Discussing position sizing
-- Rebalancing suggestions
+
+- Buy or sell recommendations
+- Risk exposure
+- Position sizing
+- Rebalancing
 - Performance analysis
 
 ---
 
-## Output Format
+## Output
 
-This task should produce:
-1. Console output confirming load success
-2. Structured summary stored in agent memory
-3. Ready state for agent to proceed with user request
+1. The refresh lines, the `--show` snapshot, and the margin JSON.
+2. The structured summary above, stored in working memory.
+3. A ready state, or a stop with a typed reason when the refresh did not land.
 
 ---
 
 ## Notes
 
-- This task does NOT modify any files
-- This task does NOT make trading recommendations
-- This task ONLY loads data into memory
-- Portfolio CSV should remain in `imports/` for historical tracking
-- Agents should reference this loaded context throughout the session
+- The refresh replaces the positions and balances snapshot in `family_office.db`. This task does not write analysis files or tickets.
+- This task does not make trading recommendations.
+- Quote the CLIs. Do not fill a missing figure with an estimate.
+- Agents should reference this loaded context for the rest of the session.
 
 ---
 
-**Last Updated:** 2025-10-31
+**Last Updated:** 2026-10-06
 **Maintained By:** Finance Orchestrator (Cassandra Holt)
