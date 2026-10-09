@@ -45,7 +45,7 @@ You paste a screenshot into a chat model and ask whether a position is too big. 
 
 _A self-hosted family office for $0._
 
-This is for a household that wants its books on its own machine: what you hold, the risk in it, and a check that refuses to guess when a number is missing. The software in this repository is free to clone and run. You bring a terminal, your own Claude Code or Codex session if you want the agents, and broker CSV exports you already have.
+This is for a household that wants its books on its own machine: what you hold, the risk in it, and a check that refuses to guess when a number is missing. The software in this repository is free to clone and run. You bring a terminal, your own [Claude Code](https://code.claude.com/) or [Codex](https://github.com/openai/codex) session if you want the agents, and broker CSV exports you already have.
 
 _Not financial advice, and this project makes no return claims._
 

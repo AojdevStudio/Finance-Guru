@@ -30,6 +30,6 @@ If you modify the program and other people interact with that modified version o
 
 [Keepfolio](https://keepfolio.app/) is a separate commercial macOS product built on this engine. Its source is not in this repository, and this repository does not state Keepfolio's license. Finance Guru, in this repo, is the free self-hosted engine for someone who will use a terminal. Keepfolio is the polished product for someone who will not.
 
-SnapTrade, SimpleFIN, and any model host are accounts you bring. This repository does not sell access to them. A broker CSV works without those accounts. Packages you install to run the engine keep their own licenses.
+[SnapTrade](https://snaptrade.com/), [SimpleFIN](https://www.simplefin.org/), and any model host are accounts you bring. This repository does not sell access to them. A broker CSV works without those accounts. Packages you install to run the engine keep their own licenses.
 
 The full license text is [LICENSE](LICENSE).
