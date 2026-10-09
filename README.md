@@ -8,6 +8,12 @@
 
 _A self-hosted family office engine: typed Python calculators, a private SQLite ledger, and specialist agents that run inside Claude Code or Codex. Your data never leaves your machine unless you point it somewhere._
 
+<!--
+TODO: Replace docs/images/demo-risk-metrics.gif with a 20-30s demo clip.
+The clip should show Claude Code asking whether a position is too big, a calculator running, and a guardrail blocking.
+Keep this GIF until that clip exists.
+-->
+
 ![Terminal recording of the risk metrics CLI printing VaR, CVaR, Sharpe, Sortino, drawdown, volatility, beta, and alpha for TSLA against SPY](docs/images/demo-risk-metrics.gif)
 
 [![CI](https://github.com/AojdevStudio/Finance-Guru/actions/workflows/ci.yml/badge.svg)](https://github.com/AojdevStudio/Finance-Guru/actions/workflows/ci.yml)
@@ -16,7 +22,7 @@ _A self-hosted family office engine: typed Python calculators, a private SQLite 
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/AojdevStudio/Finance-Guru?style=flat)](https://github.com/AojdevStudio/Finance-Guru/stargazers)
 
-[**Quick Start**](#quick-start) · [**How it works**](#how-it-works) · [**Docs**](https://aojdevstudio.github.io/Finance-Guru/) · [**For agents**](#if-you-are-an-agent)
+[**Quick Start**](#quick-start) · [**How it works**](#how-it-works) · [**What's free**](#whats-free--licensing) · [**Docs**](https://aojdevstudio.github.io/Finance-Guru/) · [**For agents**](#if-you-are-an-agent)
 
 </div>
 
@@ -36,6 +42,12 @@ You paste a screenshot into a chat model and ask whether a position is too big. 
 ### **Guardrails fail closed, in Python, with tests.**
 
 </div>
+
+_A self-hosted family office for $0._
+
+This is for a household that wants its books on its own machine: what you hold, the risk in it, and a check that refuses to guess when a number is missing. The software in this repository is free to clone and run. You bring a terminal, your own Claude Code or Codex session if you want the agents, and broker CSV exports you already have.
+
+_Not financial advice, and this project makes no return claims._
 
 Every number an agent quotes comes from a [Pydantic](https://docs.pydantic.dev/)-validated calculator with a CLI you can run yourself. Every irreversible action passes through a guardrail that blocks when its inputs are missing rather than guessing. The AI gets judgment. The math gets a test suite.
 
@@ -209,13 +221,21 @@ uv run pytest -m "not integration"
 
 Market data through [yfinance](https://github.com/ranaroussi/yfinance). Brokerage connectivity through [SnapTrade](https://snaptrade.com/). Bank and card connectivity through [SimpleFIN](https://www.simplefin.org/). Agent surfaces on [Claude Code](https://code.claude.com/) and [Codex](https://github.com/openai/codex). Diagrams drawn with the diagram-design skill; terminal recording with [vhs](https://github.com/charmbracelet/vhs).
 
+## What's free / licensing
+
+Everything tracked in this repository is free under the [GNU Affero General Public License v3.0](LICENSE), or, at your option, any later version. That covers the Python calculators, the ledger code, the skills, the specialist agents, the docs, and the apps. There is no paid tier here, and no feature of this engine is held back. You can run it, change it, and share it. If you run a modified version as a network service, the license requires you to offer that version's source to the people who use it.
+
+[Keepfolio](https://keepfolio.app/) is a separate commercial macOS product built on this engine. Its source is not in this repository, and this repository does not state Keepfolio's license. This repo is the free terminal-native engine. Keepfolio is the polished app for someone who will not run one.
+
+The copyright notice and the same split are in [LICENSING.md](LICENSING.md).
+
 ## License
 
-Finance Guru is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+Finance Guru is licensed under the [GNU Affero General Public License v3.0](LICENSE), or any later version. See [LICENSING.md](LICENSING.md).
 
 ## Financial disclaimer
 
-Finance Guru is educational software, not investment advice. Financial markets involve risk, including possible loss of principal. Verify all data and calculations independently and consult appropriately licensed financial, tax, and legal professionals before acting.
+Not financial advice, and this project makes no return claims. Finance Guru is educational software. Financial markets involve risk, including possible loss of principal. Verify all data and calculations independently and consult appropriately licensed financial, tax, and legal professionals before acting.
 
 ---
 
