@@ -272,6 +272,36 @@ class TestCurrentPrice:
         with pytest.raises(AttributeError):
             calc._fetch_current_price("TSLA")
 
+    @pytest.mark.parametrize(
+        "parse_error",
+        [KeyError("result"), IndexError("list index out of range")],
+        ids=["quote-without-result", "empty-complementary-timeseries"],
+    )
+    @patch("src.analysis.itc_risk.requests.get")
+    @patch("src.analysis.itc_risk.yf.Ticker")
+    def test_yahoo_parse_failure_keeps_the_itc_result(
+        self, mock_ticker, mock_get, parse_error
+    ):
+        from src.analysis.itc_risk import ITCRiskCalculator
+
+        response = MagicMock(status_code=200)
+        response.json.return_value = {
+            "current_risk_score": 0.45,
+            "risk_table": [
+                {"price": 100.0, "risk": 0.1},
+                {"price": 450.0, "risk": 0.45},
+            ],
+        }
+        mock_get.return_value = response
+        type(mock_ticker.return_value).info = PropertyMock(side_effect=parse_error)
+        calc = ITCRiskCalculator(api_key="test_key")
+
+        with pytest.warns(UserWarning, match="without current price"):
+            result = calc.get_risk_score("TSLA", "tradfi")
+
+        assert result.current_risk_score == 0.45
+        assert result.current_price is None
+
 
 class TestITCRiskResponse:
     """Tests for ITCRiskResponse model methods."""

@@ -435,7 +435,7 @@ class ITCRiskCalculator:
         """
         try:
             return first_quoted_price(yf.Ticker(symbol).info)
-        except (YFException, OSError, TypeError, ValueError) as e:
+        except (YFException, OSError, KeyError, IndexError, TypeError, ValueError) as e:
             warnings.warn(
                 f"Could not fetch current price for {symbol} from yfinance: {e}. "
                 "Risk data will be displayed without current price context."
