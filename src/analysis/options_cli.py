@@ -188,6 +188,13 @@ Examples:
         sys.exit(1)
 
 
+def _theta_reading(theta: float) -> str:
+    """Describe theta by its sign. A deep in-the-money European put gains value daily."""
+    if theta > 0:
+        return f"Gaining ${theta:.2f} per day as expiry nears"
+    return f"Losing ${abs(theta):.2f} per day to time decay"
+
+
 def format_greeks(greeks, args) -> str:
     """Format Greeks output in human-readable format."""
     output = []
@@ -228,7 +235,7 @@ def format_greeks(greeks, args) -> str:
     output.append(f"    → $1 stock move = Delta changes by {greeks.gamma:.4f}")
     output.append("")
     output.append(f"  Theta (Θ):                ${greeks.theta:>10.2f} per day")
-    output.append(f"    → Daily time decay = ${abs(greeks.theta):.2f}")
+    output.append(f"    → {_theta_reading(greeks.theta)}")
     output.append("")
     output.append(f"  Vega (ν):                 ${greeks.vega:>10.2f} per 1% vol")
     output.append(f"    → 1% volatility up = ${greeks.vega:.2f} option up")
@@ -262,7 +269,7 @@ def format_greeks(greeks, args) -> str:
     if greeks.gamma > 0.05:
         output.append(f"  • High gamma ({greeks.gamma:.4f}) - delta changes rapidly")
 
-    output.append(f"  • Losing ${abs(greeks.theta):.2f} per day to time decay")
+    output.append(f"  • {_theta_reading(greeks.theta)}")
 
     if greeks.time_to_expiry < 0.1:  # Less than ~36 days
         output.append("  ⚠️  WARNING: Option near expiry - theta decay accelerating")

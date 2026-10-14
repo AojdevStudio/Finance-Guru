@@ -354,8 +354,8 @@ class TechnicalScreener:
         if len(df) < self.momentum_config.rsi_period:
             return None
 
-        momentum_data = _momentum_input(df)
         try:
+            momentum_data = _momentum_input(df)
             rsi_result = self.momentum_calc.calculate_rsi(momentum_data)
 
             current_rsi = rsi_result.current_rsi
@@ -385,8 +385,8 @@ class TechnicalScreener:
         if len(df) < self.momentum_config.rsi_period:
             return None
 
-        momentum_data = _momentum_input(df)
         try:
+            momentum_data = _momentum_input(df)
             rsi_result = self.momentum_calc.calculate_rsi(momentum_data)
             current_rsi = rsi_result.current_rsi
 
@@ -415,8 +415,8 @@ class TechnicalScreener:
         if len(df) < self.momentum_config.macd_slow:
             return None
 
-        momentum_data = _momentum_input(df)
         try:
+            momentum_data = _momentum_input(df)
             macd_result = self.momentum_calc.calculate_macd(momentum_data)
 
             if (
@@ -444,8 +444,8 @@ class TechnicalScreener:
         if len(df) < self.momentum_config.macd_slow:
             return None
 
-        momentum_data = _momentum_input(df)
         try:
+            momentum_data = _momentum_input(df)
             macd_result = self.momentum_calc.calculate_macd(momentum_data)
 
             if (
@@ -541,8 +541,8 @@ class TechnicalScreener:
         if len(df) < self.momentum_config.rsi_period:
             return None
 
-        momentum_data = _momentum_input(df)
         try:
+            momentum_data = _momentum_input(df)
             rsi_result = self.momentum_calc.calculate_rsi(momentum_data)
             return float(rsi_result.current_rsi)
         except ValueError:

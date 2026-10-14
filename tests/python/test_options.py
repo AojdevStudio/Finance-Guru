@@ -411,3 +411,23 @@ class TestConvenienceFunction:
             dividend_yield=0.02,
         )
         assert result.option_price > 0
+
+
+def test_positive_theta_reads_as_a_daily_gain() -> None:
+    from types import SimpleNamespace
+
+    from src.analysis.options_cli import format_greeks
+
+    greeks = price_option(
+        spot=50.0,
+        strike=100.0,
+        days_to_expiry=365,
+        volatility=0.20,
+        option_type="put",
+        risk_free_rate=0.05,
+    )
+
+    text = format_greeks(greeks, SimpleNamespace(risk_free_rate=0.05))
+
+    assert "Losing" not in text
+    assert f"Gaining ${greeks.theta:.2f} per day" in text

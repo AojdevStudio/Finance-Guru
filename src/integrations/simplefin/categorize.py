@@ -502,6 +502,7 @@ def _is_account_verification(txn: _Transaction) -> bool:
 
 
 def _is_core_cash_sweep(txn: _Transaction) -> bool:
+    """Fidelity settles trades through its SPAXX core money market, so a sweep is not income or spending."""
     return "spaxx" in txn.text or "core account" in txn.text
 
 

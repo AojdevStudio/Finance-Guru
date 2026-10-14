@@ -74,3 +74,13 @@ def test_steady_decline_reports_rsi_oversold(screener) -> None:
     assert signal is not None
     assert signal.signal_type == PatternType.RSI_OVERSOLD
     assert screener._get_current_rsi(falling) == pytest.approx(signal.value)
+
+
+def test_a_zero_price_in_history_still_screens(screener) -> None:
+    prices = [100.0 + day for day in range(60)]
+    prices[10] = 0.0
+    dates = [d.date() for d in pd.bdate_range("2026-01-02", periods=len(prices))]
+
+    result = screener.screen_ticker("TEST", prices, dates)
+
+    assert result.ticker == "TEST"
