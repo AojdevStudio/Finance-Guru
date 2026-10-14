@@ -259,7 +259,7 @@ def format_greeks(greeks, args) -> str:
 
     output.append(f"  • {_theta_reading(greeks.theta)}")
 
-    if greeks.time_to_expiry < 0.1:
+    if greeks.time_to_expiry < 0.1 and greeks.theta < 0:
         output.append("  ⚠️  WARNING: Option near expiry - theta decay accelerating")
 
     output.append("")
