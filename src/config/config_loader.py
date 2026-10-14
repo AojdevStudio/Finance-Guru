@@ -157,9 +157,9 @@ def load_hedging_section(profile_path: Path) -> dict[str, Any]:
     if not profile_path.exists():
         return {}
     try:
-        with open(profile_path) as f:
+        with open(profile_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
-    except (OSError, yaml.YAMLError):
+    except (OSError, UnicodeDecodeError, yaml.YAMLError):
         logger.warning("Failed to parse %s, using defaults", profile_path)
         return {}
     if not isinstance(data, dict):

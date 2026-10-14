@@ -74,12 +74,14 @@ class FinGuruConfig:
             return default_layers
 
         try:
-            with open(cls.LAYERS_FILE) as f:
-                data = yaml.safe_load(f) or {}
-        except (OSError, yaml.YAMLError) as exc:
+            with open(cls.LAYERS_FILE, encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+        except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
             msg = f"Cannot read layers file {cls.LAYERS_FILE}: {exc}"
             raise LayersConfigError(msg) from exc
 
+        if data is None:
+            return default_layers
         if not isinstance(data, dict):
             msg = (
                 f"Layers file {cls.LAYERS_FILE} must be a mapping of layer name "

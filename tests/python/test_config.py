@@ -82,6 +82,27 @@ class TestFinGuruConfig:
             ):
                 FinGuruConfig.load_layers()
 
+    @pytest.mark.parametrize(
+        "yaml_content", ["[]\n", "false\n", "0\n"], ids=["list", "false", "zero"]
+    )
+    def test_raises_on_falsy_non_mapping_yaml(self, yaml_content):
+        with patch.object(FinGuruConfig, "LAYERS_FILE") as mock_file:
+            mock_file.exists.return_value = True
+            with (
+                patch("builtins.open", mock_open(read_data=yaml_content)),
+                pytest.raises(LayersConfigError, match="mapping"),
+            ):
+                FinGuruConfig.load_layers()
+
+    def test_raises_on_undecodable_file(self, tmp_path):
+        layers_file = tmp_path / "layers.yaml"
+        layers_file.write_bytes(b"layer1:\n  - \xff\xfe\n")
+        with (
+            patch.object(FinGuruConfig, "LAYERS_FILE", layers_file),
+            pytest.raises(LayersConfigError),
+        ):
+            FinGuruConfig.load_layers()
+
     def test_skips_non_list_values(self):
         yaml_content = "layer1:\n  - nvda\nlayer2: not_a_list\n"
         with patch.object(FinGuruConfig, "LAYERS_FILE") as mock_file:

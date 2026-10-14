@@ -167,6 +167,13 @@ class TestLoadHedgeConfig:
 
         assert config.monthly_budget == DEFAULT_BUDGET
 
+    def test_handles_undecodable_profile(self, tmp_path: Path):
+        path = tmp_path / "user-profile.yaml"
+        path.write_bytes(b"hedging:\n  monthly_budget: \xff\xfe\n")
+        config = load_hedge_config(profile_path=path)
+
+        assert config.monthly_budget == DEFAULT_BUDGET
+
     def test_cli_overrides_take_priority(self, tmp_path: Path):
         """CLI overrides should win over YAML values."""
         path = _write_profile(tmp_path, {"monthly_budget": YAML_BUDGET})
