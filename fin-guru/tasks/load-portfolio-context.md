@@ -27,12 +27,13 @@ uv run python -m src.integrations.refresh_all
 
 Read each `source: ok` or `source: error` line. Under `positions: ok` the refresh also prints:
 
-- `generation <synced_at>`: the timestamp this run wrote on every account it synced. Keep it for step 4.
+- `generation <synced_at>`: the UTC timestamp this run wrote on every account it synced. Keep it for step 4.
+- `no enabled, routed account synced`: the run wrote no rows. Stop and name `snaptrade-accounts.yaml` under data gaps.
 - `warning: cost basis unavailable for <quantity> <symbol> <instrument> units`: one line per lot with no cost basis.
 
 - If `positions` is `error`, stop. Surface the error. Do not quote positions or balances as fresh, and do not open a CSV to fill the gap.
 - If `transactions` or `expenses` is `error`, record that under data gaps. Those sources do not replace the positions snapshot.
-- `positions: ok` only means the positions sync did not raise. An instance with no enabled, routed account still prints `ok` and writes no rows. Step 2 is what shows whether a snapshot landed.
+- `positions: ok` only means the positions sync did not raise. An instance with no enabled, routed account still prints `ok`, writes no rows, and prints no `generation` line.
 
 _Completion criterion:_ the refresh printed `positions: ok` and a `generation` line before any read.
 
@@ -79,9 +80,9 @@ If this command fails because a required `.env` value is missing (`FG_MARGIN_INT
 Compare the `# generation` line from step 2 with the `generation` line the refresh printed in step 1. Both come from the CLIs, so no extra query is needed.
 
 - They match exactly: every account block in step 2 was written by this refresh. Proceed.
-- They differ: the refresh wrote no new generation, for example because no account is enabled and routed. Stop. Do not quote the step 2 rows as current. Name `snaptrade-accounts.yaml` under data gaps.
+- They differ, or the refresh printed no `generation` line: the refresh wrote no new generation. Stop. Do not quote the step 2 rows as current. Name `snaptrade-accounts.yaml` under data gaps.
 
-Also compare the generation date with `{current_date}` from `date +"%Y-%m-%d"`. A matching generation is from this run, so a different date means the system clock or the refresh is wrong. Warn with the timestamp.
+Also compare the generation date with today's UTC date from `date -u +"%Y-%m-%d"`. The generation is UTC, so a local `{current_date}` can differ by a day in the evening. A matching generation is from this run, so a different date means the system clock or the refresh is wrong. Warn with the timestamp.
 - SnapTrade `price`, `account_equity`, and `gross_market_value` lag one session even when `synced_at` is current. Holdings, quantities, cost basis, settled cash, and margin debt do not. Say so whenever you quote a dollar value that comes from price.
 
 ### 5. Validate before proceeding

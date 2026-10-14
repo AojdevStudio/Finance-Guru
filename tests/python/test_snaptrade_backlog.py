@@ -492,3 +492,35 @@ def test_refresh_cli_prints_positions_generation_and_unpriced_lots(
     assert "positions: ok" in output
     assert "generation 2026-10-06T15:00:00+00:00" in output
     assert "cost basis unavailable for 10.0 AAPL equity units" in output
+
+
+def test_refresh_cli_prints_no_generation_when_no_account_synced(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An empty sync prints no generation an older snapshot could match."""
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.setattr(
+        refresh_all,
+        "refresh",
+        lambda database_url, months=12: {
+            "synced_at": "2026-10-06T15:00:05+00:00",
+            "sources": [
+                {
+                    "source": "positions",
+                    "status": "ok",
+                    "summary": {
+                        "synced_at": "2026-10-06T15:00:00+00:00",
+                        "accounts": [],
+                    },
+                }
+            ],
+        },
+    )
+
+    assert refresh_all.main([]) == 0
+
+    output = capsys.readouterr().out
+    assert "no enabled, routed account synced" in output
+    assert "generation" not in output

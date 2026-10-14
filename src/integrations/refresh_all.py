@@ -86,7 +86,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{source['source']}: ok")
         if source["source"] == "positions":
             # The generation `sync_db --show` must match, and every basis gap.
+            # A sync that wrote no account has no generation to match.
             summary = source["summary"]
+            if not summary["accounts"]:
+                print("  no enabled, routed account synced")
+                continue
             print(f"  generation {summary['synced_at']}")
             for account in summary["accounts"]:
                 for lot in account["unpriced_lots"]:
