@@ -73,7 +73,12 @@ Use these fields as printed:
 
 `margin_day_change` and `margin_interest_accrued_this_month` are null on the ledger path. Record them as data gaps. Do not substitute zero, and do not read a balances CSV to obtain them.
 
-If this command fails because a required `.env` value is missing (`FG_MARGIN_INTEREST_RATE_DECIMAL`, `FG_MARGIN_JUMP_ALERT_THRESHOLD`), keep the position snapshot from step 2 and record the typed error under data gaps. Do not estimate the missing input.
+If this command fails, keep the position snapshot from step 2 and record the typed error under data gaps. Do not estimate any margin figure. Typed failures include:
+
+- a required `.env` value is missing (`FG_MARGIN_INTEREST_RATE_DECIMAL`, `FG_MARGIN_JUMP_ALERT_THRESHOLD`)
+- `MarginAccountRoutingError`: `snaptrade-accounts.yaml` has zero or more than one enabled `taxable_margin` account
+- `IncompleteBalanceGenerationError`: the latest balance generation is missing an enabled, routed account or the margin account
+- `FileNotFoundError` or `ValueError`: the ledger or its balances rows are missing
 
 ### 4. Check freshness
 
@@ -147,7 +152,7 @@ When a buy ticket asks for the portfolio context source, cite `family_office.db`
 
 Tell the owner the ledger has no current snapshot and that the next step is `uv run python -m src.integrations.refresh_all` from the instance. If the instance itself is missing, scaffold it with `uv run python -m src.cli.instance_init`. Do not ask for a Fidelity positions download.
 
-**Margin command failed on a missing input:**
+**Margin command failed:**
 
 Keep the position snapshot. Name the typed error. Do not invent the ratio.
 
