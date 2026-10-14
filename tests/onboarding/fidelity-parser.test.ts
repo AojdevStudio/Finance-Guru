@@ -71,6 +71,18 @@ describe('FidelityParser.parseBalancesCSV', () => {
     expect(balances.marginInterestAccrued).toBe(-12.34);
     expect(balances.totalAccountValue).toBe(10500);
   });
+
+  it('keeps a negative equity percentage and total account value', async () => {
+    const path = await csv(
+      'negative-balances.csv',
+      ['Account equity percentage,(12.50%)', 'Total account value,"($2,000.00)"'].join('\n')
+    );
+
+    const balances = await new FidelityParser().parseBalancesCSV(path);
+
+    expect(balances.accountEquityPercentage).toBe(-12.5);
+    expect(balances.totalAccountValue).toBe(-2000);
+  });
 });
 
 describe('FidelityParser.parsePositionsCSV', () => {
@@ -88,6 +100,22 @@ describe('FidelityParser.parsePositionsCSV', () => {
 
     expect(positions).toEqual([
       { symbol: 'ABC', quantity: 10, averageCostBasis: 4, lastPrice: 5, currentValue: 1050 }
+    ]);
+  });
+
+  it('keeps the sign of every numeric position field', async () => {
+    const path = await csv(
+      'short-positions.csv',
+      [
+        'Symbol,Description,Quantity,Last Price,Current Value,Average Cost Basis',
+        'XYZ,Short position,(10),($5.00),"($1,050.00)",($4.00)'
+      ].join('\n')
+    );
+
+    const positions = await new FidelityParser().parsePositionsCSV(path);
+
+    expect(positions).toEqual([
+      { symbol: 'XYZ', quantity: -10, averageCostBasis: -4, lastPrice: -5, currentValue: -1050 }
     ]);
   });
 });
