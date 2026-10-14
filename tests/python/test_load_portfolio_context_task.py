@@ -18,6 +18,8 @@ FORBIDDEN_SNIPPETS = (
     "Balances_for_Account_",
     "Portfolio_Positions_",
     "--source csv",
+    # The freshness check reads the CLI generation lines, not a sqlite3 shell.
+    "sqlite3 family_office.db",
 )
 
 
@@ -29,5 +31,7 @@ def test_portfolio_context_task_reads_the_ledger_after_refresh() -> None:
     assert "uv run python -m src.integrations.snaptrade.sync_db --show" in text
     assert "uv run python -m src.analysis.margin_metrics --pretty" in text
     assert "synced_at" in text
+    assert "# generation" in text
+    assert "cost basis unavailable" in text
     for snippet in FORBIDDEN_SNIPPETS:
         assert snippet not in text

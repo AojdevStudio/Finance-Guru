@@ -6,7 +6,7 @@ DATABASE_URL (e.g. ``sqlite:///family_office.db``). Read-only against SnapTrade;
 the only writes are to the local DB.
 
     uv run python -m src.integrations.snaptrade.sync_db          # sync
-    uv run python -m src.integrations.snaptrade.sync_db --show   # print current snapshot
+    uv run python -m src.integrations.snaptrade.sync_db --show   # print latest generation
 
 Snapshot semantics: each sync REPLACES the rows for every synced account (a
 current-state store, like the old DataHub). ponytail: if per-sync history is
@@ -181,7 +181,11 @@ def sync(config_path: Path, database_url: str | None) -> dict[str, Any]:
 
 
 def show(database_url: str | None) -> None:
-    """Print the current DB snapshot."""
+    """Print the latest sync generation from the DB.
+
+    One sync stamps every account it writes with the same ``synced_at``. Rows
+    kept from an earlier run, such as an account disabled since, are left out.
+    """
     db = _db_path(database_url)
     if not db.exists():
         print(f"No DB at {db}", file=sys.stderr)
@@ -190,7 +194,13 @@ def show(database_url: str | None) -> None:
     try:
         conn.row_factory = sqlite3.Row
         print(f"# {db}")
-        for b in conn.execute("SELECT * FROM balances"):
+        latest = conn.execute("SELECT MAX(synced_at) FROM balances").fetchone()[0]
+        if latest is None:
+            return
+        print(f"# generation {latest}")
+        for b in conn.execute(
+            "SELECT * FROM balances WHERE synced_at=? ORDER BY account_id", (latest,)
+        ):
             print(
                 f"\n[{b['account_id']}] equity={b['account_equity']} "
                 f"cash={b['settled_cash']} margin_debt={b['margin_debt']} "
@@ -198,8 +208,8 @@ def show(database_url: str | None) -> None:
             )
             rows = conn.execute(
                 "SELECT symbol, instrument, quantity, avg_cost FROM positions "
-                "WHERE account_id=? ORDER BY instrument, symbol",
-                (b["account_id"],),
+                "WHERE account_id=? AND synced_at=? ORDER BY instrument, symbol",
+                (b["account_id"], latest),
             ).fetchall()
             print(f"  {len(rows)} positions:")
             for r in rows:
@@ -208,6 +218,14 @@ def show(database_url: str | None) -> None:
                 )
     finally:
         conn.close()
+
+
+def unpriced_lot_warning(lot: dict[str, Any]) -> str:
+    """Describe a lot whose cost basis SnapTrade did not return."""
+    return (
+        "cost basis unavailable for "
+        f"{lot['quantity']} {lot['symbol']} {lot['instrument']} units"
+    )
 
 
 def _format_money(value: float | int | None) -> str:
@@ -253,11 +271,7 @@ def main(argv: list[str] | None = None) -> int:
             f"margin={_format_money(a['margin_debt'])}"
         )
         for lot in a["unpriced_lots"]:
-            print(
-                "  warning: cost basis unavailable for "
-                f"{lot['quantity']} {lot['symbol']} {lot['instrument']} units",
-                file=sys.stderr,
-            )
+            print(f"  warning: {unpriced_lot_warning(lot)}", file=sys.stderr)
     if not summary["accounts"]:
         print("- no syncable accounts (check config role/enabled)")
     return 0

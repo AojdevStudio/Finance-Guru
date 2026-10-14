@@ -25,13 +25,16 @@ Refresh before any read. Portfolio context depends on the positions sync, which 
 uv run python -m src.integrations.refresh_all
 ```
 
-Read each `source: ok` or `source: error` line.
+Read each `source: ok` or `source: error` line. Under `positions: ok` the refresh also prints:
+
+- `generation <synced_at>`: the timestamp this run wrote on every account it synced. Keep it for step 4.
+- `warning: cost basis unavailable for <quantity> <symbol> <instrument> units`: one line per lot with no cost basis.
 
 - If `positions` is `error`, stop. Surface the error. Do not quote positions or balances as fresh, and do not open a CSV to fill the gap.
 - If `transactions` or `expenses` is `error`, record that under data gaps. Those sources do not replace the positions snapshot.
 - `positions: ok` only means the positions sync did not raise. An instance with no enabled, routed account still prints `ok` and writes no rows. Step 2 is what shows whether a snapshot landed.
 
-_Completion criterion:_ the `positions` and `balances` tables carry this run's `synced_at` before any read.
+_Completion criterion:_ the refresh printed `positions: ok` and a `generation` line before any read.
 
 ### 2. Read the positions snapshot
 
@@ -39,11 +42,15 @@ _Completion criterion:_ the `positions` and `balances` tables carry this run's `
 uv run python -m src.integrations.snaptrade.sync_db --show
 ```
 
-Quote that output. It prints, per account, `account_equity`, settled cash, margin debt, `synced_at`, and each position (`symbol`, `instrument`, `quantity`, `avg_cost`).
+Quote that output. It prints a `# generation <synced_at>` line, then, per account, `account_equity`, settled cash, margin debt, `synced_at`, and each position (`symbol`, `instrument`, `quantity`, `avg_cost`).
 
-If it prints only the database path and no account block, stop. Name `snaptrade-accounts.yaml` under data gaps: the instance has no enabled account with a role, so there is nothing to load.
+It prints only the latest generation. Rows kept from an earlier run, such as an account disabled since, do not appear. Do not query the tables directly to add them back.
+
+If it prints no `generation` line or no account block, stop. Name `snaptrade-accounts.yaml` under data gaps: the instance has no enabled account with a role, so there is nothing to load.
 
 Cash available is `settled_cash` on the `balances` row. A `SPAXX` position is settled money-market shares, not the cash figure. The ledger has no Fidelity "Margin" versus "Cash" type column and no pending-activity row. A position printed with `avg=None` has no cost basis. Record that lot under data gaps and do not invent one.
+
+`avg_cost` covers only the lots that carry a cost basis. For each symbol named in a refresh `warning: cost basis unavailable` line, the printed `avg` is not the basis of the whole `quantity`. Record the warning under data gaps, even when `avg` is not `None`.
 
 ### 3. Read margin health from the calculator
 
@@ -69,20 +76,18 @@ If this command fails because a required `.env` value is missing (`FG_MARGIN_INT
 
 ### 4. Check freshness
 
-```bash
-sqlite3 family_office.db "SELECT 'positions', MAX(synced_at) FROM positions
-  UNION ALL SELECT 'balances', MAX(synced_at) FROM balances;"
-```
+Compare the `# generation` line from step 2 with the `generation` line the refresh printed in step 1. Both come from the CLIs, so no extra query is needed.
 
-Compare `synced_at` with `{current_date}` from `date +"%Y-%m-%d"`.
+- They match exactly: every account block in step 2 was written by this refresh. Proceed.
+- They differ: the refresh wrote no new generation, for example because no account is enabled and routed. Stop. Do not quote the step 2 rows as current. Name `snaptrade-accounts.yaml` under data gaps.
 
-- Same calendar day as this refresh: proceed.
-- More than two days behind `{current_date}`: the refresh did not land a current snapshot. Warn with the timestamp and ask the owner whether to proceed on those rows or fix the refresh first.
+Also compare the generation date with `{current_date}` from `date +"%Y-%m-%d"`. A matching generation is from this run, so a different date means the system clock or the refresh is wrong. Warn with the timestamp.
 - SnapTrade `price`, `account_equity`, and `gross_market_value` lag one session even when `synced_at` is current. Holdings, quantities, cost basis, settled cash, and margin debt do not. Say so whenever you quote a dollar value that comes from price.
 
 ### 5. Validate before proceeding
 
 - The refresh printed `positions: ok` for this run.
+- The `--show` generation equals the refresh `generation` line.
 - `--show` printed at least one balances row and at least one position.
 - `portfolio_value` from the margin JSON is greater than 0 when that command succeeded.
 - `source_file` starts with `db:`.
@@ -98,7 +103,7 @@ PORTFOLIO CONTEXT LOADED: [synced_at]
 
 SOURCE:
 - Ledger: family_office.db
-- Refresh: positions ok at [synced_at]
+- Refresh: positions ok, generation [synced_at]
 - Margin source_file: [db:... from the JSON]
 
 OVERVIEW:
@@ -120,6 +125,7 @@ DATA GAPS:
 - Accrued margin interest and day change: null on the db source
 - Position weights and concentration: these commands do not emit them
 - Price lag: account equity and position prices can be one session behind
+- Incomplete cost basis: [each refresh `warning: cost basis unavailable` line, or "none"]
 - [any refresh warning, missing .env value, or transactions/expenses error]
 
 DISCLAIMER:
@@ -144,9 +150,9 @@ Tell the owner the ledger has no current snapshot and that the next step is `uv 
 
 Keep the position snapshot. Name the typed error. Do not invent the ratio.
 
-**Snapshot older than two days:**
+**Generation mismatch:**
 
-Warn with the `synced_at` value. Recommendations from that snapshot do not describe a current book. Ask whether to proceed or to fix the refresh first.
+The `--show` generation is older than the refresh `generation` line. Those rows do not describe a current book. Stop and name the cause under data gaps.
 
 **CSV fallback:**
 
