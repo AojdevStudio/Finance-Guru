@@ -112,6 +112,7 @@ scripts/*
 !scripts/onboarding/
 !scripts/qa/
 !scripts/backlinks.py
+!scripts/launch-persona.sh
 # Private PII data files (real values for git-filter-repo — tracked templates available instead)
 scripts/qa/pii-replacements.txt
 scripts/qa/author-mailmap.txt
