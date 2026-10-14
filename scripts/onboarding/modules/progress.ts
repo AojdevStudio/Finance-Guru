@@ -1,20 +1,20 @@
-/**
- * Progress Save/Resume System
- * Manages onboarding state persistence
- */
-
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
-export type SectionName =
-  | 'liquid_assets'
-  | 'investments'
-  | 'cash_flow'
-  | 'debt'
-  | 'preferences'
-  | 'summary'
-  | 'mcp_config'
-  | 'env_setup';
+const REQUIRED_SECTIONS = [
+  'liquid_assets',
+  'investments',
+  'cash_flow',
+  'debt',
+  'preferences',
+  'summary'
+] as const;
+
+export const OPTIONAL_SECTIONS = ['mcp_config', 'env_setup'] as const;
+
+export const SECTION_ORDER = [...REQUIRED_SECTIONS, ...OPTIONAL_SECTIONS] as const;
+
+export type SectionName = (typeof SECTION_ORDER)[number];
 
 export interface OnboardingState {
   version: string;
@@ -27,26 +27,14 @@ export interface OnboardingState {
 
 const STATE_FILE = '.onboarding-state.json';
 
-/**
- * Gets the path to the state file
- * @returns Absolute path to state file
- */
 function getStatePath(): string {
   return join(process.cwd(), STATE_FILE);
 }
 
-/**
- * Checks if a saved state exists
- * @returns True if state file exists
- */
 export function hasExistingState(): boolean {
   return existsSync(getStatePath());
 }
 
-/**
- * Loads the onboarding state from disk
- * @returns OnboardingState or null if doesn't exist
- */
 export function loadState(): OnboardingState | null {
   const statePath = getStatePath();
 
@@ -63,10 +51,6 @@ export function loadState(): OnboardingState | null {
   }
 }
 
-/**
- * Saves the onboarding state to disk
- * @param state - OnboardingState to save
- */
 export function saveState(state: OnboardingState): void {
   const statePath = getStatePath();
 
@@ -80,10 +64,6 @@ export function saveState(state: OnboardingState): void {
   }
 }
 
-/**
- * Creates a new onboarding state
- * @returns New OnboardingState
- */
 export function createNewState(): OnboardingState {
   const now = new Date().toISOString();
 
@@ -97,36 +77,20 @@ export function createNewState(): OnboardingState {
   };
 }
 
-/**
- * Marks a section as completed and updates the current section
- * @param state - Current state
- * @param completedSection - Section that was completed
- * @param nextSection - Next section to work on (or null if done)
- * @returns Updated state
- */
 export function markSectionComplete(
   state: OnboardingState,
   completedSection: SectionName,
   nextSection: SectionName | null
 ): OnboardingState {
-  // Add to completed list if not already there
   if (!state.completed_sections.includes(completedSection)) {
     state.completed_sections.push(completedSection);
   }
 
-  // Update current section
   state.current_section = nextSection;
 
   return state;
 }
 
-/**
- * Saves section data to state
- * @param state - Current state
- * @param section - Section name
- * @param data - Section data
- * @returns Updated state
- */
 export function saveSectionData(
   state: OnboardingState,
   section: SectionName,
@@ -136,12 +100,6 @@ export function saveSectionData(
   return state;
 }
 
-/**
- * Gets data for a specific section
- * @param state - Current state
- * @param section - Section name
- * @returns Section data or null
- */
 export function getSectionData(
   state: OnboardingState,
   section: SectionName
@@ -149,9 +107,6 @@ export function getSectionData(
   return state.data[section] || null;
 }
 
-/**
- * Deletes the onboarding state file
- */
 export function clearState(): void {
   const statePath = getStatePath();
 
@@ -165,56 +120,18 @@ export function clearState(): void {
   }
 }
 
-/**
- * Gets the next section to work on based on current progress
- * @param state - Current state
- * @returns Next section or null if all complete
- */
 export function getNextSection(state: OnboardingState): SectionName | null {
-  const allSections: SectionName[] = [
-    'liquid_assets',
-    'investments',
-    'cash_flow',
-    'debt',
-    'preferences',
-    'summary',
-    'mcp_config',
-    'env_setup'
-  ];
-
-  // Find first section not in completed list
-  const nextSection = allSections.find(
+  const nextSection = SECTION_ORDER.find(
     section => !state.completed_sections.includes(section)
   );
 
   return nextSection || null;
 }
 
-/**
- * Checks if onboarding is complete
- * @param state - Current state
- * @returns True if all sections completed
- */
 export function isComplete(state: OnboardingState): boolean {
-  const allSections: SectionName[] = [
-    'liquid_assets',
-    'investments',
-    'cash_flow',
-    'debt',
-    'preferences',
-    'summary',
-    'mcp_config',
-    'env_setup'
-  ];
-
-  return allSections.every(section => state.completed_sections.includes(section));
+  return SECTION_ORDER.every(section => state.completed_sections.includes(section));
 }
 
-/**
- * Formats time since state was last updated
- * @param state - Current state
- * @returns Human-readable time difference
- */
 export function getTimeSinceLastUpdate(state: OnboardingState): string {
   const now = new Date();
   const lastUpdate = new Date(state.last_updated);

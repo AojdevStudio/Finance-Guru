@@ -9,18 +9,18 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import pytest
+
 
 class TestEnvSetup:
     """Test class for environment setup functionality"""
 
     def setup_method(self):
         """Set up test environment before each test"""
-        # Create temporary directory for test
         self.test_dir = tempfile.mkdtemp(prefix="test_env_setup_")
         self.original_cwd = os.getcwd()
         os.chdir(self.test_dir)
 
-        # Create necessary directories
         os.makedirs("scripts/onboarding/sections", exist_ok=True)
         os.makedirs("scripts/onboarding/modules", exist_ok=True)
         os.makedirs("fin-guru/data", exist_ok=True)
@@ -87,7 +87,6 @@ class TestEnvSetup:
         )
         content = env_setup_path.read_text()
 
-        # Check for optional API key fields
         assert "has_alphavantage?" in content, "Should have optional alphavantage flag"
         assert "alphavantage_key?" in content, "Should have optional alphavantage_key"
         assert "has_brightdata?" in content, "Should have optional brightdata flag"
@@ -166,7 +165,6 @@ class TestEnvSetup:
         )
         content = env_setup_path.read_text()
 
-        # Check for expected sections in env file
         assert "USER_NAME=" in content, "Should set USER_NAME in .env"
         assert "COMMUNICATION_LANGUAGE=" in content, (
             "Should set COMMUNICATION_LANGUAGE in .env"
@@ -183,7 +181,7 @@ class TestEnvSetup:
         content = env_setup_path.read_text()
 
         required_imports = [
-            "createInterface",
+            "createPrompt",
             "writeFileSync",
             "validateNonEmpty",
             "OnboardingState",
@@ -201,7 +199,6 @@ class TestEnvSetup:
             Path(self.original_cwd) / "scripts/onboarding/sections/env-setup.ts"
         )
 
-        # Try to run TypeScript compiler check (if available)
         try:
             result = subprocess.run(
                 ["bunx", "tsc", "--noEmit", str(env_setup_path)],
@@ -210,14 +207,11 @@ class TestEnvSetup:
                 timeout=10,
                 cwd=self.original_cwd,
             )
-            # If tsc is available, check for no errors
-            # Note: warnings are ok, we just want to catch syntax errors
             assert "error TS" not in result.stderr, (
                 f"TypeScript compilation errors: {result.stderr}"
             )
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            # If tsc is not available or times out, skip this check
-            pass
+        except (subprocess.TimeoutExpired, FileNotFoundError) as error:
+            pytest.skip(f"bunx tsc unavailable: {error}")
 
 
 def test_module_discovery():
@@ -227,11 +221,9 @@ def test_module_discovery():
 
 
 if __name__ == "__main__":
-    # Run basic checks
     print("Running Environment Setup tests...")
     test = TestEnvSetup()
 
-    # Run each test method
     test_methods = [method for method in dir(test) if method.startswith("test_")]
 
     passed = 0
@@ -252,7 +244,6 @@ if __name__ == "__main__":
             print(f"✗ {method_name}: Unexpected error: {e}")
             failed += 1
 
-    # Run module discovery test
     try:
         test_module_discovery()
         print("✓ test_module_discovery")

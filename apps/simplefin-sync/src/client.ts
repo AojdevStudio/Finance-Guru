@@ -1,6 +1,4 @@
 /**
- * SimpleFIN Bridge HTTP client.
- *
  * The access URL embeds basic-auth credentials in userinfo
  * (https://USER:PASS@host/path). Bun's fetch (like browsers) strips
  * userinfo from request URLs for security, so we extract credentials
@@ -13,9 +11,19 @@ export interface SimpleFinClient {
   fetchAccounts(query?: SfinAccountsQuery): Promise<SfinAccountSet>;
 }
 
+declare const secretBrand: unique symbol;
+
+/** An Authorization header value that carries the access URL's credentials. */
+export type BasicAuthHeader = string & { readonly [secretBrand]: true };
+
 interface ParsedAccessUrl {
   baseUrl: string;
-  authHeader: string;
+  authHeader: BasicAuthHeader;
+}
+
+function basicAuthHeader(username: string, password: string): BasicAuthHeader {
+  const encoded = Buffer.from(`${username}:${password}`).toString("base64");
+  return `Basic ${encoded}` as BasicAuthHeader;
 }
 
 export function parseAccessUrl(accessUrl: string): ParsedAccessUrl {
@@ -23,7 +31,6 @@ export function parseAccessUrl(accessUrl: string): ParsedAccessUrl {
   try {
     url = new URL(accessUrl);
   } catch {
-    // Never echo the raw access URL — it embeds user:password credentials.
     throw new Error("SIMPLEFIN_ACCESS_URL is not a valid URL");
   }
   if (url.protocol !== "https:") {
@@ -32,10 +39,12 @@ export function parseAccessUrl(accessUrl: string): ParsedAccessUrl {
   if (!url.username || !url.password) {
     throw new Error("Access URL missing user:password userinfo");
   }
-  const credentials = `${decodeURIComponent(url.username)}:${decodeURIComponent(url.password)}`;
   return {
     baseUrl: `${url.origin}${url.pathname.replace(/\/$/, "")}`,
-    authHeader: `Basic ${Buffer.from(credentials).toString("base64")}`,
+    authHeader: basicAuthHeader(
+      decodeURIComponent(url.username),
+      decodeURIComponent(url.password),
+    ),
   };
 }
 
@@ -87,10 +96,6 @@ export class SimpleFinError extends Error {
   }
 }
 
-/**
- * Convert a JS Date to a SimpleFIN unix timestamp (seconds, UTC).
- * Per spec, dates are expressed as integer seconds since epoch.
- */
 export function toSfinTimestamp(date: Date): number {
   return Math.floor(date.valueOf() / 1000);
 }

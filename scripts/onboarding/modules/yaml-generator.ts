@@ -1,23 +1,14 @@
-/**
- * YAML Generation Module
- * Generates configuration files from templates and user data
- */
-
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
-export interface UserData {
-  // User identity
-  user_name: string;
-  language?: string;
-
-  // Liquid assets
+type LiquidAssetsData = {
   liquid_assets_total?: number;
   liquid_assets_count?: number;
   liquid_assets_yield?: number;
   liquid_assets_structure?: string;
+};
 
-  // Investment portfolio
+type PortfolioData = {
   portfolio_value?: number;
   brokerage?: string;
   broker_type?: string;
@@ -27,15 +18,17 @@ export interface UserData {
   allocation_strategy?: string;
   risk_tolerance?: string;
   google_sheets_id?: string;
+};
 
-  // Cash flow
+type CashFlowData = {
   monthly_income?: number;
   fixed_expenses?: number;
   variable_expenses?: number;
   current_savings?: number;
   investment_capacity?: number;
+};
 
-  // Debt
+type DebtData = {
   has_mortgage?: boolean;
   mortgage_balance?: number;
   mortgage_payment?: number;
@@ -49,56 +42,59 @@ export interface UserData {
   credit_card_balance?: number;
   weighted_rate?: number;
   other_debt?: string;
+};
 
-  // Preferences
+type PreferencesData = {
   investment_philosophy?: string;
   focus_areas?: string[];
   emergency_fund_months?: number;
+};
 
-  // MCP Config
+type EnvironmentData = {
   has_alphavantage?: boolean;
   alphavantage_key?: string;
   has_brightdata?: boolean;
   brightdata_key?: string;
-
-  // Environment
   google_sheets_credentials?: string;
   account_number?: string;
-  project_root?: string;
+};
 
-  // Generated fields
-  timestamp?: string;
-  date?: string;
-  repository_name?: string;
-  possessive_name?: string;
-  portfolio_value_formatted?: string;
-  monthly_income_formatted?: string;
-  investment_capacity_formatted?: string;
-  focus_areas_list?: string;
-}
+export type UserData = {
+  user_name: string;
+  language?: string;
+} & LiquidAssetsData &
+  PortfolioData &
+  CashFlowData &
+  DebtData &
+  PreferencesData &
+  EnvironmentData;
 
-/**
- * Simple template variable substitution
- * Replaces {{variable}} with values from data object
- * Supports {{#if condition}}...{{/if}} for conditional blocks
- * @param template - Template string
- * @param data - Data object with values
- * @returns Processed template
- */
-function processTemplate(template: string, data: Record<string, any>): string {
+/** Values the templates read that are derived from UserData at generation time. */
+type DerivedTemplateData = {
+  timestamp: string;
+  date: string;
+  repository_name: string;
+  possessive_name: string;
+  project_root: string;
+  portfolio_value_formatted: string;
+  monthly_income_formatted: string;
+  investment_capacity_formatted: string;
+  focus_areas_list: string;
+};
+
+export type TemplateData = UserData & DerivedTemplateData;
+
+function processTemplate(template: string, data: Readonly<Record<string, unknown>>): string {
   let result = template;
 
-  // Handle conditional blocks {{#if variable}}...{{/if}}
   const ifRegex = /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
-  result = result.replace(ifRegex, (match, condition, content) => {
+  result = result.replace(ifRegex, (match, condition: string, content: string) => {
     const value = data[condition];
-    // Include block if value is truthy
     return value ? content : '';
   });
 
-  // Replace simple variables {{variable}}
   const varRegex = /\{\{(\w+)\}\}/g;
-  result = result.replace(varRegex, (match, key) => {
+  result = result.replace(varRegex, (match, key: string) => {
     const value = data[key];
     return value !== undefined && value !== null ? String(value) : '';
   });
@@ -106,32 +102,25 @@ function processTemplate(template: string, data: Record<string, any>): string {
   return result;
 }
 
-/**
- * Prepares user data with computed fields
- * @param data - Raw user data
- * @returns Enhanced data with computed fields
- */
-function prepareUserData(data: UserData): Record<string, any> {
+export function possessive(name: string): string {
+  return name.endsWith('s') ? `${name}'` : `${name}'s`;
+}
+
+function formatCurrency(value?: number): string {
+  if (!value) return '$0';
+  return `$${value.toLocaleString('en-US')}`;
+}
+
+function prepareUserData(data: UserData): TemplateData {
   const now = new Date();
   const timestamp = now.toISOString();
   const date = now.toISOString().split('T')[0];
-
-  // Compute possessive form (simple, just add 's)
-  const possessiveName = data.user_name.endsWith('s')
-    ? `${data.user_name}'`
-    : `${data.user_name}'s`;
-
-  // Format currency values
-  const formatCurrency = (value?: number) => {
-    if (!value) return '$0';
-    return `$${value.toLocaleString('en-US')}`;
-  };
 
   return {
     ...data,
     timestamp,
     date,
-    possessive_name: possessiveName,
+    possessive_name: possessive(data.user_name),
     repository_name: 'family-office',
     project_root: process.cwd(),
     portfolio_value_formatted: formatCurrency(data.portfolio_value),
@@ -141,11 +130,6 @@ function prepareUserData(data: UserData): Record<string, any> {
   };
 }
 
-/**
- * Loads a template file
- * @param templateName - Name of template file (without .template extension)
- * @returns Template content
- */
 function loadTemplate(templateName: string): string {
   const templatePath = join(__dirname, 'templates', `${templateName}.template.yaml`);
 
@@ -156,33 +140,18 @@ function loadTemplate(templateName: string): string {
   }
 }
 
-/**
- * Generates user-profile.yaml from template
- * @param data - User data
- * @returns Generated YAML content
- */
 export function generateUserProfile(data: UserData): string {
   const template = loadTemplate('user-profile');
   const preparedData = prepareUserData(data);
   return processTemplate(template, preparedData);
 }
 
-/**
- * Generates config.yaml from template
- * @param data - User data
- * @returns Generated YAML content
- */
 export function generateConfig(data: UserData): string {
   const template = loadTemplate('config');
   const preparedData = prepareUserData(data);
   return processTemplate(template, preparedData);
 }
 
-/**
- * Generates system-context.md from template
- * @param data - User data
- * @returns Generated markdown content
- */
 export function generateSystemContext(data: UserData): string {
   const templatePath = join(__dirname, 'templates', 'system-context.template.md');
 
@@ -195,11 +164,6 @@ export function generateSystemContext(data: UserData): string {
   }
 }
 
-/**
- * Generates CLAUDE.md from template
- * @param data - User data
- * @returns Generated markdown content
- */
 export function generateClaudeMd(data: UserData): string {
   const templatePath = join(__dirname, 'templates', 'CLAUDE.template.md');
 
@@ -212,11 +176,6 @@ export function generateClaudeMd(data: UserData): string {
   }
 }
 
-/**
- * Generates .env file from template
- * @param data - User data
- * @returns Generated .env content
- */
 export function generateEnv(data: UserData): string {
   const templatePath = join(__dirname, 'templates', 'env.template');
 
@@ -229,11 +188,6 @@ export function generateEnv(data: UserData): string {
   }
 }
 
-/**
- * Writes generated content to a file
- * @param filePath - Absolute path to output file
- * @param content - Content to write
- */
 export function writeConfigFile(filePath: string, content: string): void {
   try {
     writeFileSync(filePath, content, 'utf-8');
@@ -242,11 +196,6 @@ export function writeConfigFile(filePath: string, content: string): void {
   }
 }
 
-/**
- * Generates all configuration files
- * @param data - Complete user data
- * @param outputDir - Base directory for output files
- */
 export function generateAllConfigs(data: UserData, outputDir: string = process.cwd()): void {
   const importDirectories = [
     join(outputDir, 'imports'),

@@ -1,10 +1,4 @@
 #!/usr/bin/env bun
-/**
- * Hook Performance Test Suite
- *
- * Spawns each of the 3 hooks as child processes and asserts they complete
- * in under 500ms. Includes a warmup run to prime Bun's transpile cache.
- */
 
 import { describe, it, expect } from "bun:test";
 import { spawn } from "child_process";
@@ -14,9 +8,6 @@ const HOOKS_DIR = join(import.meta.dir, "..");
 const PROJECT_ROOT = join(HOOKS_DIR, "../..");
 const MAX_EXECUTION_MS = 500;
 
-/**
- * Spawn a hook as a child process, measure wall-clock time, and return results.
- */
 async function timeHook(
   hookPath: string,
   input: Record<string, unknown>

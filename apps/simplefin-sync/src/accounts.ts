@@ -1,18 +1,14 @@
 #!/usr/bin/env bun
-/**
- * Smoke-test the SimpleFIN connection.
- *
- * Pulls all accounts plus the last 30 days of transactions (including
- * pending), then prints a one-line summary per account with the three
- * most recent transactions. Surfaces partial-failure errors that
- * SimpleFIN returns alongside HTTP 200 in `errors[]`.
- */
 import { createClient, toSfinTimestamp } from "./client";
 
 const accessUrl = process.env.SIMPLEFIN_ACCESS_URL?.trim();
 if (!accessUrl) {
   console.error("✗ SIMPLEFIN_ACCESS_URL is empty. Run `bun run claim` first.");
   process.exit(1);
+}
+
+function sanitizeForTerminal(text: string): string {
+  return text.replace(/[\x00-\x1f\x7f]/g, "");
 }
 
 const client = createClient(accessUrl);
@@ -27,8 +23,7 @@ if (reportedErrors.length) {
   console.warn("⚠ SimpleFIN reported errors (partial failure):");
   for (const e of reportedErrors) {
     const msg = typeof e === "string" ? e : (e.msg ?? JSON.stringify(e));
-    // Strip control chars before printing — error text is server-supplied.
-    console.warn(`   ${msg.replace(/[\x00-\x1f\x7f]/g, "")}`);
+    console.warn(`   ${sanitizeForTerminal(msg)}`);
   }
   console.warn();
 }

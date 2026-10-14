@@ -1,5 +1,4 @@
 /**
- * SimpleFIN Bridge protocol types.
  * Spec: https://www.simplefin.org/protocol.html
  *
  * Amounts are strings to preserve decimal precision — never coerce to
@@ -8,10 +7,23 @@
  * Timestamps are unix seconds (UTC), not milliseconds.
  */
 
+declare const numericStringBrand: unique symbol;
+
+/** A decimal string such as "-12.50", kept as text so no precision is lost. */
+export type NumericString = string & { readonly [numericStringBrand]: true };
+
+const NUMERIC_STRING = /^-?\d+(\.\d+)?$/;
+
+export function toNumericString(value: string): NumericString {
+  if (!NUMERIC_STRING.test(value)) {
+    throw new Error(`Not a decimal string: ${JSON.stringify(value)}`);
+  }
+  return value as NumericString;
+}
+
 export interface SfinError {
   /** "prefix.subcode" — e.g. "gen.auth", "con.auth", "act.failed" */
   code?: string;
-  /** Human-displayable error message */
   msg?: string;
   /** Connection-level errors include this */
   conn_id?: string;
@@ -22,11 +34,8 @@ export interface SfinError {
 export interface SfinOrg {
   name: string;
   domain?: string;
-  /** Unique connection identifier */
   conn_id?: string;
-  /** Financial institution identifier */
   org_id?: string;
-  /** SimpleFIN server root URL */
   sfin_url?: string;
   /** Institution domain (alias used by some bridges) */
   url?: string;
@@ -39,8 +48,8 @@ export interface SfinTransaction {
   id: string;
   /** Unix timestamp seconds; 0 if pending */
   posted: number;
-  /** Numeric string. Positive = deposit/credit, negative = debit */
-  amount: string;
+  /** Positive = deposit/credit, negative = debit */
+  amount: NumericString;
   description: string;
   payee?: string;
   memo?: string;
@@ -48,7 +57,6 @@ export interface SfinTransaction {
   transacted_at?: number;
   /** Default false; true for pending items */
   pending?: boolean;
-  /** Server-defined custom fields */
   extra?: Record<string, unknown>;
 }
 
@@ -57,11 +65,9 @@ export interface SfinAccount {
   name: string;
   /** ISO 4217 (e.g. "USD") OR an HTTPS URL for custom currencies */
   currency: string;
-  /** Numeric string */
-  balance: string;
-  /** Numeric string; not all institutions provide this */
-  "available-balance"?: string;
-  /** Unix timestamp seconds */
+  balance: NumericString;
+  /** Not all institutions provide this */
+  "available-balance"?: NumericString;
   "balance-date": number;
   /** Connection ID linking account to org (some bridges) */
   conn_id?: string;
@@ -73,7 +79,6 @@ export interface SfinAccount {
   extra?: Record<string, unknown>;
 }
 
-/** Top-level response from GET /accounts */
 export interface SfinAccountSet {
   /** Always present; check even on HTTP 200 — partial failures are common */
   errors: (string | SfinError)[];
@@ -84,16 +89,13 @@ export interface SfinAccountSet {
   connections?: SfinOrg[];
 }
 
-/** Query parameters supported by GET /accounts */
 export interface SfinAccountsQuery {
   /** Unix timestamp; transactions on/after this date (inclusive) */
   startDate?: number;
   /** Unix timestamp; transactions before this date (exclusive) */
   endDate?: number;
-  /** Include pending transactions */
   pending?: boolean;
   /** Filter to specific account IDs (repeatable param under the hood) */
   accountIds?: string[];
-  /** Skip transactions, only return balance info */
   balancesOnly?: boolean;
 }

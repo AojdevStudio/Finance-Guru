@@ -5,7 +5,7 @@ import path from "node:path";
 import { describe, expect, test } from "bun:test";
 
 import type { SimpleFinClient } from "./client";
-import type { SfinAccount, SfinAccountSet, SfinTransaction } from "./types";
+import { toNumericString, type SfinAccount, type SfinAccountSet, type SfinTransaction } from "./types";
 import {
   buildBuyTicketCommand,
   buildBuyTicketEnv,
@@ -19,7 +19,7 @@ function transaction(overrides: Partial<SfinTransaction>): SfinTransaction {
   return {
     id: "tx-default",
     posted: 1_779_984_000,
-    amount: "0.00",
+    amount: toNumericString("0.00"),
     description: "test transaction",
     ...overrides,
   };
@@ -30,7 +30,7 @@ function account(transactions: SfinTransaction[]): SfinAccount {
     id: "account-default",
     name: "Test source",
     currency: "USD",
-    balance: "100.00",
+    balance: toNumericString("100.00"),
     "balance-date": 1_779_984_000,
     org: { name: "Test org" },
     transactions,
@@ -49,9 +49,9 @@ describe("SimpleFIN deposit trigger", () => {
     const seenStore = createMemorySeenStore();
     const { detections, skippedDuplicates } = await findNewDepositDetections(
       accountSet([
-        transaction({ id: "tx-3100", amount: "3100.00" }),
-        transaction({ id: "tx-threshold", amount: "3000.00" }),
-        transaction({ id: "tx-debit", amount: "-5000.00" }),
+        transaction({ id: "tx-3100", amount: toNumericString("3100.00") }),
+        transaction({ id: "tx-threshold", amount: toNumericString("3000.00") }),
+        transaction({ id: "tx-debit", amount: toNumericString("-5000.00") }),
       ]),
       seenStore,
     );
@@ -69,19 +69,19 @@ describe("SimpleFIN deposit trigger", () => {
       accountSet([
         transaction({
           id: "tx-pending",
-          amount: "5000.00",
+          amount: toNumericString("5000.00"),
           posted: 1_779_984_000,
           pending: true,
         }),
         transaction({
           id: "tx-zero-posted",
-          amount: "4500.00",
+          amount: toNumericString("4500.00"),
           posted: 0,
           pending: false,
         }),
         transaction({
           id: "tx-settled",
-          amount: "3100.00",
+          amount: toNumericString("3100.00"),
           posted: 1_779_984_000,
           pending: false,
         }),
@@ -92,7 +92,7 @@ describe("SimpleFIN deposit trigger", () => {
     expect(skippedDuplicates).toBe(0);
     expect(detections).toHaveLength(1);
     expect(detections[0]).toMatchObject({
-      amount: "3100.00",
+      amount: toNumericString("3100.00"),
       posted: 1_779_984_000,
       pending: false,
     });
@@ -102,8 +102,8 @@ describe("SimpleFIN deposit trigger", () => {
     const seenStore = createMemorySeenStore();
     const { detections, skippedDuplicates } = await findNewDepositDetections(
       accountSet([
-        transaction({ id: "tx-duplicate", amount: "3100.00" }),
-        transaction({ id: "tx-duplicate", amount: "3100.00" }),
+        transaction({ id: "tx-duplicate", amount: toNumericString("3100.00") }),
+        transaction({ id: "tx-duplicate", amount: toNumericString("3100.00") }),
       ]),
       seenStore,
     );
@@ -119,7 +119,7 @@ describe("SimpleFIN deposit trigger", () => {
     const client: SimpleFinClient = {
       baseUrl: "https://simplefin.example.test",
       async fetchAccounts() {
-        return accountSet([transaction({ id: "tx-1", amount: "3100.00" })]);
+        return accountSet([transaction({ id: "tx-1", amount: toNumericString("3100.00") })]);
       },
     };
 
@@ -175,7 +175,7 @@ describe("SimpleFIN deposit trigger", () => {
       expect(log).toMatchObject({
         event: "simplefin_deposit_detection",
         status: "triggered",
-        amount: "3100.00",
+        amount: toNumericString("3100.00"),
       });
       expect(log.transaction_key).toBe(calls[0]);
       expect(log.transaction_key).not.toContain("tx-1");
@@ -190,7 +190,7 @@ describe("SimpleFIN deposit trigger", () => {
     const client: SimpleFinClient = {
       baseUrl: "https://simplefin.example.test",
       async fetchAccounts() {
-        return accountSet([transaction({ id: "tx-1", amount: "3100.00" })]);
+        return accountSet([transaction({ id: "tx-1", amount: toNumericString("3100.00") })]);
       },
     };
     const calls: string[] = [];
@@ -245,7 +245,7 @@ describe("SimpleFIN deposit trigger", () => {
     const client: SimpleFinClient = {
       baseUrl: "https://simplefin.example.test",
       async fetchAccounts() {
-        return accountSet([transaction({ id: "tx-1", amount: "3100.00" })]);
+        return accountSet([transaction({ id: "tx-1", amount: toNumericString("3100.00") })]);
       },
     };
     const calls: string[] = [];
@@ -301,7 +301,7 @@ describe("SimpleFIN deposit trigger", () => {
     const client: SimpleFinClient = {
       baseUrl: "https://simplefin.example.test",
       async fetchAccounts() {
-        return accountSet([transaction({ id: "tx-1", amount: "3100.00" })]);
+        return accountSet([transaction({ id: "tx-1", amount: toNumericString("3100.00") })]);
       },
     };
     let transactionKey = "";
@@ -334,7 +334,7 @@ describe("SimpleFIN deposit trigger", () => {
 
   test("builds the buy-ticket subprocess command and sanitized trigger env", () => {
     const detection = {
-      amount: "3100.00",
+      amount: toNumericString("3100.00"),
       transactionKey: "transaction-key",
       sourceAccountKey: "source-account-key",
       posted: 1_779_984_000,

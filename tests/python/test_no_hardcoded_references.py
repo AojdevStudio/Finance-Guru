@@ -13,35 +13,33 @@ Acceptance Criteria:
 
 from pathlib import Path
 
-# The personal name pattern to scan for, split to avoid self-triggering in PII scans
-_OWNER_FIRST = "Oss" + "ie"
-_OWNER_LAST = "Iron" + "di"
+import pytest
 
-# Files/directories that are ALLOWED to contain the owner's name
-ALLOWED_FILES = {
-    "LICENSE",  # Copyright holder
-    ".git/",  # Git history
-    "specs/",  # Spec docs describing migration process
-    "fin-guru/tasks/",  # Task files with examples
-    "specs/archive/",  # Archived specs
-    "fin-guru-private/",  # Legacy private data directory (gitignored, not distributed)
-    "notebooks/",  # Private notebooks (not distributed)
-    "docs/onboarding-flow-evaluation.md",  # Evaluation document referencing the owner's setup
-    "Plans/",  # Session plans (gitignored, not distributed)
-    ".prd/",  # PRD files (gitignored, not distributed)
-    ".planning/",  # Planning files (gitignored, not distributed)
-    "docs/solutions/",  # Architecture decision records (internal docs)
-    "docs/VISION.md",  # Personal vision document — owner-authored, by definition contains the owner's name
-    "docs/runbooks/",  # Internal operational runbooks for this family office (not distributed)
-    "MEMORY/",  # Local research scratch notes (gitignored)
-    ".venv/",  # Virtual env — third-party packages may coincidentally contain the name
-    "venv/",  # Alt venv location
-    "node_modules/",  # JS deps
-    ".pi/",  # Symlinked skills / cross-harness bridge
-    ".agents/",  # Symlinked skills / cross-harness bridge
+_OWNER_NAME_SPLIT_TO_PASS_PII_SCAN = "Oss" + "ie"
+
+ALLOWED_FILES: dict[str, str] = {
+    "LICENSE": "Copyright holder",
+    ".git/": "Git history",
+    "specs/": "Spec docs describing the migration process",
+    "fin-guru/tasks/": "Task files with examples",
+    "specs/archive/": "Archived specs",
+    "fin-guru-private/": "Legacy private data directory, gitignored and not distributed",
+    "notebooks/": "Private notebooks, not distributed",
+    "docs/onboarding-flow-evaluation.md": "Evaluation document referencing the owner's setup",
+    "Plans/": "Session plans, gitignored and not distributed",
+    ".prd/": "PRD files, gitignored and not distributed",
+    ".planning/": "Planning files, gitignored and not distributed",
+    "docs/solutions/": "Architecture decision records, internal docs",
+    "docs/VISION.md": "Owner-authored vision document, which names the owner by definition",
+    "docs/runbooks/": "Internal operational runbooks for this family office, not distributed",
+    "MEMORY/": "Local research scratch notes, gitignored",
+    ".venv/": "Virtual env, where third-party packages may contain the name by chance",
+    "venv/": "Alternate virtual env location",
+    "node_modules/": "JavaScript dependencies",
+    ".pi/": "Symlinked skills for the cross-harness bridge",
+    ".agents/": "Symlinked skills for the cross-harness bridge",
 }
 
-# Files that MUST NOT contain the owner's name
 CRITICAL_FILES = [
     "fin-guru/README.md",
 ]
@@ -65,12 +63,10 @@ def test_no_hardcoded_name_in_critical_files():
         with open(full_path, encoding="utf-8") as f:
             content = f.read()
 
-        # Check for the owner's first name (case-sensitive)
-        if _OWNER_FIRST in content:
-            # Find line numbers
+        if _OWNER_NAME_SPLIT_TO_PASS_PII_SCAN in content:
             lines_with_name = []
             for i, line in enumerate(content.split("\n"), 1):
-                if _OWNER_FIRST in line:
+                if _OWNER_NAME_SPLIT_TO_PASS_PII_SCAN in line:
                     lines_with_name.append((i, line.strip()))
 
             error_msg = f"\nFound hardcoded personal name in {file_path}:\n"
@@ -87,12 +83,12 @@ def test_readme_generic_author():
     readme_path = project_root / "fin-guru/README.md"
 
     if not readme_path.exists():
-        return  # Skip if file doesn't exist
+        pytest.skip("fin-guru/README.md is not present in this checkout")
 
     with open(readme_path, encoding="utf-8") as f:
         content = f.read()
 
-    assert _OWNER_FIRST not in content, (
+    assert _OWNER_NAME_SPLIT_TO_PASS_PII_SCAN not in content, (
         "README should not contain hardcoded personal name"
     )
 
@@ -102,15 +98,12 @@ def test_scan_codebase_for_hardcoded_names():
     project_root = Path(__file__).parent.parent.parent
     violations = []
 
-    # Scan all Python, YAML, MD files
     for ext in ["*.py", "*.yaml", "*.yml", "*.md"]:
         for file_path in project_root.rglob(ext):
-            # Skip allowed files
             relative_path = str(file_path.relative_to(project_root))
             if is_allowed_file(relative_path):
                 continue
 
-            # Skip this test file itself and the fix script
             if file_path.name in [
                 "test_no_hardcoded_references.py",
                 "fix_hardcoded_names.py",
@@ -121,10 +114,9 @@ def test_scan_codebase_for_hardcoded_names():
                 with open(file_path, encoding="utf-8") as f:
                     content = f.read()
 
-                if _OWNER_FIRST in content:
+                if _OWNER_NAME_SPLIT_TO_PASS_PII_SCAN in content:
                     violations.append(relative_path)
-            except Exception:
-                # Skip files that can't be read
+            except (OSError, UnicodeDecodeError):
                 continue
 
     if violations:

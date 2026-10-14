@@ -12,14 +12,12 @@ const TEST_STATE_FILE = join(PROJECT_ROOT, ".onboarding-state.json");
 
 describe("Onboarding Resume Integration Test", () => {
   beforeEach(() => {
-    // Clean up any existing test state
     if (existsSync(TEST_STATE_FILE)) {
       rmSync(TEST_STATE_FILE, { force: true });
     }
   });
 
   afterEach(() => {
-    // Clean up test state
     if (existsSync(TEST_STATE_FILE)) {
       rmSync(TEST_STATE_FILE, { force: true });
     }
@@ -34,15 +32,12 @@ describe("Onboarding Resume Integration Test", () => {
       markSectionComplete
     } = await import("../../scripts/onboarding/modules/progress");
 
-    // Create initial state with some progress
     const initialState = createNewState();
     markSectionComplete(initialState, "liquid_assets", "investments");
     saveState(initialState);
 
-    // Verify state was saved
     expect(hasExistingState()).toBe(true);
 
-    // Load state
     const resumedState = loadState();
 
     expect(resumedState).toBeDefined();
@@ -58,14 +53,12 @@ describe("Onboarding Resume Integration Test", () => {
       markSectionComplete
     } = await import("../../scripts/onboarding/modules/progress");
 
-    // Complete multiple sections
     const state = createNewState();
     markSectionComplete(state, "liquid_assets", "investments");
     markSectionComplete(state, "investments", "cash_flow");
     markSectionComplete(state, "cash_flow", "debt");
     saveState(state);
 
-    // Resume
     const resumedState = loadState();
 
     expect(resumedState?.completed_sections).toHaveLength(3);
@@ -84,7 +77,6 @@ describe("Onboarding Resume Integration Test", () => {
       getSectionData
     } = await import("../../scripts/onboarding/modules/progress");
 
-    // Save section data
     const state = createNewState();
     saveSectionData(state, "liquid_assets", {
       checking_balance: 5000,
@@ -93,7 +85,6 @@ describe("Onboarding Resume Integration Test", () => {
     });
     saveState(state);
 
-    // Resume and retrieve data
     const resumedState = loadState();
     const sectionData = getSectionData(resumedState!, "liquid_assets");
 
@@ -112,14 +103,11 @@ describe("Onboarding Resume Integration Test", () => {
 
     const state = createNewState();
 
-    // Initially should start with liquid_assets
     expect(getNextSection(state)).toBe("liquid_assets");
 
-    // After completing liquid_assets, should move to investments
     markSectionComplete(state, "liquid_assets", "investments");
     expect(getNextSection(state)).toBe("investments");
 
-    // Complete a few more
     markSectionComplete(state, "investments", "cash_flow");
     markSectionComplete(state, "cash_flow", "debt");
     expect(getNextSection(state)).toBe("debt");
@@ -136,13 +124,11 @@ describe("Onboarding Resume Integration Test", () => {
     const state = createNewState();
     saveState(state);
 
-    // Immediately after save
     const resumedState = loadState();
     const timeSince = getTimeSinceLastUpdate(resumedState!);
 
     expect(timeSince).toBeDefined();
     expect(typeof timeSince).toBe("string");
-    // Should be "just now" since we just saved it
     expect(timeSince).toBe("just now");
   });
 
@@ -155,19 +141,16 @@ describe("Onboarding Resume Integration Test", () => {
       isComplete
     } = await import("../../scripts/onboarding/modules/progress");
 
-    // Start and complete half the sections
     const state = createNewState();
     markSectionComplete(state, "liquid_assets", "investments");
     markSectionComplete(state, "investments", "cash_flow");
     markSectionComplete(state, "cash_flow", "debt");
     saveState(state);
 
-    // Resume
     const resumedState = loadState();
     expect(isComplete(resumedState!)).toBe(false);
     expect(resumedState?.current_section).toBe("debt");
 
-    // Complete remaining sections
     markSectionComplete(resumedState!, "debt", "preferences");
     markSectionComplete(resumedState!, "preferences", "summary");
     markSectionComplete(resumedState!, "summary", "mcp_config");
@@ -185,12 +168,10 @@ describe("Onboarding Resume Integration Test", () => {
       clearState
     } = await import("../../scripts/onboarding/modules/progress");
 
-    // Create state
     const state = createNewState();
     saveState(state);
     expect(hasExistingState()).toBe(true);
 
-    // Clear state
     clearState();
     expect(hasExistingState()).toBe(false);
   });
@@ -199,10 +180,8 @@ describe("Onboarding Resume Integration Test", () => {
     const { writeFileSync } = await import("fs");
     const { loadState } = await import("../../scripts/onboarding/modules/progress");
 
-    // Write invalid JSON to state file
     writeFileSync(TEST_STATE_FILE, "{ invalid json }", "utf-8");
 
-    // Should return null for corrupted state
     const state = loadState();
     expect(state).toBeNull();
   });
@@ -230,7 +209,6 @@ describe("Onboarding Resume Integration Test", () => {
       saveSectionData
     } = await import("../../scripts/onboarding/modules/progress");
 
-    // Create complex nested data
     const state = createNewState();
     saveSectionData(state, "investments", {
       portfolio: {
@@ -250,7 +228,6 @@ describe("Onboarding Resume Integration Test", () => {
     });
     saveState(state);
 
-    // Resume and verify structure
     const resumedState = loadState();
     const investmentData = resumedState?.data.investments;
 
@@ -264,7 +241,6 @@ describe("Onboarding Resume Integration Test", () => {
 
 describe("Resume Mode CLI Behavior", () => {
   test("CLI can detect resume mode from --resume flag", () => {
-    // This tests the CLI argument parsing behavior
     const testArgs = ["--resume"];
     const isResumeMode = testArgs.includes("--resume");
 

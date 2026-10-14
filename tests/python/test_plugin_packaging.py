@@ -50,7 +50,6 @@ def test_plugin_manifest_exposes_the_canonical_component_trees() -> None:
 
     assert manifest["name"] == "finance-guru"
     assert manifest["license"] == "AGPL-3.0-only"
-    # Specialists ship once, as agents. Duplicate command personas drifted.
     assert "commands" not in manifest
     assert not list((REPO_ROOT / ".claude" / "commands").rglob("*.md"))
     expected_agents = {
@@ -195,7 +194,6 @@ def test_specialists_are_delegated_subagents_not_chat_personas() -> None:
         assert "Agent" in disallowed, path.name
         if path.stem in READ_ONLY_REVIEWERS:
             assert {"Write", "Edit", "NotebookEdit"} <= disallowed, path.name
-        # The same file also runs as the main session through `claude --agent`.
         assert "When you run as the main session" in body, path.name
         assert "](../" not in body, (
             f"{path.name}: relative links resolve from the instance"
@@ -227,8 +225,6 @@ def test_shared_checkout_settings_omit_personal_plugins() -> None:
 
 
 OUTPUT_CONTRACT = "fin-guru-output-contract"
-# Sentences the main-session --agent prompt must carry. Claude Code 2.1.289
-# does not inject skills: into that launch, so the Return section is the copy.
 MAIN_SESSION_CONTRACT = (
     "1. _Bottom line._",
     "A number you cannot trace to a command does not go in the table.",
@@ -310,15 +306,12 @@ def test_itc_ticker_lists_are_read_from_the_cli() -> None:
         assert "itc_risk_cli --list-supported crypto" in text, relative
 
 
-# Agents, skills, and prompts name a file under fin-guru/data either as a full
-# path (`fin-guru/data/risk-framework.md`) or as a directory plus a backtick
-# list (`fin-guru/data/`: `risk-framework.md`). Both must exist on disk.
-_EXPLICIT_DATA_FILE = re.compile(r"fin-guru/data/([A-Za-z0-9_.-]+\.md)")
-_LISTED_DATA_FILES = re.compile(
+_DATA_FILE_AS_FULL_PATH = re.compile(r"fin-guru/data/([A-Za-z0-9_.-]+\.md)")
+_DATA_DIRECTORY_THEN_BACKTICK_LIST = re.compile(
     r"fin-guru/data/[`}\s]*[:,]\s*"
     r"((?:`[A-Za-z0-9_.-]+\.md`\s*(?:\([^)]*\))?\s*[,.]?\s*(?:and\s+)?)*)"
 )
-_BACKTICK_MD = re.compile(r"`([A-Za-z0-9_.-]+\.md)`")
+_BACKTICKED_MD_NAME = re.compile(r"`([A-Za-z0-9_.-]+\.md)`")
 _INSTRUCTION_ROOTS = (
     REPO_ROOT / ".claude" / "agents",
     REPO_ROOT / ".claude" / "skills",
@@ -330,9 +323,9 @@ _INSTRUCTION_ROOTS = (
 
 def cited_fin_guru_data_files(text: str) -> set[str]:
     """Collect fin-guru/data markdown filenames an instruction text tells an agent to open."""
-    names = set(_EXPLICIT_DATA_FILE.findall(text))
-    for listed in _LISTED_DATA_FILES.findall(text):
-        names.update(_BACKTICK_MD.findall(listed))
+    names = set(_DATA_FILE_AS_FULL_PATH.findall(text))
+    for listed in _DATA_DIRECTORY_THEN_BACKTICK_LIST.findall(text):
+        names.update(_BACKTICKED_MD_NAME.findall(listed))
     return names
 
 

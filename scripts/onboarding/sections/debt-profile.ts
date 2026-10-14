@@ -1,9 +1,4 @@
-/**
- * Debt Profile Section
- * Interactive prompts for collecting debt and liability information
- */
-
-import { createInterface } from 'readline';
+import { createPrompt, promptWithValidation, type Prompt } from '../modules/prompt';
 import { validateCurrency, validatePercentage } from '../modules/input-validator';
 import type { OnboardingState } from '../modules/progress';
 import { saveSectionData, markSectionComplete, saveState } from '../modules/progress';
@@ -23,62 +18,8 @@ export interface DebtProfileData {
   irregular_expenses?: string;
 }
 
-/**
- * Creates a readline interface for prompting user
- */
-function createPrompt() {
-  return createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-}
-
-/**
- * Prompts user for input with validation
- * @param rl - Readline interface
- * @param question - Question to ask
- * @param validator - Validation function
- * @param allowEmpty - Whether empty input is allowed
- * @returns Validated value
- */
-async function promptWithValidation<T>(
-  rl: ReturnType<typeof createInterface>,
-  question: string,
-  validator: (input: string) => T,
-  allowEmpty: boolean = false
-): Promise<T> {
-  return new Promise((resolve) => {
-    const ask = () => {
-      rl.question(question, (answer) => {
-        if (allowEmpty && answer.trim() === '') {
-          resolve(null as T);
-          return;
-        }
-
-        try {
-          const validated = validator(answer);
-          resolve(validated);
-        } catch (error) {
-          if (error instanceof Error) {
-            console.log(`❌ ${error.message}`);
-          }
-          console.log('Please try again.');
-          ask();
-        }
-      });
-    };
-    ask();
-  });
-}
-
-/**
- * Prompts for yes/no question
- * @param rl - Readline interface
- * @param question - Question to ask
- * @returns true if yes, false if no
- */
 async function promptYesNo(
-  rl: ReturnType<typeof createInterface>,
+  rl: Prompt,
   question: string
 ): Promise<boolean> {
   return new Promise((resolve) => {
@@ -99,11 +40,6 @@ async function promptYesNo(
   });
 }
 
-/**
- * Runs the Debt Profile section
- * @param state - Current onboarding state
- * @returns Updated state with debt profile data
- */
 export async function runDebtProfileSection(state: OnboardingState): Promise<OnboardingState> {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('💳 Section 4 of 7: Debt Profile');
@@ -119,7 +55,6 @@ export async function runDebtProfileSection(state: OnboardingState): Promise<Onb
     let totalDebtBalance = 0;
     let weightedInterestSum = 0;
 
-    // Prompt for mortgage
     console.log('📊 Mortgage Information');
     console.log('');
 
@@ -141,7 +76,6 @@ export async function runDebtProfileSection(state: OnboardingState): Promise<Onb
         validateCurrency
       );
 
-      // For weighted interest calculation
       const mortgageRate = await promptWithValidation(
         rl,
         'What is your mortgage interest rate? (%) ',
@@ -152,7 +86,6 @@ export async function runDebtProfileSection(state: OnboardingState): Promise<Onb
       weightedInterestSum += mortgageBalance * mortgageRate;
     }
 
-    // Prompt for student loans
     console.log('');
     console.log('📚 Student Loans');
     console.log('');
@@ -182,7 +115,6 @@ export async function runDebtProfileSection(state: OnboardingState): Promise<Onb
       weightedInterestSum += studentLoanBalance * studentLoanRate;
     }
 
-    // Prompt for car loans
     console.log('');
     console.log('🚗 Car Loans');
     console.log('');
@@ -224,7 +156,6 @@ export async function runDebtProfileSection(state: OnboardingState): Promise<Onb
       weightedInterestSum += carLoanBalance * carLoanRate;
     }
 
-    // Prompt for credit cards
     console.log('');
     console.log('💳 Credit Cards');
     console.log('');
@@ -266,12 +197,10 @@ export async function runDebtProfileSection(state: OnboardingState): Promise<Onb
       weightedInterestSum += ccBalance * ccRate;
     }
 
-    // Calculate weighted interest rate
     const weightedInterestRate = totalDebtBalance > 0
       ? weightedInterestSum / totalDebtBalance
       : 0;
 
-    // Prompt for irregular expenses
     console.log('');
     const hasIrregularExpenses = await promptYesNo(
       rl,
@@ -292,7 +221,6 @@ export async function runDebtProfileSection(state: OnboardingState): Promise<Onb
       );
     }
 
-    // Create debt profile data
     const debtProfileData: DebtProfileData = {
       mortgage_balance: mortgageBalance,
       mortgage_payment: mortgagePayment,
@@ -301,20 +229,16 @@ export async function runDebtProfileSection(state: OnboardingState): Promise<Onb
       irregular_expenses: irregularExpenses
     };
 
-    // Save section data
     saveSectionData(state, 'debt', debtProfileData);
 
-    // Mark section as complete and set next section
     markSectionComplete(state, 'debt', 'preferences');
 
-    // Save state to disk
     saveState(state);
 
     console.log('');
     console.log('✅ Debt Profile: Complete');
     console.log('');
 
-    // Display summary
     if (totalDebtBalance > 0) {
       console.log(`Total debt: $${totalDebtBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
       console.log(`Weighted average interest rate: ${(weightedInterestRate * 100).toFixed(2)}%`);

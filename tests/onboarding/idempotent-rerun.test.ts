@@ -10,16 +10,27 @@ import { join } from "path";
 const PROJECT_ROOT = process.cwd();
 const TEST_STATE_FILE = join(PROJECT_ROOT, ".onboarding-state.json");
 
+function stateWithoutTimestamps<T extends { started_at: string; last_updated: string }>(
+  state: T
+): Omit<T, "started_at" | "last_updated"> {
+  const { started_at, last_updated, ...rest } = state;
+  return rest;
+}
+
+function yamlWithoutTimestamps(yaml: string): string {
+  return yaml
+    .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g, "<timestamp>")
+    .replace(/\d{4}-\d{2}-\d{2}/g, "<date>");
+}
+
 describe("Idempotent Re-run Integration Test", () => {
   beforeEach(() => {
-    // Clean up any existing test state
     if (existsSync(TEST_STATE_FILE)) {
       rmSync(TEST_STATE_FILE, { force: true });
     }
   });
 
   afterEach(() => {
-    // Clean up test state
     if (existsSync(TEST_STATE_FILE)) {
       rmSync(TEST_STATE_FILE, { force: true });
     }
@@ -31,11 +42,7 @@ describe("Idempotent Re-run Integration Test", () => {
     const state1 = createNewState();
     const state2 = createNewState();
 
-    // Structure should be identical (timestamps will differ)
-    expect(state1.version).toBe(state2.version);
-    expect(state1.completed_sections).toEqual(state2.completed_sections);
-    expect(state1.current_section).toBe(state2.current_section);
-    expect(typeof state1.data).toBe(typeof state2.data);
+    expect(stateWithoutTimestamps(state1)).toEqual(stateWithoutTimestamps(state2));
   });
 
   test("multiple save/load cycles preserve data integrity", async () => {
@@ -47,7 +54,6 @@ describe("Idempotent Re-run Integration Test", () => {
       saveSectionData
     } = await import("../../scripts/onboarding/modules/progress");
 
-    // First cycle
     const state1 = createNewState();
     saveSectionData(state1, "liquid_assets", { total: 10000 });
     markSectionComplete(state1, "liquid_assets", "investments");
@@ -57,17 +63,15 @@ describe("Idempotent Re-run Integration Test", () => {
     expect(loaded1?.data.liquid_assets.total).toBe(10000);
     expect(loaded1?.current_section).toBe("investments");
 
-    // Second cycle - save again with additional data
     saveSectionData(loaded1!, "investments", { total_value: 50000 });
     markSectionComplete(loaded1!, "investments", "cash_flow");
     saveState(loaded1!);
 
     const loaded2 = loadState();
-    expect(loaded2?.data.liquid_assets.total).toBe(10000); // Original data preserved
+    expect(loaded2?.data.liquid_assets.total).toBe(10000);
     expect(loaded2?.data.investments.total_value).toBe(50000);
     expect(loaded2?.current_section).toBe("cash_flow");
 
-    // Third cycle - verify all data intact
     saveState(loaded2!);
     const loaded3 = loadState();
 
@@ -80,7 +84,6 @@ describe("Idempotent Re-run Integration Test", () => {
     const { validateCurrency, validateRiskTolerance, validateNonEmpty } =
       await import("../../scripts/onboarding/modules/input-validator");
 
-    // Run validations multiple times
     const inputs = ["$1,234.56", "aggressive", "test value"];
 
     for (let i = 0; i < 5; i++) {
@@ -105,21 +108,13 @@ describe("Idempotent Re-run Integration Test", () => {
     const yaml2 = generateUserProfile(testData);
     const yaml3 = generateUserProfile(testData);
 
-    // All outputs should contain the same key data (timestamps will differ)
     expect(yaml1).toContain("User: TestUser");
     expect(yaml1).toContain("total: 10000");
     expect(yaml1).toContain("total_value: 100000");
     expect(yaml1).toContain('risk_tolerance: "moderate"');
 
-    expect(yaml2).toContain("User: TestUser");
-    expect(yaml2).toContain("total: 10000");
-    expect(yaml2).toContain("total_value: 100000");
-    expect(yaml2).toContain('risk_tolerance: "moderate"');
-
-    expect(yaml3).toContain("User: TestUser");
-    expect(yaml3).toContain("total: 10000");
-    expect(yaml3).toContain("total_value: 100000");
-    expect(yaml3).toContain('risk_tolerance: "moderate"');
+    expect(yamlWithoutTimestamps(yaml2)).toBe(yamlWithoutTimestamps(yaml1));
+    expect(yamlWithoutTimestamps(yaml3)).toBe(yamlWithoutTimestamps(yaml1));
   });
 
   test("completing same section multiple times is safe", async () => {
@@ -132,25 +127,21 @@ describe("Idempotent Re-run Integration Test", () => {
 
     const state = createNewState();
 
-    // Save section data
     saveSectionData(state, "liquid_assets", {
       checking: 5000,
       savings: 10000,
       total: 15000
     });
 
-    // Mark complete
     markSectionComplete(state, "liquid_assets", "investments");
     expect(state.completed_sections).toContain("liquid_assets");
 
-    // Update the same section data (idempotent update)
     saveSectionData(state, "liquid_assets", {
       checking: 5000,
       savings: 10000,
       total: 15000
     });
 
-    // Data should be preserved
     const data = getSectionData(state, "liquid_assets");
     expect(data?.total).toBe(15000);
     expect(state.completed_sections).toContain("liquid_assets");
@@ -167,7 +158,6 @@ describe("Idempotent Re-run Integration Test", () => {
       isComplete
     } = await import("../../scripts/onboarding/modules/progress");
 
-    // First complete run
     const state1 = createNewState();
     const sections: Array<[string, string | null]> = [
       ["liquid_assets", "investments"],
@@ -186,7 +176,6 @@ describe("Idempotent Re-run Integration Test", () => {
     expect(isComplete(state1)).toBe(true);
     saveState(state1);
 
-    // Clear and re-run
     clearState();
 
     const state2 = createNewState();
@@ -196,7 +185,6 @@ describe("Idempotent Re-run Integration Test", () => {
     expect(isComplete(state2)).toBe(true);
     saveState(state2);
 
-    // Both runs should produce complete state
     const loaded = loadState();
     expect(isComplete(loaded!)).toBe(true);
     expect(loaded?.completed_sections).toHaveLength(8);
@@ -206,10 +194,8 @@ describe("Idempotent Re-run Integration Test", () => {
     const { loadState, hasExistingState } =
       await import("../../scripts/onboarding/modules/progress");
 
-    // Ensure no state exists
     expect(hasExistingState()).toBe(false);
 
-    // Multiple loads should all return null
     expect(loadState()).toBeNull();
     expect(loadState()).toBeNull();
     expect(loadState()).toBeNull();
@@ -225,7 +211,6 @@ describe("Idempotent Re-run Integration Test", () => {
     const state = createNewState();
     const testData = { value: 100, name: "Test" };
 
-    // Save same data multiple times
     saveSectionData(state, "test_section", testData);
     saveSectionData(state, "test_section", testData);
     saveSectionData(state, "test_section", testData);
@@ -233,7 +218,6 @@ describe("Idempotent Re-run Integration Test", () => {
     const retrieved = getSectionData(state, "test_section");
     expect(retrieved).toEqual(testData);
 
-    // State.data should only have one entry for this section
     expect(Object.keys(state.data).filter(k => k === "test_section")).toHaveLength(1);
   });
 
@@ -245,19 +229,17 @@ describe("Idempotent Re-run Integration Test", () => {
       hasExistingState
     } = await import("../../scripts/onboarding/modules/progress");
 
-    // Create and save state
     const state = createNewState();
     saveState(state);
     expect(hasExistingState()).toBe(true);
 
-    // Clear multiple times
     clearState();
     expect(hasExistingState()).toBe(false);
 
-    clearState(); // Should not error
+    clearState();
     expect(hasExistingState()).toBe(false);
 
-    clearState(); // Should still not error
+    clearState();
     expect(hasExistingState()).toBe(false);
   });
 
@@ -265,7 +247,6 @@ describe("Idempotent Re-run Integration Test", () => {
     const { validateCurrency, validateRiskTolerance } =
       await import("../../scripts/onboarding/modules/input-validator");
 
-    // Run invalid inputs multiple times
     for (let i = 0; i < 3; i++) {
       expect(() => validateCurrency("invalid")).toThrow();
       expect(() => validateCurrency("")).toThrow();
@@ -294,20 +275,16 @@ describe("Idempotent Re-run Integration Test", () => {
       }
     };
 
-    // First cycle
     const state1 = createNewState();
     saveSectionData(state1, "investments", complexData);
     saveState(state1);
 
-    // Second cycle - load and re-save
     const state2 = loadState();
     saveState(state2!);
 
-    // Third cycle - load and re-save again
     const state3 = loadState();
     saveState(state3!);
 
-    // Final verification
     const finalState = loadState();
     expect(finalState?.data.investments.portfolio.equities).toHaveLength(2);
     expect(finalState?.data.investments.portfolio.equities[0].ticker).toBe("TSLA");

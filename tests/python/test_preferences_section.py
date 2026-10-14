@@ -11,10 +11,27 @@ This validates:
 """
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
 import pytest
+
+
+def _interface_fields(source: str, interface: str) -> dict[str, str]:
+    """Map each field of a TypeScript interface to its declared type, with ? kept on optional names."""
+    body = re.search(rf"export interface {interface} \{{(.*?)\n\}}", source, re.S)
+    assert body, f"interface {interface} not found"
+    return dict(re.findall(r"^\s*(\w+\??):\s*([^;]+);", body.group(1), re.M))
+
+
+def _call_sites(source: str, function: str) -> int:
+    """Count uses of a function outside import lines."""
+    return sum(
+        line.count(function)
+        for line in source.splitlines()
+        if not line.lstrip().startswith("import")
+    )
 
 
 class TestPreferencesSection:
@@ -91,7 +108,6 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Check for required imports
         assert "validateEnum" in content
         assert "OnboardingState" in content
         assert "saveSectionData" in content
@@ -102,7 +118,6 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Check for interface definition
         assert "interface PreferencesData" in content
         assert "risk_tolerance:" in content
         assert "investment_philosophy:" in content
@@ -117,7 +132,6 @@ class TestPreferencesSection:
             text=True,
             timeout=5,
         )
-        # Should not have TypeScript compilation errors
         assert "error TS" not in result.stderr
 
     def test_section_structure_matches_spec(self):
@@ -125,10 +139,8 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Verify section displays correct header
         assert "Section 5 of 7" in content
 
-        # Verify prompts for required fields
         assert "risk" in content.lower() and "tolerance" in content.lower()
         assert "investment" in content.lower() and "philosophy" in content.lower()
         assert "time" in content.lower() and "horizon" in content.lower()
@@ -139,12 +151,10 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Verify state management calls
         assert "saveSectionData" in content
         assert "markSectionComplete" in content
         assert "saveState" in content
 
-        # Verify correct section name used
         assert "'preferences'" in content or '"preferences"' in content
 
     def test_section_marks_next_section_correctly(self):
@@ -152,12 +162,10 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should mark next section as 'summary' or similar
         assert "'summary'" in content or "summary" in content.lower()
 
     def test_validation_integration(self):
         """Test that validation functions are properly integrated"""
-        # Test enum validation integration
         result = subprocess.run(
             [
                 "bun",
@@ -180,7 +188,6 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should have all three risk tolerance options
         assert "conservative" in content.lower()
         assert "moderate" in content.lower()
         assert "aggressive" in content.lower()
@@ -190,10 +197,8 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should have multiple philosophy options
         assert "growth" in content.lower()
         assert "income" in content.lower()
-        # May have variations like aggressive_growth, aggressive_growth_plus_income
         assert "aggressive_growth" in content.lower() or "balanced" in content.lower()
 
     def test_time_horizon_options(self):
@@ -201,7 +206,6 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should have time horizon options
         assert "short_term" in content.lower()
         assert "medium_term" in content.lower() or "medium" in content.lower()
         assert "long_term" in content.lower()
@@ -211,7 +215,6 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should have logic for optional input
         assert "optional" in content.lower()
         assert (
             "skip" in content.lower()
@@ -224,16 +227,14 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should mention comma-separated input
         assert "comma" in content.lower()
-        assert "split" in content  # Should split input by comma
+        assert "split" in content
 
     def test_focus_areas_options_documented(self):
         """Test that available focus_areas are documented"""
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should list available focus areas
         assert (
             "dividend_portfolio_construction" in content
             or "dividend" in content.lower()
@@ -249,33 +250,36 @@ class TestPreferencesSection:
         assert "Section 5 of 7" in content
 
     def test_readline_usage(self):
-        """Test that section uses readline for input"""
+        """Test that section reads input through the shared readline prompt"""
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should import readline
-        assert "readline" in content
-        assert "createInterface" in content or "question" in content
+        assert "from '../modules/prompt'" in content
+        assert "createPrompt()" in content
 
     def test_error_handling(self):
         """Test that section has proper error handling"""
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should have try/catch or error handling
         assert "try" in content or "catch" in content or "error" in content.lower()
-        assert "finally" in content or "close" in content  # Should close readline
+        assert "finally" in content or "close" in content
 
     def test_enum_validation_for_all_required_fields(self):
         """Test that all required enum fields use validateEnum"""
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should use validateEnum for risk_tolerance, investment_philosophy, time_horizon
-        # At least 3 calls expected
-        validate_count = content.count("validateEnum")
-        assert validate_count >= 3, (
-            f"Expected at least 3 validateEnum calls, found {validate_count}"
+        fields = _interface_fields(content, "PreferencesData")
+        enum_fields = [
+            name
+            for name, kind in fields.items()
+            if kind == "string" and not name.endswith("?")
+        ]
+        validate_count = _call_sites(content, "validateEnum")
+        assert validate_count >= len(enum_fields), (
+            f"Expected a validateEnum call for each of {enum_fields}, "
+            f"found {validate_count}"
         )
 
     def test_focus_areas_validation(self):
@@ -283,8 +287,6 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should validate or filter focus areas
-        # Look for validation logic or defined valid options
         assert "validFocusAreas" in content or "filter" in content
 
     def test_previous_section_is_debt(self):
@@ -292,7 +294,6 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should reference 'preferences' as current section key
         assert "'preferences'" in content or '"preferences"' in content
 
     def test_examples_provided(self):
@@ -300,8 +301,6 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should show examples or descriptions
-        # Check for descriptive text explaining options
         conservative_desc = "conservative" in content.lower()
         moderate_desc = "moderate" in content.lower()
         aggressive_desc = "aggressive" in content.lower()
@@ -313,9 +312,7 @@ class TestPreferencesSection:
         section_file = Path("scripts/onboarding/sections/preferences.ts")
         content = section_file.read_text()
 
-        # Should conditionally add focus_areas to data structure
-        # Look for conditional assignment or check for empty input
-        assert "if" in content or "?" in content  # Conditional logic for optional field
+        assert "if" in content or "?" in content
 
 
 if __name__ == "__main__":

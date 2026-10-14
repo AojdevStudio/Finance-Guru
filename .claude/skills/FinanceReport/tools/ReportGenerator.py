@@ -15,10 +15,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-# Add project root to path for imports
-PROJECT_ROOT = Path(__file__).resolve().parents[4]  # Go up from tools/ to project root
-sys.path.insert(0, str(PROJECT_ROOT))
-
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from reportlab.lib.pagesizes import letter
@@ -35,14 +31,21 @@ from reportlab.platypus import (
 )
 
 from src.config.instance_paths import InstancePaths
+from src.utils import market_data
 
-# Finance Guru Brand Colors
 NAVY = colors.HexColor("#1a365d")
 GOLD = colors.HexColor("#d69e2e")
 GREEN = colors.HexColor("#38a169")
 RED = colors.HexColor("#e53e3e")
 LIGHT_GRAY = colors.HexColor("#f7fafc")
 DARK_GRAY = colors.HexColor("#2d3748")
+
+VERDICT_COL_WIDTHS = [2.8 * inch, 4.2 * inch]
+COVER_INFO_COL_WIDTHS = [2.5 * inch, 4.5 * inch]
+RISK_METRICS_COL_WIDTHS = [1.5 * inch, 1.3 * inch, 1.3 * inch, 2.4 * inch]
+MOMENTUM_COL_WIDTHS = [2 * inch, 2 * inch, 2.5 * inch]
+METRIC_VALUE_COL_WIDTHS = [3 * inch, 3.5 * inch]
+ANALYST_RATINGS_COL_WIDTHS = [2 * inch, 2 * inch]
 
 
 class FinanceGuruStyles:
@@ -54,7 +57,6 @@ class FinanceGuruStyles:
 
     def _create_custom_styles(self):
         """Create all custom paragraph styles."""
-        # Brand Title
         self.styles.add(
             ParagraphStyle(
                 name="BrandTitle",
@@ -67,7 +69,6 @@ class FinanceGuruStyles:
             )
         )
 
-        # Gold Subtitle
         self.styles.add(
             ParagraphStyle(
                 name="GoldSubtitle",
@@ -80,7 +81,6 @@ class FinanceGuruStyles:
             )
         )
 
-        # Section Header
         self.styles.add(
             ParagraphStyle(
                 name="SectionHeader",
@@ -93,7 +93,6 @@ class FinanceGuruStyles:
             )
         )
 
-        # Subsection Header
         self.styles.add(
             ParagraphStyle(
                 name="SubHeader",
@@ -106,7 +105,6 @@ class FinanceGuruStyles:
             )
         )
 
-        # Body Text
         self.styles.add(
             ParagraphStyle(
                 name="ReportBody",
@@ -119,7 +117,6 @@ class FinanceGuruStyles:
             )
         )
 
-        # Bullet Point
         self.styles.add(
             ParagraphStyle(
                 name="BulletPoint",
@@ -132,7 +129,6 @@ class FinanceGuruStyles:
             )
         )
 
-        # Disclaimer
         self.styles.add(
             ParagraphStyle(
                 name="Disclaimer",
@@ -145,7 +141,6 @@ class FinanceGuruStyles:
             )
         )
 
-        # Table Cell - for text that needs to wrap inside table cells
         self.styles.add(
             ParagraphStyle(
                 name="TableCell",
@@ -160,7 +155,6 @@ class FinanceGuruStyles:
             )
         )
 
-        # Table Header Cell - bold text for table headers
         self.styles.add(
             ParagraphStyle(
                 name="TableHeaderCell",
@@ -203,8 +197,8 @@ class FinanceGuruReport:
 
         self.styles = FinanceGuruStyles()
         self.story = []
+        self.has_disclaimer = False
 
-        # Report data (populated during build)
         self.data = {}
 
     def _wrap_cell_text(self, text: str, is_header: bool = False) -> Paragraph:
@@ -218,7 +212,6 @@ class FinanceGuruReport:
             if is_header
             else self.styles.get("TableCell")
         )
-        # Handle None values
         if text is None:
             text = "N/A"
         return Paragraph(str(text), style)
@@ -239,12 +232,10 @@ class FinanceGuruReport:
             col_widths: Explicit column widths (REQUIRED for proper wrapping)
             has_header: Whether first row is a header row
         """
-        # Wrap all cell content in Paragraph objects for proper text wrapping
         wrapped_data = []
         for row_idx, row in enumerate(data):
             wrapped_row = []
             for cell in row:
-                # Skip if already a Paragraph or other flowable
                 if hasattr(cell, "wrap"):
                     wrapped_row.append(cell)
                 else:
@@ -295,7 +286,6 @@ class FinanceGuruReport:
             ["Risk Level", risk_level],
         ]
 
-        # Color based on rating
         if "BUY" in rating.upper():
             header_color = GREEN
         elif "SELL" in rating.upper():
@@ -303,9 +293,7 @@ class FinanceGuruReport:
         else:
             header_color = GOLD
 
-        # Column widths: 2.8" + 4.2" = 7" (fits in 7.5" content area)
-        # First column needs 2.8" to fit "INVESTMENT RATING" at 14pt bold
-        table = Table(data, colWidths=[2.8 * inch, 4.2 * inch])
+        table = Table(data, colWidths=VERDICT_COL_WIDTHS)
         table.setStyle(
             TableStyle(
                 [
@@ -334,7 +322,8 @@ class FinanceGuruReport:
         title: str,
         subtitle: str,
         current_price: float,
-        ytd_performance: float,
+        ytd_performance: float | None = None,
+        daily_change_percent: float | None = None,
         analyst_team: list[str] = None,
         week_52_range: str = None,
         market_cap: str = None,
@@ -348,7 +337,6 @@ class FinanceGuruReport:
         - Analyst names listed WITHOUT bullet points, one per line
         - No "Finance Guru Multi-Agent System" header
         """
-        # Default analyst team - names with roles (matching GOOG format)
         if analyst_team is None:
             analyst_team = [
                 "Dr. Aleksandr Petrov (Market Research)",
@@ -356,7 +344,6 @@ class FinanceGuruReport:
                 "Elena Rodriguez-Park (Strategy)",
             ]
 
-        # Brand header
         self.story.append(Spacer(1, 0.3 * inch))
         self.story.append(Paragraph("FINANCE GURU™", self.styles.get("BrandTitle")))
         self.story.append(
@@ -367,7 +354,6 @@ class FinanceGuruReport:
         self.story.append(HRFlowable(width="100%", thickness=2, color=NAVY))
         self.story.append(Spacer(1, 0.2 * inch))
 
-        # Report title - ticker prominently displayed
         self.story.append(
             Paragraph(
                 f"<b>{self.ticker}</b> - {title}", self.styles.get("SectionHeader")
@@ -376,24 +362,23 @@ class FinanceGuruReport:
         self.story.append(Paragraph(subtitle, self.styles.get("ReportBody")))
         self.story.append(Spacer(1, 0.3 * inch))
 
-        # Create analyst team text (no bullets, just line breaks)
         team_paragraph = Paragraph(
             "<br/>".join(analyst_team), self.styles.get("TableCell")
         )
 
-        # Build table data - HEADER ROW FIRST (navy background)
-        key_info = [
-            ["Report Date:", self.date]  # Header row
-        ]
+        key_info = [["Report Date:", self.date]]
 
-        # Data rows
         key_info.append(["Analyst Team:", team_paragraph])
         key_info.append(["Current Price:", f"${current_price:,.2f}"])
 
         if week_52_range:
             key_info.append(["52-Week Range:", week_52_range])
 
-        key_info.append(["YTD Performance:", f"{ytd_performance:+.1f}%"])
+        if daily_change_percent is not None:
+            key_info.append(["Daily Change:", f"{daily_change_percent:+.1f}%"])
+
+        if ytd_performance is not None:
+            key_info.append(["YTD Performance:", f"{ytd_performance:+.1f}%"])
 
         if market_cap:
             key_info.append(["Market Cap:", market_cap])
@@ -401,19 +386,15 @@ class FinanceGuruReport:
         if expense_ratio is not None:
             key_info.append(["Expense Ratio:", f"{expense_ratio:.2f}%"])
 
-        # Create table with GOOG-style formatting
-        info_table = Table(key_info, colWidths=[2.5 * inch, 4.5 * inch])
+        info_table = Table(key_info, colWidths=COVER_INFO_COL_WIDTHS)
 
-        # Style the table like GOOG example
         info_table.setStyle(
             TableStyle(
                 [
-                    # Header row (first row) - Navy background, white bold text
                     ("BACKGROUND", (0, 0), (-1, 0), NAVY),
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                     ("FONTSIZE", (0, 0), (-1, 0), 10),
-                    # All rows styling
                     ("ALIGN", (0, 0), (0, -1), "LEFT"),
                     ("ALIGN", (1, 0), (1, -1), "LEFT"),
                     ("FONTNAME", (0, 1), (0, -1), "Helvetica"),
@@ -423,9 +404,7 @@ class FinanceGuruReport:
                     ("LEFTPADDING", (0, 0), (-1, -1), 10),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 10),
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    # Grid lines
                     ("GRID", (0, 0), (-1, -1), 0.5, DARK_GRAY),
-                    # Data rows - white background
                     ("BACKGROUND", (0, 1), (-1, -1), colors.white),
                 ]
             )
@@ -449,14 +428,12 @@ class FinanceGuruReport:
         self.story.append(HRFlowable(width="80%", thickness=1, color=GOLD))
         self.story.append(Spacer(1, 0.15 * inch))
 
-        # Investment thesis
         self.story.append(
             Paragraph("<b>Investment Thesis</b>", self.styles.get("SubHeader"))
         )
         self.story.append(Paragraph(thesis, self.styles.get("ReportBody")))
         self.story.append(Spacer(1, 0.15 * inch))
 
-        # Key findings
         self.story.append(
             Paragraph("<b>Key Findings</b>", self.styles.get("SubHeader"))
         )
@@ -468,7 +445,6 @@ class FinanceGuruReport:
             )
         self.story.append(Spacer(1, 0.2 * inch))
 
-        # Verdict box
         self.story.append(self._create_verdict_box(rating, conviction, risk_level))
         self.story.append(PageBreak())
 
@@ -485,7 +461,6 @@ class FinanceGuruReport:
         self.story.append(HRFlowable(width="80%", thickness=1, color=GOLD))
         self.story.append(Spacer(1, 0.15 * inch))
 
-        # Risk Metrics Table
         self.story.append(
             Paragraph(
                 "<b>Risk & Performance Metrics (252-Day)</b>",
@@ -513,14 +488,9 @@ class FinanceGuruReport:
             ["VaR (95%)", str(risk_metrics.get("var_95", "N/A")), "-", "-"],
         ]
 
-        self.story.append(
-            self._create_table(
-                risk_table_data, [1.5 * inch, 1.3 * inch, 1.3 * inch, 2.4 * inch]
-            )
-        )
+        self.story.append(self._create_table(risk_table_data, RISK_METRICS_COL_WIDTHS))
         self.story.append(Spacer(1, 0.2 * inch))
 
-        # Momentum Indicators
         self.story.append(
             Paragraph(
                 "<b>Momentum Indicators (90-Day)</b>", self.styles.get("SubHeader")
@@ -543,12 +513,9 @@ class FinanceGuruReport:
             ["Williams %R", str(momentum_data.get("williams_r", "N/A")), "-"],
         ]
 
-        self.story.append(
-            self._create_table(momentum_table_data, [2 * inch, 2 * inch, 2.5 * inch])
-        )
+        self.story.append(self._create_table(momentum_table_data, MOMENTUM_COL_WIDTHS))
         self.story.append(Spacer(1, 0.2 * inch))
 
-        # Volatility Assessment
         self.story.append(
             Paragraph("<b>Volatility Assessment</b>", self.styles.get("SubHeader"))
         )
@@ -564,7 +531,7 @@ class FinanceGuruReport:
             ["Volatility Regime", volatility_data.get("regime", "Normal")],
         ]
 
-        self.story.append(self._create_table(vol_table_data, [3 * inch, 3.5 * inch]))
+        self.story.append(self._create_table(vol_table_data, METRIC_VALUE_COL_WIDTHS))
         self.story.append(PageBreak())
 
     def add_portfolio_sizing(
@@ -577,7 +544,6 @@ class FinanceGuruReport:
         self.story.append(HRFlowable(width="80%", thickness=1, color=GOLD))
         self.story.append(Spacer(1, 0.15 * inch))
 
-        # Calculate sizing
         min_pct = recommended_pct - 0.5
         max_pct = recommended_pct + 0.5
         min_amount = self.portfolio_value * (min_pct / 100)
@@ -601,10 +567,9 @@ class FinanceGuruReport:
             ["Current Price", f"${current_price:,.2f}"],
         ]
 
-        self.story.append(self._create_table(sizing_data, [3 * inch, 3.5 * inch]))
+        self.story.append(self._create_table(sizing_data, METRIC_VALUE_COL_WIDTHS))
         self.story.append(Spacer(1, 0.2 * inch))
 
-        # Entry Strategy
         self.story.append(
             Paragraph("<b>Entry Strategy</b>", self.styles.get("SubHeader"))
         )
@@ -625,11 +590,9 @@ class FinanceGuruReport:
         self.story.append(HRFlowable(width="80%", thickness=1, color=GOLD))
         self.story.append(Spacer(1, 0.15 * inch))
 
-        # Sentiment Summary
         self.story.append(Paragraph(sentiment_summary, self.styles.get("ReportBody")))
         self.story.append(Spacer(1, 0.15 * inch))
 
-        # Analyst Ratings
         if analyst_ratings:
             self.story.append(
                 Paragraph("<b>Analyst Consensus</b>", self.styles.get("SubHeader"))
@@ -641,10 +604,11 @@ class FinanceGuruReport:
                 ["Sell", str(analyst_ratings.get("sell", 0))],
                 ["Average Target", f"${analyst_ratings.get('target', 0):,.2f}"],
             ]
-            self.story.append(self._create_table(ratings_data, [2 * inch, 2 * inch]))
+            self.story.append(
+                self._create_table(ratings_data, ANALYST_RATINGS_COL_WIDTHS)
+            )
             self.story.append(Spacer(1, 0.15 * inch))
 
-        # 2026 Catalysts
         self.story.append(
             Paragraph("<b>2026 Catalysts</b>", self.styles.get("SubHeader"))
         )
@@ -654,11 +618,9 @@ class FinanceGuruReport:
             )
         self.story.append(Spacer(1, 0.15 * inch))
 
-        # Key Risks
         self.story.append(Paragraph("<b>Key Risks</b>", self.styles.get("SubHeader")))
         for risk in risks:
             self.story.append(Paragraph(f"• {risk}", self.styles.get("BulletPoint")))
-        # No PageBreak here - let disclaimer flow naturally on same page if space allows
 
     def add_disclaimer(self):
         """Add compliance disclaimer with 'Powered by Finance Guru™' branding.
@@ -669,6 +631,7 @@ class FinanceGuruReport:
         - 'Powered by Finance Guru™' branding line
         - Report date
         """
+        self.has_disclaimer = True
         self.story.append(Spacer(1, 0.3 * inch))
         self.story.append(HRFlowable(width="100%", thickness=1, color=DARK_GRAY))
         self.story.append(Spacer(1, 0.15 * inch))
@@ -686,7 +649,6 @@ class FinanceGuruReport:
         self.story.append(Paragraph(disclaimer.strip(), self.styles.get("Disclaimer")))
         self.story.append(Spacer(1, 0.15 * inch))
 
-        # "Powered by Finance Guru™" branding (user preferred format)
         powered_by_style = ParagraphStyle(
             name="PoweredBy",
             parent=self.styles.get("Disclaimer"),
@@ -716,15 +678,13 @@ class FinanceGuruReport:
             bottomMargin=0.5 * inch,
         )
 
-        # Add disclaimer at end if not already added
-        if not any("DISCLAIMER" in str(item) for item in self.story):
+        if not self.has_disclaimer:
             self.add_disclaimer()
 
         doc.build(self.story)
         print(f"Report generated: {output_file}")
         return str(output_file)
 
-    # Helper methods for assessments
     def _assess_sharpe(self, sharpe) -> str:
         if sharpe is None:
             return "N/A"
@@ -806,39 +766,27 @@ Examples:
 
     args = parser.parse_args()
 
-    # Fetch real-time price data using market_data module
     print(f"Fetching real-time price data for {args.ticker}...")
-    try:
-        from src.utils.market_data import get_prices
+    quote = market_data.get_prices(args.ticker, realtime=True).get(args.ticker)
+    if quote is None:
+        sys.exit(
+            f"Error: no price returned for {args.ticker}. "
+            "Refusing to build a report without a real price."
+        )
+    current_price = quote.price
+    print(f"  ✓ {args.ticker}: ${current_price:.2f} ({quote.change_percent:+.2f}%)")
 
-        price_data = get_prices(args.ticker, realtime=True)
-
-        if args.ticker in price_data:
-            current_price = price_data[args.ticker].price
-            change_percent = price_data[args.ticker].change_percent
-            print(f"  ✓ {args.ticker}: ${current_price:.2f} ({change_percent:+.2f}%)")
-        else:
-            print(f"  ⚠ Could not fetch price for {args.ticker}, using fallback")
-            current_price = 100.00
-            change_percent = 0.0
-    except Exception as e:
-        print(f"  ⚠ Price fetch failed: {e}, using fallback")
-        current_price = 100.00
-        change_percent = 0.0
-
-    # Create report
     report = FinanceGuruReport(
         ticker=args.ticker,
         portfolio_value=args.portfolio_value,
         output_dir=args.output_dir,
     )
 
-    # Add sections with REAL price data
     report.add_cover_page(
         title=f"{args.ticker} Comprehensive Analysis",
         subtitle="2026 Watchlist Analysis & Investment Recommendation",
         current_price=current_price,
-        ytd_performance=change_percent,  # Using daily change as proxy for now
+        daily_change_percent=quote.change_percent,
     )
 
     report.add_executive_summary(
@@ -888,7 +836,7 @@ Examples:
 
     report.add_portfolio_sizing(
         recommended_pct=2.5,
-        current_price=current_price,  # Using real-time price
+        current_price=current_price,
         entry_strategy="Scale in with 3 tranches: 40% at current price, 30% on 5% pullback, 30% on 10% pullback",
     )
 

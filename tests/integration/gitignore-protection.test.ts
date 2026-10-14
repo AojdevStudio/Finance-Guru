@@ -13,16 +13,13 @@ const TEST_DIR = join("/tmp", `finance-guru-gitignore-test-${Date.now()}`);
 
 describe("Gitignore Protection Integration Test", () => {
   beforeEach(async () => {
-    // Create fresh test directory
     if (existsSync(TEST_DIR)) {
       rmSync(TEST_DIR, { recursive: true, force: true });
     }
     mkdirSync(TEST_DIR, { recursive: true });
 
-    // Initialize git repository
     spawnSync(["git", "init", "-q"], { cwd: TEST_DIR });
 
-    // Copy .gitignore from project root
     const gitignorePath = join(PROJECT_ROOT, ".gitignore");
     if (!existsSync(gitignorePath)) {
       throw new Error(".gitignore not found in project root");
@@ -32,20 +29,17 @@ describe("Gitignore Protection Integration Test", () => {
   });
 
   afterEach(() => {
-    // Clean up test directory
     if (existsSync(TEST_DIR)) {
       rmSync(TEST_DIR, { recursive: true, force: true });
     }
   });
 
   test("CSV files are ignored", () => {
-    // Create directory structure
     mkdirSync(join(TEST_DIR, "notebooks/updates"), { recursive: true });
     mkdirSync(join(TEST_DIR, "notebooks/retirement-accounts"), { recursive: true });
     mkdirSync(join(TEST_DIR, "notebooks/transactions"), { recursive: true });
     mkdirSync(join(TEST_DIR, "fin-guru-private/fin-guru/analysis"), { recursive: true });
 
-    // Create test CSV files
     const csvFiles = [
       "notebooks/updates/Portfolio_Positions_SAMPLE.csv",
       "notebooks/updates/dividend.csv",
@@ -59,7 +53,6 @@ describe("Gitignore Protection Integration Test", () => {
       writeFileSync(filePath, "Date,Ticker,Shares,Price,Value\n2026-01-12,TSLA,100,350.00,35000.00\n");
     });
 
-    // Verify all CSV files are ignored
     csvFiles.forEach(file => {
       const result = spawnSync(["git", "check-ignore", "-q", file], { cwd: TEST_DIR });
       expect(result.exitCode).toBe(0);
@@ -74,7 +67,6 @@ describe("Gitignore Protection Integration Test", () => {
       writeFileSync(filePath, "API_KEY=secret123456\n");
     });
 
-    // Verify all environment files are ignored
     envFiles.forEach(file => {
       const result = spawnSync(["git", "check-ignore", "-q", file], { cwd: TEST_DIR });
       expect(result.exitCode).toBe(0);
@@ -95,7 +87,6 @@ describe("Gitignore Protection Integration Test", () => {
       writeFileSync(filePath, "# Sensitive Financial Analysis\n");
     });
 
-    // Verify private files are ignored
     privateFiles.forEach(file => {
       const result = spawnSync(["git", "check-ignore", "-q", file], { cwd: TEST_DIR });
       expect(result.exitCode).toBe(0);
@@ -115,7 +106,6 @@ describe("Gitignore Protection Integration Test", () => {
       writeFileSync(testFile, "test data\n");
     });
 
-    // Verify notebook directories are ignored
     notebookDirs.forEach(dir => {
       const result = spawnSync(["git", "check-ignore", "-q", dir], { cwd: TEST_DIR });
       expect(result.exitCode).toBe(0);
@@ -162,7 +152,6 @@ assets:
       writeFileSync(filePath, "sensitive data\n");
     });
 
-    // Verify private directory files are ignored
     privateDirFiles.forEach(file => {
       const result = spawnSync(["git", "check-ignore", "-q", file], { cwd: TEST_DIR });
       expect(result.exitCode).toBe(0);
@@ -170,16 +159,13 @@ assets:
   });
 
   test(".gitignore itself is tracked", () => {
-    // Add .gitignore to git
     spawnSync(["git", "add", ".gitignore"], { cwd: TEST_DIR });
 
-    // Verify .gitignore is tracked
     const result = spawnSync(["git", "ls-files", "--error-unmatch", ".gitignore"], { cwd: TEST_DIR });
     expect(result.exitCode).toBe(0);
   });
 
   test("git status shows no sensitive files", () => {
-    // Create all types of sensitive files
     mkdirSync(join(TEST_DIR, "notebooks/updates"), { recursive: true });
     mkdirSync(join(TEST_DIR, "fin-guru-private/fin-guru/analysis"), { recursive: true });
     mkdirSync(join(TEST_DIR, "research/finance"), { recursive: true });
@@ -191,14 +177,11 @@ assets:
     writeFileSync(join(TEST_DIR, "research/finance/analysis.md"), "# Analysis\n");
     writeFileSync(join(TEST_DIR, "private/data.txt"), "sensitive\n");
 
-    // Try to add all files
     spawnSync(["git", "add", "-A"], { cwd: TEST_DIR });
 
-    // Get tracked files
     const result = spawnSync(["git", "ls-files"], { cwd: TEST_DIR });
     const trackedFiles = result.stdout?.toString() || "";
 
-    // Verify no sensitive patterns are tracked
     expect(trackedFiles).not.toMatch(/\.(csv|env)$/);
     expect(trackedFiles).not.toMatch(/notebooks\//);
     expect(trackedFiles).not.toMatch(/fin-guru-private\//);
@@ -209,7 +192,6 @@ assets:
   });
 
   test("all sensitive file types are protected", () => {
-    // Create comprehensive test structure
     const sensitiveStructure = {
       "notebooks/updates/Portfolio_Positions.csv": "portfolio data",
       "notebooks/retirement-accounts/401k.csv": "retirement data",
@@ -223,14 +205,12 @@ assets:
       ".env": "env vars",
     };
 
-    // Create all files
     Object.entries(sensitiveStructure).forEach(([path, content]) => {
       const dir = join(TEST_DIR, path.split("/").slice(0, -1).join("/"));
       mkdirSync(dir, { recursive: true });
       writeFileSync(join(TEST_DIR, path), content);
     });
 
-    // Verify ALL are ignored
     Object.keys(sensitiveStructure).forEach(path => {
       const result = spawnSync(["git", "check-ignore", "-q", path], { cwd: TEST_DIR });
       expect(result.exitCode).toBe(0);

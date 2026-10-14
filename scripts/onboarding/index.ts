@@ -1,10 +1,5 @@
 #!/usr/bin/env bun
 
-/**
- * Finance Guru™ Onboarding CLI
- * Main entry point for interactive onboarding wizard
- */
-
 import {
   hasExistingState,
   loadState,
@@ -16,14 +11,10 @@ import {
   type OnboardingState
 } from './modules/progress';
 
-// Parse command line arguments
 const args = process.argv.slice(2);
 const isResumeMode = args.includes('--resume');
 const isTestMode = args.includes('--test');
 
-/**
- * Display welcome screen
- */
 function displayWelcome(): void {
   console.log('╔══════════════════════════════════════════════════════════╗');
   console.log('║                                                          ║');
@@ -50,9 +41,6 @@ function displayWelcome(): void {
   console.log('');
 }
 
-/**
- * Display resume screen
- */
 function displayResume(state: OnboardingState): void {
   console.log('╔══════════════════════════════════════════════════════════╗');
   console.log('║                                                          ║');
@@ -81,9 +69,6 @@ function displayResume(state: OnboardingState): void {
   console.log('');
 }
 
-/**
- * Display completion message
- */
 function displayComplete(): void {
   console.log('');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -110,20 +95,15 @@ function displayComplete(): void {
   console.log('');
 }
 
-/**
- * Main onboarding flow
- */
 async function main() {
   try {
     let state: OnboardingState;
 
-    // Check for existing state
     if (hasExistingState() && isResumeMode) {
       const existingState = loadState();
       if (existingState) {
         displayResume(existingState);
 
-        // Check if already complete
         if (isComplete(existingState)) {
           console.log('✅ Onboarding already complete!');
           console.log('');
@@ -142,8 +122,6 @@ async function main() {
       state = createNewState();
     }
 
-    // TODO: Implement section flows
-    // For now, just save the initial state
     console.log('🚧 Onboarding CLI structure created.');
     console.log('📋 Section implementations coming in subsequent tasks.');
     console.log('');
@@ -157,7 +135,6 @@ async function main() {
     console.log('  📂 scripts/onboarding/tests/ (ready for implementation)');
     console.log('');
 
-    // Save state
     saveState(state);
 
     console.log('💾 Progress saved to .onboarding-state.json');
@@ -169,5 +146,4 @@ async function main() {
   }
 }
 
-// Run main function
 main();

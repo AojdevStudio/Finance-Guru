@@ -160,7 +160,6 @@ jobs:
           echo '' >> "$GITHUB_STEP_SUMMARY"
           echo 'Flags referenced in src/utils/feature_flags.py or FG_FLAG_ env vars without a call site:' >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          # extract FG_FLAG_* refs from code and compare to flags.enabled() call sites
           DECLARED=$(git grep -hE "FG_FLAG_[A-Z_]+" -- 'src/**/*.py' 'docs/**/*.md' | grep -oE "FG_FLAG_[A-Z_]+" | sort -u || true)
           CALLED=$(git grep -hE 'flags\.enabled\("([A-Z_]+)"' -- 'src/**/*.py' | grep -oE '"[A-Z_]+"' | tr -d '"' | sort -u || true)
           echo "Declared: $DECLARED" >> "$GITHUB_STEP_SUMMARY"

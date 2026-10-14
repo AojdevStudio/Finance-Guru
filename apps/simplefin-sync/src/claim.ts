@@ -1,7 +1,5 @@
 #!/usr/bin/env bun
 /**
- * Exchange a SimpleFIN setup token for a long-lived access URL.
- *
  * Setup tokens are SINGLE-USE: a successful claim destroys the token.
  * If POST returns 403 the token has either already been claimed or is
  * invalid — the protocol spec recommends treating that as a possible
@@ -11,6 +9,7 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { persistAccessUrl } from "./env-file";
 
 const ENV_PATH = resolve(import.meta.dir, "../.env");
 
@@ -73,21 +72,15 @@ try {
   process.exit(1);
 }
 
-// Persist to .env. Each replace MUST hit exactly one line — otherwise the
-// access URL would be silently dropped and the setup token (which is now
-// dead) would be unrecoverable.
-const env = readFileSync(ENV_PATH, "utf-8");
-const tokenRegex = /^SIMPLEFIN_SETUP_TOKEN=.*$/m;
-const accessRegex = /^SIMPLEFIN_ACCESS_URL=.*$/m;
-if (!tokenRegex.test(env) || !accessRegex.test(env)) {
-  console.error("✗ .env is missing SIMPLEFIN_SETUP_TOKEN= or SIMPLEFIN_ACCESS_URL= lines.");
+let updated: string;
+try {
+  updated = persistAccessUrl(readFileSync(ENV_PATH, "utf-8"), accessUrl);
+} catch (err) {
+  console.error(`✗ ${err instanceof Error ? err.message : String(err)}`);
   console.error("  Recover the access URL manually:");
   console.error(`  ${accessUrl}`);
   process.exit(1);
 }
-const updated = env
-  .replace(tokenRegex, "SIMPLEFIN_SETUP_TOKEN=")
-  .replace(accessRegex, `SIMPLEFIN_ACCESS_URL=${accessUrl}`);
 writeFileSync(ENV_PATH, updated);
 
 const { hostname } = new URL(accessUrl);

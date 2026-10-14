@@ -11,10 +11,27 @@ This validates:
 """
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
 import pytest
+
+
+def _interface_fields(source: str, interface: str) -> dict[str, str]:
+    """Map each field of a TypeScript interface to its declared type, with ? kept on optional names."""
+    body = re.search(rf"export interface {interface} \{{(.*?)\n\}}", source, re.S)
+    assert body, f"interface {interface} not found"
+    return dict(re.findall(r"^\s*(\w+\??):\s*([^;]+);", body.group(1), re.M))
+
+
+def _call_sites(source: str, function: str) -> int:
+    """Count uses of a function outside import lines."""
+    return sum(
+        line.count(function)
+        for line in source.splitlines()
+        if not line.lstrip().startswith("import")
+    )
 
 
 class TestCashFlowSection:
@@ -79,7 +96,6 @@ class TestCashFlowSection:
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Check for required imports
         assert "validateCurrency" in content
         assert "OnboardingState" in content
         assert "saveSectionData" in content
@@ -90,7 +106,6 @@ class TestCashFlowSection:
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Check for interface definition
         assert "interface CashFlowData" in content
         assert "monthly_income:" in content
         assert "fixed_expenses:" in content
@@ -106,7 +121,6 @@ class TestCashFlowSection:
             text=True,
             timeout=5,
         )
-        # Should not have TypeScript compilation errors
         assert "error TS" not in result.stderr
 
     def test_section_structure_matches_spec(self):
@@ -114,10 +128,8 @@ class TestCashFlowSection:
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Verify section displays correct header
         assert "Section 3 of 7: Cash Flow" in content
 
-        # Verify prompts for required fields
         assert "monthly" in content.lower() and "income" in content.lower()
         assert "fixed" in content.lower() and "expenses" in content.lower()
         assert "variable" in content.lower() and "expenses" in content.lower()
@@ -129,12 +141,10 @@ class TestCashFlowSection:
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Verify state management calls
         assert "saveSectionData" in content
         assert "markSectionComplete" in content
         assert "saveState" in content
 
-        # Verify correct section name used
         assert "'cash_flow'" in content or '"cash_flow"' in content
 
     def test_section_marks_next_section_correctly(self):
@@ -142,12 +152,10 @@ class TestCashFlowSection:
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Should mark next section as 'debt'
         assert "'debt'" in content or '"debt"' in content
 
     def test_validation_integration(self):
         """Test that validation functions are properly integrated"""
-        # Test currency validation integration
         result = subprocess.run(
             [
                 "bun",
@@ -169,7 +177,6 @@ class TestCashFlowSection:
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Should validate investment capacity against monthly income
         assert "monthlyIncome" in content or "monthly_income" in content
         assert "cannot exceed" in content.lower() or ">" in content
 
@@ -178,23 +185,20 @@ class TestCashFlowSection:
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Should calculate and display surplus
         assert "surplus" in content.lower() or "calculated" in content.lower()
-        assert "toLocaleString" in content  # Format currency for display
+        assert "toLocaleString" in content
 
     def test_expense_descriptions(self):
         """Test that section provides descriptions for expense types"""
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Should provide examples of fixed expenses
         assert (
             "rent" in content.lower()
             or "insurance" in content.lower()
             or "recurring" in content.lower()
         )
 
-        # Should provide examples of variable expenses
         assert (
             "groceries" in content.lower()
             or "dining" in content.lower()
@@ -213,33 +217,29 @@ class TestCashFlowSection:
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Should reference 'cash_flow' as current section key
         assert "'cash_flow'" in content or '"cash_flow"' in content
 
     def test_readline_usage(self):
-        """Test that section uses readline for input"""
+        """Test that section reads input through the shared readline prompt"""
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Should import readline
-        assert "readline" in content
-        assert "createInterface" in content or "question" in content
+        assert "from '../modules/prompt'" in content
+        assert "createPrompt()" in content
 
     def test_error_handling(self):
         """Test that section has proper error handling"""
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Should have try/catch or error handling
         assert "try" in content or "catch" in content or "error" in content.lower()
-        assert "finally" in content or "close" in content  # Should close readline
+        assert "finally" in content or "close" in content
 
     def test_after_tax_income_clarification(self):
         """Test that section clarifies income should be after-tax"""
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Should specify after-tax income
         assert "after-tax" in content.lower() or "after tax" in content.lower()
 
     def test_all_currency_fields_validated(self):
@@ -247,11 +247,12 @@ class TestCashFlowSection:
         section_file = Path("scripts/onboarding/sections/cash-flow.ts")
         content = section_file.read_text()
 
-        # Should use validateCurrency for all monetary inputs
-        # Count should be at least 5 (income, fixed, variable, savings, capacity)
-        validate_count = content.count("validateCurrency")
-        assert validate_count >= 4, (
-            f"Expected at least 4 validateCurrency calls, found {validate_count}"
+        fields = _interface_fields(content, "CashFlowData")
+        currency_fields = [name for name, kind in fields.items() if kind == "number"]
+        validate_count = _call_sites(content, "validateCurrency")
+        assert validate_count >= len(currency_fields), (
+            f"Expected a validateCurrency call for each of {currency_fields}, "
+            f"found {validate_count}"
         )
 
 

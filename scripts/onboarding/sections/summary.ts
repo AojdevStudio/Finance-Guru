@@ -1,51 +1,20 @@
-/**
- * Summary & Confirmation Section
- * Displays collected data and asks for final confirmation before generating config files
- */
-
-import { createInterface } from 'readline';
+import { createPrompt, type Prompt } from '../modules/prompt';
 import type { OnboardingState } from '../modules/progress';
-import { getSectionData, markSectionComplete, saveState, clearState } from '../modules/progress';
+import { getSectionData, markSectionComplete, saveState, clearState, OPTIONAL_SECTIONS } from '../modules/progress';
 import { generateAllConfigs } from '../modules/yaml-generator';
 
-/**
- * Creates a readline interface for prompting user
- */
-function createPrompt() {
-  return createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-}
-
-/**
- * Formats currency for display
- * @param value - Numeric value
- * @returns Formatted currency string
- */
 function formatCurrency(value?: number): string {
   if (value === undefined || value === null) return 'Not provided';
   return `$${value.toLocaleString('en-US')}`;
 }
 
-/**
- * Formats percentage for display
- * @param value - Decimal value (e.g., 0.04)
- * @returns Formatted percentage string
- */
 function formatPercentage(value?: number): string {
   if (value === undefined || value === null) return 'Not provided';
   return `${(value * 100).toFixed(2)}%`;
 }
 
-/**
- * Prompts user with a yes/no question
- * @param rl - Readline interface
- * @param question - Question to ask
- * @returns Promise resolving to true for yes, false for no
- */
 async function promptYesNo(
-  rl: ReturnType<typeof createInterface>,
+  rl: Prompt,
   question: string
 ): Promise<boolean> {
   return new Promise((resolve) => {
@@ -67,10 +36,6 @@ async function promptYesNo(
   });
 }
 
-/**
- * Displays summary of liquid assets
- * @param data - Liquid assets data
- */
 function displayLiquidAssetsSummary(data: any): void {
   console.log('  💰 Liquid Assets');
   console.log(`     Total: ${formatCurrency(data.total)}`);
@@ -85,10 +50,6 @@ function displayLiquidAssetsSummary(data: any): void {
   }
 }
 
-/**
- * Displays summary of investment portfolio
- * @param data - Investment portfolio data
- */
 function displayInvestmentsSummary(data: any): void {
   console.log('  📈 Investment Portfolio');
   console.log(`     Total Value: ${formatCurrency(data.total_value)}`);
@@ -97,10 +58,6 @@ function displayInvestmentsSummary(data: any): void {
   console.log(`     Risk Profile: ${data.risk_profile || 'Not provided'}`);
 }
 
-/**
- * Displays summary of cash flow
- * @param data - Cash flow data
- */
 function displayCashFlowSummary(data: any): void {
   console.log('  💵 Cash Flow');
   console.log(`     Monthly Income: ${formatCurrency(data.monthly_income)}`);
@@ -110,10 +67,6 @@ function displayCashFlowSummary(data: any): void {
   console.log(`     Investment Capacity: ${formatCurrency(data.investment_capacity)}`);
 }
 
-/**
- * Displays summary of debt profile
- * @param data - Debt profile data
- */
 function displayDebtSummary(data: any): void {
   console.log('  🏦 Debt Profile');
   console.log(`     Mortgage Balance: ${formatCurrency(data.mortgage_balance)}`);
@@ -129,10 +82,6 @@ function displayDebtSummary(data: any): void {
   }
 }
 
-/**
- * Displays summary of preferences
- * @param data - Preferences data
- */
 function displayPreferencesSummary(data: any): void {
   console.log('  🎯 Investment Preferences');
   console.log(`     Risk Tolerance: ${data.risk_tolerance || 'Not provided'}`);
@@ -149,11 +98,6 @@ function displayPreferencesSummary(data: any): void {
   }
 }
 
-/**
- * Runs the Summary & Confirmation section
- * @param state - Current onboarding state
- * @returns Updated state
- */
 export async function runSummarySection(state: OnboardingState): Promise<OnboardingState> {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('📋 Section 6 of 7: Summary & Confirmation');
@@ -169,7 +113,6 @@ export async function runSummarySection(state: OnboardingState): Promise<Onboard
   const rl = createPrompt();
 
   try {
-    // Display each section's summary
     const liquidAssets = getSectionData(state, 'liquid_assets');
     if (liquidAssets) {
       displayLiquidAssetsSummary(liquidAssets);
@@ -203,7 +146,6 @@ export async function runSummarySection(state: OnboardingState): Promise<Onboard
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('');
 
-    // Ask for confirmation
     const confirmed = await promptYesNo(
       rl,
       'Save this profile and generate configuration files? (y/n): '
@@ -214,7 +156,6 @@ export async function runSummarySection(state: OnboardingState): Promise<Onboard
       console.log('✅ Confirmed! Generating configuration files...');
       console.log('');
 
-      // Generate all configuration files
       try {
         await generateAllConfigs(state);
         console.log('✅ Configuration files generated successfully');
@@ -225,13 +166,10 @@ export async function runSummarySection(state: OnboardingState): Promise<Onboard
         console.log('  ✓ system-context.md');
         console.log('');
 
-        // Mark section as complete (next sections are optional: mcp_config, env_setup)
-        markSectionComplete(state, 'summary', 'mcp_config');
+        markSectionComplete(state, 'summary', OPTIONAL_SECTIONS[0]);
 
-        // Save final state
         saveState(state);
 
-        // Clear progress file (onboarding complete)
         clearState();
 
         console.log('🎉 Onboarding Complete!');
@@ -270,7 +208,6 @@ export async function runSummarySection(state: OnboardingState): Promise<Onboard
         console.log('Please run the setup script again.');
         console.log('');
 
-        // Clear state to start fresh
         clearState();
       } else {
         console.log('');
@@ -278,7 +215,6 @@ export async function runSummarySection(state: OnboardingState): Promise<Onboard
         console.log('You can resume later by running: bun scripts/onboarding/index.ts --resume');
         console.log('');
 
-        // Keep state for resume
         saveState(state);
       }
     }

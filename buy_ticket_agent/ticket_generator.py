@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from anthropic import Anthropic
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from buy_ticket_agent.config import resolve_annual_margin_rate
@@ -59,10 +60,6 @@ class Layer3ITCError(ValueError):
 
 def _default_client() -> Any:
     """Build the Anthropic client lazily so tests can inject a fake client."""
-    try:
-        from anthropic import Anthropic
-    except ImportError as exc:  # pragma: no cover - covered by dependency gates
-        raise RuntimeError("anthropic SDK is required for ticket generation") from exc
     return Anthropic()
 
 

@@ -31,16 +31,11 @@ jobs:
           uv export --format requirements.txt --no-hashes --no-emit-project --frozen | diff -u requirements.txt -
 
       - name: Check uv.lock matches pyproject.toml
-        # Fails instead of relocking, so a stale lockfile cannot pass CI.
         env:
           UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
         run: uv lock --check
 
-      - name: Set up Bun
-        # Needed by tests that shell out to bun for the onboarding
-        # TypeScript sections (test_cash_flow_section, test_debt_profile_section,
-        # test_investment_portfolio_section, test_liquid_assets_section,
-        # test_onboarding_summary, test_preferences_section).
+      - name: Set up Bun for the hook tests, plugin validation, and onboarding section tests
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -49,7 +44,6 @@ jobs:
         run: uv sync --locked --dev
 
       - name: Validate the Claude Code plugin and marketplace
-        # Pinned so a validator change upstream cannot turn a green head red.
         run: |
           bunx @anthropic-ai/claude-code@2.1.289 plugin validate .claude-plugin/plugin.json
           bunx @anthropic-ai/claude-code@2.1.289 plugin validate .

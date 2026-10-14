@@ -16,27 +16,9 @@ import sys
 from io import BytesIO
 from typing import Any
 
-# Lazy loading for optional dependencies
-_plt = None
-_np = None
+import matplotlib.pyplot as plt
+import numpy as np
 
-
-def _import_dependencies():
-    """Import matplotlib and numpy lazily."""
-    global _plt, _np
-    try:
-        import matplotlib.pyplot as plt
-        import numpy as np
-
-        _plt = plt
-        _np = np
-    except ImportError:
-        print("ChartKit requires matplotlib and numpy.")
-        print("Install with: uv add matplotlib numpy")
-        sys.exit(1)
-
-
-# Finance Guru Brand Colors
 COLORS = {
     "navy": "#1a365d",
     "gold": "#d69e2e",
@@ -69,9 +51,8 @@ def create_line_chart(
     dpi: int = 150,
 ) -> BytesIO:
     """Create a line chart for price history or metrics."""
-    _import_dependencies()
 
-    fig, ax = _plt.subplots(figsize=figsize, dpi=dpi)
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
     if "dates" in data and "values" in data:
         ax.plot(data["dates"], data["values"], color=COLORS["navy"], linewidth=1.5)
@@ -83,16 +64,15 @@ def create_line_chart(
     ax.grid(True, alpha=0.3)
     ax.tick_params(axis="both", labelsize=8)
 
-    # Rotate x-axis labels if dates
     if len(ax.get_xticklabels()) > 10:
-        _plt.xticks(rotation=45, ha="right")
+        plt.xticks(rotation=45, ha="right")
 
-    _plt.tight_layout()
+    plt.tight_layout()
 
     buffer = BytesIO()
     fig.savefig(buffer, format="png", bbox_inches="tight", facecolor="white")
     buffer.seek(0)
-    _plt.close(fig)
+    plt.close(fig)
 
     return buffer
 
@@ -105,14 +85,12 @@ def create_bar_chart(
     dpi: int = 150,
 ) -> BytesIO:
     """Create a bar chart for metric comparison."""
-    _import_dependencies()
 
-    fig, ax = _plt.subplots(figsize=figsize, dpi=dpi)
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
     labels = data.get("labels", [])
     values = data.get("values", [])
 
-    # Color bars based on positive/negative
     colors = [COLORS["green"] if v >= 0 else COLORS["red"] for v in values]
 
     if horizontal:
@@ -126,12 +104,12 @@ def create_bar_chart(
     ax.grid(True, alpha=0.3, axis="x" if horizontal else "y")
     ax.tick_params(axis="both", labelsize=8)
 
-    _plt.tight_layout()
+    plt.tight_layout()
 
     buffer = BytesIO()
     fig.savefig(buffer, format="png", bbox_inches="tight", facecolor="white")
     buffer.seek(0)
-    _plt.close(fig)
+    plt.close(fig)
 
     return buffer
 
@@ -144,29 +122,23 @@ def create_heatmap(
     dpi: int = 150,
 ) -> BytesIO:
     """Create a correlation heatmap."""
-    _import_dependencies()
 
-    fig, ax = _plt.subplots(figsize=figsize, dpi=dpi)
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
-    matrix = _np.array(correlation_matrix)
+    matrix = np.array(correlation_matrix)
 
-    # Create heatmap
     im = ax.imshow(matrix, cmap="RdYlGn", vmin=-1, vmax=1)
 
-    # Add colorbar
     cbar = ax.figure.colorbar(im, ax=ax)
     cbar.ax.tick_params(labelsize=8)
 
-    # Set ticks and labels
-    ax.set_xticks(_np.arange(len(labels)))
-    ax.set_yticks(_np.arange(len(labels)))
+    ax.set_xticks(np.arange(len(labels)))
+    ax.set_yticks(np.arange(len(labels)))
     ax.set_xticklabels(labels, fontsize=8)
     ax.set_yticklabels(labels, fontsize=8)
 
-    # Rotate x labels
-    _plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
-    # Add value annotations
     for i in range(len(labels)):
         for j in range(len(labels)):
             text_color = "white" if abs(matrix[i, j]) > 0.5 else "black"
@@ -181,12 +153,12 @@ def create_heatmap(
             )
 
     ax.set_title(title, fontsize=11, fontweight="bold", loc="left")
-    _plt.tight_layout()
+    plt.tight_layout()
 
     buffer = BytesIO()
     fig.savefig(buffer, format="png", bbox_inches="tight", facecolor="white")
     buffer.seek(0)
-    _plt.close(fig)
+    plt.close(fig)
 
     return buffer
 
@@ -203,17 +175,14 @@ def create_technical_chart(
     dpi: int = 150,
 ) -> BytesIO:
     """Create a dual-axis technical indicator chart."""
-    _import_dependencies()
 
-    fig, ax1 = _plt.subplots(figsize=figsize, dpi=dpi)
+    fig, ax1 = plt.subplots(figsize=figsize, dpi=dpi)
 
-    # Primary axis (price)
     ax1.plot(dates, price_data, color=COLORS["navy"], linewidth=1.5, label=price_label)
     ax1.set_ylabel(price_label, color=COLORS["navy"], fontsize=9)
     ax1.tick_params(axis="y", labelcolor=COLORS["navy"], labelsize=8)
     ax1.tick_params(axis="x", labelsize=8)
 
-    # Secondary axis (indicator)
     ax2 = ax1.twinx()
     ax2.plot(
         dates,
@@ -225,7 +194,6 @@ def create_technical_chart(
     ax2.set_ylabel(indicator_label, color=COLORS["gold"], fontsize=9)
     ax2.tick_params(axis="y", labelcolor=COLORS["gold"], labelsize=8)
 
-    # Add threshold lines
     if thresholds:
         for thresh in thresholds:
             ax2.axhline(
@@ -235,21 +203,19 @@ def create_technical_chart(
     ax1.set_title(title, fontsize=11, fontweight="bold", loc="left")
     ax1.grid(True, alpha=0.3)
 
-    # Rotate x-axis labels
     if len(dates) > 10:
-        _plt.xticks(rotation=45, ha="right")
+        plt.xticks(rotation=45, ha="right")
 
-    # Legend
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right", fontsize=8)
 
-    _plt.tight_layout()
+    plt.tight_layout()
 
     buffer = BytesIO()
     fig.savefig(buffer, format="png", bbox_inches="tight", facecolor="white")
     buffer.seek(0)
-    _plt.close(fig)
+    plt.close(fig)
 
     return buffer
 
@@ -307,15 +273,12 @@ Examples:
 
     args = parser.parse_args()
 
-    # Parse figsize
     figsize = tuple(map(float, args.figsize.split(",")))
 
-    # Generate chart based on type
     if args.chart_type == "line":
         if args.data:
             data = json.loads(args.data)
         else:
-            # Use momentum CLI to get price data
             data = run_cli_tool(
                 "src.utils.momentum_cli", [args.ticker, "--days", str(args.days)]
             )
@@ -327,7 +290,6 @@ Examples:
         if args.data:
             data = json.loads(args.data)
         else:
-            # Use risk metrics CLI
             data = run_cli_tool(
                 "src.analysis.risk_metrics_cli", [args.ticker, "--days", "252"]
             )
@@ -341,7 +303,6 @@ Examples:
     elif args.chart_type == "heatmap":
         tickers = args.tickers.split(",") if args.tickers else [args.ticker]
 
-        # Use correlation CLI
         data = run_cli_tool("src.analysis.correlation_cli", tickers + ["--days", "252"])
 
         title = args.title or "Correlation Matrix"
@@ -376,7 +337,6 @@ Examples:
         print(f"Unknown chart type: {args.chart_type}")
         sys.exit(1)
 
-    # Save chart
     save_chart(buffer, args.output)
 
 

@@ -180,10 +180,6 @@ module = [
 ]
 ignore_missing_imports = true
 
-# Relaxed checks for existing financial analysis codebase.
-# These modules use dynamic Literal types and pandas patterns
-# that produce false positives with strict mypy. Tightening
-# is deferred to a dedicated type-safety hardening plan.
 [[tool.mypy.overrides]]
 module = [
     "src.utils.screener",
