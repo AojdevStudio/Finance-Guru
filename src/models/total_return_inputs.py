@@ -226,7 +226,6 @@ class TickerReturn(BaseModel):
         return self
 
 
-# Type exports
 __all__ = [
     "TotalReturnInput",
     "DividendRecord",

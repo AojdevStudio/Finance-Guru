@@ -12,6 +12,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
+
 
 class VolatilityDataInput(BaseModel):
     """WHAT: Historical price data for volatility calculations
@@ -81,7 +83,6 @@ class VolatilityConfig(BaseModel):
     These periods (14, 20) are industry standards but can be customized.
     """
 
-    # Bollinger Bands settings
     bb_period: int = Field(
         default=20,
         ge=10,
@@ -95,12 +96,10 @@ class VolatilityConfig(BaseModel):
         description="Bollinger Bands standard deviation multiplier (default: 2.0)",
     )
 
-    # Average True Range (ATR) settings
     atr_period: int = Field(
         default=14, ge=7, le=30, description="ATR calculation period (default: 14)"
     )
 
-    # Historical Volatility settings
     hvol_period: int = Field(
         default=20,
         ge=10,
@@ -108,13 +107,12 @@ class VolatilityConfig(BaseModel):
         description="Historical volatility lookback period (default: 20)",
     )
     hvol_annualization_factor: int = Field(
-        default=252,
+        default=TRADING_DAYS_PER_YEAR,
         ge=200,
         le=365,
         description="Trading days per year for annualization (default: 252)",
     )
 
-    # Keltner Channels settings
     kc_period: int = Field(
         default=20,
         ge=10,
@@ -223,13 +221,11 @@ class VolatilityMetricsOutput(BaseModel):
     calculation_date: date
     current_price: float = Field(..., gt=0.0, description="Latest closing price")
 
-    # Individual indicator outputs
     bollinger_bands: BollingerBandsOutput
     atr: ATROutput
     historical_volatility: HistoricalVolatilityOutput
     keltner_channels: KeltnerChannelsOutput
 
-    # Summary metrics
     volatility_regime: Literal["low", "normal", "high", "extreme"] = Field(
         ..., description="Overall volatility assessment"
     )

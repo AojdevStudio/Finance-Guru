@@ -8,11 +8,12 @@ allowing users to complete the Finance Guru setup in multiple sessions.
 import json
 import os
 import tempfile
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 SectionName = Literal[
     "liquid_assets",
@@ -37,6 +38,8 @@ ALL_SECTIONS: list[SectionName] = [
 
 class OnboardingState(BaseModel):
     """Represents the current state of the onboarding process."""
+
+    model_config = ConfigDict(extra="ignore")
 
     version: str = "1.0"
     started_at: str
@@ -87,11 +90,14 @@ def load_state() -> OnboardingState | None:
         return None
 
 
-def save_state(state: OnboardingState) -> None:
+def save_state(
+    state: OnboardingState, *, clock: Callable[[], datetime] = datetime.now
+) -> None:
     """Saves the onboarding state to disk.
 
     Args:
         state: OnboardingState to save
+        clock: Source of the ``last_updated`` timestamp.
 
     Raises:
         Exception: If save operation fails
@@ -100,7 +106,7 @@ def save_state(state: OnboardingState) -> None:
     temp_path: Path | None = None
 
     try:
-        state.last_updated = datetime.now().isoformat()
+        state.last_updated = clock().isoformat()
         content = state.model_dump_json(indent=2)
         with tempfile.NamedTemporaryFile(
             mode="w",
@@ -154,11 +160,9 @@ def mark_section_complete(
     Returns:
         OnboardingState: Updated state
     """
-    # Add to completed list if not already there
     if completed_section not in state.completed_sections:
         state.completed_sections.append(completed_section)
 
-    # Update current section
     state.current_section = next_section
 
     return state
@@ -220,7 +224,6 @@ def get_next_section(state: OnboardingState) -> SectionName | None:
     Returns:
         SectionName or None: Next section or None if all complete
     """
-    # Find first section not in completed list
     for section in ALL_SECTIONS:
         if section not in state.completed_sections:
             return section

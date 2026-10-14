@@ -29,7 +29,9 @@ from datetime import date
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+SignalStrength = Literal["weak", "moderate", "strong"]
 
 
 class PatternType(StrEnum):
@@ -84,7 +86,6 @@ class ScreeningCriteria(BaseModel):
         min_length=1,
     )
 
-    # RSI thresholds
     rsi_oversold: float = Field(
         default=30.0,
         ge=10.0,
@@ -99,7 +100,6 @@ class ScreeningCriteria(BaseModel):
         description="RSI threshold for overbought condition (default: 70)",
     )
 
-    # Moving average periods
     ma_fast: int = Field(
         default=50,
         ge=10,
@@ -114,7 +114,6 @@ class ScreeningCriteria(BaseModel):
         description="Slow moving average period (default: 200)",
     )
 
-    # Volume thresholds
     volume_multiplier: float = Field(
         default=1.5,
         ge=1.0,
@@ -122,7 +121,6 @@ class ScreeningCriteria(BaseModel):
         description="Volume multiplier for breakout detection (default: 1.5x average)",
     )
 
-    # Scoring weights
     pattern_weight: float = Field(
         default=1.0,
         ge=0.0,
@@ -130,20 +128,14 @@ class ScreeningCriteria(BaseModel):
         description="Weight for pattern matches in scoring (default: 1.0)",
     )
 
-    @field_validator("rsi_overbought")
-    @classmethod
-    def validate_rsi_overbought_above_oversold(cls, v: float, info) -> float:
-        """Ensure overbought threshold is above oversold threshold."""
-        # Note: We can't access rsi_oversold here directly in field validator
-        # This will be checked in model validator
-        return v
-
-    @field_validator("ma_slow")
-    @classmethod
-    def validate_ma_slow_above_fast(cls, v: float, info) -> float:
-        """Ensure slow MA period is greater than fast MA period."""
-        # Will be checked in model validator
-        return v
+    @model_validator(mode="after")
+    def validate_ma_slow_above_fast(self) -> "ScreeningCriteria":
+        """Reject a slow moving average that is not longer than the fast one."""
+        if self.ma_slow <= self.ma_fast:
+            raise ValueError(
+                f"ma_slow ({self.ma_slow}) must be greater than ma_fast ({self.ma_fast})"
+            )
+        return self
 
 
 class TechnicalSignal(BaseModel):
@@ -155,7 +147,7 @@ class TechnicalSignal(BaseModel):
 
     signal_type: PatternType = Field(..., description="Type of pattern detected")
 
-    strength: Literal["weak", "moderate", "strong"] = Field(
+    strength: SignalStrength = Field(
         ..., description="Signal strength (confidence level)"
     )
 
@@ -198,12 +190,10 @@ class ScreeningResult(BaseModel):
         ..., description="Whether stock meets screening criteria"
     )
 
-    # Signals
     signals: list[TechnicalSignal] = Field(
         default_factory=list, description="List of detected technical signals"
     )
 
-    # Scoring
     score: float = Field(
         default=0.0, ge=0.0, description="Composite score (higher = better opportunity)"
     )
@@ -212,14 +202,12 @@ class ScreeningResult(BaseModel):
         default=None, ge=1, description="Rank among screened tickers (1 = best)"
     )
 
-    # Current metrics
     current_price: float = Field(..., gt=0.0, description="Current price")
 
     current_rsi: float | None = Field(
         default=None, ge=0.0, le=100.0, description="Current RSI value"
     )
 
-    # Recommendations
     recommendation: Literal["strong_buy", "buy", "hold", "sell", "strong_sell"] = Field(
         ..., description="Overall recommendation based on signals"
     )
@@ -319,12 +307,15 @@ class PortfolioScreeningOutput(BaseModel):
 
     summary: str = Field(..., description="Human-readable summary of screening results")
 
-    @field_validator("tickers_matching")
-    @classmethod
-    def validate_matching_count(cls, v: int, info) -> int:
-        """Ensure matching count doesn't exceed total screened."""
-        # Will be validated in model validator with access to total_tickers_screened
-        return v
+    @model_validator(mode="after")
+    def validate_matching_count(self) -> "PortfolioScreeningOutput":
+        """Reject a matching count larger than the number of tickers screened."""
+        if self.tickers_matching > self.total_tickers_screened:
+            raise ValueError(
+                f"tickers_matching ({self.tickers_matching}) cannot exceed "
+                f"total_tickers_screened ({self.total_tickers_screened})"
+            )
+        return self
 
     model_config = {
         "json_schema_extra": {
@@ -334,7 +325,7 @@ class PortfolioScreeningOutput(BaseModel):
                     "criteria_used": ["golden_cross", "rsi_oversold"],
                     "total_tickers_screened": 10,
                     "tickers_matching": 3,
-                    "results": [],  # Would contain ScreeningResult objects
+                    "results": [],
                     "top_picks": ["TSLA", "PLTR", "NVDA"],
                     "summary": "Found 3 of 10 tickers meeting criteria. Top signal: TSLA with golden cross and oversold RSI.",
                 }
@@ -343,8 +334,8 @@ class PortfolioScreeningOutput(BaseModel):
     }
 
 
-# Type exports
 __all__ = [
+    "SignalStrength",
     "PatternType",
     "ScreeningCriteria",
     "TechnicalSignal",

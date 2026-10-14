@@ -30,20 +30,47 @@ Author: Finance Guru™ Development Team
 Created: 2025-10-13
 """
 
+import sys
+from collections import Counter
 from datetime import date
+from typing import assert_never
 
 import pandas as pd
 
-# Import existing momentum and MA calculators
 from src.models.momentum_inputs import MomentumConfig, MomentumDataInput
 from src.models.screener_inputs import (
     PatternType,
     PortfolioScreeningOutput,
     ScreeningCriteria,
     ScreeningResult,
+    SignalStrength,
     TechnicalSignal,
 )
 from src.utils.momentum import MomentumIndicators
+
+_BREAKOUT_FACTOR = 1.01
+_BREAKDOWN_FACTOR = 0.99
+
+_SIGNAL_POINTS: dict[SignalStrength, float] = {
+    "strong": 3.0,
+    "moderate": 2.0,
+    "weak": 1.0,
+}
+
+_MIN_SIGNALS_TO_MATCH: dict[SignalStrength, int] = {
+    "strong": 1,
+    "moderate": 2,
+    "weak": 3,
+}
+
+
+def _momentum_input(df: pd.DataFrame) -> MomentumDataInput:
+    """Wrap a screener price frame as close-only momentum input."""
+    return MomentumDataInput(
+        ticker="TEMP",
+        close=df["price"].tolist(),
+        dates=df.index.tolist(),
+    )
 
 
 class TechnicalScreener:
@@ -86,13 +113,7 @@ class TechnicalScreener:
         """
         self.criteria = criteria
 
-        # Create momentum calculator
-        self.momentum_config = MomentumConfig(
-            rsi_period=14,  # Standard RSI period
-            macd_fast=12,
-            macd_slow=26,
-            macd_signal=9,
-        )
+        self.momentum_config = MomentumConfig()
         self.momentum_calc = MomentumIndicators(self.momentum_config)
 
     def screen_ticker(
@@ -118,7 +139,6 @@ class TechnicalScreener:
         Each pattern match generates a TechnicalSignal with a strength rating.
         The overall score is the sum of all signal strengths.
         """
-        # Convert to pandas for easier analysis
         df = pd.DataFrame(
             {
                 "date": dates,
@@ -129,29 +149,22 @@ class TechnicalScreener:
             df["volume"] = volumes
         df = df.set_index("date")
 
-        # Initialize signals list
         signals: list[TechnicalSignal] = []
 
-        # Check each pattern in criteria
         for pattern in self.criteria.patterns:
             signal = self._detect_pattern(ticker, pattern, df)
             if signal:
                 signals.append(signal)
 
-        # Calculate score
         score = self._calculate_score(signals)
 
-        # Determine if matches criteria (needs at least 1 strong or 2 moderate signals)
-        matches = self._matches_criteria(signals)
+        matches = self._meets_criteria(signals)
 
-        # Generate recommendation
         recommendation, confidence = self._generate_recommendation(signals, score)
 
-        # Get current metrics
         current_price = float(df["price"].iloc[-1])
         current_rsi = self._get_current_rsi(df)
 
-        # Generate notes
         notes = self._generate_notes(signals, df)
 
         return ScreeningResult(
@@ -160,7 +173,6 @@ class TechnicalScreener:
             matches_criteria=matches,
             signals=signals,
             score=score,
-            rank=None,  # Will be set when ranking multiple tickers
             current_price=current_price,
             current_rsi=current_rsi,
             recommendation=recommendation,
@@ -186,30 +198,23 @@ class TechnicalScreener:
         """
         results: list[ScreeningResult] = []
 
-        # Screen each ticker
         for ticker, (prices, dates, volumes) in tickers_data.items():
             try:
                 result = self.screen_ticker(ticker, prices, dates, volumes)
                 results.append(result)
             except Exception as e:
-                # Skip tickers that fail to screen
                 print(f"Warning: Skipping {ticker} - {e}")
                 continue
 
-        # Sort by score (descending)
         results.sort(key=lambda r: r.score, reverse=True)
 
-        # Assign ranks
         for rank, result in enumerate(results, start=1):
             result.rank = rank
 
-        # Count matching
         matching_count = sum(1 for r in results if r.matches_criteria)
 
-        # Get top picks (top 5 or fewer)
         top_picks = [r.ticker for r in results[:5] if r.matches_criteria]
 
-        # Generate summary
         summary = self._generate_summary(results, matching_count)
 
         return PortfolioScreeningOutput(
@@ -236,29 +241,26 @@ class TechnicalScreener:
         Returns None if pattern not detected.
         """
         try:
-            if pattern == PatternType.GOLDEN_CROSS:
-                return self._detect_golden_cross(df)
-            elif pattern == PatternType.DEATH_CROSS:
-                return self._detect_death_cross(df)
-            elif pattern == PatternType.RSI_OVERSOLD:
-                return self._detect_rsi_oversold(df)
-            elif pattern == PatternType.RSI_OVERBOUGHT:
-                return self._detect_rsi_overbought(df)
-            elif pattern == PatternType.MACD_BULLISH:
-                return self._detect_macd_bullish(df)
-            elif pattern == PatternType.MACD_BEARISH:
-                return self._detect_macd_bearish(df)
-            elif pattern == PatternType.BREAKOUT:
-                return self._detect_breakout(df)
-            elif pattern == PatternType.BREAKDOWN:
-                return self._detect_breakdown(df)
-            else:
-                return None
-        except Exception as e:
-            # If detection fails, log for debugging (in production, would use logging module)
-            # For now, silently skip failed patterns but allow non-failing ones to proceed
-            import sys
-
+            match pattern:
+                case PatternType.GOLDEN_CROSS:
+                    return self._detect_golden_cross(df)
+                case PatternType.DEATH_CROSS:
+                    return self._detect_death_cross(df)
+                case PatternType.RSI_OVERSOLD:
+                    return self._detect_rsi_oversold(df)
+                case PatternType.RSI_OVERBOUGHT:
+                    return self._detect_rsi_overbought(df)
+                case PatternType.MACD_BULLISH:
+                    return self._detect_macd_bullish(df)
+                case PatternType.MACD_BEARISH:
+                    return self._detect_macd_bearish(df)
+                case PatternType.BREAKOUT:
+                    return self._detect_breakout(df)
+                case PatternType.BREAKDOWN:
+                    return self._detect_breakdown(df)
+                case _:
+                    assert_never(pattern)
+        except ValueError as e:
             print(
                 f"⚠️  Pattern detection failed for {pattern.value}: {e}", file=sys.stderr
             )
@@ -273,25 +275,20 @@ class TechnicalScreener:
         if len(df) < 200:
             return None
 
-        # Calculate moving averages
         ma50 = df["price"].rolling(window=self.criteria.ma_fast).mean()
         ma200 = df["price"].rolling(window=self.criteria.ma_slow).mean()
 
-        # Check for recent crossover (within last 10 days)
         recent_df = df.iloc[-10:]
         recent_ma50 = ma50.iloc[-10:]
         recent_ma200 = ma200.iloc[-10:]
 
-        # Look for crossover: MA50 was below MA200, now above
         for i in range(1, len(recent_df)):
             prev_below = recent_ma50.iloc[i - 1] < recent_ma200.iloc[i - 1]
             now_above = recent_ma50.iloc[i] > recent_ma200.iloc[i]
 
             if prev_below and now_above:
-                # Golden cross detected!
                 crossover_date = recent_df.index[i]
 
-                # Determine strength based on how decisive the cross was
                 separation = abs(recent_ma50.iloc[i] - recent_ma200.iloc[i])
                 avg_price = df["price"].mean()
                 separation_pct = separation / avg_price
@@ -305,7 +302,7 @@ class TechnicalScreener:
 
                 return TechnicalSignal(
                     signal_type=PatternType.GOLDEN_CROSS,
-                    strength=strength,  # type: ignore
+                    strength=strength,
                     description=f"Golden Cross: {self.criteria.ma_fast}MA crossed above {self.criteria.ma_slow}MA",
                     date_detected=crossover_date,
                     value=float(separation_pct),
@@ -344,7 +341,7 @@ class TechnicalScreener:
 
                 return TechnicalSignal(
                     signal_type=PatternType.DEATH_CROSS,
-                    strength=strength,  # type: ignore
+                    strength=strength,
                     description=f"Death Cross: {self.criteria.ma_fast}MA crossed below {self.criteria.ma_slow}MA",
                     date_detected=crossover_date,
                     value=float(separation_pct),
@@ -354,22 +351,16 @@ class TechnicalScreener:
 
     def _detect_rsi_oversold(self, df: pd.DataFrame) -> TechnicalSignal | None:
         """Detect RSI oversold condition."""
-        if len(df) < 14:
+        if len(df) < self.momentum_config.rsi_period:
             return None
 
-        # Calculate RSI using existing momentum calculator
+        momentum_data = _momentum_input(df)
         try:
-            momentum_data = MomentumDataInput(
-                ticker="TEMP",
-                prices=df["price"].tolist(),
-                dates=df.index.tolist(),
-            )
             rsi_result = self.momentum_calc.calculate_rsi(momentum_data)
 
             current_rsi = rsi_result.current_rsi
 
             if current_rsi < self.criteria.rsi_oversold:
-                # Determine strength based on how oversold
                 if current_rsi < 20:
                     strength = "strong"
                 elif current_rsi < 25:
@@ -379,27 +370,23 @@ class TechnicalScreener:
 
                 return TechnicalSignal(
                     signal_type=PatternType.RSI_OVERSOLD,
-                    strength=strength,  # type: ignore
+                    strength=strength,
                     description=f"RSI Oversold: RSI at {current_rsi:.1f} (below {self.criteria.rsi_oversold})",
                     date_detected=df.index[-1],
                     value=float(current_rsi),
                 )
-        except Exception:
+        except ValueError:
             pass
 
         return None
 
     def _detect_rsi_overbought(self, df: pd.DataFrame) -> TechnicalSignal | None:
         """Detect RSI overbought condition."""
-        if len(df) < 14:
+        if len(df) < self.momentum_config.rsi_period:
             return None
 
+        momentum_data = _momentum_input(df)
         try:
-            momentum_data = MomentumDataInput(
-                ticker="TEMP",
-                prices=df["price"].tolist(),
-                dates=df.index.tolist(),
-            )
             rsi_result = self.momentum_calc.calculate_rsi(momentum_data)
             current_rsi = rsi_result.current_rsi
 
@@ -413,30 +400,25 @@ class TechnicalScreener:
 
                 return TechnicalSignal(
                     signal_type=PatternType.RSI_OVERBOUGHT,
-                    strength=strength,  # type: ignore
+                    strength=strength,
                     description=f"RSI Overbought: RSI at {current_rsi:.1f} (above {self.criteria.rsi_overbought})",
                     date_detected=df.index[-1],
                     value=float(current_rsi),
                 )
-        except Exception:
+        except ValueError:
             pass
 
         return None
 
     def _detect_macd_bullish(self, df: pd.DataFrame) -> TechnicalSignal | None:
         """Detect MACD bullish crossover."""
-        if len(df) < 26:
+        if len(df) < self.momentum_config.macd_slow:
             return None
 
+        momentum_data = _momentum_input(df)
         try:
-            momentum_data = MomentumDataInput(
-                ticker="TEMP",
-                prices=df["price"].tolist(),
-                dates=df.index.tolist(),
-            )
             macd_result = self.momentum_calc.calculate_macd(momentum_data)
 
-            # Check if MACD line recently crossed above signal line
             if (
                 macd_result.signal == "bullish"
                 or macd_result.signal == "strong_bullish"
@@ -447,27 +429,23 @@ class TechnicalScreener:
 
                 return TechnicalSignal(
                     signal_type=PatternType.MACD_BULLISH,
-                    strength=strength,  # type: ignore
+                    strength=strength,
                     description="MACD Bullish: MACD line crossed above signal line",
                     date_detected=df.index[-1],
                     value=float(macd_result.macd_line),
                 )
-        except Exception:
+        except ValueError:
             pass
 
         return None
 
     def _detect_macd_bearish(self, df: pd.DataFrame) -> TechnicalSignal | None:
         """Detect MACD bearish crossover."""
-        if len(df) < 26:
+        if len(df) < self.momentum_config.macd_slow:
             return None
 
+        momentum_data = _momentum_input(df)
         try:
-            momentum_data = MomentumDataInput(
-                ticker="TEMP",
-                prices=df["price"].tolist(),
-                dates=df.index.tolist(),
-            )
             macd_result = self.momentum_calc.calculate_macd(momentum_data)
 
             if (
@@ -480,12 +458,12 @@ class TechnicalScreener:
 
                 return TechnicalSignal(
                     signal_type=PatternType.MACD_BEARISH,
-                    strength=strength,  # type: ignore
+                    strength=strength,
                     description="MACD Bearish: MACD line crossed below signal line",
                     date_detected=df.index[-1],
                     value=float(macd_result.macd_line),
                 )
-        except Exception:
+        except ValueError:
             pass
 
         return None
@@ -495,17 +473,15 @@ class TechnicalScreener:
         if "volume" not in df.columns or len(df) < 20:
             return None
 
-        # Calculate 20-day high and average volume
         high_20d = df["price"].rolling(window=20).max()
         avg_volume = df["volume"].rolling(window=20).mean()
 
         current_price = df["price"].iloc[-1]
-        recent_high = high_20d.iloc[-2]  # High before today
+        recent_high = high_20d.iloc[-2]
         current_volume = df["volume"].iloc[-1]
         recent_avg_volume = avg_volume.iloc[-1]
 
-        # Check if price broke above recent high with volume
-        if current_price > recent_high * 1.01:  # 1% above high
+        if current_price > recent_high * _BREAKOUT_FACTOR:
             volume_multiplier = current_volume / recent_avg_volume
 
             if volume_multiplier > self.criteria.volume_multiplier:
@@ -518,7 +494,7 @@ class TechnicalScreener:
 
                 return TechnicalSignal(
                     signal_type=PatternType.BREAKOUT,
-                    strength=strength,  # type: ignore
+                    strength=strength,
                     description=f"Breakout: Price broke above 20-day high with {volume_multiplier:.1f}x volume",
                     date_detected=df.index[-1],
                     value=float(volume_multiplier),
@@ -539,7 +515,7 @@ class TechnicalScreener:
         current_volume = df["volume"].iloc[-1]
         recent_avg_volume = avg_volume.iloc[-1]
 
-        if current_price < recent_low * 0.99:  # 1% below low
+        if current_price < recent_low * _BREAKDOWN_FACTOR:
             volume_multiplier = current_volume / recent_avg_volume
 
             if volume_multiplier > self.criteria.volume_multiplier:
@@ -552,7 +528,7 @@ class TechnicalScreener:
 
                 return TechnicalSignal(
                     signal_type=PatternType.BREAKDOWN,
-                    strength=strength,  # type: ignore
+                    strength=strength,
                     description=f"Breakdown: Price broke below 20-day low with {volume_multiplier:.1f}x volume",
                     date_detected=df.index[-1],
                     value=float(volume_multiplier),
@@ -562,18 +538,14 @@ class TechnicalScreener:
 
     def _get_current_rsi(self, df: pd.DataFrame) -> float | None:
         """Get current RSI value."""
-        if len(df) < 14:
+        if len(df) < self.momentum_config.rsi_period:
             return None
 
+        momentum_data = _momentum_input(df)
         try:
-            momentum_data = MomentumDataInput(
-                ticker="TEMP",
-                prices=df["price"].tolist(),
-                dates=df.index.tolist(),
-            )
             rsi_result = self.momentum_calc.calculate_rsi(momentum_data)
             return float(rsi_result.current_rsi)
-        except Exception:
+        except ValueError:
             return None
 
     def _calculate_score(self, signals: list[TechnicalSignal]) -> float:
@@ -588,18 +560,10 @@ class TechnicalScreener:
         Higher scores indicate more compelling opportunities.
         A score of 6+ typically indicates multiple strong signals.
         """
-        score = 0.0
-        for signal in signals:
-            if signal.strength == "strong":
-                score += 3.0
-            elif signal.strength == "moderate":
-                score += 2.0
-            else:  # weak
-                score += 1.0
-
+        score = sum(_SIGNAL_POINTS[signal.strength] for signal in signals)
         return score * self.criteria.pattern_weight
 
-    def _matches_criteria(self, signals: list[TechnicalSignal]) -> bool:
+    def _meets_criteria(self, signals: list[TechnicalSignal]) -> bool:
         """Determine if signals meet screening criteria.
 
         CRITERIA FOR MATCH:
@@ -611,14 +575,11 @@ class TechnicalScreener:
         These thresholds balance between finding opportunities
         and avoiding too many false signals.
         """
-        if not signals:
-            return False
-
-        strong_count = sum(1 for s in signals if s.strength == "strong")
-        moderate_count = sum(1 for s in signals if s.strength == "moderate")
-        weak_count = sum(1 for s in signals if s.strength == "weak")
-
-        return (strong_count >= 1) or (moderate_count >= 2) or (weak_count >= 3)
+        counts = Counter(signal.strength for signal in signals)
+        return any(
+            counts[strength] >= minimum
+            for strength, minimum in _MIN_SIGNALS_TO_MATCH.items()
+        )
 
     def _generate_recommendation(
         self, signals: list[TechnicalSignal], score: float
@@ -637,7 +598,6 @@ class TechnicalScreener:
         if not signals:
             return ("hold", 0.5)
 
-        # Count bullish vs bearish signals
         bullish_patterns = {
             PatternType.GOLDEN_CROSS,
             PatternType.RSI_OVERSOLD,
@@ -689,7 +649,6 @@ class TechnicalScreener:
             notes.append("No technical signals detected")
             return notes
 
-        # Group signals by type
         signal_types = [s.signal_type for s in signals]
 
         if (
@@ -730,7 +689,6 @@ class TechnicalScreener:
         )
 
 
-# Type exports
 __all__ = [
     "TechnicalScreener",
 ]

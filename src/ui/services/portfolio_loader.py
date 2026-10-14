@@ -8,13 +8,24 @@ Author: Finance Guru™ Development Team
 Created: 2025-11-17
 """
 
+import math
 from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+from pydantic import ValidationError
 
 from src.config import FinGuruConfig, InstancePaths
 from src.models.dashboard_inputs import HoldingInput, PortfolioSnapshotInput
+
+_FIDELITY_NON_HOLDING_ROWS = frozenset({"pending activity", "pending", "total"})
+
+_NUMBER_NOISE = str.maketrans("", "", "$%+,")
+
+
+def _normalize_fidelity_symbol(raw_symbol: str) -> str:
+    """Strip Fidelity's markers from a symbol, so "SPAXX**" becomes "SPAXX"."""
+    return "".join(c for c in raw_symbol.upper() if c.isalnum())
 
 
 class PortfolioLoader:
@@ -38,84 +49,30 @@ class PortfolioLoader:
         return max(csv_files, key=lambda p: p.stat().st_mtime)
 
     @staticmethod
-    def _parse_currency(value: str | float) -> float:
-        """Parse currency string (e.g., "$64583.53" or "+$935.45") to float.
+    def _parse_number(value: str | float) -> float:
+        """Parse a Fidelity currency or percent cell to a float.
 
-        Handles ERROR, N/A, NaN, and other non-numeric values gracefully.
-
-        Args:
-            value: Currency string or already a float
-
-        Returns:
-            Float value (0.0 for unparseable values)
-        """
-        # Check for NaN first (before isinstance check)
-        if pd.isna(value):
-            return 0.0
-
-        if isinstance(value, (int, float)):
-            # Handle float('nan') case
-            import math
-
-            if math.isnan(value):
-                return 0.0
-            return float(value)
-
-        # Remove $, +, -, commas, and whitespace
-        cleaned = str(value).replace("$", "").replace("+", "").replace(",", "").strip()
-
-        # Handle special non-numeric values
-        if (
-            not cleaned
-            or cleaned == "-"
-            or cleaned.upper() in ["ERROR", "N/A", "NA", "NAN", "--"]
-        ):
-            return 0.0
-
-        try:
-            return float(cleaned)
-        except ValueError:
-            return 0.0
-
-    @staticmethod
-    def _parse_percent(value: str | float) -> float:
-        """Parse percentage string (e.g., "+1.46%" or "-0.10%") to float.
-
-        Handles ERROR, N/A, NaN, and other non-numeric values gracefully.
+        Accepts values such as "$64583.53", "+$935.45", "+1.46%", or a number.
+        Percent values stay in percent units (not divided by 100). Blank,
+        "--", "ERROR", "N/A", and NaN cells parse to 0.0.
 
         Args:
-            value: Percentage string or already a float
+            value: Cell value from the CSV.
 
         Returns:
-            Float percentage value (not divided by 100)
+            Parsed float, or 0.0 when the cell holds no number.
         """
-        # Check for NaN first (before isinstance check)
         if pd.isna(value):
             return 0.0
-
         if isinstance(value, (int, float)):
-            # Handle float('nan') case
-            import math
-
-            if math.isnan(value):
-                return 0.0
             return float(value)
 
-        # Remove %, +, -, commas, and whitespace
-        cleaned = str(value).replace("%", "").replace("+", "").replace(",", "").strip()
-
-        # Handle special non-numeric values
-        if (
-            not cleaned
-            or cleaned == "-"
-            or cleaned.upper() in ["ERROR", "N/A", "NA", "NAN", "--"]
-        ):
-            return 0.0
-
+        cleaned = str(value).translate(_NUMBER_NOISE).strip()
         try:
-            return float(cleaned)
+            number = float(cleaned)
         except ValueError:
             return 0.0
+        return 0.0 if math.isnan(number) else number
 
     @staticmethod
     def parse_portfolio(csv_path: Path) -> PortfolioSnapshotInput:
@@ -132,61 +89,48 @@ class PortfolioLoader:
         """
         try:
             df = pd.read_csv(csv_path)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             raise ValueError(f"Failed to read CSV: {e}") from e
 
-        # Validate columns
         required = ["Symbol", "Current Value", "Today's Gain/Loss Dollar"]
         missing = [col for col in required if col not in df.columns]
         if missing:
             raise ValueError(f"Missing required columns: {missing}")
 
-        # Load layer mappings
         layer_map = FinGuruConfig.load_layers()
         symbol_to_layer = {}
         for layer, symbols in layer_map.items():
             for symbol in symbols:
                 symbol_to_layer[str(symbol).upper()] = layer
 
-        # Parse holdings (Pydantic will validate automatically)
         holdings = []
         for _, row in df.iterrows():
             raw_symbol = str(row["Symbol"]).strip()
             if not raw_symbol or pd.isna(raw_symbol):
                 continue
 
-            # Skip Fidelity metadata rows
-            if raw_symbol.lower() in ["pending activity", "pending", "total"]:
+            if raw_symbol.lower() in _FIDELITY_NON_HOLDING_ROWS:
                 continue
 
-            # Clean symbol: remove special characters, keep only alphanumeric
-            # Some symbols like "SPAXX**" need to be cleaned to "SPAXX"
-            symbol = "".join(c for c in raw_symbol.upper() if c.isalnum())
+            symbol = _normalize_fidelity_symbol(raw_symbol)
 
-            # Skip if symbol is empty after cleaning
             if not symbol:
                 continue
 
-            # Parse values, handling currency and percentage formats
             quantity = (
                 float(row.get("Quantity", 0))
                 if not pd.isna(row.get("Quantity"))
                 else 0.0
             )
-            current_value = PortfolioLoader._parse_currency(row["Current Value"])
-            day_change = PortfolioLoader._parse_currency(
-                row["Today's Gain/Loss Dollar"]
-            )
-            day_change_pct = PortfolioLoader._parse_percent(
+            current_value = PortfolioLoader._parse_number(row["Current Value"])
+            day_change = PortfolioLoader._parse_number(row["Today's Gain/Loss Dollar"])
+            day_change_pct = PortfolioLoader._parse_number(
                 row.get("Today's Gain/Loss Percent", 0)
             )
 
-            # Skip holdings with zero value (cash, etc.)
             if current_value == 0:
                 continue
 
-            # Skip if symbol doesn't pass Pydantic validation (e.g., contains numbers)
-            # We'll catch ValidationError and skip invalid symbols
             try:
                 holdings.append(
                     HoldingInput(
@@ -198,19 +142,16 @@ class PortfolioLoader:
                         layer=symbol_to_layer.get(symbol, "unknown"),
                     )
                 )
-            except Exception:
-                # Skip invalid symbols (e.g., cash positions with numbers)
+            except ValidationError:
                 continue
 
         if not holdings:
             raise ValueError("No valid holdings found in CSV")
 
-        # Calculate totals
         total_value = sum(h.current_value for h in holdings)
         day_change = sum(h.day_change for h in holdings)
         day_change_pct = (day_change / total_value * 100) if total_value else 0.0
 
-        # Pydantic model validates all inputs automatically
         return PortfolioSnapshotInput(
             total_value=total_value,
             day_change=day_change,
@@ -231,6 +172,5 @@ class PortfolioLoader:
             return None
         try:
             return cls.parse_portfolio(csv_path)
-        except Exception:
-            # Return None on parse errors - app will handle gracefully
+        except ValueError:
             return None

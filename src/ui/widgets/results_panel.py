@@ -144,7 +144,6 @@ class ResultsPanel(VerticalScroll):
 
         failed_tools: list[str] = []
 
-        # Momentum
         momentum = results.get("momentum")
         if momentum:
             if momentum.get("ok") and momentum.get("data"):
@@ -152,7 +151,6 @@ class ResultsPanel(VerticalScroll):
             elif momentum.get("error"):
                 failed_tools.append(f"Momentum: {momentum['error']}")
 
-        # Volatility
         volatility = results.get("volatility")
         if volatility:
             if volatility.get("ok") and volatility.get("data"):
@@ -160,7 +158,6 @@ class ResultsPanel(VerticalScroll):
             elif volatility.get("error"):
                 failed_tools.append(f"Volatility: {volatility['error']}")
 
-        # Risk
         risk = results.get("risk")
         if risk:
             if risk.get("ok") and risk.get("data"):
@@ -168,7 +165,6 @@ class ResultsPanel(VerticalScroll):
             elif risk.get("error"):
                 failed_tools.append(f"Risk: {risk['error']}")
 
-        # Moving Averages
         ma = results.get("moving_averages")
         if ma:
             if ma.get("ok") and ma.get("data"):
@@ -228,8 +224,7 @@ class ResultsPanel(VerticalScroll):
                 f"K: {stoch.get('k_value', 0):.2f}, D: {stoch.get('d_value', 0):.2f} {signal_emoji}",
             )
 
-        self.mount(Static(table))
-        self.mount(Static(""))  # Spacer
+        self.mount(Static(table, classes="result-table"))
 
     def _render_volatility(self, data: dict) -> None:
         """Render volatility metrics table."""
@@ -257,8 +252,7 @@ class ResultsPanel(VerticalScroll):
             bb = data["bollinger_bands"]
             table.add_row("Bollinger %B", f"{bb.get('percent_b', 0):.2f}")
 
-        self.mount(Static(table))
-        self.mount(Static(""))  # Spacer
+        self.mount(Static(table, classes="result-table"))
 
     def _render_risk(self, data: dict) -> None:
         """Render risk metrics table."""
@@ -283,8 +277,7 @@ class ResultsPanel(VerticalScroll):
             dd = data.get("max_drawdown", 0)
             table.add_row("Max Drawdown", f"{dd:.2f}%")
 
-        self.mount(Static(table))
-        self.mount(Static(""))  # Spacer
+        self.mount(Static(table, classes="result-table"))
 
     def _render_ma(self, data: dict) -> None:
         """Render moving average analysis table."""
@@ -313,5 +306,4 @@ class ResultsPanel(VerticalScroll):
             )
             table.add_row("Crossover Signal", f"{signal_emoji} {signal}")
 
-        self.mount(Static(table))
-        self.mount(Static(""))  # Spacer
+        self.mount(Static(table, classes="result-table"))

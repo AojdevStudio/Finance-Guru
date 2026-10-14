@@ -21,9 +21,10 @@ from src.utils.onboarding_sections import (
     run_summary_section,
 )
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+
+def _answers(**answers: object) -> list[object]:
+    """Return prompt answers in the order the section asks, named by prompt."""
+    return list(answers.values())
 
 
 def _fresh_state() -> OnboardingState:
@@ -89,7 +90,6 @@ def _prepopulated_state() -> OnboardingState:
         "brightdata_key": None,
         "google_sheets_credentials": None,
     }
-    # Mark all prior sections complete
     for section in [
         SectionName.LIQUID_ASSETS,
         SectionName.INVESTMENTS,
@@ -103,24 +103,18 @@ def _prepopulated_state() -> OnboardingState:
     return state
 
 
-# ---------------------------------------------------------------------------
-# Section 1: Liquid Assets
-# ---------------------------------------------------------------------------
-
-
 class TestLiquidAssetsSection:
     """Test liquid assets section runner."""
 
     def test_collects_all_fields(self, mocker):
         """Section stores total, accounts_count, average_yield, structure."""
         mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
-        # Responses: total, accounts_count, yield, structure
-        mock_text.return_value.ask.side_effect = [
-            "15000",  # total
-            "3",  # accounts_count
-            "4.5",  # average_yield (%)
-            "",  # structure (skip)
-        ]
+        mock_text.return_value.ask.side_effect = _answers(
+            liquid_total="15000",
+            accounts_count="3",
+            average_yield_pct="4.5",
+            account_structure="",
+        )
 
         state = _fresh_state()
         result = run_liquid_assets_section(state)
@@ -128,13 +122,18 @@ class TestLiquidAssetsSection:
         data = result.data[SectionName.LIQUID_ASSETS.value]
         assert data["total"] == 15000.0
         assert data["accounts_count"] == 3
-        assert data["average_yield"] == pytest.approx(0.045)  # decimal
-        assert data["structure"] is None  # empty string -> None
+        assert data["average_yield"] == pytest.approx(0.045)
+        assert data["structure"] is None
 
     def test_marks_section_complete(self, mocker):
         """Section marks liquid_assets as complete."""
         mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
-        mock_text.return_value.ask.side_effect = ["15000", "3", "4.5", ""]
+        mock_text.return_value.ask.side_effect = _answers(
+            liquid_total="15000",
+            accounts_count="3",
+            average_yield_pct="4.5",
+            account_structure="",
+        )
 
         state = _fresh_state()
         result = run_liquid_assets_section(state)
@@ -144,23 +143,18 @@ class TestLiquidAssetsSection:
     def test_with_structure(self, mocker):
         """Section stores structure when provided."""
         mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
-        mock_text.return_value.ask.side_effect = [
-            "25000",
-            "2",
-            "3.0",
-            "1 checking, 1 HYSA",
-        ]
+        mock_text.return_value.ask.side_effect = _answers(
+            liquid_total="25000",
+            accounts_count="2",
+            average_yield_pct="3.0",
+            account_structure="1 checking, 1 HYSA",
+        )
 
         state = _fresh_state()
         result = run_liquid_assets_section(state)
 
         data = result.data[SectionName.LIQUID_ASSETS.value]
         assert data["structure"] == "1 checking, 1 HYSA"
-
-
-# ---------------------------------------------------------------------------
-# Section 2: Investments
-# ---------------------------------------------------------------------------
 
 
 class TestInvestmentsSection:
@@ -172,21 +166,18 @@ class TestInvestmentsSection:
         mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
         mock_select = mocker.patch("src.utils.onboarding_sections.questionary.select")
 
-        # text: total_value, brokerage, retirement_value, sheets_id, account_num
-        mock_text.return_value.ask.side_effect = [
-            "100000",  # total_value
-            "Fidelity",  # brokerage
-            "50000",  # retirement_value
-            "",  # google_sheets_id (skip)
-            "",  # account_number (skip)
-        ]
-        # confirm: has_retirement
+        mock_text.return_value.ask.side_effect = _answers(
+            portfolio_total="100000",
+            brokerage="Fidelity",
+            retirement_total="50000",
+            google_sheets_id="",
+            account_last_four="",
+        )
         mock_confirm.return_value.ask.return_value = True
-        # select: allocation_strategy, risk_tolerance (called twice)
-        mock_select.return_value.ask.side_effect = [
-            "aggressive_growth",  # allocation_strategy
-            "aggressive",  # risk_tolerance
-        ]
+        mock_select.return_value.ask.side_effect = _answers(
+            allocation_strategy="aggressive_growth",
+            risk_tolerance="aggressive",
+        )
 
         state = _fresh_state()
         result = run_investments_section(state)
@@ -196,15 +187,9 @@ class TestInvestmentsSection:
         assert data["brokerage"] == "Fidelity"
         assert data["has_retirement"] is True
         assert data["retirement_value"] == 50000.0
-        # Enum fields stored as strings (NOT enum instances)
         assert data["allocation_strategy"] == "aggressive_growth"
         assert data["risk_tolerance"] == "aggressive"
         assert result.is_section_complete(SectionName.INVESTMENTS)
-
-
-# ---------------------------------------------------------------------------
-# Section 3: Cash Flow
-# ---------------------------------------------------------------------------
 
 
 class TestCashFlowSection:
@@ -213,13 +198,13 @@ class TestCashFlowSection:
     def test_collects_five_fields(self, mocker):
         """Section stores all 5 cash flow fields correctly."""
         mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
-        mock_text.return_value.ask.side_effect = [
-            "8000",  # monthly_income
-            "3000",  # fixed_expenses
-            "2000",  # variable_expenses
-            "1000",  # current_savings
-            "2000",  # investment_capacity
-        ]
+        mock_text.return_value.ask.side_effect = _answers(
+            monthly_income="8000",
+            fixed_expenses="3000",
+            variable_expenses="2000",
+            current_savings="1000",
+            investment_capacity="2000",
+        )
 
         state = _fresh_state()
         result = run_cash_flow_section(state)
@@ -233,11 +218,6 @@ class TestCashFlowSection:
         assert result.is_section_complete(SectionName.CASH_FLOW)
 
 
-# ---------------------------------------------------------------------------
-# Section 5: Preferences
-# ---------------------------------------------------------------------------
-
-
 class TestPreferencesSection:
     """Test preferences section runner."""
 
@@ -249,30 +229,21 @@ class TestPreferencesSection:
             "src.utils.onboarding_sections.questionary.checkbox"
         )
 
-        # select: investment_philosophy
         mock_select.return_value.ask.return_value = "growth"
-        # checkbox: focus_areas
         mock_checkbox.return_value.ask.return_value = [
             "Dividend income",
             "Growth investing",
         ]
-        # text: emergency_fund_months
         mock_text.return_value.ask.return_value = "6"
 
         state = _fresh_state()
         result = run_preferences_section(state)
 
         data = result.data[SectionName.PREFERENCES.value]
-        # Philosophy stored as string (NOT enum instance)
         assert data["investment_philosophy"] == "growth"
         assert data["focus_areas"] == ["Dividend income", "Growth investing"]
         assert data["emergency_fund_months"] == 6
         assert result.is_section_complete(SectionName.PREFERENCES)
-
-
-# ---------------------------------------------------------------------------
-# Section 7: Environment Setup
-# ---------------------------------------------------------------------------
 
 
 class TestEnvSetupSection:
@@ -283,13 +254,9 @@ class TestEnvSetupSection:
         mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
         mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
 
-        # text: user_name, language, google_sheets_credentials
-        mock_text.return_value.ask.side_effect = [
-            "Alex",  # user_name
-            "English",  # language
-            "",  # google_sheets_credentials (skip)
-        ]
-        # confirm: has_alphavantage, has_brightdata (both False)
+        mock_text.return_value.ask.side_effect = _answers(
+            user_name="Alex", language="English", google_sheets_credentials=""
+        )
         mock_confirm.return_value.ask.return_value = False
 
         state = _fresh_state()
@@ -309,15 +276,13 @@ class TestEnvSetupSection:
         mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
         mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
 
-        # text: user_name, language, av_key, bd_key, gs_creds
-        mock_text.return_value.ask.side_effect = [
-            "Alex",
-            "English",
-            "my-av-key-123",  # alphavantage_key
-            "my-bd-key-456",  # brightdata_key
-            "/path/to/creds",  # google_sheets_credentials
-        ]
-        # confirm: has_alphavantage=True, has_brightdata=True
+        mock_text.return_value.ask.side_effect = _answers(
+            user_name="Alex",
+            language="English",
+            alphavantage_key="my-av-key-123",
+            brightdata_key="my-bd-key-456",
+            google_sheets_credentials="/path/to/creds",
+        )
         mock_confirm.return_value.ask.return_value = True
 
         state = _fresh_state()
@@ -329,11 +294,6 @@ class TestEnvSetupSection:
         assert data["has_brightdata"] is True
         assert data["brightdata_key"] == "my-bd-key-456"
         assert data["google_sheets_credentials"] == "/path/to/creds"
-
-
-# ---------------------------------------------------------------------------
-# Section 8: Summary
-# ---------------------------------------------------------------------------
 
 
 class TestSummarySection:
@@ -353,8 +313,9 @@ class TestSummarySection:
     def test_declined_no_restart(self, mocker):
         """Summary declined without restart stores confirmed=False."""
         mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
-        # First call: confirm save (False), second call: restart (False)
-        mock_confirm.return_value.ask.side_effect = [False, False]
+        mock_confirm.return_value.ask.side_effect = _answers(
+            save_profile=False, restart=False
+        )
 
         state = _prepopulated_state()
         result = run_summary_section(state)
@@ -364,12 +325,12 @@ class TestSummarySection:
     def test_declined_with_restart(self, mocker):
         """Summary declined with restart clears state."""
         mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
-        # First call: confirm save (False), second call: restart (True)
-        mock_confirm.return_value.ask.side_effect = [False, True]
+        mock_confirm.return_value.ask.side_effect = _answers(
+            save_profile=False, restart=True
+        )
 
         state = _prepopulated_state()
         result = run_summary_section(state)
 
-        # State should be cleared on restart
         assert len(result.completed_sections) == 0
         assert result.current_section == SectionName.LIQUID_ASSETS

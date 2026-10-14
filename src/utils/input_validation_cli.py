@@ -58,11 +58,9 @@ def print_validation_summary(result, output_format: str = "text") -> None:
         output_format: "text" or "json"
     """
     if output_format == "json":
-        # Convert to dict for JSON serialization
         print(json.dumps(result.model_dump(), indent=2, default=str))
         return
 
-    # Text output for humans and Claude agents
     print(f"\n{'=' * 70}")
     print(f"DATA VALIDATION REPORT: {result.ticker}")
     print(f"{'=' * 70}")
@@ -70,13 +68,11 @@ def print_validation_summary(result, output_format: str = "text") -> None:
     print(f"Total Data Points: {result.total_points}")
     print()
 
-    # Overall status
     status_symbol = "✓" if result.is_valid else "✗"
     status_text = "VALID" if result.is_valid else "INVALID"
     print(f"Overall Status: {status_symbol} {status_text}")
     print()
 
-    # Quality scores
     print("Quality Scores:")
     print(
         f"  Completeness:  {result.completeness_score:>6.1%} ({_score_grade(result.completeness_score)})"
@@ -89,7 +85,6 @@ def print_validation_summary(result, output_format: str = "text") -> None:
     )
     print()
 
-    # Issue summary
     print("Issue Summary:")
     print(f"  Missing Data:     {result.missing_count:>4} points")
     print(f"  Outliers:         {result.outlier_count:>4} points")
@@ -97,14 +92,12 @@ def print_validation_summary(result, output_format: str = "text") -> None:
     print(f"  Potential Splits: {result.potential_splits:>4} events")
     print()
 
-    # Warnings
     if result.warnings:
         print("Warnings:")
         for warning in result.warnings:
             print(f"  ⚠  {warning}")
         print()
 
-    # Detailed anomalies (show top 10)
     if result.anomalies:
         print(f"Anomalies Detected ({len(result.anomalies)} total):")
         display_anomalies = result.anomalies[:10]
@@ -122,7 +115,6 @@ def print_validation_summary(result, output_format: str = "text") -> None:
             print(f"\n  ... and {len(result.anomalies) - 10} more anomalies")
         print()
 
-    # Recommendations
     print("Recommendations:")
     for rec in result.recommendations:
         print(f"  {rec}")
@@ -180,7 +172,6 @@ def validate_ticker(
         end_date = date.today()
         start_date = end_date - timedelta(days=days)
 
-        # Get historical data
         data = yf.Ticker(ticker).history(
             start=start_date.strftime("%Y-%m-%d"),
             end=end_date.strftime("%Y-%m-%d"),
@@ -190,7 +181,6 @@ def validate_ticker(
             print(f"Error: Insufficient data for {ticker}", file=sys.stderr)
             return 1
 
-        # Convert to PriceSeriesInput
         price_series = PriceSeriesInput(
             ticker=ticker,
             prices=data["Close"].tolist(),
@@ -204,7 +194,6 @@ def validate_ticker(
         print(f"Error fetching data for {ticker}: {e}", file=sys.stderr)
         return 1
 
-    # Create validation config
     config = ValidationConfig(
         outlier_method=OutlierMethod(outlier_method),
         outlier_threshold=outlier_threshold,
@@ -214,14 +203,11 @@ def validate_ticker(
         split_threshold=split_threshold,
     )
 
-    # Run validation
     validator = InputValidator(config)
     result = validator.validate_price_series(price_series)
 
-    # Print results
     print_validation_summary(result, output_format)
 
-    # Return exit code
     return 0 if result.is_valid else 1
 
 
@@ -255,12 +241,10 @@ Agent Use Cases:
         """,
     )
 
-    # Required arguments
     parser.add_argument(
         "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
     )
 
-    # Optional arguments
     parser.add_argument(
         "--days",
         type=int,
@@ -318,7 +302,6 @@ Agent Use Cases:
 
     args = parser.parse_args()
 
-    # Validate ticker
     exit_code = validate_ticker(
         ticker=args.ticker.upper(),
         days=args.days,

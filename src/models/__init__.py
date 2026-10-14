@@ -87,6 +87,7 @@ from src.models.risk_inputs import (
     RiskCalculationConfig,
     RiskMetricsOutput,
 )
+from src.models.ticker import Ticker
 from src.models.total_return_inputs import (
     DividendRecord,
     TickerReturn,
@@ -103,11 +104,10 @@ from src.models.volatility_inputs import (
 )
 
 __all__ = [
-    # Risk models
+    "Ticker",
     "PriceDataInput",
     "RiskCalculationConfig",
     "RiskMetricsOutput",
-    # Momentum models
     "MomentumDataInput",
     "MomentumConfig",
     "RSIOutput",
@@ -116,7 +116,6 @@ __all__ = [
     "WilliamsROutput",
     "ROCOutput",
     "AllMomentumOutput",
-    # Volatility models
     "VolatilityDataInput",
     "VolatilityConfig",
     "BollingerBandsOutput",
@@ -124,35 +123,29 @@ __all__ = [
     "HistoricalVolatilityOutput",
     "KeltnerChannelsOutput",
     "VolatilityMetricsOutput",
-    # Correlation models
     "PortfolioPriceData",
     "CorrelationConfig",
     "CorrelationMatrixOutput",
     "CovarianceMatrixOutput",
     "RollingCorrelationOutput",
     "PortfolioCorrelationOutput",
-    # Backtest models
     "BacktestConfig",
     "TradeSignal",
     "TradeExecution",
     "BacktestPerformanceMetrics",
     "BacktestResults",
-    # Moving average models
     "MovingAverageDataInput",
     "MovingAverageConfig",
     "MovingAverageOutput",
     "CrossoverOutput",
     "MovingAverageAnalysis",
-    # Portfolio optimization models
     "PortfolioDataInput",
     "OptimizationConfig",
     "OptimizationOutput",
     "EfficientFrontierOutput",
-    # ITC Risk models
     "ITCRiskRequest",
     "RiskBand",
     "ITCRiskResponse",
-    # Options models
     "OptionInput",
     "BlackScholesInput",
     "GreeksOutput",
@@ -161,15 +154,12 @@ __all__ = [
     "PutCallParityInput",
     "OptionContractData",
     "OptionsChainOutput",
-    # Hedging models
     "HedgePosition",
     "RollSuggestion",
     "HedgeSizeRequest",
-    # Total return models
     "TotalReturnInput",
     "DividendRecord",
     "TickerReturn",
-    # Hedge comparison models
     "ScenarioInput",
     "SQQQResult",
     "PutResult",

@@ -20,10 +20,6 @@ from src.models.volatility_inputs import (
 )
 from src.utils.volatility import VolatilityCalculator, calculate_volatility
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
 
 def _make_dates(n: int) -> list[date]:
     start = date(2025, 1, 2)
@@ -44,12 +40,11 @@ def _make_vol_data(
         closes.append(closes[-1] + trend + rng.normal(0, daily_vol))
     closes = [max(c, 1.0) for c in closes]
 
-    # Generate realistic high/low around close
     high = [c + abs(rng.normal(0, daily_vol * 0.5)) for c in closes]
     low = [c - abs(rng.normal(0, daily_vol * 0.5)) for c in closes]
     high = [max(h, c) for h, c in zip(high, closes, strict=True)]
     low = [min(lo, c) for lo, c in zip(low, closes, strict=True)]
-    low = [max(lo, 0.01) for lo in low]  # keep positive
+    low = [max(lo, 0.01) for lo in low]
 
     return VolatilityDataInput(
         ticker="TEST",
@@ -73,11 +68,6 @@ def vol_data() -> VolatilityDataInput:
 @pytest.fixture
 def calculator(config: VolatilityConfig) -> VolatilityCalculator:
     return VolatilityCalculator(config)
-
-
-# ---------------------------------------------------------------------------
-# Bollinger Bands
-# ---------------------------------------------------------------------------
 
 
 class TestBollingerBands:
@@ -106,7 +96,6 @@ class TestBollingerBands:
         self, calculator: VolatilityCalculator, vol_data: VolatilityDataInput
     ):
         bb = calculator.calculate_all_metrics(vol_data).bollinger_bands
-        # %B can be outside [0,1] if price is outside bands, but should be finite
         assert np.isfinite(bb.percent_b)
 
     def test_wider_std_gives_wider_bands(self, vol_data: VolatilityDataInput):
@@ -116,11 +105,6 @@ class TestBollingerBands:
         bb_narrow = narrow.calculate_all_metrics(vol_data).bollinger_bands
         bb_wide = wide.calculate_all_metrics(vol_data).bollinger_bands
         assert bb_wide.bandwidth > bb_narrow.bandwidth
-
-
-# ---------------------------------------------------------------------------
-# ATR
-# ---------------------------------------------------------------------------
 
 
 class TestATR:
@@ -147,11 +131,6 @@ class TestATR:
         atr_low = calc.calculate_all_metrics(low_vol).atr.atr
         atr_high = calc.calculate_all_metrics(high_vol).atr.atr
         assert atr_high > atr_low
-
-
-# ---------------------------------------------------------------------------
-# Historical Volatility
-# ---------------------------------------------------------------------------
 
 
 class TestHistoricalVolatility:
@@ -185,11 +164,6 @@ class TestHistoricalVolatility:
         assert hvol_high > hvol_low
 
 
-# ---------------------------------------------------------------------------
-# Keltner Channels
-# ---------------------------------------------------------------------------
-
-
 class TestKeltnerChannels:
     """Keltner Channels tests."""
 
@@ -204,11 +178,6 @@ class TestKeltnerChannels:
     ):
         kc = calculator.calculate_all_metrics(vol_data).keltner_channels
         assert kc.upper_channel > kc.middle_line > kc.lower_channel
-
-
-# ---------------------------------------------------------------------------
-# Volatility Regime
-# ---------------------------------------------------------------------------
 
 
 class TestVolatilityRegime:
@@ -235,11 +204,6 @@ class TestVolatilityRegime:
         assert result.volatility_regime in ("high", "extreme")
 
 
-# ---------------------------------------------------------------------------
-# Full metrics output
-# ---------------------------------------------------------------------------
-
-
 class TestFullMetricsOutput:
     """Tests for calculate_all_metrics."""
 
@@ -256,11 +220,6 @@ class TestFullMetricsOutput:
     ):
         result = calculator.calculate_all_metrics(vol_data)
         assert result.calculation_date == vol_data.dates[-1]
-
-
-# ---------------------------------------------------------------------------
-# Convenience function
-# ---------------------------------------------------------------------------
 
 
 class TestConvenienceFunction:

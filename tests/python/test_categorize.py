@@ -12,6 +12,7 @@ import pytest
 
 from src.integrations.simplefin.categorize import (
     BUSINESS_CATEGORIES,
+    CATEGORIES,
     CATEGORY_PATTERNS,
     NON_SPEND_CATEGORIES,
     MerchantRulesError,
@@ -107,6 +108,9 @@ class TestCardFees:
     )
     def test_fees_are_categorized(self, memo: str) -> None:
         assert categorize_expense(memo, -895.00) == "Fees & Interest"
+
+    def test_adj_redist_memo_is_a_fee(self) -> None:
+        assert categorize_expense("ADJ REDIST", -12.50) == "Fees & Interest"
 
 
 class TestExemptions:
@@ -463,15 +467,14 @@ class TestMerchantRules:
             "Groceries:\n  - Corner Market\nFamily Care:\n  - little sprouts\n"
         )
         merged = merge_patterns(CATEGORY_PATTERNS, load_merchant_rules(rules))
-        assert list(merged) == list(CATEGORY_PATTERNS)
-        assert merged["Groceries"][-1] == "corner market"
+        assert [category for category, _ in merged] == list(CATEGORIES)
+        assert dict(merged)["Groceries"][-1] == "corner market"
         assert (
             categorize_expense("CORNER MARKET #12", -40.00, None, merged) == "Groceries"
         )
         assert (
             categorize_expense("LITTLE SPROUTS", -40.00, None, merged) == "Family Care"
         )
-        # The public table alone still knows nothing about the household.
         assert categorize_expense("LITTLE SPROUTS", -40.00, None) == "Uncategorized"
 
     def test_public_table_order_still_decides_ties(self, tmp_path) -> None:
@@ -518,4 +521,4 @@ def test_category_rules_doc_mirrors_the_public_table() -> None:
     for block in listed.split("### ")[1:]:
         heading, _, body = block.partition("\n")
         documented[heading.strip()] = tuple(re.findall(r"`([^`]+)`", body))
-    assert documented == CATEGORY_PATTERNS
+    assert tuple(documented.items()) == CATEGORY_PATTERNS

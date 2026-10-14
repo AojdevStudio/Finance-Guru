@@ -17,10 +17,6 @@ from src.models.moving_avg_inputs import (
 )
 from src.utils.moving_averages import MovingAverageCalculator, calculate_moving_average
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
 
 def _make_dates(n: int) -> list[date]:
     start = date(2024, 1, 2)
@@ -53,25 +49,23 @@ def ma_data() -> MovingAverageDataInput:
     return _make_ma_data()
 
 
-# ---------------------------------------------------------------------------
-# SMA
-# ---------------------------------------------------------------------------
-
-
 class TestSMA:
     """Simple Moving Average tests."""
 
     def test_sma_known_answer(self):
-        """SMA of [1,2,3,4,5] with period 3 = [NaN, NaN, 2, 3, 4]."""
+        """Each SMA value is the plain mean of the trailing window."""
         import pandas as pd
 
-        prices = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0])
+        values = [1.0, 2.0, 3.0, 4.0, 5.0]
+        window = 3
         config = MovingAverageConfig(ma_type="SMA", period=5)
         calc = MovingAverageCalculator(config)
-        sma = calc.calculate_sma(prices, 3)
-        assert sma.iloc[2] == pytest.approx(2.0)
-        assert sma.iloc[3] == pytest.approx(3.0)
-        assert sma.iloc[4] == pytest.approx(4.0)
+        sma = calc.calculate_sma(pd.Series(values), window)
+        expected = [
+            sum(values[end - window + 1 : end + 1]) / window
+            for end in range(window - 1, len(values))
+        ]
+        assert sma.iloc[window - 1 :].tolist() == pytest.approx(expected)
 
     def test_sma_output_type(self, ma_data: MovingAverageDataInput):
         config = MovingAverageConfig(ma_type="SMA", period=20)
@@ -94,11 +88,6 @@ class TestSMA:
         assert np.isfinite(result.current_value)
 
 
-# ---------------------------------------------------------------------------
-# EMA
-# ---------------------------------------------------------------------------
-
-
 class TestEMA:
     """Exponential Moving Average tests."""
 
@@ -116,41 +105,33 @@ class TestEMA:
         ema_calc = MovingAverageCalculator(config_ema)
         sma_val = sma_calc.calculate_ma(ma_data).current_value
         ema_val = ema_calc.calculate_ma(ma_data).current_value
-        # Both should be close to last price but different from each other
         assert sma_val is not None
         assert ema_val is not None
         assert sma_val != pytest.approx(ema_val, abs=1e-6)
-
-
-# ---------------------------------------------------------------------------
-# WMA
-# ---------------------------------------------------------------------------
 
 
 class TestWMA:
     """Weighted Moving Average tests."""
 
     def test_wma_known_answer(self):
-        """WMA of [10,11,12,13,14] with period 5 = weighted average."""
+        """WMA weights the newest price most, linearly: 1, 2, ..., period."""
         import pandas as pd
 
-        prices = pd.Series([10.0, 11.0, 12.0, 13.0, 14.0])
+        values = [10.0, 11.0, 12.0, 13.0, 14.0]
+        weights = range(1, len(values) + 1)
         config = MovingAverageConfig(ma_type="WMA", period=5)
         calc = MovingAverageCalculator(config)
-        wma = calc.calculate_wma(prices, 5)
-        # Expected: (10*1 + 11*2 + 12*3 + 13*4 + 14*5) / 15 = 190/15 = 12.667
-        assert wma.iloc[4] == pytest.approx(190.0 / 15.0, abs=0.01)
+        wma = calc.calculate_wma(pd.Series(values), len(values))
+        expected = sum(w * v for w, v in zip(weights, values, strict=True)) / sum(
+            weights
+        )
+        assert wma.iloc[-1] == pytest.approx(expected, abs=0.01)
 
     def test_wma_output_type(self, ma_data: MovingAverageDataInput):
         config = MovingAverageConfig(ma_type="WMA", period=20)
         calc = MovingAverageCalculator(config)
         result = calc.calculate_ma(ma_data)
         assert result.ma_type == "WMA"
-
-
-# ---------------------------------------------------------------------------
-# HMA
-# ---------------------------------------------------------------------------
 
 
 class TestHMA:
@@ -168,11 +149,6 @@ class TestHMA:
         result = calc.calculate_ma(ma_data)
         assert result.current_value is not None
         assert np.isfinite(result.current_value)
-
-
-# ---------------------------------------------------------------------------
-# Price vs MA position
-# ---------------------------------------------------------------------------
 
 
 class TestPricePosition:
@@ -195,11 +171,6 @@ class TestPricePosition:
         calc = MovingAverageCalculator(config)
         result = calc.calculate_ma(data)
         assert result.price_vs_ma == "BELOW"
-
-
-# ---------------------------------------------------------------------------
-# Crossover detection
-# ---------------------------------------------------------------------------
 
 
 class TestCrossover:
@@ -254,10 +225,15 @@ class TestCrossover:
         assert result.crossover_analysis is not None
         assert result.crossover_analysis.current_signal == "BULLISH"
 
-
-# ---------------------------------------------------------------------------
-# Convenience function
-# ---------------------------------------------------------------------------
+    def test_secondary_period_shorter_than_primary_is_rejected(self):
+        """The primary MA is the fast line, so its period must be the shorter one."""
+        with pytest.raises(ValueError, match="must be shorter than"):
+            MovingAverageConfig(
+                ma_type="SMA",
+                period=30,
+                secondary_ma_type="SMA",
+                secondary_period=10,
+            )
 
 
 class TestConvenienceFunction:
@@ -265,7 +241,7 @@ class TestConvenienceFunction:
 
     def test_single_ma(self):
         n = 80
-        dates = [str(date(2025, 1, 2) + timedelta(days=i)) for i in range(n)]
+        dates = [str(d) for d in _make_dates(n)]
         prices = [100.0 + i * 0.1 for i in range(n)]
         result = calculate_moving_average(
             ticker="CONV",
@@ -281,7 +257,7 @@ class TestConvenienceFunction:
 
     def test_crossover_analysis(self):
         n = 80
-        dates = [str(date(2025, 1, 2) + timedelta(days=i)) for i in range(n)]
+        dates = [str(d) for d in _make_dates(n)]
         prices = [100.0 + i * 0.1 for i in range(n)]
         result = calculate_moving_average(
             ticker="CONV",
@@ -296,23 +272,18 @@ class TestConvenienceFunction:
         assert result.crossover_analysis is not None
 
 
-# ---------------------------------------------------------------------------
-# Edge cases
-# ---------------------------------------------------------------------------
-
-
 class TestEdgeCases:
     """Edge case handling."""
 
-    def test_insufficient_data_raises(self):
-        """Should raise with too few data points."""
+    def test_exactly_one_period_of_data_is_enough(self):
+        """A series exactly as long as the SMA period still yields a value."""
+        period = 50
         data = MovingAverageDataInput(
             ticker="SHORT",
-            dates=_make_dates(50),
-            prices=[100.0 + i for i in range(50)],
+            dates=_make_dates(period),
+            prices=[100.0 + i for i in range(period)],
         )
-        config = MovingAverageConfig(ma_type="SMA", period=50)
+        config = MovingAverageConfig(ma_type="SMA", period=period)
         calc = MovingAverageCalculator(config)
-        # 50 points for period 50 should be exactly enough for SMA
         result = calc.calculate_ma(data)
         assert result.current_value is not None

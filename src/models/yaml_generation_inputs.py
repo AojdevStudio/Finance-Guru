@@ -187,7 +187,6 @@ class UserDataInput(BaseModel):
     preferences: UserPreferencesInput
     mcp: MCPConfigInput = Field(default_factory=MCPConfigInput)
 
-    # Environment
     project_root: str | None = Field(None, description="Project root directory")
     google_sheets_credentials: str | None = Field(
         None, description="Path to Google Sheets credentials JSON"

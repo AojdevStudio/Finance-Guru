@@ -24,6 +24,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from src.models.ticker import Ticker
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
+
 
 class PriceDataInput(BaseModel):
     """Historical price data for risk calculations.
@@ -44,12 +47,9 @@ class PriceDataInput(BaseModel):
         )
     """
 
-    ticker: str = Field(
+    ticker: Ticker = Field(
         ...,
         description="Stock ticker symbol (e.g., 'TSLA', 'AAPL', 'SPY', 'BRK-B')",
-        min_length=1,
-        max_length=10,
-        pattern=r"^[A-Z\-\.]+$",  # Uppercase letters, hyphens, and dots (e.g., BRK-B, BRK.B)
     )
 
     prices: list[float] = Field(
@@ -232,8 +232,8 @@ class RiskCalculationConfig(BaseModel):
 
     confidence_level: float = Field(
         default=0.95,
-        ge=0.50,  # At least 50% confidence
-        le=0.99,  # At most 99% confidence
+        ge=0.50,
+        le=0.99,
         description="Confidence level for VaR calculation (0.95 = 95% confidence)",
     )
 
@@ -247,16 +247,16 @@ class RiskCalculationConfig(BaseModel):
     )
 
     rolling_window: int = Field(
-        default=252,
-        ge=30,  # Minimum 30 days for statistical validity
-        le=756,  # Maximum 3 years (beyond that, markets change too much)
+        default=TRADING_DAYS_PER_YEAR,
+        ge=30,
+        le=756,
         description="Number of days for rolling calculations (252 = 1 trading year)",
     )
 
     risk_free_rate: float = Field(
         default=0.045,
-        ge=0.0,  # Risk-free rate can't be negative (except in rare circumstances)
-        le=0.20,  # Sanity check: if >20%, likely a data entry error
+        ge=0.0,
+        le=0.20,
         description="Annual risk-free rate for Sharpe/Sortino calculations (0.045 = 4.5%)",
     )
 
@@ -272,7 +272,6 @@ class RiskCalculationConfig(BaseModel):
         - 99% (0.99): Very conservative, rare VaR breaches
         """
         if v < 0.90:
-            # This is a warning, not an error - we still allow it
             import warnings
 
             warnings.warn(
@@ -287,7 +286,7 @@ class RiskCalculationConfig(BaseModel):
                 {
                     "confidence_level": 0.95,
                     "var_method": "historical",
-                    "rolling_window": 252,
+                    "rolling_window": TRADING_DAYS_PER_YEAR,
                     "risk_free_rate": 0.045,
                 },
                 {
@@ -320,7 +319,6 @@ class RiskMetricsOutput(BaseModel):
     - Beta/Alpha: "How does this relate to the market?" (systematic vs idiosyncratic risk)
     """
 
-    # Identification
     ticker: str = Field(..., description="Stock ticker symbol")
 
     calculation_date: date = Field(
@@ -328,7 +326,6 @@ class RiskMetricsOutput(BaseModel):
         description="Date of calculation (typically the latest date in the price series)",
     )
 
-    # Value at Risk Metrics
     var_95: float = Field(
         ...,
         description=(
@@ -345,7 +342,6 @@ class RiskMetricsOutput(BaseModel):
         ),
     )
 
-    # Return-Based Risk Metrics
     sharpe_ratio: float = Field(
         ...,
         description=(
@@ -364,10 +360,9 @@ class RiskMetricsOutput(BaseModel):
         ),
     )
 
-    # Drawdown Metrics
     max_drawdown: float = Field(
         ...,
-        le=0.0,  # Drawdowns are always negative or zero
+        le=0.0,
         description=(
             "Maximum peak-to-trough decline (always negative or zero). "
             "Example: -0.32 means 'worst decline was 32% from peak'"
@@ -383,17 +378,15 @@ class RiskMetricsOutput(BaseModel):
         ),
     )
 
-    # Volatility Metrics
     annual_volatility: float = Field(
         ...,
-        ge=0.0,  # Volatility is always positive
+        ge=0.0,
         description=(
             "Annualized volatility (standard deviation of returns). "
             "Example: 0.42 means 42% annual volatility (high for stocks, typical for crypto)"
         ),
     )
 
-    # Market Relationship Metrics (Optional)
     beta: float | None = Field(
         default=None,
         description=(
@@ -458,7 +451,6 @@ class RiskMetricsOutput(BaseModel):
         - CVaR should be more extreme than VaR (it's the "tail" beyond VaR)
         - Sortino should generally be higher than Sharpe (less penalized)
         """
-        # CVaR should be more extreme (more negative) than VaR
         if self.cvar_95 > self.var_95:
             import warnings
 
@@ -503,7 +495,6 @@ class RiskMetricsOutput(BaseModel):
     }
 
 
-# Type exports for convenience
 __all__ = [
     "PriceDataInput",
     "RiskCalculationConfig",

@@ -158,12 +158,10 @@ class GreeksOutput(BaseModel):
     - Vega 0.20 means: 1% volatility up → $0.20 option up
     """
 
-    # Identification
     ticker: str = Field(..., description="Underlying asset ticker")
     option_type: Literal["call", "put"] = Field(..., description="Option type")
     calculation_date: date = Field(..., description="Date of calculation")
 
-    # Pricing
     option_price: float = Field(..., ge=0.0, description="Theoretical option price")
 
     intrinsic_value: float = Field(
@@ -171,10 +169,13 @@ class GreeksOutput(BaseModel):
     )
 
     time_value: float = Field(
-        ..., ge=0.0, description="Time value (option_price - intrinsic_value)"
+        ...,
+        description=(
+            "Time value (option_price - intrinsic_value). Negative for a deep "
+            "in-the-money European put, which can price below intrinsic."
+        ),
     )
 
-    # Greeks (First Order)
     delta: float = Field(
         ..., ge=-1.0, le=1.0, description="Delta: Price sensitivity to $1 stock move"
     )
@@ -184,7 +185,11 @@ class GreeksOutput(BaseModel):
     )
 
     theta: float = Field(
-        ..., le=0.0, description="Theta: Daily time decay (always negative)"
+        ...,
+        description=(
+            "Theta: daily time decay. Positive for a deep in-the-money European "
+            "put, whose value rises toward intrinsic as expiry nears."
+        ),
     )
 
     vega: float = Field(
@@ -193,12 +198,10 @@ class GreeksOutput(BaseModel):
 
     rho: float = Field(..., description="Rho: Sensitivity to 1% interest rate change")
 
-    # Moneyness
     moneyness: Literal["ITM", "ATM", "OTM"] = Field(
         ..., description="Moneyness: In/At/Out of the money"
     )
 
-    # Input parameters (for reference)
     spot_price: float = Field(..., description="Spot price used")
     strike: float = Field(..., description="Strike price")
     time_to_expiry: float = Field(..., description="Time to expiry (years)")
@@ -350,7 +353,6 @@ class OptionsChainOutput(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
 
-# Type exports
 __all__ = [
     "OptionInput",
     "BlackScholesInput",

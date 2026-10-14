@@ -30,6 +30,7 @@ Created: 2025-10-13
 """
 
 from datetime import date
+from typing import assert_never
 
 import numpy as np
 import pandas as pd
@@ -41,6 +42,10 @@ from src.models.validation_inputs import (
     ValidationConfig,
     ValidationOutput,
 )
+from src.utils.robust_stats import MAD_TO_STD_SCALE, MODIFIED_Z_SCORE_SCALE
+
+_HIGH_OUTLIER_RATIO = 0.10
+_MEDIUM_OUTLIER_RATIO = 0.05
 
 
 class DataValidator:
@@ -101,7 +106,6 @@ class DataValidator:
         5. Calculate quality scores
         6. Generate recommendations
         """
-        # Convert to pandas for easier analysis
         df = pd.DataFrame(
             {
                 "date": price_series.dates,
@@ -111,30 +115,24 @@ class DataValidator:
         if price_series.volumes:
             df["volume"] = price_series.volumes
 
-        # Initialize results tracking
         anomalies: list[DataAnomaly] = []
         warnings_list: list[str] = []
         recommendations: list[str] = []
 
-        # Run validation checks
         missing_count = self._check_missing_data(df, anomalies, warnings_list)
         outlier_count = self._check_outliers(df, anomalies, warnings_list)
         gap_count = self._check_date_gaps(df, anomalies, warnings_list)
         split_count = self._check_splits(df, anomalies, warnings_list)
 
-        # Calculate quality scores
         completeness = self._calculate_completeness_score(df, missing_count)
         consistency = self._calculate_consistency_score(df, outlier_count)
 
-        # Determine if data is valid
         is_valid = self._determine_validity(completeness, consistency, anomalies)
 
-        # Generate recommendations
         self._generate_recommendations(
             is_valid, completeness, consistency, anomalies, recommendations
         )
 
-        # Return validated output
         return ValidationOutput(
             ticker=price_series.ticker,
             validation_date=date.today(),
@@ -146,7 +144,7 @@ class DataValidator:
             potential_splits=split_count,
             completeness_score=completeness,
             consistency_score=consistency,
-            reliability_score=0.0,  # Calculated by model_validator
+            reliability_score=0.0,
             anomalies=anomalies,
             warnings=warnings_list,
             recommendations=recommendations,
@@ -185,7 +183,7 @@ class DataValidator:
             anomalies.append(
                 DataAnomaly(
                     anomaly_type="missing",
-                    severity=severity,  # type: ignore
+                    severity=severity,
                     description=f"Found {total_missing} missing data points ({missing_ratio:.1%})",
                     value=total_missing,
                     recommendation=(
@@ -233,63 +231,53 @@ class DataValidator:
            - Most robust to extreme outliers
            - Good when data has many anomalies
         """
-        # Calculate daily returns for outlier detection
         returns = df["price"].pct_change().dropna()
 
-        outliers = []
-        outlier_indices = []
+        match self.config.outlier_method:
+            case OutlierMethod.Z_SCORE:
+                mean_return = returns.mean()
+                std_return = returns.std()
+                z_scores = np.abs((returns - mean_return) / std_return)
+                outlier_mask = z_scores > self.config.outlier_threshold
+            case OutlierMethod.IQR:
+                q1 = returns.quantile(0.25)
+                q3 = returns.quantile(0.75)
+                iqr = q3 - q1
+                lower_bound = q1 - (self.config.outlier_threshold * iqr)
+                upper_bound = q3 + (self.config.outlier_threshold * iqr)
+                outlier_mask = (returns < lower_bound) | (returns > upper_bound)
+            case OutlierMethod.MODIFIED_Z:
+                median_return = returns.median()
+                mad = np.median(np.abs(returns - median_return))
+                if mad == 0:
+                    mad = np.std(returns) / MAD_TO_STD_SCALE
+                modified_z_scores = MODIFIED_Z_SCORE_SCALE * np.abs(
+                    (returns - median_return) / mad
+                )
+                outlier_mask = modified_z_scores > self.config.outlier_threshold
+            case _:
+                assert_never(self.config.outlier_method)
 
-        if self.config.outlier_method == OutlierMethod.Z_SCORE:
-            # Z-score method
-            mean_return = returns.mean()
-            std_return = returns.std()
-            z_scores = np.abs((returns - mean_return) / std_return)
-            outlier_mask = z_scores > self.config.outlier_threshold
-            outliers = returns[outlier_mask]
-            outlier_indices = returns[outlier_mask].index.tolist()
-
-        elif self.config.outlier_method == OutlierMethod.IQR:
-            # IQR method
-            q1 = returns.quantile(0.25)
-            q3 = returns.quantile(0.75)
-            iqr = q3 - q1
-            lower_bound = q1 - (self.config.outlier_threshold * iqr)
-            upper_bound = q3 + (self.config.outlier_threshold * iqr)
-            outlier_mask = (returns < lower_bound) | (returns > upper_bound)
-            outliers = returns[outlier_mask]
-            outlier_indices = returns[outlier_mask].index.tolist()
-
-        else:  # MODIFIED_Z
-            # Modified z-score method (most robust)
-            median_return = returns.median()
-            mad = np.median(np.abs(returns - median_return))
-            # Avoid division by zero
-            if mad == 0:
-                mad = np.std(returns) / 1.4826  # Fallback to std
-            modified_z_scores = 0.6745 * np.abs((returns - median_return) / mad)
-            outlier_mask = modified_z_scores > self.config.outlier_threshold
-            outliers = returns[outlier_mask]
-            outlier_indices = returns[outlier_mask].index.tolist()
+        outliers = returns[outlier_mask]
+        outlier_indices = outliers.index.tolist()
 
         outlier_count = len(outliers)
 
         if outlier_count > 0:
             outlier_ratio = outlier_count / len(returns)
 
-            # Determine severity based on count and magnitude
             severity = "low"
-            if outlier_ratio > 0.10:  # More than 10% outliers
+            if outlier_ratio > _HIGH_OUTLIER_RATIO:
                 severity = "high"
-            elif outlier_ratio > 0.05:  # More than 5% outliers
+            elif outlier_ratio > _MEDIUM_OUTLIER_RATIO:
                 severity = "medium"
 
-            # Add anomalies for each outlier
             for idx, return_val in zip(outlier_indices, outliers, strict=True):
                 date_str = str(df.loc[idx, "date"]) if idx < len(df) else "unknown"
                 anomalies.append(
                     DataAnomaly(
                         anomaly_type="outlier",
-                        severity=severity,  # type: ignore
+                        severity=severity,
                         description=f"Price return of {return_val:.2%} exceeds threshold",
                         location=date_str,
                         value=float(return_val),
@@ -331,11 +319,9 @@ class DataValidator:
         - Returns calculations become meaningless across gaps
         - Risk metrics underestimate true volatility
         """
-        # Calculate gaps between consecutive dates
         date_series = pd.Series(df["date"])
         date_diffs = date_series.diff().dt.days.dropna()
 
-        # Find gaps exceeding threshold
         suspicious_gaps = date_diffs[date_diffs > self.config.max_gap_days]
         gap_count = len(suspicious_gaps)
 
@@ -356,7 +342,7 @@ class DataValidator:
                     anomalies.append(
                         DataAnomaly(
                             anomaly_type="gap",
-                            severity=severity,  # type: ignore
+                            severity=severity,
                             description=f"Gap of {gap_days} days in data",
                             location=f"{start_date} to {end_date}",
                             value=float(gap_days),
@@ -401,10 +387,8 @@ class DataValidator:
         if not self.config.check_splits:
             return 0
 
-        # Calculate daily returns
         returns = df["price"].pct_change().dropna()
 
-        # Look for returns exceeding split threshold (e.g., 25% = 0.25)
         potential_splits = returns[np.abs(returns) > self.config.split_threshold]
         split_count = len(potential_splits)
 
@@ -415,7 +399,6 @@ class DataValidator:
                     df.loc[idx - 1, "price"] if idx > 0 else None
                     df.loc[idx, "price"]
 
-                    # Estimate split ratio
                     split_ratio = "unknown"
                     if -0.60 < return_val < -0.40:
                         split_ratio = "2:1"
@@ -504,10 +487,8 @@ class DataValidator:
         - One bad data point can skew risk calculations
         - When in doubt, reject the data and get better quality
         """
-        # Check for critical anomalies
         has_critical = any(a.severity == "critical" for a in anomalies)
 
-        # Data is valid if it passes all checks
         is_valid = completeness >= 0.95 and consistency >= 0.90 and not has_critical
 
         return is_valid
@@ -542,7 +523,6 @@ class DataValidator:
                     "⚠️  Review flagged anomalies to ensure they're legitimate"
                 )
         else:
-            # Data has issues - provide specific guidance
             if completeness < 0.95:
                 recommendations.append(
                     "❌ Too much missing data - consider using alternative data source"
@@ -563,7 +543,6 @@ class DataValidator:
             )
 
 
-# Convenience function
 def validate_price_data(
     ticker: str,
     prices: list[float],
@@ -594,10 +573,8 @@ def validate_price_data(
     """
     from datetime import date as date_type
 
-    # Convert string dates to date objects
     date_objects = [date_type.fromisoformat(d) for d in dates]
 
-    # Create input model
     price_series = PriceSeriesInput(
         ticker=ticker,
         prices=prices,
@@ -605,15 +582,12 @@ def validate_price_data(
         volumes=volumes,
     )
 
-    # Create config
     config = ValidationConfig(**config_kwargs)
 
-    # Validate
     validator = DataValidator(config)
     return validator.validate(price_series)
 
 
-# Type exports
 __all__ = [
     "DataValidator",
     "validate_price_data",

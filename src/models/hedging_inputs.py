@@ -248,7 +248,6 @@ class HedgeSizeRequest(BaseModel):
         return v
 
 
-# Type exports
 __all__ = [
     "HedgePosition",
     "RollSuggestion",

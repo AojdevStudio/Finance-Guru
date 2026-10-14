@@ -37,7 +37,6 @@ from src.models.yaml_generation_inputs import (
 from src.utils.yaml_generator import YAMLGenerator
 
 
-# Test fixtures
 @pytest.fixture
 def valid_user_data() -> UserDataInput:
     """Create valid user data for testing CLAUDE.md generation."""
@@ -135,11 +134,6 @@ def generator() -> YAMLGenerator:
     return YAMLGenerator(str(template_dir))
 
 
-# ============================================================================
-# Template Loading Tests
-# ============================================================================
-
-
 def test_claude_md_template_exists(generator: YAMLGenerator):
     """Test that CLAUDE.template.md exists and is readable."""
     template_path = (
@@ -151,7 +145,6 @@ def test_claude_md_template_exists(generator: YAMLGenerator):
 
     content = template_path.read_text()
     assert len(content) > 0, "CLAUDE.template.md is empty"
-    # Template uses possessive_name throughout (not user_name directly)
     assert "{{possessive_name}}" in content, (
         "Template missing {{possessive_name}} variable"
     )
@@ -167,21 +160,14 @@ def test_claude_md_generation_succeeds(
     assert isinstance(result, str)
 
 
-# ============================================================================
-# Variable Substitution Tests
-# ============================================================================
-
-
 def test_user_name_substitution(
     generator: YAMLGenerator, valid_user_data: UserDataInput
 ):
     """Test that {{user_name}} is replaced with actual user name."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # Should contain actual name
     assert "Alex" in result, "Generated CLAUDE.md missing user name 'Alex'"
 
-    # Should NOT contain template variable
     assert "{{user_name}}" not in result, (
         "Generated CLAUDE.md contains unreplaced {{user_name}}"
     )
@@ -193,10 +179,8 @@ def test_possessive_name_substitution(
     """Test that {{possessive_name}} is replaced correctly."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # For "Alex" -> "Alex's"
     assert "Alex's" in result, "Generated CLAUDE.md missing possessive form 'Alex's'"
 
-    # Should NOT contain template variable
     assert "{{possessive_name}}" not in result, (
         "Generated CLAUDE.md contains unreplaced {{possessive_name}}"
     )
@@ -208,10 +192,8 @@ def test_possessive_name_ending_in_s(
     """Test possessive handling for names ending in 's' (James -> James')."""
     result = generator.generate_claude_md(user_data_name_ending_in_s)
 
-    # For "James" -> "James'"
     assert "James'" in result, "Generated CLAUDE.md should use James' (not James's)"
 
-    # Should not have double possessive
     assert "James's" not in result, (
         "Generated CLAUDE.md incorrectly uses James's instead of James'"
     )
@@ -223,10 +205,8 @@ def test_risk_tolerance_substitution(
     """Test that {{risk_tolerance}} is replaced with actual value."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # Should contain the risk tolerance value
     assert "aggressive" in result.lower(), "Generated CLAUDE.md missing risk tolerance"
 
-    # Should NOT contain template variable
     assert "{{risk_tolerance}}" not in result, (
         "Generated CLAUDE.md contains unreplaced {{risk_tolerance}}"
     )
@@ -238,18 +218,11 @@ def test_brokerage_substitution(
     """Test that {{brokerage}} is replaced with actual brokerage name."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # Should contain the brokerage name
     assert "Fidelity" in result, "Generated CLAUDE.md missing brokerage name"
 
-    # Should NOT contain template variable
     assert "{{brokerage}}" not in result, (
         "Generated CLAUDE.md contains unreplaced {{brokerage}}"
     )
-
-
-# ============================================================================
-# Currency Formatting Tests
-# ============================================================================
 
 
 def test_portfolio_value_formatting(
@@ -258,13 +231,10 @@ def test_portfolio_value_formatting(
     """Test that portfolio value is formatted as currency with commas."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # For $500,000 -> should show "$500,000"
     assert "$500,000" in result, "Generated CLAUDE.md missing formatted portfolio value"
 
-    # Should NOT contain unformatted value
     assert "500000" not in result, "Generated CLAUDE.md contains unformatted value"
 
-    # Should NOT contain template variable
     assert "{{portfolio_value_formatted}}" not in result, (
         "Generated CLAUDE.md contains unreplaced {{portfolio_value_formatted}}"
     )
@@ -276,10 +246,8 @@ def test_monthly_income_formatting(
     """Test that monthly income is formatted as currency."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # For $25,000 -> should show "$25,000"
     assert "$25,000" in result, "Generated CLAUDE.md missing formatted monthly income"
 
-    # Should NOT contain template variable
     assert "{{monthly_income_formatted}}" not in result, (
         "Generated CLAUDE.md contains unreplaced {{monthly_income_formatted}}"
     )
@@ -291,20 +259,13 @@ def test_investment_capacity_formatting(
     """Test that investment capacity is formatted as currency."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # For $10,500 -> should show "$10,500"
     assert "$10,500" in result, (
         "Generated CLAUDE.md missing formatted investment capacity"
     )
 
-    # Should NOT contain template variable
     assert "{{investment_capacity_formatted}}" not in result, (
         "Generated CLAUDE.md contains unreplaced {{investment_capacity_formatted}}"
     )
-
-
-# ============================================================================
-# Content Completeness Tests
-# ============================================================================
 
 
 def test_required_sections_present(
@@ -337,7 +298,6 @@ def test_key_principle_personalized(
     """Test that the Key Principle statement is personalized."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # Should contain personalized key principle
     assert "Alex's" in result, "Key Principle not personalized with possessive name"
     assert "Finance Guru" in result, "Key Principle missing 'Finance Guru' reference"
 
@@ -348,7 +308,6 @@ def test_portfolio_overview_section_complete(
     """Test that Portfolio Overview section contains all user-specific data."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # Check for all portfolio overview fields
     assert "$500,000" in result, "Portfolio Overview missing portfolio value"
     assert "$25,000" in result, "Portfolio Overview missing monthly income"
     assert "$10,500" in result, "Portfolio Overview missing investment capacity"
@@ -360,7 +319,6 @@ def test_tools_table_present(generator: YAMLGenerator, valid_user_data: UserData
     """Test that Financial Analysis Tools table is present and complete."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # Check for key tools in the table
     tools = [
         "Risk Metrics",
         "Momentum",
@@ -382,7 +340,6 @@ def test_agent_tool_matrix_present(
     """Test that Agent-Tool Matrix is present with all agents."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # Check for all agents
     agents = [
         "Market Researcher",
         "Quant Analyst",
@@ -401,7 +358,6 @@ def test_landing_the_plane_section(
     """Test that Landing the Plane section is complete with all steps."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # Check for critical workflow steps
     assert "git pull --rebase" in result, "Landing the Plane missing git commands"
     assert "bd sync" not in result, "Landing the Plane should not reference bd sync"
     assert "git push" in result, "Landing the Plane missing git push"
@@ -410,18 +366,12 @@ def test_landing_the_plane_section(
     )
 
 
-# ============================================================================
-# Template Consistency Tests
-# ============================================================================
-
-
 def test_no_unreplaced_variables(
     generator: YAMLGenerator, valid_user_data: UserDataInput
 ):
     """Test that no template variables remain unreplaced."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # Common template variable patterns
     template_vars = [
         "{{user_name}}",
         "{{possessive_name}}",
@@ -447,50 +397,37 @@ def test_timestamp_and_date_present(
     """Test that timestamp and date are generated and included."""
     result = generator.generate_claude_md(valid_user_data)
 
-    # Should contain "Generated:" footer
     assert "**Generated**:" in result, "Generated CLAUDE.md missing timestamp footer"
 
-    # Should NOT contain template variables
     assert "{{timestamp}}" not in result, (
         "Generated CLAUDE.md contains unreplaced {{timestamp}}"
     )
     assert "{{date}}" not in result, "Generated CLAUDE.md contains unreplaced {{date}}"
 
 
-# ============================================================================
-# Integration Tests
-# ============================================================================
-
-
 def test_full_generation_workflow(
     generator: YAMLGenerator, valid_user_data: UserDataInput
 ):
     """Test complete CLAUDE.md generation workflow end-to-end."""
-    # Generate CLAUDE.md
     result = generator.generate_claude_md(valid_user_data)
 
-    # Validate basic structure
     assert result.startswith("# CLAUDE.md"), "Generated file doesn't start with header"
     assert len(result) > 1000, "Generated CLAUDE.md seems too short"
 
-    # Validate personalization
     assert "Alex's" in result, "Missing personalization"
     assert "$500,000" in result, "Missing portfolio value"
     assert "Fidelity" in result, "Missing brokerage"
 
-    # Validate completeness
     assert "## Architecture" in result, "Missing Architecture section"
     assert "## Financial Analysis Tools" in result, "Missing Tools section"
     assert "## Landing the Plane" in result, "Missing Landing section"
 
-    # Validate no template variables
     assert "{{" not in result, "Contains unreplaced template variables"
     assert "}}" not in result, "Contains unreplaced template variables"
 
 
 def test_different_user_generates_different_claude_md(generator: YAMLGenerator):
     """Test that different users get personalized CLAUDE.md files."""
-    # User 1: Alex with $500k portfolio
     user1 = UserDataInput(
         identity=UserIdentityInput(user_name="Alex", language="English"),
         liquid_assets=LiquidAssetsInput(
@@ -527,7 +464,6 @@ def test_different_user_generates_different_claude_md(generator: YAMLGenerator):
         mcp=MCPConfigInput(has_alphavantage=True, alphavantage_key="key1"),
     )
 
-    # User 2: Sarah with $100k portfolio
     user2 = UserDataInput(
         identity=UserIdentityInput(user_name="Sarah", language="English"),
         liquid_assets=LiquidAssetsInput(
@@ -561,18 +497,14 @@ def test_different_user_generates_different_claude_md(generator: YAMLGenerator):
         mcp=MCPConfigInput(has_alphavantage=False, has_brightdata=False),
     )
 
-    # Generate both
     result1 = generator.generate_claude_md(user1)
     result2 = generator.generate_claude_md(user2)
 
-    # They should be different
     assert result1 != result2, "Different users generated identical CLAUDE.md"
 
-    # User 1 specific
     assert "Alex's" in result1 and "Alex's" not in result2
     assert "$500,000" in result1 and "$500,000" not in result2
     assert "Fidelity" in result1 and "Schwab" in result2
 
-    # User 2 specific
     assert "Sarah's" in result2 and "Sarah's" not in result1
     assert "$100,000" in result2 and "$100,000" not in result1

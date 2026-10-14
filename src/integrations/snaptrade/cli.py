@@ -28,7 +28,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, assert_never, get_args
 
 import yaml
 
@@ -44,6 +44,8 @@ from src.integrations.snaptrade.models import (
     SnapTradeAccountsConfig,
 )
 
+RoutingKind = Literal["positions", "balances", "activities"]
+
 
 def main(argv: list[str] | None = None) -> int:
     """Run the SnapTrade CLI."""
@@ -51,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "accounts":
         return _accounts_command(args)
-    if args.command in ("positions", "balances", "activities"):
+    if args.command in get_args(RoutingKind):
         return _routing_command(args)
     parser.print_help(sys.stderr)
     return 2
@@ -93,7 +95,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Overwrite an existing config when used with --write-config.",
     )
 
-    for kind in ("positions", "balances", "activities"):
+    for kind in get_args(RoutingKind):
         sub = subparsers.add_parser(
             kind,
             help=f"Sync {kind} for config-enabled accounts only (read-only).",
@@ -149,7 +151,7 @@ def _accounts_command(args: argparse.Namespace) -> int:
 
 
 def _routing_command(args: argparse.Namespace) -> int:
-    kind = args.command  # "positions", "balances", or "activities"
+    kind: RoutingKind = args.command
     config_path = (
         Path(args.config)
         if args.config is not None
@@ -186,10 +188,8 @@ def _routing_command(args: argparse.Namespace) -> int:
 
 
 def _fetch_routing_records(
-    syncable: list[SnapTradeAccountConfig], kind: str
+    syncable: list[SnapTradeAccountConfig], kind: RoutingKind
 ) -> list[dict[str, Any]]:
-    # The config gate is the only cutover switch: with no syncable account we
-    # never touch the network, so the live path stays inert until verified.
     if not syncable:
         return []
     client = SnapTradeClientWrapper.from_env()
@@ -200,14 +200,16 @@ def _fetch_routing_records(
             "name": account.name,
             "role": str(account.role),
         }
-        if kind == "positions":
-            record["positions"] = _account_positions(
-                client, account.snaptrade_account_id
-            )
-        elif kind == "activities":
-            record["activities"] = client.get_activities(account.snaptrade_account_id)
-        else:
-            record["balances"] = _account_balances(client, account.snaptrade_account_id)
+        account_id = account.snaptrade_account_id
+        match kind:
+            case "positions":
+                record["positions"] = _account_positions(client, account_id)
+            case "activities":
+                record["activities"] = client.get_activities(account_id)
+            case "balances":
+                record["balances"] = _account_balances(client, account_id)
+            case _:
+                assert_never(kind)
         records.append(record)
     return records
 
@@ -215,7 +217,6 @@ def _fetch_routing_records(
 def _account_positions(
     client: SnapTradeClientWrapper, account_id: str
 ) -> list[dict[str, Any]]:
-    # Equities come from the positions endpoint; options from a separate one.
     return client.get_positions(account_id) + client.get_options(account_id)
 
 
@@ -249,7 +250,7 @@ def _account_balances(
     )
     return {
         "currency": requested_currency,
-        "settled_cash": selected.get("cash"),  # -> SPAXX row
+        "settled_cash": selected.get("cash"),
         "buying_power": selected.get("buying_power"),
         "account_equity": equity,
         "gross_market_value": gross_mv,

@@ -42,9 +42,9 @@ class TickerInput(Container):
             yield Static("Timeframe: 90 days", id="timeframe-label")
             yield Static("  ", classes="separator")
             yield Button("▶ Run Analysis", variant="primary", id="run-btn")
-        yield Static("")  # Spacer
         yield Static(
-            "Select tools to run (Space to toggle, Tab to navigate):", classes="hint"
+            "Select tools to run (Space to toggle, Tab to navigate):",
+            classes="hint tools-hint",
         )
         with Horizontal(classes="tools-row"):
             yield Checkbox("📈 Momentum", id="tool-momentum", value=True)
@@ -71,7 +71,6 @@ class TickerInput(Container):
             tools.append("moving_averages")
 
         if not tools:
-            # Surface a clear, inline error instead of running an empty analysis
             if self.app is not None:
                 self.app.notify(
                     "⚠️ Select at least one tool before running analysis.",

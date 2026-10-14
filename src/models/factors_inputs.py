@@ -162,7 +162,6 @@ class FactorExposureOutput(BaseModel):
     ticker: str = Field(..., description="Asset ticker symbol")
     analysis_date: date = Field(..., description="Date of analysis")
 
-    # Factor Betas (Exposures)
     market_beta: float = Field(
         ..., description="Market factor beta (typically 0.5 to 2.0 for stocks)"
     )
@@ -180,12 +179,10 @@ class FactorExposureOutput(BaseModel):
         default=None, description="Momentum factor beta (positive = momentum tilt)"
     )
 
-    # Alpha (Excess Return)
     alpha: float = Field(
         ..., description="Alpha (excess return not explained by factors, annualized)"
     )
 
-    # Model Quality
     r_squared: float = Field(
         ...,
         ge=0.0,
@@ -193,7 +190,6 @@ class FactorExposureOutput(BaseModel):
         description="R-squared (proportion of variance explained by model)",
     )
 
-    # Standard Errors (for statistical significance)
     alpha_tstat: float = Field(
         ..., description="T-statistic for alpha (> 2.0 suggests significance)"
     )
@@ -246,10 +242,8 @@ class AttributionOutput(BaseModel):
     ticker: str = Field(..., description="Asset ticker symbol")
     analysis_date: date = Field(..., description="Date of analysis")
 
-    # Total Performance
     total_return: float = Field(..., description="Total annualized return")
 
-    # Factor Contributions (additive)
     market_attribution: float = Field(
         ..., description="Return attributed to market factor"
     )
@@ -272,7 +266,6 @@ class AttributionOutput(BaseModel):
 
     residual: float = Field(..., description="Unexplained return (model error)")
 
-    # Factor Importance (as % of total)
     market_importance: float = Field(
         ..., ge=0.0, le=1.0, description="Market contribution as % of total return"
     )
@@ -323,7 +316,6 @@ class FactorAnalysisOutput(BaseModel):
     )
 
 
-# Type exports
 __all__ = [
     "FactorDataInput",
     "FactorExposureOutput",

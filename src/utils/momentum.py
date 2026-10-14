@@ -116,26 +116,20 @@ class MomentumIndicators:
         """
         prices = pd.Series(data.close, index=data.dates)
 
-        # Need at least period + 1 data points
         if len(prices) < self.config.rsi_period + 1:
             raise ValueError(
                 f"Need at least {self.config.rsi_period + 1} data points for RSI, "
                 f"got {len(prices)}"
             )
 
-        # Calculate price changes
         delta = prices.diff()
 
-        # Separate gains and losses
         gains = delta.where(delta > 0, 0)
         losses = -delta.where(delta < 0, 0)
 
-        # Calculate average gains and losses using Wilder's smoothing
-        # First value is simple average
         avg_gain = gains.rolling(window=self.config.rsi_period).mean()
         avg_loss = losses.rolling(window=self.config.rsi_period).mean()
 
-        # Apply Wilder's smoothing to subsequent values
         for i in range(self.config.rsi_period, len(prices)):
             avg_gain.iloc[i] = (
                 avg_gain.iloc[i - 1] * (self.config.rsi_period - 1) + gains.iloc[i]
@@ -144,14 +138,11 @@ class MomentumIndicators:
                 avg_loss.iloc[i - 1] * (self.config.rsi_period - 1) + losses.iloc[i]
             ) / self.config.rsi_period
 
-        # Calculate RS and RSI
         rs = avg_gain / avg_loss
         rsi = 100 - (100 / (1 + rs))
 
-        # Get current RSI (last value)
         current_rsi = float(rsi.iloc[-1])
 
-        # Determine signal
         if current_rsi > 70:
             signal: Literal["overbought", "oversold", "neutral"] = "overbought"
         elif current_rsi < 30:
@@ -199,32 +190,25 @@ class MomentumIndicators:
         """
         prices = pd.Series(data.close, index=data.dates)
 
-        # Need enough data for slow EMA + signal EMA
         min_periods = self.config.macd_slow + self.config.macd_signal
         if len(prices) < min_periods:
             raise ValueError(
                 f"Need at least {min_periods} data points for MACD, got {len(prices)}"
             )
 
-        # Calculate EMAs
         ema_fast = prices.ewm(span=self.config.macd_fast, adjust=False).mean()
         ema_slow = prices.ewm(span=self.config.macd_slow, adjust=False).mean()
 
-        # Calculate MACD line
         macd_line = ema_fast - ema_slow
 
-        # Calculate signal line (EMA of MACD)
         signal_line = macd_line.ewm(span=self.config.macd_signal, adjust=False).mean()
 
-        # Calculate histogram
         histogram = macd_line - signal_line
 
-        # Get current values
         current_macd = float(macd_line.iloc[-1])
         current_signal = float(signal_line.iloc[-1])
         current_histogram = float(histogram.iloc[-1])
 
-        # Determine signal
         signal_type: Literal["bullish", "bearish"] = (
             "bullish" if current_macd > current_signal else "bearish"
         )
@@ -277,14 +261,12 @@ class MomentumIndicators:
         Returns:
             StochasticOutput: %K, %D, and signal
         """
-        # Stochastic requires high/low data
         if data.high is None or data.low is None:
             raise ValueError(
                 "Stochastic Oscillator requires high and low price data. "
                 "Provide high/low arrays in MomentumDataInput."
             )
 
-        # Create DataFrame with all price data
         df = pd.DataFrame(
             {
                 "high": data.high,
@@ -294,28 +276,22 @@ class MomentumIndicators:
             index=data.dates,
         )
 
-        # Need enough data for calculation
         if len(df) < self.config.stoch_k_period:
             raise ValueError(
                 f"Need at least {self.config.stoch_k_period} data points for Stochastic, "
                 f"got {len(df)}"
             )
 
-        # Calculate rolling high and low
         rolling_high = df["high"].rolling(window=self.config.stoch_k_period).max()
         rolling_low = df["low"].rolling(window=self.config.stoch_k_period).min()
 
-        # Calculate %K
         k_values = 100 * ((df["close"] - rolling_low) / (rolling_high - rolling_low))
 
-        # Calculate %D (SMA of %K)
         d_values = k_values.rolling(window=self.config.stoch_d_period).mean()
 
-        # Get current values
         current_k = float(k_values.iloc[-1])
         current_d = float(d_values.iloc[-1])
 
-        # Determine signal
         if current_k > 80:
             signal: Literal["overbought", "oversold", "neutral"] = "overbought"
         elif current_k < 20:
@@ -368,14 +344,12 @@ class MomentumIndicators:
         Returns:
             WilliamsROutput: %R value and signal
         """
-        # Williams %R requires high/low data
         if data.high is None or data.low is None:
             raise ValueError(
                 "Williams %R requires high and low price data. "
                 "Provide high/low arrays in MomentumDataInput."
             )
 
-        # Create DataFrame
         df = pd.DataFrame(
             {
                 "high": data.high,
@@ -385,26 +359,21 @@ class MomentumIndicators:
             index=data.dates,
         )
 
-        # Need enough data
         if len(df) < self.config.williams_period:
             raise ValueError(
                 f"Need at least {self.config.williams_period} data points for Williams %R, "
                 f"got {len(df)}"
             )
 
-        # Calculate rolling high and low
         rolling_high = df["high"].rolling(window=self.config.williams_period).max()
         rolling_low = df["low"].rolling(window=self.config.williams_period).min()
 
-        # Calculate Williams %R
         williams_r = -100 * (
             (rolling_high - df["close"]) / (rolling_high - rolling_low)
         )
 
-        # Get current value
         current_wr = float(williams_r.iloc[-1])
 
-        # Determine signal
         if current_wr > -20:
             signal: Literal["overbought", "oversold", "neutral"] = "overbought"
         elif current_wr < -80:
@@ -458,21 +427,16 @@ class MomentumIndicators:
         """
         prices = pd.Series(data.close, index=data.dates)
 
-        # Need at least period + 1 data points
         if len(prices) < self.config.roc_period + 1:
             raise ValueError(
                 f"Need at least {self.config.roc_period + 1} data points for ROC, "
                 f"got {len(prices)}"
             )
 
-        # Calculate ROC
-        # pct_change with periods parameter gives us exactly what we need
         roc_series = prices.pct_change(periods=self.config.roc_period) * 100
 
-        # Get current ROC
         current_roc = float(roc_series.iloc[-1])
 
-        # Determine signal
         if current_roc > 0:
             signal: Literal["bullish", "bearish", "neutral"] = "bullish"
         elif current_roc < 0:
@@ -518,7 +482,6 @@ class MomentumIndicators:
         Raises:
             ValueError: If data insufficient for any indicator
         """
-        # Calculate each indicator
         rsi_result = self.calculate_rsi(data)
         macd_result = self.calculate_macd(data)
         stoch_result = self.calculate_stochastic(data)
@@ -536,7 +499,6 @@ class MomentumIndicators:
         )
 
 
-# Convenience function for quick calculations
 def calculate_momentum(
     ticker: str,
     dates: list[str],
@@ -575,10 +537,8 @@ def calculate_momentum(
     """
     from datetime import date as date_type
 
-    # Convert string dates to date objects
     date_objects = [date_type.fromisoformat(d) for d in dates]
 
-    # Create input model
     momentum_data = MomentumDataInput(
         ticker=ticker,
         dates=date_objects,
@@ -587,15 +547,12 @@ def calculate_momentum(
         low=low,
     )
 
-    # Create config
     config = MomentumConfig(**config_kwargs)
 
-    # Calculate
     calculator = MomentumIndicators(config)
     return calculator.calculate_all(momentum_data)
 
 
-# Type exports
 __all__ = [
     "MomentumIndicators",
     "calculate_momentum",

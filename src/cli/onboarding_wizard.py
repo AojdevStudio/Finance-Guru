@@ -29,9 +29,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-# Add project root to path for direct invocation
-_project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(_project_root))
+import questionary
 
 from src.config.instance_paths import InstancePaths
 from src.models.onboarding_inputs import OnboardingState, SectionName
@@ -60,15 +58,6 @@ from src.utils.onboarding_sections import (
 )
 from src.utils.yaml_generator import YAMLGenerator
 
-try:
-    import questionary
-except ImportError:
-    questionary = None  # type: ignore[assignment]
-
-# ---------------------------------------------------------------------------
-# Section execution order
-# ---------------------------------------------------------------------------
-
 SECTION_ORDER: list[tuple[SectionName, Callable[..., Any]]] = [
     (SectionName.LIQUID_ASSETS, run_liquid_assets_section),
     (SectionName.INVESTMENTS, run_investments_section),
@@ -80,9 +69,6 @@ SECTION_ORDER: list[tuple[SectionName, Callable[..., Any]]] = [
     (SectionName.SUMMARY, run_summary_section),
 ]
 
-# ---------------------------------------------------------------------------
-# Progress file persistence (save/resume on Ctrl+C)
-# ---------------------------------------------------------------------------
 
 PROGRESS_FILE = Path(".onboarding-progress.json")
 
@@ -182,10 +168,6 @@ class WizardInterruptHandler:
                 save_progress(self._state)
 
 
-# ---------------------------------------------------------------------------
-# Welcome / completion banners
-# ---------------------------------------------------------------------------
-
 _BANNER = """
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
   Finance Guru Onboarding Wizard
@@ -219,11 +201,6 @@ _COMPLETION = """
 """.strip()
 
 
-# ---------------------------------------------------------------------------
-# State-to-model conversion
-# ---------------------------------------------------------------------------
-
-
 def _safe_enum(enum_cls, raw_value: str, default):
     """Safely convert a string to an enum instance with fallback."""
     if raw_value is None:
@@ -231,7 +208,6 @@ def _safe_enum(enum_cls, raw_value: str, default):
     try:
         return enum_cls(raw_value)
     except ValueError:
-        # Try case-insensitive match
         for member in enum_cls:
             if member.value.lower() == raw_value.lower():
                 return member
@@ -262,7 +238,6 @@ def convert_state_to_user_data(
     Raises:
         KeyError: If required section data is missing.
     """
-    # --- Section data with safe defaults ---
     la = state.data.get(SectionName.LIQUID_ASSETS.value, {})
     inv = state.data.get(SectionName.INVESTMENTS.value, {})
     cf = state.data.get(SectionName.CASH_FLOW.value, {})
@@ -270,13 +245,11 @@ def convert_state_to_user_data(
     prefs = state.data.get(SectionName.PREFERENCES.value, {})
     env = state.data.get(SectionName.ENV_SETUP.value, {})
 
-    # --- Identity (from env_setup section) ---
     identity = UserIdentityInput(
         user_name=env.get("user_name", "User"),
         language=env.get("language", "English"),
     )
 
-    # --- Liquid Assets ---
     liquid_assets = LiquidAssetsInput(
         total=la.get("total", 0.0),
         accounts_count=la.get("accounts_count", 0),
@@ -284,7 +257,6 @@ def convert_state_to_user_data(
         structure=la.get("structure"),
     )
 
-    # --- Investment Portfolio (enum conversion critical here) ---
     portfolio = InvestmentPortfolioInput(
         total_value=inv.get("total_value", 0.0),
         brokerage=inv.get("brokerage"),
@@ -304,7 +276,6 @@ def convert_state_to_user_data(
         account_number=inv.get("account_number"),
     )
 
-    # --- Cash Flow ---
     cash_flow = CashFlowInput(
         monthly_income=cf.get("monthly_income", 1000.0),
         fixed_expenses=cf.get("fixed_expenses", 0.0),
@@ -313,7 +284,6 @@ def convert_state_to_user_data(
         investment_capacity=cf.get("investment_capacity", 0.0),
     )
 
-    # --- Debt Profile ---
     debt_profile = DebtProfileInput(
         has_mortgage=debt.get("has_mortgage", False),
         mortgage_balance=debt.get("mortgage_balance"),
@@ -330,7 +300,6 @@ def convert_state_to_user_data(
         other_debt=debt.get("other_debt"),
     )
 
-    # --- Preferences (enum conversion) ---
     preferences = UserPreferencesInput(
         investment_philosophy=_safe_enum(
             InvestmentPhilosophy,
@@ -341,7 +310,6 @@ def convert_state_to_user_data(
         emergency_fund_months=prefs.get("emergency_fund_months", 6),
     )
 
-    # --- MCP Config (from env_setup) ---
     mcp = MCPConfigInput(
         has_alphavantage=env.get("has_alphavantage", False),
         alphavantage_key=env.get("alphavantage_key"),
@@ -361,10 +329,6 @@ def convert_state_to_user_data(
         google_sheets_credentials=env.get("google_sheets_credentials"),
     )
 
-
-# ---------------------------------------------------------------------------
-# Config file generation
-# ---------------------------------------------------------------------------
 
 _TEMPLATE_DIR = "scripts/onboarding/modules/templates"
 
@@ -404,26 +368,20 @@ def generate_config_files(user_data: UserDataInput, project_root: Path) -> None:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_text(content, encoding="utf-8")
 
-    # --- Write project-root files with backup ---
-
-    # CLAUDE.md
     claude_path = project_root / "CLAUDE.md"
     _backup_file(claude_path)
     claude_path.write_text(output.claude_md, encoding="utf-8")
 
-    # .env
     env_path = paths.env_file
     _backup_file(env_path)
     env_path.write_text(output.env_file, encoding="utf-8")
 
-    # .claude/mcp.json
     mcp_dir = project_root / ".claude"
     mcp_dir.mkdir(parents=True, exist_ok=True)
     mcp_path = mcp_dir / "mcp.json"
     _backup_file(mcp_path)
     mcp_path.write_text(output.mcp_json, encoding="utf-8")
 
-    # --- Print results ---
     print()
     print("  Generated configuration files:")
     print(f"    - {paths.profile}")
@@ -437,11 +395,6 @@ def generate_config_files(user_data: UserDataInput, project_root: Path) -> None:
     print("  You may need to manually merge your custom MCP server entries")
     print("  into the newly generated file.")
     print()
-
-
-# ---------------------------------------------------------------------------
-# Wizard orchestrator
-# ---------------------------------------------------------------------------
 
 
 def run_wizard(dry_run: bool = False) -> None:
@@ -460,7 +413,6 @@ def run_wizard(dry_run: bool = False) -> None:
     print(_BANNER)
     print()
 
-    # --- Check for saved progress ---
     saved_state = load_progress()
     start_index = 0
 
@@ -475,29 +427,24 @@ def run_wizard(dry_run: bool = False) -> None:
         ).ask()
         if resume:
             state = saved_state
-            # Find the index to resume from (current_section)
             section_names = [name for name, _ in SECTION_ORDER]
             if state.current_section in section_names:
                 start_index = section_names.index(state.current_section)
             else:
                 start_index = n_complete
         else:
-            # User declined resume -- start fresh, delete old progress
             delete_progress()
             state = OnboardingState.create_new()
     else:
         state = OnboardingState.create_new()
 
-    # --- Set up interrupt handler ---
     handler = WizardInterruptHandler()
     handler.setup()
 
-    # --- Execute sections from start_index ---
     try:
         for _section_name, runner_fn in SECTION_ORDER[start_index:]:
             state = runner_fn(state)
             handler.update_state(state)
-            # Save progress after each completed section (if any progress)
             if len(state.completed_sections) > 0:
                 save_progress(state)
     except KeyboardInterrupt:
@@ -506,13 +453,11 @@ def run_wizard(dry_run: bool = False) -> None:
         print("\n\n  Progress saved. Run the wizard again to resume.\n")
         return
 
-    # Check if summary was confirmed
     summary_data = state.data.get(SectionName.SUMMARY.value, {})
     if not summary_data.get("confirmed", False):
         print("  Onboarding was not confirmed. No files generated.")
         return
 
-    # Convert state to validated model
     project_root = Path.cwd()
     paths = InstancePaths.resolve(cwd=project_root)
     user_data = convert_state_to_user_data(state, str(project_root))
@@ -534,25 +479,17 @@ def run_wizard(dry_run: bool = False) -> None:
         print(f"    - {paths.env_file}")
         print(f"    - {project_root / '.claude' / 'mcp.json'}")
         print()
-        # Deactivate handler and clean up progress on dry-run completion too
         handler.deactivate()
         delete_progress()
         return
 
-    # Generate and write config files
     generate_config_files(user_data, project_root)
 
-    # --- Successful completion: deactivate handler and delete progress ---
     handler.deactivate()
     delete_progress()
 
     print(_COMPLETION)
     print()
-
-
-# ---------------------------------------------------------------------------
-# CLI entry point
-# ---------------------------------------------------------------------------
 
 
 def main() -> None:

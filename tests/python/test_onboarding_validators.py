@@ -20,10 +20,6 @@ from src.utils.onboarding_validators import (
     validate_positive_integer,
 )
 
-# ---------------------------------------------------------------------------
-# validate_currency
-# ---------------------------------------------------------------------------
-
 
 class TestValidateCurrency:
     """Test currency string parsing."""
@@ -73,11 +69,6 @@ class TestValidateCurrency:
             validate_currency("$")
 
 
-# ---------------------------------------------------------------------------
-# validate_percentage
-# ---------------------------------------------------------------------------
-
-
 class TestValidatePercentage:
     """Test percentage string parsing."""
 
@@ -110,11 +101,6 @@ class TestValidatePercentage:
             validate_percentage("")
 
 
-# ---------------------------------------------------------------------------
-# validate_positive_integer
-# ---------------------------------------------------------------------------
-
-
 class TestValidatePositiveInteger:
     """Test positive integer parsing."""
 
@@ -143,11 +129,6 @@ class TestValidatePositiveInteger:
     def test_empty_invalid(self):
         with pytest.raises(ValueError):
             validate_positive_integer("")
-
-
-# ---------------------------------------------------------------------------
-# ask_with_retry
-# ---------------------------------------------------------------------------
 
 
 class TestAskWithRetry:
@@ -191,11 +172,10 @@ class TestAskWithRetry:
         def prompt_fn():
             return next(responses)
 
-        # Mock questionary.confirm in the validators module
         mock_confirm = mocker.patch(
             "src.utils.onboarding_validators.questionary.confirm"
         )
-        mock_confirm.return_value.ask.return_value = True  # Accept skip
+        mock_confirm.return_value.ask.return_value = True
 
         result = ask_with_retry(
             prompt_fn=prompt_fn,
@@ -232,7 +212,6 @@ class TestAskWithRetry:
 
     def test_decline_skip_then_succeed(self, mocker):
         """If user declines skip, gets one more attempt."""
-        # 3 bad attempts exhaust retries, decline skip, then succeed
         call_count = 0
 
         def prompt_fn():
@@ -245,7 +224,7 @@ class TestAskWithRetry:
         mock_confirm = mocker.patch(
             "src.utils.onboarding_validators.questionary.confirm"
         )
-        mock_confirm.return_value.ask.return_value = False  # Decline skip
+        mock_confirm.return_value.ask.return_value = False
 
         result = ask_with_retry(
             prompt_fn=prompt_fn,
@@ -254,3 +233,25 @@ class TestAskWithRetry:
         )
         assert result == 5000.0
         assert call_count == 4
+
+    def test_last_failed_attempt_says_retries_are_spent(self, mocker, capsys):
+        """Only the final failure tells the user no attempts are left."""
+        responses = iter(["abc", "def"])
+        mock_confirm = mocker.patch(
+            "src.utils.onboarding_validators.questionary.confirm"
+        )
+        mock_confirm.return_value.ask.return_value = True
+
+        ask_with_retry(
+            prompt_fn=lambda: next(responses),
+            validator=validate_currency,
+            default=0.0,
+            max_retries=2,
+        )
+
+        lines = capsys.readouterr().out.splitlines()
+        assert len(lines) == 2
+        assert "attempt 1/2" in lines[0]
+        assert "No attempts left" not in lines[0]
+        assert "attempt 2/2" in lines[1]
+        assert lines[1].endswith("No attempts left.")

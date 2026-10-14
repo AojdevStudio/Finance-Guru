@@ -23,6 +23,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
+
 
 class ScenarioInput(BaseModel):
     """Input for a single market drop scenario.
@@ -45,7 +47,7 @@ class ScenarioInput(BaseModel):
     holding_days: int = Field(
         default=30,
         ge=1,
-        le=252,
+        le=TRADING_DAYS_PER_YEAR,
         description="Holding period in trading days",
     )
 
@@ -250,7 +252,6 @@ class ComparisonOutput(BaseModel):
     }
 
 
-# Type exports
 __all__ = [
     "ScenarioInput",
     "SQQQResult",

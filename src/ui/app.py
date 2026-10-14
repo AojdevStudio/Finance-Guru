@@ -132,6 +132,14 @@ class FinanceGuruApp(App):
         color: $text-muted;
     }
 
+    .tools-hint {
+        margin-top: 2;
+    }
+
+    .result-table {
+        margin-bottom: 2;
+    }
+
     .result-header {
         text-style: bold;
         color: $accent;
@@ -171,7 +179,6 @@ class FinanceGuruApp(App):
             if portfolio:
                 self.query_one(PortfolioHeader).portfolio = portfolio
             else:
-                # Show warning but allow ticker input to proceed
                 self.notify(
                     "Portfolio CSV not found - continuing with ticker input only",
                     severity="warning",

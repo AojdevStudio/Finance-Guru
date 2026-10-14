@@ -28,6 +28,7 @@ Created: 2026-01-16
 """
 
 from datetime import date
+from typing import assert_never
 
 import numpy as np
 import pandas as pd
@@ -39,6 +40,9 @@ from src.models.validation_inputs import (
     ValidationConfig,
     ValidationOutput,
 )
+from src.utils.robust_stats import MODIFIED_Z_SCORE_SCALE
+
+_MIN_CONSISTENCY_SCORE = 0.90
 
 
 class InputValidator:
@@ -91,7 +95,6 @@ class InputValidator:
         This is the main entry point. It orchestrates all validation checks
         and combines them into a single comprehensive report.
         """
-        # Convert to pandas for easier calculations
         df = pd.DataFrame(
             {
                 "date": price_data.dates,
@@ -102,41 +105,32 @@ class InputValidator:
         if price_data.volumes is not None:
             df["volume"] = price_data.volumes
 
-        # Initialize anomaly list
         anomalies: list[DataAnomaly] = []
         warnings: list[str] = []
         recommendations: list[str] = []
 
-        # 1. Check for missing data
-        missing_count = self._check_missing_data(df, anomalies, warnings)
+        missing_count = self._count_null_prices(df, anomalies, warnings)
 
-        # 2. Detect outliers
         outlier_count = self._detect_outliers(df, anomalies, warnings)
 
-        # 3. Check for date gaps
         gap_count = self._check_date_gaps(df, anomalies, warnings)
 
-        # 4. Check for stock splits (if enabled)
         split_count = 0
         if self.config.check_splits:
             split_count = self._detect_splits(df, anomalies, warnings)
 
-        # 5. Calculate quality scores
         total_points = len(df)
         completeness_score = max(0.0, 1.0 - (missing_count / total_points))
         consistency_score = max(0.0, 1.0 - (outlier_count / total_points))
 
-        # 6. Determine overall validity
         is_valid = self._determine_validity(
             completeness_score, consistency_score, anomalies
         )
 
-        # 7. Generate recommendations
         self._generate_recommendations(
             is_valid, completeness_score, consistency_score, anomalies, recommendations
         )
 
-        # Build and return output (Pydantic calculates reliability_score)
         return ValidationOutput(
             ticker=price_data.ticker,
             validation_date=date.today(),
@@ -148,16 +142,16 @@ class InputValidator:
             potential_splits=split_count,
             completeness_score=completeness_score,
             consistency_score=consistency_score,
-            reliability_score=0.0,  # Calculated by Pydantic validator
+            reliability_score=0.0,
             anomalies=anomalies,
             warnings=warnings,
             recommendations=recommendations,
         )
 
-    def _check_missing_data(
+    def _count_null_prices(
         self, df: pd.DataFrame, anomalies: list[DataAnomaly], warnings: list[str]
     ) -> int:
-        """Check for missing data points.
+        """Count null prices and flag them when they exceed the missing-data threshold.
 
         EDUCATIONAL NOTE:
         Missing data can occur due to:
@@ -165,8 +159,6 @@ class InputValidator:
         - Data provider outages (problematic)
         - Delisted stocks (critical issue)
         """
-        # For now, we consider missing data as NULL values
-        # More sophisticated version would check for expected trading days
         missing_count = df["price"].isna().sum()
 
         if missing_count > 0:
@@ -209,14 +201,16 @@ class InputValidator:
         """
         prices = df["price"].values
 
-        if self.config.outlier_method == OutlierMethod.Z_SCORE:
-            outliers, outlier_indices = self._zscore_outliers(prices)
-        elif self.config.outlier_method == OutlierMethod.IQR:
-            outliers, outlier_indices = self._iqr_outliers(prices)
-        else:  # MODIFIED_Z
-            outliers, outlier_indices = self._modified_zscore_outliers(prices)
+        match self.config.outlier_method:
+            case OutlierMethod.Z_SCORE:
+                outliers, outlier_indices = self._zscore_outliers(prices)
+            case OutlierMethod.IQR:
+                outliers, outlier_indices = self._iqr_outliers(prices)
+            case OutlierMethod.MODIFIED_Z:
+                outliers, outlier_indices = self._modified_zscore_outliers(prices)
+            case _:
+                assert_never(self.config.outlier_method)
 
-        # Record anomalies
         for idx in outlier_indices:
             severity = (
                 "medium"
@@ -272,7 +266,6 @@ class InputValidator:
         outlier_mask = (prices < lower_bound) | (prices > upper_bound)
         outlier_indices = np.where(outlier_mask)[0].tolist()
 
-        # Calculate "scores" for compatibility (distance from bounds in IQR units)
         scores = np.zeros_like(prices)
         scores[prices < lower_bound] = (
             lower_bound - prices[prices < lower_bound]
@@ -300,8 +293,7 @@ class InputValidator:
         if mad == 0:
             return np.zeros_like(prices), []
 
-        # Modified z-score formula: 0.6745 * (x - median) / MAD
-        modified_z = 0.6745 * (prices - median) / mad
+        modified_z = MODIFIED_Z_SCORE_SCALE * (prices - median) / mad
         outlier_mask = np.abs(modified_z) > self.config.outlier_threshold
         outlier_indices = np.where(outlier_mask)[0].tolist()
 
@@ -320,7 +312,6 @@ class InputValidator:
         dates = pd.to_datetime(df["date"])
         date_diffs = dates.diff().dt.days
 
-        # Find gaps exceeding threshold
         gap_mask = date_diffs > self.config.max_gap_days
         gap_indices = np.where(gap_mask)[0].tolist()
 
@@ -364,10 +355,8 @@ class InputValidator:
         prices = df["price"].values
         dates = df["date"].values
 
-        # Calculate daily returns
         returns = np.diff(prices) / prices[:-1]
 
-        # Find large jumps
         split_mask = np.abs(returns) > self.config.split_threshold
         split_indices = np.where(split_mask)[0].tolist()
 
@@ -409,18 +398,13 @@ class InputValidator:
         - Too many outliers (>5% by default)
         - Critical anomalies present
         """
-        # Check for critical anomalies
         has_critical = any(a.severity == "critical" for a in anomalies)
 
-        # Check if scores meet thresholds
         completeness_ok = completeness_score >= (
             1.0 - self.config.missing_data_threshold
         )
 
-        # Consistency threshold derived from outlier checks
-        # If we allow 5% outliers, we need 95% consistency
-        1.0 - (self.config.outlier_threshold / 100.0)
-        consistency_ok = consistency_score >= 0.90  # 90% minimum
+        consistency_ok = consistency_score >= _MIN_CONSISTENCY_SCORE
 
         return completeness_ok and consistency_ok and not has_critical
 
@@ -467,7 +451,6 @@ class InputValidator:
                     "→ Investigate outliers: verify prices and check for data errors"
                 )
 
-            # Check for critical issues
             critical_anomalies = [a for a in anomalies if a.severity == "critical"]
             if critical_anomalies:
                 recommendations.append(
@@ -475,5 +458,4 @@ class InputValidator:
                 )
 
 
-# Export main class
 __all__ = ["InputValidator"]

@@ -38,7 +38,6 @@ from src.models.yaml_generation_inputs import (
 from src.utils.yaml_generator import YAMLGenerator
 
 
-# Test fixtures
 @pytest.fixture
 def valid_user_data_with_all_mcp() -> UserDataInput:
     """Create valid user data with all MCP servers (Alpha Vantage + BrightData)."""
@@ -174,11 +173,6 @@ def generator() -> YAMLGenerator:
     return YAMLGenerator(str(template_dir))
 
 
-# ============================================================================
-# Template Loading Tests
-# ============================================================================
-
-
 def test_mcp_json_template_exists(generator: YAMLGenerator):
     """Test that mcp.template.json exists and is readable."""
     template_path = (
@@ -204,24 +198,17 @@ def test_mcp_json_generation_succeeds(
     assert isinstance(result, str)
 
 
-# ============================================================================
-# JSON Validity Tests
-# ============================================================================
-
-
 def test_generated_mcp_json_is_valid_json(
     generator: YAMLGenerator, valid_user_data_with_all_mcp: UserDataInput
 ):
     """Test that generated MCP JSON is valid, parseable JSON."""
     result = generator.generate_mcp_json(valid_user_data_with_all_mcp)
 
-    # Should be parseable as JSON
     try:
         parsed = json.loads(result)
     except json.JSONDecodeError as e:
         pytest.fail(f"Generated MCP JSON is not valid JSON: {e}")
 
-    # Should have top-level mcpServers key
     assert "mcpServers" in parsed, "Generated JSON missing 'mcpServers' key"
     assert isinstance(parsed["mcpServers"], dict), "'mcpServers' should be a dictionary"
 
@@ -233,23 +220,15 @@ def test_generated_mcp_json_has_metadata(
     result = generator.generate_mcp_json(valid_user_data_with_all_mcp)
     parsed = json.loads(result)
 
-    # Should have metadata
     assert "_meta" in parsed, "Generated JSON missing '_meta' section"
     meta = parsed["_meta"]
 
-    # Metadata should have required fields
     assert "generated_by" in meta, "Metadata missing 'generated_by'"
     assert "generated_at" in meta, "Metadata missing 'generated_at'"
     assert "user" in meta, "Metadata missing 'user'"
     assert "version" in meta, "Metadata missing 'version'"
 
-    # User should be correct
     assert meta["user"] == "Alex", f"Expected user 'Alex', got '{meta['user']}'"
-
-
-# ============================================================================
-# Required Servers Tests
-# ============================================================================
 
 
 def test_required_mcp_servers_always_present(
@@ -261,7 +240,6 @@ def test_required_mcp_servers_always_present(
 
     mcp_servers = parsed["mcpServers"]
 
-    # Required servers. The retired gdrive server must stay absent.
     required_servers = ["exa", "perplexity", "context7"]
 
     for server in required_servers:
@@ -279,7 +257,6 @@ def test_required_servers_have_command_and_args(
 
     mcp_servers = parsed["mcpServers"]
 
-    # Check exa as example
     exa = mcp_servers["exa"]
     assert "command" in exa, "exa missing 'command' field"
     assert "args" in exa, "exa missing 'args' field"
@@ -329,11 +306,6 @@ def test_retired_gdrive_server_is_absent(
         assert "MCP Servers Required" in claude_md
 
 
-# ============================================================================
-# Optional Servers Tests (Conditional Inclusion)
-# ============================================================================
-
-
 def test_alphavantage_included_when_has_key(
     generator: YAMLGenerator, valid_user_data_with_all_mcp: UserDataInput
 ):
@@ -343,12 +315,10 @@ def test_alphavantage_included_when_has_key(
 
     mcp_servers = parsed["mcpServers"]
 
-    # Should have financial-datasets
     assert "financial-datasets" in mcp_servers, (
         "financial-datasets should be present when has_alphavantage=True"
     )
 
-    # Should have env with API key
     financial_datasets = mcp_servers["financial-datasets"]
     assert "env" in financial_datasets, "financial-datasets missing 'env' section"
     assert "ALPHA_VANTAGE_API_KEY" in financial_datasets["env"], (
@@ -368,7 +338,6 @@ def test_alphavantage_excluded_when_no_key(
 
     mcp_servers = parsed["mcpServers"]
 
-    # Should NOT have financial-datasets
     assert "financial-datasets" not in mcp_servers, (
         "financial-datasets should be excluded when has_alphavantage=False"
     )
@@ -383,12 +352,10 @@ def test_brightdata_included_when_has_key(
 
     mcp_servers = parsed["mcpServers"]
 
-    # Should have bright-data
     assert "bright-data" in mcp_servers, (
         "bright-data should be present when has_brightdata=True"
     )
 
-    # Should have env with API key
     bright_data = mcp_servers["bright-data"]
     assert "env" in bright_data, "bright-data missing 'env' section"
     assert "BRIGHT_DATA_API_KEY" in bright_data["env"], (
@@ -408,7 +375,6 @@ def test_brightdata_excluded_when_no_key(
 
     mcp_servers = parsed["mcpServers"]
 
-    # Should NOT have bright-data
     assert "bright-data" not in mcp_servers, (
         "bright-data should be excluded when has_brightdata=False"
     )
@@ -423,16 +389,9 @@ def test_only_alphavantage_no_brightdata(
 
     mcp_servers = parsed["mcpServers"]
 
-    # Should have financial-datasets
     assert "financial-datasets" in mcp_servers, "financial-datasets should be present"
 
-    # Should NOT have bright-data
     assert "bright-data" not in mcp_servers, "bright-data should be excluded"
-
-
-# ============================================================================
-# Variable Substitution Tests
-# ============================================================================
 
 
 def test_user_name_substitution_in_metadata(
@@ -442,10 +401,8 @@ def test_user_name_substitution_in_metadata(
     result = generator.generate_mcp_json(valid_user_data_with_all_mcp)
     parsed = json.loads(result)
 
-    # User name should be in metadata
     assert parsed["_meta"]["user"] == "Alex", "User name not substituted correctly"
 
-    # Should NOT contain template variable
     assert "{{user_name}}" not in result, (
         "Generated JSON contains unreplaced {{user_name}}"
     )
@@ -458,12 +415,10 @@ def test_timestamp_substitution(
     result = generator.generate_mcp_json(valid_user_data_with_all_mcp)
     parsed = json.loads(result)
 
-    # Should have a generated_at timestamp
     generated_at = parsed["_meta"]["generated_at"]
     assert len(generated_at) > 0, "generated_at is empty"
     assert "-" in generated_at, "generated_at should be ISO format (YYYY-MM-DD)"
 
-    # Should NOT contain template variable
     assert "{{timestamp}}" not in result, (
         "Generated JSON contains unreplaced {{timestamp}}"
     )
@@ -475,7 +430,6 @@ def test_no_unreplaced_variables(
     """Test that no template variables remain unreplaced."""
     result = generator.generate_mcp_json(valid_user_data_with_all_mcp)
 
-    # Common template variable patterns
     template_vars = [
         "{{user_name}}",
         "{{timestamp}}",
@@ -489,37 +443,26 @@ def test_no_unreplaced_variables(
         )
 
 
-# ============================================================================
-# Integration Tests
-# ============================================================================
-
-
 def test_full_mcp_generation_workflow(
     generator: YAMLGenerator, valid_user_data_with_all_mcp: UserDataInput
 ):
     """Test complete MCP JSON generation workflow end-to-end."""
-    # Generate MCP JSON
     result = generator.generate_mcp_json(valid_user_data_with_all_mcp)
 
-    # Validate JSON structure
     parsed = json.loads(result)
     assert "mcpServers" in parsed, "Missing mcpServers"
     assert "_meta" in parsed, "Missing _meta"
 
-    # Validate required servers
     required = ["exa", "perplexity", "context7"]
     for server in required:
         assert server in parsed["mcpServers"], f"Missing required server: {server}"
 
-    # Validate optional servers (should be present)
     assert "financial-datasets" in parsed["mcpServers"], "Missing financial-datasets"
     assert "bright-data" in parsed["mcpServers"], "Missing bright-data"
 
-    # Validate metadata
     assert parsed["_meta"]["user"] == "Alex"
     assert parsed["_meta"]["generated_by"] == "Finance Guru™ Onboarding"
 
-    # Validate no template variables
     assert "{{" not in result, "Contains unreplaced template variables"
     assert "}}" not in result, "Contains unreplaced template variables"
 
@@ -528,7 +471,6 @@ def test_different_users_generate_different_mcp_configs(
     generator: YAMLGenerator,
 ):
     """Test that different users get personalized MCP configs."""
-    # User 1: Alex with all MCP servers
     user1 = UserDataInput(
         identity=UserIdentityInput(user_name="Alex", language="English"),
         liquid_assets=LiquidAssetsInput(
@@ -563,7 +505,6 @@ def test_different_users_generate_different_mcp_configs(
         ),
     )
 
-    # User 2: Sarah with NO optional MCP servers
     user2 = UserDataInput(
         identity=UserIdentityInput(user_name="Sarah", language="English"),
         liquid_assets=LiquidAssetsInput(
@@ -592,23 +533,18 @@ def test_different_users_generate_different_mcp_configs(
         mcp=MCPConfigInput(has_alphavantage=False, has_brightdata=False),
     )
 
-    # Generate both
     result1 = generator.generate_mcp_json(user1)
     result2 = generator.generate_mcp_json(user2)
 
-    # They should be different
     assert result1 != result2, "Different users generated identical MCP JSON"
 
-    # Parse
     parsed1 = json.loads(result1)
     parsed2 = json.loads(result2)
 
-    # User 1 should have optional servers
     assert "financial-datasets" in parsed1["mcpServers"]
     assert "bright-data" in parsed1["mcpServers"]
     assert parsed1["_meta"]["user"] == "Alex"
 
-    # User 2 should NOT have optional servers
     assert "financial-datasets" not in parsed2["mcpServers"]
     assert "bright-data" not in parsed2["mcpServers"]
     assert parsed2["_meta"]["user"] == "Sarah"

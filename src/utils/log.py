@@ -25,10 +25,10 @@ from typing import Any
 
 structlog: Any
 try:
-    import structlog as _structlog  # third-party, comes from dev deps
+    import structlog as _structlog
 
     structlog = _structlog
-except ImportError:  # pragma: no cover - import-time guard
+except ImportError:
     structlog = None
 
 __all__ = ["get_logger", "scrub_pii", "ScrubPIIProcessor", "configure_logging"]
@@ -93,7 +93,7 @@ def configure_logging(level: int = logging.INFO) -> None:
     Chooses JSON output when stderr is not a TTY (CI, redirected logs)
     and pretty console output otherwise.
     """
-    if structlog is None:  # pragma: no cover
+    if structlog is None:
         logging.basicConfig(level=level, stream=sys.stderr)
         return
 
@@ -127,7 +127,7 @@ def get_logger(name: str | None = None) -> Any:
         A bound structlog logger, or the stdlib logger as a fallback
         if structlog is not installed.
     """
-    if structlog is None:  # pragma: no cover
+    if structlog is None:
         return logging.getLogger(name)
     configure_logging()
     return structlog.get_logger(name)

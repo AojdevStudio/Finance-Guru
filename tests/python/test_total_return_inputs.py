@@ -17,7 +17,6 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-# Add project root for imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -237,7 +236,7 @@ class TestTickerReturn:
                 end_date=date(2026, 1, 1),
                 price_return=0.05,
                 dividend_return=0.035,
-                total_return=0.15,  # 0.15 != 0.05 + 0.035 = 0.085
+                total_return=0.15,
             )
             assert len(w) == 1
             assert "deviates" in str(w[0].message)
@@ -252,8 +251,7 @@ class TestTickerReturn:
                 end_date=date(2026, 1, 1),
                 price_return=0.05,
                 dividend_return=0.035,
-                total_return=0.0851,  # Close enough (diff < 0.01)
+                total_return=0.0851,
             )
-            # Filter only our specific warnings (not Pydantic internals)
             relevant = [x for x in w if "deviates" in str(x.message)]
             assert len(relevant) == 0

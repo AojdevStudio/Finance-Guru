@@ -12,6 +12,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
+
 
 class PortfolioPriceData(BaseModel):
     """WHAT: Historical price data for multiple assets
@@ -53,19 +55,16 @@ class PortfolioPriceData(BaseModel):
         if not v:
             raise ValueError("Prices dictionary cannot be empty")
 
-        # Check all prices are positive
         for ticker, price_list in v.items():
             if any(p <= 0 for p in price_list):
                 raise ValueError(f"All prices for {ticker} must be positive")
 
-        # Check all series have same length
         lengths = [len(price_list) for price_list in v.values()]
         if len(set(lengths)) > 1:
             raise ValueError(
                 f"All price series must have same length. Found: {dict(zip(v.keys(), lengths, strict=False))}"
             )
 
-        # Check tickers match
         tickers_in_data = info.data.get("tickers", [])
         if tickers_in_data:
             for ticker in tickers_in_data:
@@ -115,7 +114,7 @@ class CorrelationConfig(BaseModel):
     rolling_window: int | None = Field(
         default=None,
         ge=20,
-        le=252,
+        le=TRADING_DAYS_PER_YEAR,
         description="Rolling window for time-varying correlation (None = full period)",
     )
 
@@ -281,11 +280,9 @@ class PortfolioCorrelationOutput(BaseModel):
     calculation_date: date
     tickers: list[str]
 
-    # Core analysis outputs
     correlation_matrix: CorrelationMatrixOutput
     covariance_matrix: CovarianceMatrixOutput
 
-    # Portfolio-level metrics
     diversification_score: float = Field(
         ...,
         ge=0.0,
@@ -297,7 +294,6 @@ class PortfolioCorrelationOutput(BaseModel):
         ..., description="True if average correlation exceeds 0.7 (concentration risk)"
     )
 
-    # Optional rolling analysis
     rolling_correlations: list[RollingCorrelationOutput] | None = Field(
         default=None,
         description="Time-varying correlations (if rolling window specified)",

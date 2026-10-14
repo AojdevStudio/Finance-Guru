@@ -39,10 +39,6 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
 from src.models.screener_inputs import (
     PatternType,
     PortfolioScreeningOutput,
@@ -50,6 +46,7 @@ from src.models.screener_inputs import (
     ScreeningResult,
 )
 from src.utils.screener import TechnicalScreener
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR, calendar_days_for
 
 
 def fetch_ticker_data(
@@ -60,9 +57,7 @@ def fetch_ticker_data(
         import yfinance as yf
 
         end_date = date.today()
-        # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
-        # Example: 252 trading days × 1.5 = 378 calendar days (~1 year with market closures)
-        start_date = end_date - timedelta(days=int(days * 1.5))
+        start_date = end_date - timedelta(days=calendar_days_for(days))
 
         ticker_obj = yf.Ticker(ticker)
         hist = ticker_obj.history(start=start_date, end=end_date)
@@ -99,14 +94,12 @@ def format_single_result(result: ScreeningResult) -> str:
     output.append("=" * 70)
     output.append("")
 
-    # Status
     if result.matches_criteria:
         output.append("✅ MATCHES CRITERIA - Signals detected")
     else:
         output.append("❌ DOES NOT MATCH - No significant signals")
     output.append("")
 
-    # Recommendation
     rec_emoji = {
         "strong_buy": "🚀",
         "buy": "👍",
@@ -119,7 +112,6 @@ def format_single_result(result: ScreeningResult) -> str:
     output.append(f"   Confidence: {result.confidence:.0%}")
     output.append("")
 
-    # Scores
     output.append("📈 SCORING")
     output.append("-" * 70)
     output.append(f"  Composite Score:          {result.score:>10.1f}")
@@ -127,7 +119,6 @@ def format_single_result(result: ScreeningResult) -> str:
         output.append(f"  Rank:                     {result.rank:>10}")
     output.append("")
 
-    # Current Metrics
     output.append("💰 CURRENT METRICS")
     output.append("-" * 70)
     output.append(f"  Price:                    ${result.current_price:>10.2f}")
@@ -135,7 +126,6 @@ def format_single_result(result: ScreeningResult) -> str:
         output.append(f"  RSI:                      {result.current_rsi:>10.1f}")
     output.append("")
 
-    # Signals
     if result.signals:
         output.append("🔔 SIGNALS DETECTED")
         output.append("-" * 70)
@@ -151,7 +141,6 @@ def format_single_result(result: ScreeningResult) -> str:
                 output.append(f"     Value: {signal.value:.2f}")
         output.append("")
 
-    # Notes
     if result.notes:
         output.append("💡 NOTES")
         output.append("-" * 70)
@@ -172,7 +161,6 @@ def format_portfolio_results(results: PortfolioScreeningOutput) -> str:
     output.append("=" * 70)
     output.append("")
 
-    # Summary
     output.append("📊 SUMMARY")
     output.append("-" * 70)
     output.append(f"  Total Screened:           {results.total_tickers_screened:>10}")
@@ -184,12 +172,10 @@ def format_portfolio_results(results: PortfolioScreeningOutput) -> str:
     output.append(f"  {results.summary}")
     output.append("")
 
-    # Top Picks
     if results.top_picks:
         output.append("🏆 TOP PICKS")
         output.append("-" * 70)
         for i, ticker in enumerate(results.top_picks, 1):
-            # Find the result for this ticker
             ticker_result = next(
                 (r for r in results.results if r.ticker == ticker), None
             )
@@ -200,12 +186,10 @@ def format_portfolio_results(results: PortfolioScreeningOutput) -> str:
                 )
         output.append("")
 
-    # Detailed Results
     output.append("📋 DETAILED RESULTS (Ranked by Score)")
     output.append("=" * 70)
     output.append("")
 
-    # Show ALL results, not just matches (for educational value)
     for result in results.results:
         rec_emoji = {
             "strong_buy": "🚀",
@@ -216,20 +200,17 @@ def format_portfolio_results(results: PortfolioScreeningOutput) -> str:
         }
         emoji = rec_emoji.get(result.recommendation, "")
 
-        # Show ticker with match status
         match_status = "✅ MATCH" if result.matches_criteria else "❌ NO MATCH"
         rank_str = f"#{result.rank}" if result.rank else "N/A"
         output.append(
             f"{match_status} | Rank {rank_str}: {result.ticker} - Score {result.score:.1f} {emoji}"
         )
 
-        # Format RSI properly (avoid None formatting errors)
         rsi_str = (
             f"{result.current_rsi:.1f}" if result.current_rsi is not None else "N/A"
         )
         output.append(f"  Price: ${result.current_price:.2f} | RSI: {rsi_str}")
 
-        # Show signals (or lack thereof)
         if result.signals:
             signals_str = ", ".join(s.signal_type.value for s in result.signals)
             output.append(f"  Signals: {signals_str}")
@@ -271,29 +252,25 @@ Examples:
         """,
     )
 
-    # Tickers to screen
     parser.add_argument(
         "tickers", nargs="+", type=str, help="One or more ticker symbols to screen"
     )
 
-    # Data parameters
     parser.add_argument(
         "--days",
         type=int,
-        default=252,
-        help="Number of days of historical data (default: 252)",
+        default=TRADING_DAYS_PER_YEAR,
+        help=f"Number of days of historical data (default: {TRADING_DAYS_PER_YEAR})",
     )
 
-    # Pattern selection
     parser.add_argument(
         "--patterns",
         nargs="+",
         choices=[p.value for p in PatternType],
-        default=None,  # None means "all patterns" - more useful default
+        default=None,
         help="Technical patterns to screen for (default: all patterns)",
     )
 
-    # RSI parameters
     parser.add_argument(
         "--rsi-oversold",
         type=float,
@@ -308,7 +285,6 @@ Examples:
         help="RSI overbought threshold (default: 70)",
     )
 
-    # MA parameters
     parser.add_argument(
         "--ma-fast", type=int, default=50, help="Fast MA period (default: 50)"
     )
@@ -317,7 +293,6 @@ Examples:
         "--ma-slow", type=int, default=200, help="Slow MA period (default: 200)"
     )
 
-    # Volume parameters
     parser.add_argument(
         "--volume-multiplier",
         type=float,
@@ -325,7 +300,6 @@ Examples:
         help="Volume multiplier for breakouts (default: 1.5)",
     )
 
-    # Output parameters
     parser.add_argument(
         "--output",
         type=str,
@@ -340,13 +314,10 @@ Examples:
 
     args = parser.parse_args()
 
-    # Validate parameters
     if args.days < 200:
         print("⚠️  Warning: Need at least 200 days for MA200 detection", file=sys.stderr)
 
     try:
-        # Create screening criteria
-        # If no patterns specified, use all patterns (most useful default)
         patterns_to_use = (
             [PatternType(p) for p in args.patterns]
             if args.patterns
@@ -362,11 +333,9 @@ Examples:
             volume_multiplier=args.volume_multiplier,
         )
 
-        # Create screener
         screener = TechnicalScreener(criteria)
 
         if len(args.tickers) == 1:
-            # Single ticker mode
             ticker = args.tickers[0].upper()
             print(
                 f"📥 Fetching {args.days} days of data for {ticker}...", file=sys.stderr
@@ -384,7 +353,6 @@ Examples:
                 output_text = format_single_result(result)
 
         else:
-            # Portfolio mode
             print(
                 f"📥 Fetching data for {len(args.tickers)} tickers...", file=sys.stderr
             )
@@ -411,7 +379,6 @@ Examples:
             else:
                 output_text = format_portfolio_results(portfolio_results)
 
-        # Output results
         print("", file=sys.stderr)
         if args.save_to:
             save_path = Path(args.save_to)

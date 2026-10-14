@@ -53,59 +53,90 @@ SFIN_ACCOUNT_SET = {
 }
 
 
-def test_categorize_expense_patterns_and_exemptions() -> None:
-    assert categorize_expense("H-E-B #063 ANYTOWN TX") == "Groceries"
-    assert categorize_expense("CHUCK E CHEESE 578") == "Dining Out"
-    assert categorize_expense("Tesla SUPERCHA 123") == "Auto & Transport"
-    assert categorize_expense("OPENAI *CHATGPT SUBSCR") == "Business Expense"
-    assert categorize_expense("aMaZoN marketplace") == "Shopping"
-    assert categorize_expense("MERCHANT STARBUCKS123") == "Dining Out"
-    assert categorize_expense("anything", -0.50) == "Exempt"
-    assert categorize_expense("WELLS FARGO IFACCTVERIFY") == "Exempt"
-    assert categorize_expense("ZZZ UNKNOWN MERCHANT") == "Uncategorized"
-    assert categorize_expense(None) == "Uncategorized"
+@pytest.mark.parametrize(
+    ("text", "amount", "expected"),
+    [
+        pytest.param("H-E-B #063 ANYTOWN TX", None, "Groceries", id="heb"),
+        pytest.param("CHUCK E CHEESE 578", None, "Dining Out", id="chuck-e-cheese"),
+        pytest.param("Tesla SUPERCHA 123", None, "Auto & Transport", id="supercharger"),
+        pytest.param("OPENAI *CHATGPT SUBSCR", None, "Business Expense", id="openai"),
+        pytest.param("aMaZoN marketplace", None, "Shopping", id="mixed-case"),
+        pytest.param("MERCHANT STARBUCKS123", None, "Dining Out", id="substring"),
+        pytest.param("anything", -0.50, "Exempt", id="sub-dollar"),
+        pytest.param("WELLS FARGO IFACCTVERIFY", None, "Exempt", id="verification"),
+        pytest.param("ZZZ UNKNOWN MERCHANT", None, "Uncategorized", id="unknown"),
+        pytest.param(None, None, "Uncategorized", id="no-text"),
+    ],
+)
+def test_categorize_expense_patterns_and_exemptions(
+    text: str | None, amount: float | None, expected: str
+) -> None:
+    assert categorize_expense(text, amount) == expected
 
 
-def test_resolve_direction_prefers_feed_wording_over_sign() -> None:
-    # Fidelity's CMA reports inbound payroll negative; wording must win.
-    assert (
-        resolve_direction("DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)", -1428.61)
-        == "credit"
-    )
-    assert (
-        resolve_direction("DIRECT DEPOSIT Ridgeline SerPAYROLL (Cash)", -2300.00)
-        == "credit"
-    )
-    assert (
-        resolve_direction("DIRECT DEBIT AMEX EPAYMENT ACH PMT (Cash)", -9402.47)
-        == "debit"
-    )
-    # A debit marker with an unexpectedly positive amount still reads as outflow.
-    assert resolve_direction("DIRECT DEBIT CHASE CREDIT CAUTOPAY", 600.00) == "debit"
-    # No marker falls back to sign.
-    assert resolve_direction("H-E-B #063 ANYTOWN TX", -54.13) == "debit"
-    assert resolve_direction("Capital One", 2000.00) == "credit"
-    assert resolve_direction(None, None) == "credit"
+@pytest.mark.parametrize(
+    ("text", "amount", "expected"),
+    [
+        pytest.param(
+            "DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)",
+            -1428.61,
+            "credit",
+            id="negative-dir-dep",
+        ),
+        pytest.param(
+            "DIRECT DEPOSIT Ridgeline SerPAYROLL (Cash)",
+            -2300.00,
+            "credit",
+            id="negative-payroll",
+        ),
+        pytest.param(
+            "DIRECT DEBIT AMEX EPAYMENT ACH PMT (Cash)",
+            -9402.47,
+            "debit",
+            id="direct-debit",
+        ),
+        pytest.param(
+            "DIRECT DEBIT CHASE CREDIT CAUTOPAY", 600.00, "debit", id="positive-debit"
+        ),
+        pytest.param("H-E-B #063 ANYTOWN TX", -54.13, "debit", id="sign-negative"),
+        pytest.param("Capital One", 2000.00, "credit", id="sign-positive"),
+        pytest.param(None, None, "credit", id="nothing-known"),
+    ],
+)
+def test_resolve_direction_prefers_feed_wording_over_sign(
+    text: str | None, amount: float | None, expected: str
+) -> None:
+    """Fidelity's CMA reports inbound payroll negative, so wording must win."""
+    assert resolve_direction(text, amount) == expected
 
 
-def test_normalize_transaction_signs_amount_to_match_direction() -> None:
+@pytest.mark.parametrize(
+    ("description", "expected_direction", "expected_amount"),
+    [
+        pytest.param(
+            "DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)",
+            "credit",
+            1428.61,
+            id="deposit",
+        ),
+        pytest.param("DIRECT DEBIT AMEX EPAYMENT", "debit", -1428.61, id="withdrawal"),
+    ],
+)
+def test_normalize_transaction_signs_amount_to_match_direction(
+    description: str, expected_direction: str, expected_amount: float
+) -> None:
     account = {"id": "ACT-cma", "name": "Cash Management", "org": {"name": "Fidelity"}}
-    deposit = {
-        "id": "TXN-payroll",
+    txn = {
+        "id": "TXN-1",
         "posted": 1704067200,
         "payee": None,
-        "description": "DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)",
+        "description": description,
         "amount": "-1428.61",
     }
-    row = normalize_transaction(account, deposit, "2026-07-31T00:00:00Z")
+    row = normalize_transaction(account, txn, "2026-07-31T00:00:00Z")
     amount, direction = row[8], row[9]
-    assert direction == "credit"
-    assert amount == 1428.61
-
-    withdrawal = dict(deposit, id="TXN-amex", description="DIRECT DEBIT AMEX EPAYMENT")
-    row = normalize_transaction(account, withdrawal, "2026-07-31T00:00:00Z")
-    assert row[9] == "debit"
-    assert row[8] == -1428.61
+    assert direction == expected_direction
+    assert amount == expected_amount
 
 
 def test_sync_inserts_updates_and_promotes_pending_transaction(tmp_path) -> None:
@@ -171,50 +202,63 @@ def test_sync_rejects_partial_failure_payload_before_writing(tmp_path) -> None:
     assert not (tmp_path / "t.db").exists()
 
 
-def test_resolve_direction_handles_fidelity_card_and_transfer_wording() -> None:
+@pytest.mark.parametrize(
+    ("text", "amount", "expected"),
+    [
+        pytest.param(
+            "CASH ADVANCE *LAKESIDE ANYTOWN TX 081826 AUTHID:624330 (Cash)",
+            654.00,
+            "debit",
+            id="cash-advance",
+        ),
+        pytest.param(
+            "DEBIT CARD PURCHASE GUMROAD* SHAWN GRADY GUMROAD.COM NY 082226",
+            21.60,
+            "debit",
+            id="card-purchase",
+        ),
+        pytest.param(
+            "DEBIT CARD PURCHASE CASH APP*FIRST CHURCH cash.app TX 082726",
+            20.00,
+            "debit",
+            id="card-purchase-cash-app",
+        ),
+        pytest.param(
+            "TRANSFERRED FROM VS ZXX-XXX752-1 (Cash)",
+            -650.00,
+            "credit",
+            id="transferred-from",
+        ),
+        pytest.param(
+            "TRANSFERRED TO VS ZXX-XXX592-1 (Cash)",
+            -650.00,
+            "debit",
+            id="transferred-to",
+        ),
+        pytest.param(
+            "TRANSFER WITHDRAWAL To ....2222 (Cash)",
+            650.00,
+            "debit",
+            id="transfer-withdrawal",
+        ),
+        pytest.param(
+            "DIRECT DEBIT CHASE CREDIT CAUTOPAYBUS (Cash)",
+            -477.33,
+            "debit",
+            id="direct-debit",
+        ),
+    ],
+)
+def test_resolve_direction_handles_fidelity_card_and_transfer_wording(
+    text: str, amount: float, expected: str
+) -> None:
     """Fidelity's sign is unreliable in BOTH directions, so wording must win.
 
-    Every case below is a real row from the Fidelity brokerage feed whose
-    SimpleFIN sign contradicts the authoritative SnapTrade `transactions` row
-    for the same transaction (verified 2026-08-31).
+    Every case is a real row from the Fidelity brokerage feed whose SimpleFIN
+    sign contradicts the authoritative SnapTrade `transactions` row for the same
+    transaction (verified 2026-08-31).
     """
-    # Outflows the feed reported as positive.
-    assert (
-        resolve_direction(
-            "CASH ADVANCE *LAKESIDE ANYTOWN TX 081826 AUTHID:624330 (Cash)", 654.00
-        )
-        == "debit"
-    )
-    assert (
-        resolve_direction(
-            "DEBIT CARD PURCHASE GUMROAD* SHAWN GRADY GUMROAD.COM NY 082226", 21.60
-        )
-        == "debit"
-    )
-    assert (
-        resolve_direction(
-            "DEBIT CARD PURCHASE CASH APP*FIRST CHURCH cash.app TX 082726", 20.00
-        )
-        == "debit"
-    )
-    # An inflow the feed reported as negative: SnapTrade books it CONTRIBUTION +650.
-    assert (
-        resolve_direction("TRANSFERRED FROM VS ZXX-XXX752-1 (Cash)", -650.00)
-        == "credit"
-    )
-    # The outbound leg on the CMA side stays an outflow.
-    assert (
-        resolve_direction("TRANSFERRED TO VS ZXX-XXX592-1 (Cash)", -650.00) == "debit"
-    )
-    # An outbound transfer's own wording is a debit even when signed positive.
-    assert (
-        resolve_direction("TRANSFER WITHDRAWAL To ....2222 (Cash)", 650.00) == "debit"
-    )
-    # "direct debit" must still win over the newer, less specific markers.
-    assert (
-        resolve_direction("DIRECT DEBIT CHASE CREDIT CAUTOPAYBUS (Cash)", -477.33)
-        == "debit"
-    )
+    assert resolve_direction(text, amount) == expected
 
 
 def test_retirement_account_activity_is_not_household_spending() -> None:
@@ -230,16 +274,42 @@ def test_retirement_account_activity_is_not_household_spending() -> None:
     assert categorize_expense("contribution", -120.00, retirement) == "Retirement"
     assert categorize_expense("contribution", -30.00, retirement) == "Retirement"
     assert categorize_expense("dividend", 8.00, retirement) == "Retirement"
-    # Retirement must be excluded from household spending totals.
     assert "Retirement" in NON_SPEND_CATEGORIES
-    # A contribution on a normal account is still ordinary spending, not Retirement.
     assert (
         categorize_expense("CONTRIBUTION TO CHURCH", -100.00, "Platinum Card® (3333)")
         != "Retirement"
     )
 
 
-def test_inbound_direct_deposits_are_payroll_regardless_of_employer_memo() -> None:
+@pytest.mark.parametrize(
+    ("memo", "amount", "expected"),
+    [
+        pytest.param(
+            "DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)",
+            2200.00,
+            "Payroll",
+            id="dir-dep",
+        ),
+        pytest.param(
+            "DIRECT DEPOSIT Ridgeline SerACH (Cash)", 2300.00, "Payroll", id="ach"
+        ),
+        pytest.param(
+            "DIRECT DEPOSIT NORTHFIELD COLLPAYROLL (Cash)",
+            2400.00,
+            "Payroll",
+            id="payroll",
+        ),
+        pytest.param(
+            "DIRECT DEPOSIT WELLS FARGO ACCTVERIFY",
+            0.25,
+            "Exempt",
+            id="verification-deposit",
+        ),
+    ],
+)
+def test_inbound_direct_deposits_are_payroll_regardless_of_employer_memo(
+    memo: str, amount: float, expected: str
+) -> None:
     """Employers vary the memo suffix; the deposit is payroll either way.
 
     Verified 2026-08-31 against a real feed: payers whose memo ends in "PAYROLL"
@@ -247,28 +317,11 @@ def test_inbound_direct_deposits_are_payroll_regardless_of_employer_memo() -> No
     fell through to Uncategorized, leaving a large share of income untagged. The
     verification micro-deposits must stay Exempt.
 
-    Employer names and amounts below are placeholders; the memo SHAPE is what is
+    Employer names and amounts are placeholders; the memo SHAPE is what is
     under test, and real payer names do not belong in a public repository.
     """
     cma = "Cash Management (Joint WROS) (0001)"
-    assert (
-        categorize_expense("DIRECT DEPOSIT ACME STAFFINGDIR DEP (Cash)", 2200.00, cma)
-        == "Payroll"
-    )
-    assert (
-        categorize_expense("DIRECT DEPOSIT Ridgeline SerACH (Cash)", 2300.00, cma)
-        == "Payroll"
-    )
-    # Already-working variants must not regress.
-    assert (
-        categorize_expense("DIRECT DEPOSIT NORTHFIELD COLLPAYROLL (Cash)", 2400.00, cma)
-        == "Payroll"
-    )
-    # Sub-dollar bank verification deposits stay Exempt, not payroll.
-    assert (
-        categorize_expense("DIRECT DEPOSIT WELLS FARGO ACCTVERIFY", 0.25, cma)
-        == "Exempt"
-    )
+    assert categorize_expense(memo, amount, cma) == expected
 
 
 def test_sync_applies_household_merchant_rules(tmp_path) -> None:

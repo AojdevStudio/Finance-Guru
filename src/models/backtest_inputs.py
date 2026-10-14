@@ -124,14 +124,12 @@ class TradeExecution(BaseModel):
     )
     ticker: str = Field(..., description="Asset ticker")
 
-    # Entry details
     entry_price: float = Field(
         ..., gt=0.0, description="Actual entry price (after slippage)"
     )
     shares: float = Field(..., gt=0.0, description="Number of shares traded")
     entry_commission: float = Field(..., ge=0.0, description="Commission paid on entry")
 
-    # Exit details (if closed)
     exit_price: float | None = Field(
         default=None, description="Actual exit price (after slippage)"
     )
@@ -139,11 +137,9 @@ class TradeExecution(BaseModel):
         default=None, description="Commission paid on exit"
     )
 
-    # Trade performance
     pnl: float | None = Field(default=None, description="Profit/Loss in dollars")
     pnl_pct: float | None = Field(default=None, description="Profit/Loss as percentage")
 
-    # Metadata
     signal_reason: str | None = Field(
         default=None, description="Original signal reason"
     )
@@ -189,20 +185,17 @@ class BacktestPerformanceMetrics(BaseModel):
     - Win rate > 50% OR profit factor > 2.0 (winners outweigh losers)
     """
 
-    # Capital metrics
     initial_capital: float = Field(..., description="Starting capital")
     final_capital: float = Field(..., description="Ending capital")
     total_return: float = Field(..., description="Total return in dollars")
     total_return_pct: float = Field(..., description="Total return as percentage")
 
-    # Risk metrics
     sharpe_ratio: float | None = Field(
         default=None, description="Sharpe ratio (risk-adjusted return)"
     )
     max_drawdown: float = Field(..., description="Maximum peak-to-trough decline")
     max_drawdown_pct: float = Field(..., description="Max drawdown as percentage")
 
-    # Trade statistics
     total_trades: int = Field(..., ge=0, description="Total number of trades executed")
     winning_trades: int = Field(..., ge=0, description="Number of profitable trades")
     losing_trades: int = Field(..., ge=0, description="Number of losing trades")
@@ -210,7 +203,6 @@ class BacktestPerformanceMetrics(BaseModel):
         ..., ge=0.0, le=1.0, description="Win rate (winning trades / total trades)"
     )
 
-    # Profit metrics
     avg_win: float | None = Field(
         default=None, description="Average profit on winning trades"
     )
@@ -221,7 +213,6 @@ class BacktestPerformanceMetrics(BaseModel):
         default=None, description="Profit factor (gross profits / gross losses)"
     )
 
-    # Cost analysis
     total_commissions: float = Field(..., ge=0.0, description="Total commissions paid")
     total_slippage: float = Field(..., ge=0.0, description="Total slippage cost")
 
@@ -261,28 +252,22 @@ class BacktestResults(BaseModel):
     - Compliance Officer: Assess strategy risk profile before approval
     """
 
-    # Backtest metadata
     ticker: str = Field(..., description="Asset ticker tested")
     start_date: date = Field(..., description="Backtest start date")
     end_date: date = Field(..., description="Backtest end date")
     strategy_name: str = Field(..., description="Strategy name/description")
 
-    # Configuration used
     config: BacktestConfig = Field(..., description="Backtest configuration")
 
-    # Performance metrics
     performance: BacktestPerformanceMetrics = Field(
         ..., description="Performance statistics"
     )
 
-    # Trade history
     trades: list[TradeExecution] = Field(..., description="All executed trades")
 
-    # Equity curve data
     equity_dates: list[date] = Field(..., description="Dates for equity curve")
     equity_values: list[float] = Field(..., description="Portfolio values over time")
 
-    # Verdict
     recommendation: Literal["DEPLOY", "OPTIMIZE", "REJECT"] = Field(
         ..., description="Backtest verdict based on performance"
     )

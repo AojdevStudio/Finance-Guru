@@ -71,9 +71,6 @@ def parse_amount(raw: str) -> float:
     return float(clean)
 
 
-# ---- Row-level assertions -----------------------------------------------
-
-
 def test_row_count(golden_rows, expected):
     assert len(golden_rows) == expected["row_count"]
 
@@ -102,9 +99,6 @@ def test_substitute_payment_pattern_priority(taxonomy):
     assert sub_idx < plain_idx, (
         "SUBSTITUTE PAYMENT must precede plain DIVIDEND RECEIVED"
     )
-
-
-# ---- Aggregate totals (the real contract) -------------------------------
 
 
 def test_totals_match_expected(golden_rows, expected, taxonomy):

@@ -33,18 +33,21 @@ Created: 2025-10-13
 """
 
 from datetime import date
-from typing import Literal
+from typing import Literal, assert_never
 
 import numpy as np
 import pandas as pd
 
 from src.models.moving_avg_inputs import (
     CrossoverOutput,
+    MAType,
     MovingAverageAnalysis,
     MovingAverageConfig,
     MovingAverageDataInput,
     MovingAverageOutput,
 )
+
+_AT_MA_TOLERANCE_PCT = 0.1
 
 
 class MovingAverageCalculator:
@@ -213,10 +216,8 @@ class MovingAverageCalculator:
         Returns:
             pd.Series: WMA values
         """
-        # Create weight array: [1, 2, 3, ..., period]
         weights = np.arange(1, period + 1)
 
-        # Calculate weighted sum using rolling window
         def weighted_mean(window):
             return np.dot(window, weights) / weights.sum()
 
@@ -271,23 +272,34 @@ class MovingAverageCalculator:
         Returns:
             pd.Series: HMA values
         """
-        # Calculate half-period and sqrt-period
         half_period = period // 2
         sqrt_period = int(np.sqrt(period))
 
-        # Step 1: WMA of half period
         wma_half = self.calculate_wma(prices, half_period)
 
-        # Step 2: WMA of full period
         wma_full = self.calculate_wma(prices, period)
 
-        # Step 3-4: 2×WMA(n/2) - WMA(n)
         raw_hma = 2 * wma_half - wma_full
 
-        # Step 5: Smooth with WMA of sqrt(n)
         hma = self.calculate_wma(raw_hma, sqrt_period)
 
         return hma
+
+    def _calculate_series(
+        self, ma_type: MAType, prices: pd.Series, period: int
+    ) -> pd.Series:
+        """Dispatch to the calculator for ``ma_type``."""
+        match ma_type:
+            case "SMA":
+                return self.calculate_sma(prices, period)
+            case "EMA":
+                return self.calculate_ema(prices, period)
+            case "WMA":
+                return self.calculate_wma(prices, period)
+            case "HMA":
+                return self.calculate_hma(prices, period)
+            case _:
+                assert_never(ma_type)
 
     def calculate_ma(self, data: MovingAverageDataInput) -> MovingAverageOutput:
         """Calculate primary moving average.
@@ -307,10 +319,8 @@ class MovingAverageCalculator:
         """
         prices = pd.Series(data.prices, index=data.dates)
 
-        # Verify sufficient data
         min_required = self.config.period
         if self.config.ma_type == "HMA":
-            # HMA needs more data due to nested calculations
             min_required = self.config.period + int(np.sqrt(self.config.period))
 
         if len(prices) < min_required:
@@ -319,23 +329,15 @@ class MovingAverageCalculator:
                 f"({self.config.period}), got {len(prices)}"
             )
 
-        # Calculate appropriate MA type
-        if self.config.ma_type == "SMA":
-            ma_series = self.calculate_sma(prices, self.config.period)
-        elif self.config.ma_type == "EMA":
-            ma_series = self.calculate_ema(prices, self.config.period)
-        elif self.config.ma_type == "WMA":
-            ma_series = self.calculate_wma(prices, self.config.period)
-        else:  # HMA
-            ma_series = self.calculate_hma(prices, self.config.period)
+        ma_series = self._calculate_series(
+            self.config.ma_type, prices, self.config.period
+        )
 
-        # Get current values
         current_ma = float(ma_series.iloc[-1])
         current_price = float(prices.iloc[-1])
 
-        # Determine price vs MA position
         price_diff_pct = ((current_price - current_ma) / current_ma) * 100
-        if abs(price_diff_pct) < 0.1:  # Within 0.1%
+        if abs(price_diff_pct) < _AT_MA_TOLERANCE_PCT:
             price_vs_ma: Literal["ABOVE", "BELOW", "AT"] = "AT"
         elif current_price > current_ma:
             price_vs_ma = "ABOVE"
@@ -378,33 +380,26 @@ class MovingAverageCalculator:
         Returns:
             tuple: (signal, last_crossover_date, days_since_crossover)
         """
-        # Get current relationship
         current_fast = fast_ma.iloc[-1]
         current_slow = slow_ma.iloc[-1]
 
-        # Find most recent crossover
         last_crossover_date = None
         days_since = None
 
-        # Look back through history for crossovers
-        # A crossover occurs when the relationship changes
         for i in range(len(fast_ma) - 1, 0, -1):
             if pd.isna(fast_ma.iloc[i]) or pd.isna(slow_ma.iloc[i]):
                 continue
             if pd.isna(fast_ma.iloc[i - 1]) or pd.isna(slow_ma.iloc[i - 1]):
                 continue
 
-            # Check if relationship changed (crossover)
             current_relationship = fast_ma.iloc[i] > slow_ma.iloc[i]
             previous_relationship = fast_ma.iloc[i - 1] > slow_ma.iloc[i - 1]
 
             if current_relationship != previous_relationship:
-                # Found most recent crossover
                 last_crossover_date = dates[i]
                 days_since = len(dates) - 1 - i
                 break
 
-        # Determine current signal
         if current_fast > current_slow:
             signal = "BULLISH"
         elif current_fast < current_slow:
@@ -439,7 +434,9 @@ class MovingAverageCalculator:
         Raises:
             ValueError: If crossover config not provided or insufficient data
         """
-        if self.config.secondary_ma_type is None:
+        secondary_type = self.config.secondary_ma_type
+        secondary_period = self.config.secondary_period
+        if secondary_type is None or secondary_period is None:
             raise ValueError(
                 "Crossover analysis requires secondary_ma_type and secondary_period "
                 "in configuration. Use calculate_ma() for single MA analysis."
@@ -447,41 +444,21 @@ class MovingAverageCalculator:
 
         prices = pd.Series(data.prices, index=data.dates)
 
-        # Calculate primary MA
         primary_output = self.calculate_ma(data)
 
-        # Calculate secondary MA
-        if self.config.secondary_ma_type == "SMA":
-            secondary_ma = self.calculate_sma(prices, self.config.secondary_period)
-        elif self.config.secondary_ma_type == "EMA":
-            secondary_ma = self.calculate_ema(prices, self.config.secondary_period)
-        elif self.config.secondary_ma_type == "WMA":
-            secondary_ma = self.calculate_wma(prices, self.config.secondary_period)
-        else:  # HMA
-            secondary_ma = self.calculate_hma(prices, self.config.secondary_period)
+        secondary_ma = self._calculate_series(secondary_type, prices, secondary_period)
 
-        # Determine which is fast/slow
-        if self.config.period < self.config.secondary_period:
-            fast_ma = pd.Series(
-                primary_output.ma_values,
-                index=data.dates[-len(primary_output.ma_values) :],
-            )
-            slow_ma = secondary_ma
-            fast_is_primary = True
-        else:
-            fast_ma = secondary_ma
-            slow_ma = pd.Series(
-                primary_output.ma_values,
-                index=data.dates[-len(primary_output.ma_values) :],
-            )
-            fast_is_primary = False
+        fast_ma = pd.Series(
+            primary_output.ma_values,
+            index=data.dates[-len(primary_output.ma_values) :],
+        )
+        slow_ma = secondary_ma
 
-        # Create secondary output
         secondary_output = MovingAverageOutput(
             ticker=data.ticker,
             calculation_date=data.dates[-1],
-            ma_type=self.config.secondary_ma_type,
-            period=self.config.secondary_period,
+            ma_type=secondary_type,
+            period=secondary_period,
             current_value=float(secondary_ma.iloc[-1]),
             current_price=float(prices.iloc[-1]),
             price_vs_ma="ABOVE"
@@ -490,8 +467,6 @@ class MovingAverageCalculator:
             ma_values=secondary_ma.dropna().tolist(),
         )
 
-        # Detect crossover
-        # Align series for comparison
         min_length = min(len(fast_ma.dropna()), len(slow_ma.dropna()))
         fast_aligned = fast_ma.dropna().iloc[-min_length:]
         slow_aligned = slow_ma.dropna().iloc[-min_length:]
@@ -501,20 +476,9 @@ class MovingAverageCalculator:
             fast_aligned, slow_aligned, dates_aligned
         )
 
-        # Determine crossover type (Golden Cross/Death Cross only for 50/200 SMA)
         crossover_type: Literal["GOLDEN_CROSS", "DEATH_CROSS", "NONE"] = "NONE"
-        fast_period = (
-            self.config.period if fast_is_primary else self.config.secondary_period
-        )
-        slow_period = (
-            self.config.secondary_period if fast_is_primary else self.config.period
-        )
-        fast_type = (
-            self.config.ma_type if fast_is_primary else self.config.secondary_ma_type
-        )
-        slow_type = (
-            self.config.secondary_ma_type if fast_is_primary else self.config.ma_type
-        )
+        fast_period, slow_period = self.config.period, secondary_period
+        fast_type, slow_type = self.config.ma_type, secondary_type
 
         if (
             fast_period == 50
@@ -528,7 +492,6 @@ class MovingAverageCalculator:
             elif signal == "BEARISH":
                 crossover_type = "DEATH_CROSS"
 
-        # Create crossover output
         crossover_output = CrossoverOutput(
             ticker=data.ticker,
             calculation_date=data.dates[-1],
@@ -547,13 +510,12 @@ class MovingAverageCalculator:
         return MovingAverageAnalysis(
             ticker=data.ticker,
             calculation_date=data.dates[-1],
-            primary_ma=primary_output if fast_is_primary else secondary_output,
-            secondary_ma=secondary_output if fast_is_primary else primary_output,
+            primary_ma=primary_output,
+            secondary_ma=secondary_output,
             crossover_analysis=crossover_output,
         )
 
 
-# Convenience function for quick calculations
 def calculate_moving_average(
     ticker: str,
     dates: list[str],
@@ -605,17 +567,14 @@ def calculate_moving_average(
     """
     from datetime import date as date_type
 
-    # Convert string dates to date objects
     date_objects = [date_type.fromisoformat(d) for d in dates]
 
-    # Create input model
     ma_data = MovingAverageDataInput(
         ticker=ticker,
         dates=date_objects,
         prices=prices,
     )
 
-    # Create config
     config = MovingAverageConfig(
         ma_type=ma_type,
         period=period,
@@ -623,13 +582,11 @@ def calculate_moving_average(
         secondary_period=secondary_period,
     )
 
-    # Calculate
     calculator = MovingAverageCalculator(config)
 
     if secondary_ma_type and secondary_period:
         return calculator.calculate_with_crossover(ma_data)
     else:
-        # Single MA analysis
         primary_ma = calculator.calculate_ma(ma_data)
         return MovingAverageAnalysis(
             ticker=ma_data.ticker,
@@ -640,7 +597,6 @@ def calculate_moving_average(
         )
 
 
-# Type exports
 __all__ = [
     "MovingAverageCalculator",
     "calculate_moving_average",

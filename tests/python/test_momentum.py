@@ -21,10 +21,6 @@ from src.models.momentum_inputs import (
 )
 from src.utils.momentum import MomentumIndicators, calculate_momentum
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
 
 def _make_dates(n: int) -> list[date]:
     start = date(2025, 1, 2)
@@ -50,7 +46,7 @@ def _make_momentum_data(
     closes = [start_price]
     for _ in range(n - 1):
         closes.append(closes[-1] + trend + rng.normal(0, volatility))
-    closes = [max(c, 1.0) for c in closes]  # keep positive
+    closes = [max(c, 1.0) for c in closes]
 
     high = (
         [c + abs(rng.normal(0, volatility * 0.5)) for c in closes]
@@ -62,7 +58,6 @@ def _make_momentum_data(
         if include_hlv
         else None
     )
-    # Ensure high >= close >= low
     if high and low:
         high = [max(h, c) for h, c in zip(high, closes, strict=True)]
         low = [min(lo, c) for lo, c in zip(low, closes, strict=True)]
@@ -91,11 +86,6 @@ def calculator(config: MomentumConfig) -> MomentumIndicators:
     return MomentumIndicators(config)
 
 
-# ---------------------------------------------------------------------------
-# RSI
-# ---------------------------------------------------------------------------
-
-
 class TestRSI:
     """RSI indicator tests."""
 
@@ -117,7 +107,7 @@ class TestRSI:
         data = _make_momentum_data(n=40, trend=3.0, volatility=0.5, seed=10)
         calc = MomentumIndicators(MomentumConfig(rsi_period=14))
         result = calc.calculate_rsi(data)
-        assert result.current_rsi > 60  # strong uptrend
+        assert result.current_rsi > 60
 
     def test_rsi_oversold_on_strong_downtrend(self):
         """Strongly falling prices should push RSI toward oversold."""
@@ -141,7 +131,6 @@ class TestRSI:
 
     def test_rsi_signal_matches_value(self, calculator: MomentumIndicators):
         """Signal should correspond to RSI value thresholds."""
-        # Build data that gives a known RSI range
         data = _make_momentum_data(n=60, trend=0.0, volatility=2.0, seed=42)
         result = calculator.calculate_rsi(data)
         if result.current_rsi > 70:
@@ -150,11 +139,6 @@ class TestRSI:
             assert result.rsi_signal == "oversold"
         else:
             assert result.rsi_signal == "neutral"
-
-
-# ---------------------------------------------------------------------------
-# MACD
-# ---------------------------------------------------------------------------
 
 
 class TestMACD:
@@ -198,12 +182,7 @@ class TestMACD:
         data = _make_momentum_data(n=60, trend=1.0, volatility=0.3, seed=5)
         calc = MomentumIndicators(MomentumConfig())
         result = calc.calculate_macd(data)
-        assert result.macd_line > 0  # Fast EMA > slow EMA in uptrend
-
-
-# ---------------------------------------------------------------------------
-# Stochastic
-# ---------------------------------------------------------------------------
+        assert result.macd_line > 0
 
 
 class TestStochastic:
@@ -245,11 +224,6 @@ class TestStochastic:
             assert result.signal == "neutral"
 
 
-# ---------------------------------------------------------------------------
-# Williams %R
-# ---------------------------------------------------------------------------
-
-
 class TestWilliamsR:
     """Williams %R tests."""
 
@@ -285,11 +259,6 @@ class TestWilliamsR:
             assert result.signal == "oversold"
         else:
             assert result.signal == "neutral"
-
-
-# ---------------------------------------------------------------------------
-# ROC
-# ---------------------------------------------------------------------------
 
 
 class TestROC:
@@ -329,11 +298,6 @@ class TestROC:
             calc.calculate_roc(data)
 
 
-# ---------------------------------------------------------------------------
-# calculate_all
-# ---------------------------------------------------------------------------
-
-
 class TestCalculateAll:
     """Tests for the combined calculate_all method."""
 
@@ -347,11 +311,6 @@ class TestCalculateAll:
         assert isinstance(result.stochastic, StochasticOutput)
         assert isinstance(result.williams_r, WilliamsROutput)
         assert isinstance(result.roc, ROCOutput)
-
-
-# ---------------------------------------------------------------------------
-# Convenience function
-# ---------------------------------------------------------------------------
 
 
 class TestConvenienceFunction:

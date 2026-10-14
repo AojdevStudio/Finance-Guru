@@ -12,10 +12,14 @@ Created: 2025-11-17
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field, field_validator
+
+from src.models.ticker import Ticker
+
+_ALLOWED_CLOCK_SKEW = timedelta(minutes=1)
 
 
 class HoldingInput(BaseModel):
@@ -197,9 +201,7 @@ class PortfolioSnapshotInput(BaseModel):
         clock skew between systems, but anything more is suspicious.
         """
         now = datetime.now()
-        future_threshold = 60  # 1 minute
-
-        if (v - now).total_seconds() > future_threshold:
+        if v - now > _ALLOWED_CLOCK_SKEW:
             raise ValueError(
                 f"Timestamp {v} is in the future (now: {now}). "
                 "Check system clock or data source."
@@ -306,12 +308,9 @@ class AnalysisResultsInput(BaseModel):
         )
     """
 
-    ticker: str = Field(
+    ticker: Ticker = Field(
         ...,
         description="Ticker symbol analyzed (e.g., 'TSLA', 'BRK-B')",
-        min_length=1,
-        max_length=10,
-        pattern=r"^[A-Z\-\.]+$",  # Uppercase letters, hyphens, and dots (e.g., BRK-B, BRK.B)
     )
 
     timeframe: int = Field(..., ge=30, le=1000, description="Number of days analyzed")
@@ -387,7 +386,6 @@ class AnalysisResultsInput(BaseModel):
     }
 
 
-# Type exports for convenience
 __all__ = [
     "HoldingInput",
     "PortfolioSnapshotInput",

@@ -124,7 +124,7 @@ def sync(config_path: Path, database_url: str | None) -> dict[str, Any]:
             netted = _net_positions(_account_positions(client, aid))
             positions = netted.positions
             balances = _account_balances(client, aid)
-            with conn:  # one transaction per account
+            with conn:
                 conn.execute("DELETE FROM positions WHERE account_id = ?", (aid,))
                 conn.executemany(
                     "INSERT INTO positions "

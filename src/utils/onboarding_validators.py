@@ -15,10 +15,6 @@ from typing import Any
 
 import questionary
 
-# ---------------------------------------------------------------------------
-# Domain validators
-# ---------------------------------------------------------------------------
-
 
 def validate_currency(value: str) -> float:
     """Parse currency strings into a float.
@@ -39,7 +35,6 @@ def validate_currency(value: str) -> float:
     if not cleaned:
         raise ValueError("Please enter a dollar amount. Try: 25000, $25,000, or 25k")
 
-    # Handle shorthand multipliers: 25k, 1.5m
     multiplier = 1.0
     suffix_match = re.match(r"^([0-9]*\.?[0-9]+)\s*([kKmM])$", cleaned)
     if suffix_match:
@@ -130,11 +125,6 @@ def validate_positive_integer(value: str) -> int:
     return result
 
 
-# ---------------------------------------------------------------------------
-# Retry-with-skip wrapper
-# ---------------------------------------------------------------------------
-
-
 def ask_with_retry(
     prompt_fn: Callable[[], Any],
     validator: Callable[[Any], Any] | None = None,
@@ -181,13 +171,11 @@ def ask_with_retry(
             return validator(raw)
         except (ValueError, TypeError) as exc:
             attempts += 1
-            remaining = max_retries - attempts
-            if remaining > 0:
-                print(f"  Invalid input (attempt {attempts}/{max_retries}): {exc}")
-            else:
-                print(f"  Invalid input (attempt {attempts}/{max_retries}): {exc}")
+            message = f"  Invalid input (attempt {attempts}/{max_retries}): {exc}"
+            if attempts == max_retries:
+                message += " No attempts left."
+            print(message)
 
-    # All retries exhausted -- offer skip with default
     default_display = default if default is not None else "empty"
     skip = questionary.confirm(
         f"  Use default value ({default_display}) and continue?",
@@ -195,13 +183,11 @@ def ask_with_retry(
     ).ask()
 
     if skip is None:
-        # Ctrl+C during skip prompt
         return default
 
     if skip:
         return default
 
-    # User declined skip -- one more chance
     raw = prompt_fn()
     if raw is None:
         return default
