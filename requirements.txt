@@ -110,7 +110,7 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.61
+gitpython==3.1.62
     # via streamlit
 grimp==3.14
     # via import-linter
@@ -169,7 +169,7 @@ mdurl==0.1.2
     # via markdown-it-py
 msgpack==1.2.1
     # via cachecontrol
-multidict==6.7.1
+multidict==6.9.1
     # via
     #   aiohttp
     #   yarl
@@ -391,7 +391,7 @@ tomli==2.4.1
     #   pip-audit
 tomli-w==1.2.0
     # via pip-audit
-tornado==6.5.8
+tornado==6.5.9
     # via streamlit
 tqdm==4.67.3
     # via nltk
@@ -432,7 +432,7 @@ tzlocal==5.3.1
     # via dateparser
 uc-micro-py==1.0.3
     # via linkify-it-py
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   family-office
     #   growthbook
