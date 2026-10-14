@@ -11,14 +11,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TASK = REPO_ROOT / "fin-guru" / "tasks" / "load-portfolio-context.md"
 
-# Instructions that sent specialists at a second ledger.
 FORBIDDEN_SNIPPETS = (
     'find imports -name "Portfolio_Positions',
     "Please download latest positions from Fidelity",
     "Balances_for_Account_",
     "Portfolio_Positions_",
     "--source csv",
-    # The freshness check reads the CLI generation lines, not a sqlite3 shell.
     "sqlite3 family_office.db",
 )
 

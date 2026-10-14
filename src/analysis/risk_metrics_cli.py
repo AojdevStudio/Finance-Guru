@@ -53,18 +53,16 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+from yfinance.exceptions import YFException
 
-# Import our type-safe components
 from src.analysis.risk_metrics import RiskCalculator
 from src.models.risk_inputs import (
     PriceDataInput,
     RiskCalculationConfig,
     RiskMetricsOutput,
 )
-from src.utils.market_data import get_prices  # Finnhub integration
+from src.utils.market_data import get_prices
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR, calendar_days_for
 
 
 def fetch_price_data(ticker: str, days: int, realtime: bool = False) -> PriceDataInput:
@@ -88,34 +86,26 @@ def fetch_price_data(ticker: str, days: int, realtime: bool = False) -> PriceDat
         ValueError: If unable to fetch data or insufficient data points
     """
     try:
-        # Import yfinance for data fetching
         import yfinance as yf
 
-        # Calculate date range
         end_date = date.today()
-        # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
-        start_date = end_date - timedelta(days=int(days * 1.5))
+        start_date = end_date - timedelta(days=calendar_days_for(days))
 
-        # Fetch data
         ticker_obj = yf.Ticker(ticker)
         hist = ticker_obj.history(start=start_date, end=end_date)
 
         if hist.empty:
             raise ValueError(f"No data found for ticker {ticker}")
 
-        # Extract prices and dates
         prices = hist["Close"].tolist()
         dates = [d.date() for d in hist.index]
 
-        # FINNHUB INTEGRATION: Append real-time intraday price if requested
         if realtime:
             try:
-                # Get real-time price from Finnhub
                 rt_data = get_prices(ticker, realtime=True)
                 if ticker.upper() in rt_data:
                     price_data = rt_data[ticker.upper()]
                     current_price = price_data.price
-                    # Append today's date and current price to the data
                     prices.append(current_price)
                     dates.append(date.today())
                     print(
@@ -128,14 +118,12 @@ def fetch_price_data(ticker: str, days: int, realtime: bool = False) -> PriceDat
                     file=sys.stderr,
                 )
 
-        # Ensure we have minimum required data points
         if len(prices) < 30:
             raise ValueError(
                 f"Insufficient data: got {len(prices)} days, need at least 30. "
                 f"Try increasing --days parameter."
             )
 
-        # Create validated model
         return PriceDataInput(
             ticker=ticker.upper(),
             prices=prices,
@@ -144,10 +132,7 @@ def fetch_price_data(ticker: str, days: int, realtime: bool = False) -> PriceDat
 
     except ImportError as e:
         raise ImportError("yfinance not installed. Run: uv add yfinance") from e
-    except ValueError:
-        # Re-raise ValueError as-is (from empty data or insufficient data checks)
-        raise
-    except Exception as e:
+    except YFException as e:
         raise ValueError(f"Failed to fetch data for {ticker}: {e}") from e
 
 
@@ -174,7 +159,6 @@ def format_output_human(results: RiskMetricsOutput) -> str:
         f"📅 Data Through: {results.calculation_date} (most recent market close)"
     )
 
-    # Show if data is stale (more than 3 days old)
     days_old = (date_type.today() - results.calculation_date).days
     if days_old > 3:
         output.append(
@@ -184,7 +168,6 @@ def format_output_human(results: RiskMetricsOutput) -> str:
     output.append("=" * 70)
     output.append("")
 
-    # Value at Risk Section
     output.append("📉 VALUE AT RISK (VaR)")
     output.append("-" * 70)
     output.append(f"  95% VaR (Daily):          {results.var_95:>10.2%}")
@@ -198,14 +181,12 @@ def format_output_human(results: RiskMetricsOutput) -> str:
     )
     output.append("")
 
-    # Risk-Adjusted Returns Section
     output.append("📈 RISK-ADJUSTED RETURNS")
     output.append("-" * 70)
     output.append(f"  Sharpe Ratio:             {results.sharpe_ratio:>10.2f}")
     output.append(f"  Sortino Ratio:            {results.sortino_ratio:>10.2f}")
     output.append("")
 
-    # Interpret Sharpe Ratio
     if results.sharpe_ratio < 1.0:
         sharpe_interpretation = "Poor (< 1.0)"
     elif results.sharpe_ratio < 2.0:
@@ -215,7 +196,6 @@ def format_output_human(results: RiskMetricsOutput) -> str:
     output.append(f"  💡 Sharpe Rating: {sharpe_interpretation}")
     output.append("")
 
-    # Drawdown Section
     output.append("📊 DRAWDOWN ANALYSIS")
     output.append("-" * 70)
     output.append(f"  Maximum Drawdown:         {results.max_drawdown:>10.2%}")
@@ -226,13 +206,11 @@ def format_output_human(results: RiskMetricsOutput) -> str:
     )
     output.append("")
 
-    # Volatility Section
     output.append("🎢 VOLATILITY")
     output.append("-" * 70)
     output.append(f"  Annual Volatility:        {results.annual_volatility:>10.2%}")
     output.append("")
 
-    # Interpret volatility
     if results.annual_volatility < 0.20:
         vol_interpretation = "Low (< 20%)"
     elif results.annual_volatility < 0.40:
@@ -244,7 +222,6 @@ def format_output_human(results: RiskMetricsOutput) -> str:
     output.append(f"  💡 Volatility Level: {vol_interpretation}")
     output.append("")
 
-    # Beta/Alpha Section (if available)
     if results.beta is not None and results.alpha is not None:
         output.append("🎯 MARKET RELATIONSHIP")
         output.append("-" * 70)
@@ -252,7 +229,6 @@ def format_output_human(results: RiskMetricsOutput) -> str:
         output.append(f"  Alpha (vs Benchmark):     {results.alpha:>10.2%}")
         output.append("")
 
-        # Interpret Beta
         if results.beta < 0.5:
             beta_interpretation = "Low systematic risk (defensive)"
         elif results.beta < 1.5:
@@ -261,7 +237,6 @@ def format_output_human(results: RiskMetricsOutput) -> str:
             beta_interpretation = "High systematic risk (aggressive)"
         output.append(f"  💡 Beta Category: {beta_interpretation}")
 
-        # Interpret Alpha
         if results.alpha > 0:
             output.append(f"     Alpha: Outperforming by {results.alpha:.2%} annually")
         else:
@@ -270,7 +245,6 @@ def format_output_human(results: RiskMetricsOutput) -> str:
             )
         output.append("")
 
-    # Footer
     output.append("=" * 70)
     output.append(
         "⚠️  DISCLAIMER: For educational purposes only. Not investment advice."
@@ -313,7 +287,6 @@ def main() -> int:
     Returns:
         int: Exit code (0 for success, 1 for error, 130 for user cancellation)
     """
-    # Create argument parser
     parser = argparse.ArgumentParser(
         description="Calculate risk metrics for Finance Guru™",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -336,16 +309,14 @@ Examples:
         """,
     )
 
-    # Required arguments
     parser.add_argument(
         "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
     )
 
-    # Data parameters
     parser.add_argument(
         "--days",
         type=int,
-        default=252,
+        default=TRADING_DAYS_PER_YEAR,
         help="Number of days of historical data (default: 252 = 1 year)",
     )
 
@@ -362,7 +333,6 @@ Examples:
         help="Append current intraday price from Finnhub for real-time risk analysis",
     )
 
-    # Risk calculation parameters
     parser.add_argument(
         "--confidence",
         type=float,
@@ -385,7 +355,6 @@ Examples:
         help="Annual risk-free rate (default: 0.045 = 4.5%%)",
     )
 
-    # Output parameters
     parser.add_argument(
         "--output",
         type=str,
@@ -398,10 +367,8 @@ Examples:
         "--save-to", type=str, default=None, help="Save output to file (optional)"
     )
 
-    # Parse arguments
     args = parser.parse_args()
 
-    # Validate days parameter
     if args.days < 30:
         print(
             "ERROR: --days must be at least 30 for statistical validity",
@@ -410,7 +377,6 @@ Examples:
         return 1
 
     try:
-        # Step 1: Fetch price data
         data_source = (
             "real-time (Finnhub + yfinance)"
             if args.realtime
@@ -424,7 +390,6 @@ Examples:
         print(f"✅ Fetched {len(price_data.prices)} data points", file=sys.stderr)
         print(f"📅 Latest data: {price_data.dates[-1]}", file=sys.stderr)
 
-        # Step 2: Fetch benchmark data (if requested)
         benchmark_data = None
         if args.benchmark:
             print(
@@ -439,36 +404,30 @@ Examples:
                 file=sys.stderr,
             )
 
-        # Step 3: Create configuration
         config = RiskCalculationConfig(
             confidence_level=args.confidence,
             var_method=args.var_method,
-            rolling_window=min(args.days, 252),  # Cap at 1 year
+            rolling_window=min(args.days, TRADING_DAYS_PER_YEAR),
             risk_free_rate=args.risk_free_rate,
         )
 
-        # Step 4: Calculate risk metrics
         print("🧮 Calculating risk metrics...", file=sys.stderr)
         calculator = RiskCalculator(config)
         results = calculator.calculate_risk_metrics(price_data, benchmark_data)
         print("✅ Calculation complete!", file=sys.stderr)
-        print("", file=sys.stderr)  # Blank line before output
+        print("", file=sys.stderr)
 
-        # Step 5: Format output
         if args.output == "json":
             output = format_output_json(results)
         else:
             output = format_output_human(results)
 
-        # Step 6: Display or save
         if args.save_to:
-            # Save to file
             save_path = Path(args.save_to)
             save_path.parent.mkdir(parents=True, exist_ok=True)
             save_path.write_text(output)
             print(f"💾 Saved to: {save_path}", file=sys.stderr)
         else:
-            # Print to stdout
             print(output)
 
         return 0

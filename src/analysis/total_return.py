@@ -35,6 +35,7 @@ from __future__ import annotations
 import statistics
 from dataclasses import dataclass, field
 from datetime import date
+from typing import Literal
 
 import yaml
 
@@ -44,9 +45,11 @@ from src.models.total_return_inputs import (
     TotalReturnInput,
 )
 
-# ---------------------------------------------------------------------------
-# Exceptions
-# ---------------------------------------------------------------------------
+MIN_DIVIDEND_COUNT_RATIO = 0.75
+"""Warn when a known payer shows fewer than 75% of its expected dividends."""
+
+SPLIT_ARTIFACT_MEDIAN_MULTIPLE = 3
+"""A dividend above this multiple of the median looks like a stock split artifact."""
 
 
 class DividendDataError(Exception):
@@ -55,11 +58,6 @@ class DividendDataError(Exception):
     This error indicates gaps in dividend data that could produce misleading
     total return calculations. Use force=True to override and calculate anyway.
     """
-
-
-# ---------------------------------------------------------------------------
-# Result dataclass
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -86,11 +84,6 @@ class TotalReturnResult:
     data_quality_warnings: list[str] = field(default_factory=list)
 
 
-# ---------------------------------------------------------------------------
-# Schedule loader
-# ---------------------------------------------------------------------------
-
-
 def load_dividend_schedules() -> dict:
     """Load per-ticker dividend frequency metadata from YAML.
 
@@ -109,11 +102,6 @@ def load_dividend_schedules() -> dict:
     if not isinstance(data, dict):
         return {}
     return data
-
-
-# ---------------------------------------------------------------------------
-# Calculator
-# ---------------------------------------------------------------------------
 
 
 class TotalReturnCalculator:
@@ -228,9 +216,7 @@ class TotalReturnCalculator:
         breakdown: list[dict] = []
 
         for div in self.dividends:
-            # Determine reinvestment price: use ex_date_prices if available,
-            # otherwise fall back to the last price in the series
-            reinvest_price = self.ex_date_prices.get(div.ex_date, self.prices[-1])
+            reinvest_price, price_source = self._reinvestment_price(div.ex_date)
             dividend_cash = shares * div.amount
             new_shares = dividend_cash / reinvest_price
             shares += new_shares
@@ -239,6 +225,7 @@ class TotalReturnCalculator:
                     "date": div.ex_date,
                     "dividend_per_share": div.amount,
                     "reinvest_price": reinvest_price,
+                    "reinvest_price_source": price_source,
                     "shares_acquired": new_shares,
                     "cumulative_shares": shares,
                 }
@@ -247,6 +234,18 @@ class TotalReturnCalculator:
         final_value = shares * self.prices[-1]
         drip_return = (final_value / initial_value) - 1.0
         return drip_return, shares, breakdown
+
+    def _reinvestment_price(
+        self, ex_date: date
+    ) -> tuple[float, Literal["ex_date_close", "period_last_close"]]:
+        """Return the DRIP reinvestment price for a dividend and where it came from.
+
+        The ex-date close is the price a DRIP buys at. When the price series has
+        no close for that ex-date, the period's last close stands in.
+        """
+        if ex_date in self.ex_date_prices:
+            return self.ex_date_prices[ex_date], "ex_date_close"
+        return self.prices[-1], "period_last_close"
 
     def calculate_annualized_return(self, total_return: float) -> float:
         """Annualize a period return using calendar days.
@@ -284,7 +283,6 @@ class TotalReturnCalculator:
         period_days = (self.data.end_date - self.data.start_date).days
         schedules = self._dividend_schedules
 
-        # Check 1: Expected frequency vs actual count
         schedule = schedules.get(ticker)
         if schedule:
             expected_freq = schedule.get("frequency", 0)
@@ -292,29 +290,27 @@ class TotalReturnCalculator:
                 expected_count = max(1, int(expected_freq * period_days / 365))
                 actual_count = len(self.dividends)
 
-                # Known payer with zero dividends (Check 3)
                 if actual_count == 0:
                     warnings_list.append(
                         f"No dividends found for {ticker} (expected dividend payer). "
                         f"yfinance may have data gaps. Results show price return only."
                     )
-                elif actual_count < expected_count * 0.75:
-                    # 25% tolerance
+                elif actual_count < expected_count * MIN_DIVIDEND_COUNT_RATIO:
                     warnings_list.append(
                         f"Expected ~{expected_count} dividends for {ticker} over "
                         f"{period_days} days, found {actual_count}. "
                         f"Dividend data may be incomplete."
                     )
 
-        # Check 2: Split artifact detection (>3x median)
         if len(self.dividends) >= 2:
             amounts = [d.amount for d in self.dividends]
             median_amount = statistics.median(amounts)
             if median_amount > 0:
                 for div in self.dividends:
-                    if div.amount > median_amount * 3:
+                    if div.amount > median_amount * SPLIT_ARTIFACT_MEDIAN_MULTIPLE:
                         warnings_list.append(
-                            f"Dividend on {div.ex_date} ({div.amount:.4f}) is >3x "
+                            f"Dividend on {div.ex_date} ({div.amount:.4f}) is "
+                            f">{SPLIT_ARTIFACT_MEDIAN_MULTIPLE}x "
                             f"median ({median_amount:.4f}). "
                             f"Possible stock split artifact -- suspicious value."
                         )
@@ -337,7 +333,6 @@ class TotalReturnCalculator:
         Raises:
             DividendDataError: When data has quality issues and force is False.
         """
-        # Step 1: Validate data quality
         quality_warnings = self.validate_dividend_data()
         if quality_warnings and not force:
             raise DividendDataError(
@@ -346,18 +341,14 @@ class TotalReturnCalculator:
                 + " Use force=True to calculate anyway."
             )
 
-        # Step 2: Calculate returns
         price_ret = self.calculate_price_return()
         div_ret = self.calculate_dividend_return()
         total_ret = self.calculate_total_return()
 
-        # Step 3: DRIP calculation
         drip_ret, final_shares, breakdown = self.calculate_drip_return()
 
-        # Step 4: Annualize
         annualized = self.calculate_annualized_return(total_ret)
 
-        # Step 5: Build result
         return TotalReturnResult(
             ticker=self.data.ticker,
             start_date=self.data.start_date,
@@ -375,7 +366,6 @@ class TotalReturnCalculator:
         )
 
 
-# Type exports
 __all__ = [
     "DividendDataError",
     "TotalReturnCalculator",

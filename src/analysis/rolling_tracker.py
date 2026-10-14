@@ -41,7 +41,7 @@ from datetime import date
 
 import yaml
 
-from src.analysis.options import price_option
+from src.analysis.options import OPTION_CONTRACT_MULTIPLIER, price_option
 from src.analysis.options_chain_cli import scan_chain
 from src.config.config_loader import HedgeConfig
 from src.config.instance_paths import InstancePaths
@@ -51,12 +51,17 @@ from src.utils.market_data import get_prices
 
 logger = logging.getLogger(__name__)
 
-# Default parameters for pricing
 DEFAULT_IV = 0.30
 """Default implied volatility used when live IV is unavailable."""
 
 DEFAULT_RISK_FREE_RATE = 0.045
 """Default risk-free rate for Black-Scholes pricing."""
+
+ROLL_WINDOW_DAYS = 7
+"""A put this close to expiry is due to roll (fixed roll window, LOCKED decision)."""
+
+EXPIRING_WINDOW_DAYS = 14
+"""A put this close to expiry is flagged as expiring soon."""
 
 
 def scan_chain_quiet(
@@ -134,32 +139,37 @@ def price_american_put(
     Returns:
         Estimated American put price (>= intrinsic value).
     """
-    intrinsic_value = max(strike - spot, 0.0)
-
-    try:
-        greeks = price_option(
-            spot=spot,
-            strike=strike,
-            days_to_expiry=days_to_expiry,
-            volatility=volatility,
-            option_type="put",
-            risk_free_rate=risk_free_rate,
-            dividend_yield=dividend_yield,
-        )
-        return max(greeks.option_price, intrinsic_value)
-    except Exception:
-        # Deep ITM puts can cause GreeksOutput validation errors (negative
-        # time_value, positive theta) because BS assumes European exercise.
-        # Fall back to intrinsic value -- the minimum an American holder
-        # can realize by exercising immediately.
-        logger.debug(
-            "BS pricing failed for put (spot=%.2f, strike=%.2f), "
-            "using intrinsic value %.2f",
-            spot,
-            strike,
-            intrinsic_value,
-        )
+    intrinsic_value = put_intrinsic_value(spot=spot, strike=strike)
+    if days_to_expiry <= 0:
         return intrinsic_value
+
+    greeks = price_option(
+        spot=spot,
+        strike=strike,
+        days_to_expiry=days_to_expiry,
+        volatility=volatility,
+        option_type="put",
+        risk_free_rate=risk_free_rate,
+        dividend_yield=dividend_yield,
+    )
+    return max(greeks.option_price, intrinsic_value)
+
+
+def put_intrinsic_value(spot: float, strike: float) -> float:
+    """Return what a put is worth if exercised now: ``max(strike - spot, 0)``."""
+    return max(strike - spot, 0.0)
+
+
+def put_strike(pos: HedgePosition) -> float:
+    """Return a put position's strike.
+
+    Raises:
+        ValueError: If the position has no strike. ``HedgePosition`` rejects a
+            put without one, so this only fires on a non-put position.
+    """
+    if pos.strike is None:
+        raise ValueError(f"{pos.ticker} {pos.hedge_type} position has no strike")
+    return pos.strike
 
 
 def load_positions() -> list[HedgePosition]:
@@ -268,9 +278,9 @@ def _dte_status(dte: int | None) -> tuple[str, str]:
     """
     if dte is None:
         return "OK", "green"
-    if dte <= 7:
+    if dte <= ROLL_WINDOW_DAYS:
         return "ROLL", "red"
-    if dte <= 14:
+    if dte <= EXPIRING_WINDOW_DAYS:
         return "EXPIRING", "yellow"
     return "OK", "green"
 
@@ -292,7 +302,6 @@ def _rank_contract_score(
     """
     otm_dist = abs(contract.otm_pct - otm_mid)
     dte_dist = abs(contract.days_to_expiry - dte_mid)
-    # Normalize DTE distance to same scale as OTM%
     return otm_dist + (dte_dist / 10.0)
 
 
@@ -357,7 +366,6 @@ class RollingTracker:
         positions = load_positions()
         today = date.today()
 
-        # --- Auto-archive expired positions ---
         active: list[HedgePosition] = []
         expired: list[HedgePosition] = []
         for pos in positions:
@@ -379,7 +387,6 @@ class RollingTracker:
             save_roll_history(history)
             save_positions(active)
 
-        # --- Enrich active positions ---
         enriched: list[dict] = []
         total_hedge_cost = 0.0
         total_current_value = 0.0
@@ -409,31 +416,27 @@ class RollingTracker:
         Returns:
             Dict with keys: position (enriched dict), entry_cost, current_value.
         """
-        # Calculate DTE
         dte: int | None = None
         if pos.expiry is not None:
             dte = (pos.expiry - today).days
 
-        # Calculate entry cost
         if pos.hedge_type == "put":
-            entry_cost = pos.premium_paid * 100 * pos.quantity
+            entry_cost = pos.premium_paid * OPTION_CONTRACT_MULTIPLIER * pos.quantity
         else:
             entry_cost = pos.premium_paid * pos.quantity
-
-        # Fetch live pricing
-        current_value = entry_cost  # fallback
-        pricing_error = False
 
         try:
             price_data = get_prices(pos.ticker)
             spot = price_data[pos.ticker].price
             current_value = self._price_position(pos, spot, dte)
+            pricing_error = False
         except Exception as e:
             logger.warning(
                 "Pricing error for %s: %s -- using entry cost as fallback",
                 pos.ticker,
                 e,
             )
+            current_value = entry_cost
             pricing_error = True
 
         pnl = current_value - entry_cost
@@ -474,21 +477,15 @@ class RollingTracker:
         Returns:
             Current total value of the position.
         """
-        if pos.hedge_type == "put" and dte is not None and dte > 0:
-            per_contract = price_american_put(
-                spot=spot,
-                strike=pos.strike,  # type: ignore[arg-type]
-                days_to_expiry=dte,
-                volatility=DEFAULT_IV,
-            )
-            return per_contract * 100 * pos.quantity
         if pos.hedge_type == "inverse_etf":
             return spot * pos.quantity
-        if pos.hedge_type == "put":
-            # At or past expiry -- value is intrinsic only
-            intrinsic = max((pos.strike or 0.0) - spot, 0.0)
-            return intrinsic * 100 * pos.quantity
-        return 0.0
+        per_contract = price_american_put(
+            spot=spot,
+            strike=put_strike(pos),
+            days_to_expiry=dte if dte is not None else 0,
+            volatility=DEFAULT_IV,
+        )
+        return per_contract * OPTION_CONTRACT_MULTIPLIER * pos.quantity
 
     def suggest_rolls(self) -> list[dict]:
         """Identify expiring put positions and suggest replacement contracts.
@@ -513,36 +510,30 @@ class RollingTracker:
         suggestions: list[dict] = []
 
         for pos in positions:
-            # Only consider puts with expiry within 7 days
             if pos.hedge_type != "put":
                 continue
             if pos.expiry is None:
                 continue
 
             dte = (pos.expiry - today).days
-            if dte > 7:
+            if dte > ROLL_WINDOW_DAYS:
                 continue
 
-            # Calculate remaining value of current position
             remaining_value = 0.0
             try:
                 price_data = get_prices(pos.ticker)
                 spot = price_data[pos.ticker].price
-                if dte > 0:
-                    remaining_value = price_american_put(
-                        spot=spot,
-                        strike=pos.strike,  # type: ignore[arg-type]
-                        days_to_expiry=dte,
-                        volatility=DEFAULT_IV,
-                    )
-                else:
-                    remaining_value = max((pos.strike or 0.0) - spot, 0.0)
+                remaining_value = price_american_put(
+                    spot=spot,
+                    strike=put_strike(pos),
+                    days_to_expiry=dte,
+                    volatility=DEFAULT_IV,
+                )
             except Exception as e:
                 logger.warning(
                     "Could not price current position for %s: %s", pos.ticker, e
                 )
 
-            # Scan for replacement contracts
             otm_mid = (self.config.min_otm_pct + self.config.max_otm_pct) / 2
             dte_mid = (self.config.target_dte_min + self.config.target_dte_max) / 2
 
@@ -580,7 +571,6 @@ class RollingTracker:
                     )
                     continue
 
-                # Rank by proximity to target midpoints
                 ranked = sorted(
                     result.contracts,
                     key=lambda c: _rank_contract_score(c, otm_mid, dte_mid),
@@ -645,7 +635,6 @@ class RollingTracker:
         positions = load_positions()
         today = date.today()
 
-        # Find matching put position
         match_idx: int | None = None
         for i, pos in enumerate(positions):
             if pos.ticker == ticker and pos.hedge_type == "put":
@@ -660,7 +649,6 @@ class RollingTracker:
 
         old_pos = positions[match_idx]
 
-        # Archive old position
         history = load_roll_history()
         history.append(
             {
@@ -671,7 +659,6 @@ class RollingTracker:
         )
         save_roll_history(history)
 
-        # Create new position
         new_pos = HedgePosition(
             ticker=ticker,
             hedge_type="put",
@@ -682,7 +669,6 @@ class RollingTracker:
             entry_date=today,
         )
 
-        # Replace old with new
         positions[match_idx] = new_pos
         save_positions(positions)
 
@@ -701,7 +687,6 @@ class RollingTracker:
         return load_roll_history()
 
 
-# Type exports
 __all__ = [
     "RollingTracker",
     "scan_chain_quiet",

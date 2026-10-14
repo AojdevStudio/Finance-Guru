@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 CLI interface for strategy backtesting.
 
@@ -42,11 +41,6 @@ import argparse
 import json
 import sys
 from datetime import datetime, timedelta
-from pathlib import Path
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 import pandas as pd
 import yfinance as yf
@@ -56,6 +50,7 @@ from src.models.backtest_inputs import (
     TradeSignal,
 )
 from src.strategies.backtester import Backtester
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR, calendar_days_for
 
 
 def fetch_price_data(ticker: str, days: int) -> pd.DataFrame:
@@ -72,8 +67,7 @@ def fetch_price_data(ticker: str, days: int) -> pd.DataFrame:
     Raises:
         ValueError: If data cannot be fetched
     """
-    # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
-    start_date = datetime.now() - timedelta(days=int(days * 1.5))
+    start_date = datetime.now() - timedelta(days=calendar_days_for(days))
     end_date = datetime.now()
 
     stock = yf.Ticker(ticker)
@@ -82,7 +76,6 @@ def fetch_price_data(ticker: str, days: int) -> pd.DataFrame:
     if hist.empty:
         raise ValueError(f"No data found for ticker {ticker}")
 
-    # Take only requested number of days
     hist = hist.tail(days)
 
     if len(hist) < 30:
@@ -119,7 +112,6 @@ def generate_rsi_signals(
     Returns:
         List of TradeSignal objects
     """
-    # Calculate RSI
     delta = df["Close"].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
@@ -127,7 +119,6 @@ def generate_rsi_signals(
     rs = gain / loss
     rsi = 100 - (100 / (1 + rs))
 
-    # Generate signals
     signals = []
     in_position = False
 
@@ -137,11 +128,9 @@ def generate_rsi_signals(
         current_rsi = rsi.iloc[i]
 
         if pd.isna(current_rsi):
-            # Not enough data yet
             continue
 
         if current_rsi < 30 and not in_position:
-            # Oversold - BUY signal
             signals.append(
                 TradeSignal(
                     signal_date=date,
@@ -155,7 +144,6 @@ def generate_rsi_signals(
             in_position = True
 
         elif current_rsi > 70 and in_position:
-            # Overbought - SELL signal
             signals.append(
                 TradeSignal(
                     signal_date=date,
@@ -169,7 +157,6 @@ def generate_rsi_signals(
             in_position = False
 
         else:
-            # HOLD
             signals.append(
                 TradeSignal(
                     signal_date=date,
@@ -212,11 +199,9 @@ def generate_sma_crossover_signals(
     Returns:
         List of TradeSignal objects
     """
-    # Calculate SMAs
     fast_sma = df["Close"].rolling(window=fast_period).mean()
     slow_sma = df["Close"].rolling(window=slow_period).mean()
 
-    # Generate signals
     signals = []
     in_position = False
     prev_fast = None
@@ -229,12 +214,9 @@ def generate_sma_crossover_signals(
         current_slow = slow_sma.iloc[i]
 
         if pd.isna(current_fast) or pd.isna(current_slow):
-            # Not enough data yet
             continue
 
-        # Check for crossover
         if prev_fast is not None and prev_slow is not None:
-            # Golden cross (fast crosses above slow)
             if (
                 prev_fast <= prev_slow
                 and current_fast > current_slow
@@ -252,7 +234,6 @@ def generate_sma_crossover_signals(
                 )
                 in_position = True
 
-            # Death cross (fast crosses below slow)
             elif prev_fast >= prev_slow and current_fast < current_slow and in_position:
                 signals.append(
                     TradeSignal(
@@ -266,7 +247,6 @@ def generate_sma_crossover_signals(
                 )
                 in_position = False
             else:
-                # HOLD
                 signals.append(
                     TradeSignal(
                         signal_date=date,
@@ -276,7 +256,6 @@ def generate_sma_crossover_signals(
                     )
                 )
         else:
-            # First data point - HOLD
             signals.append(
                 TradeSignal(
                     signal_date=date,
@@ -320,7 +299,6 @@ def generate_buy_hold_signals(df: pd.DataFrame, ticker: str) -> list[TradeSignal
         price = float(df["Close"].iloc[i])
 
         if i == 0:
-            # Buy on first day
             signals.append(
                 TradeSignal(
                     signal_date=date,
@@ -332,7 +310,6 @@ def generate_buy_hold_signals(df: pd.DataFrame, ticker: str) -> list[TradeSignal
                 )
             )
         else:
-            # Hold forever
             signals.append(
                 TradeSignal(
                     signal_date=date,
@@ -362,7 +339,6 @@ def format_human_output(result) -> str:
     lines.append(f"Period: {result.start_date} to {result.end_date}")
     lines.append(f"{'=' * 70}\n")
 
-    # Recommendation (most important)
     recommendation_emoji = {"DEPLOY": "🟢", "OPTIMIZE": "🟡", "REJECT": "🔴"}
     emoji = recommendation_emoji.get(result.recommendation, "⚪")
 
@@ -370,7 +346,6 @@ def format_human_output(result) -> str:
     lines.append(f"Reasoning: {result.reasoning}")
     lines.append("")
 
-    # Performance Summary
     perf = result.performance
     lines.append("PERFORMANCE SUMMARY")
     lines.append("-" * 70)
@@ -390,7 +365,6 @@ def format_human_output(result) -> str:
     )
     lines.append("")
 
-    # Trade Statistics
     lines.append("TRADE STATISTICS")
     lines.append("-" * 70)
     lines.append(f"Total Trades: {perf.total_trades}")
@@ -407,7 +381,6 @@ def format_human_output(result) -> str:
 
     lines.append("")
 
-    # Cost Analysis
     lines.append("COST ANALYSIS")
     lines.append("-" * 70)
     lines.append(f"Total Commissions: ${perf.total_commissions:,.2f}")
@@ -417,7 +390,6 @@ def format_human_output(result) -> str:
     )
     lines.append("")
 
-    # Recent Trades (last 5)
     if result.trades:
         lines.append("RECENT TRADES (Last 5)")
         lines.append("-" * 70)
@@ -440,7 +412,6 @@ def format_human_output(result) -> str:
 
         lines.append("")
 
-    # Equity Curve Summary
     lines.append("EQUITY CURVE")
     lines.append("-" * 70)
     lines.append(f"Starting Value: ${result.equity_values[0]:,.2f}")
@@ -496,7 +467,6 @@ Agent Use Cases:
         """,
     )
 
-    # Required arguments
     parser.add_argument(
         "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
     )
@@ -504,7 +474,7 @@ Agent Use Cases:
     parser.add_argument(
         "--days",
         type=int,
-        default=252,
+        default=TRADING_DAYS_PER_YEAR,
         help="Number of days to backtest (default: 252, one year)",
     )
 
@@ -515,7 +485,6 @@ Agent Use Cases:
         help="Strategy to backtest (default: rsi)",
     )
 
-    # Backtest configuration
     parser.add_argument(
         "--capital",
         type=float,
@@ -544,7 +513,6 @@ Agent Use Cases:
         help="Position size as fraction of capital (default: 1.0 = 100%%)",
     )
 
-    # Output format
     parser.add_argument(
         "--output",
         choices=["human", "json"],
@@ -555,13 +523,11 @@ Agent Use Cases:
     args = parser.parse_args()
 
     try:
-        # Fetch price data
         print(
             f"Fetching {args.days} days of data for {args.ticker}...", file=sys.stderr
         )
         df = fetch_price_data(args.ticker, args.days)
 
-        # Generate signals based on strategy
         print(f"Generating {args.strategy} signals...", file=sys.stderr)
 
         if args.strategy == "rsi":
@@ -576,7 +542,6 @@ Agent Use Cases:
         else:
             raise ValueError(f"Unknown strategy: {args.strategy}")
 
-        # Create backtest config
         config = BacktestConfig(
             initial_capital=args.capital,
             commission_per_trade=args.commission,
@@ -585,12 +550,10 @@ Agent Use Cases:
             allow_fractional_shares=True,
         )
 
-        # Run backtest
         print("Running backtest...", file=sys.stderr)
         backtester = Backtester(config)
         result = backtester.run_backtest(signals, args.ticker, strategy_name)
 
-        # Output results
         if args.output == "json":
             print(format_json_output(result))
         else:

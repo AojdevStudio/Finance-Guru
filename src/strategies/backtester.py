@@ -15,6 +15,8 @@ FEATURES:
 Used by: Strategy Advisor (hypothesis testing), Quant Analyst (model validation)
 """
 
+from typing import Literal
+
 import numpy as np
 import pandas as pd
 
@@ -25,6 +27,9 @@ from src.models.backtest_inputs import (
     TradeExecution,
     TradeSignal,
 )
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
+
+OpenPositionOutcome = Literal["opened", "skipped_insufficient_capital"]
 
 
 class Backtester:
@@ -55,6 +60,7 @@ class Backtester:
         self.trades: list[TradeExecution] = []
         self.equity_curve: list[tuple[pd.Timestamp, float]] = []
         self.current_position: TradeExecution | None = None
+        self.skipped_signals: list[TradeSignal] = []
 
     def run_backtest(
         self,
@@ -75,48 +81,40 @@ class Backtester:
         - Should have BUY/SELL/HOLD actions
 
         Args:
-            signals: List of TradeSignal objects (chronologically sorted)
+            signals: TradeSignal objects in any order. They run by signal_date.
             ticker: Asset ticker being traded
             strategy_name: Descriptive name for the strategy
 
         Returns:
             BacktestResults with complete performance analysis
         """
-        # Validate inputs
         if not signals:
             raise ValueError("No signals provided for backtest")
 
-        # Sort signals by date (defensive)
         signals = sorted(signals, key=lambda x: x.signal_date)
 
-        # Initialize
         self.capital = self.config.initial_capital
         self.trades = []
         self.equity_curve = [(pd.Timestamp(signals[0].signal_date), self.capital)]
         self.current_position = None
+        self.skipped_signals = []
 
-        # Process each signal
         for signal in signals:
             self._process_signal(signal)
 
-            # Record equity (capital + position value if holding)
             current_equity = self._calculate_current_equity(signal.price)
             self.equity_curve.append((pd.Timestamp(signal.signal_date), current_equity))
 
-        # Close any open position at the end
         if self.current_position is not None:
             last_signal = signals[-1]
             self._close_position(
                 last_signal.signal_date, last_signal.price, "Backtest end"
             )
 
-        # Calculate performance metrics
         performance = self._calculate_performance_metrics()
 
-        # Generate recommendation
         recommendation, reasoning = self._generate_recommendation(performance)
 
-        # Extract equity curve data
         equity_dates = [ts.date() for ts, _ in self.equity_curve]
         equity_values = [val for _, val in self.equity_curve]
 
@@ -146,13 +144,14 @@ class Backtester:
             signal: TradeSignal to process
         """
         if signal.action == "BUY" and self.current_position is None:
-            self._open_position(signal)
+            if self._open_position(signal) == "skipped_insufficient_capital":
+                self.skipped_signals.append(signal)
         elif signal.action == "SELL" and self.current_position is not None:
             self._close_position(
                 signal.signal_date, signal.price, signal.reason or "Sell signal"
             )
 
-    def _open_position(self, signal: TradeSignal) -> None:
+    def _open_position(self, signal: TradeSignal) -> OpenPositionOutcome:
         """Open a new trading position with realistic execution costs.
 
         EXECUTION MODEL:
@@ -172,35 +171,29 @@ class Backtester:
 
         Args:
             signal: BUY signal
+
+        Returns:
+            "opened", or "skipped_insufficient_capital" when the position plus
+            commission costs more than the cash on hand.
         """
-        # Calculate position size
         position_capital = self.capital * self.config.position_size_pct
 
-        # Apply slippage (price moves UP when buying)
         entry_price = signal.price * (1 + self.config.slippage_pct)
 
-        # Calculate shares (before commission)
         shares = position_capital / entry_price
 
-        # Round shares if fractional not allowed
         if not self.config.allow_fractional_shares:
             shares = int(shares)
 
-        # Calculate actual capital needed
         capital_needed = shares * entry_price
 
-        # Apply commission
         commission = self.config.commission_per_trade
 
-        # Check if we have enough capital
         if capital_needed + commission > self.capital:
-            # Not enough capital - skip trade
-            return
+            return "skipped_insufficient_capital"
 
-        # Deduct capital and commission
         self.capital -= capital_needed + commission
 
-        # Create trade execution record
         self.current_position = TradeExecution(
             entry_date=signal.signal_date,
             exit_date=None,
@@ -214,6 +207,7 @@ class Backtester:
             pnl_pct=None,
             signal_reason=signal.reason,
         )
+        return "opened"
 
     def _close_position(self, exit_date, exit_price: float, reason: str) -> None:
         """Close the current position with realistic execution costs.
@@ -240,37 +234,29 @@ class Backtester:
         if self.current_position is None:
             return
 
-        # Apply slippage (price moves DOWN when selling)
         actual_exit_price = exit_price * (1 - self.config.slippage_pct)
 
-        # Calculate proceeds from sale
         proceeds = self.current_position.shares * actual_exit_price
 
-        # Apply commission
         commission = self.config.commission_per_trade
         net_proceeds = proceeds - commission
 
-        # Add net proceeds to capital
         self.capital += net_proceeds
 
-        # Calculate P&L
         entry_cost = self.current_position.shares * self.current_position.entry_price
         entry_cost_with_commission = entry_cost + self.current_position.entry_commission
 
         pnl = net_proceeds - entry_cost_with_commission
         pnl_pct = (pnl / entry_cost_with_commission) * 100
 
-        # Complete trade execution record
         self.current_position.exit_date = exit_date
         self.current_position.exit_price = actual_exit_price
         self.current_position.exit_commission = commission
         self.current_position.pnl = pnl
         self.current_position.pnl_pct = pnl_pct
 
-        # Add to trades list
         self.trades.append(self.current_position)
 
-        # Clear current position
         self.current_position = None
 
     def _calculate_current_equity(self, current_price: float) -> float:
@@ -285,7 +271,6 @@ class Backtester:
         equity = self.capital
 
         if self.current_position is not None:
-            # Add current position value (mark-to-market)
             position_value = self.current_position.shares * current_price
             equity += position_value
 
@@ -303,35 +288,32 @@ class Backtester:
         Returns:
             BacktestPerformanceMetrics with all statistics
         """
-        # Capital metrics
         initial = self.config.initial_capital
         final = self.capital
         total_return = final - initial
         total_return_pct = (total_return / initial) * 100
 
-        # Calculate returns series for Sharpe
         if len(self.equity_curve) > 1:
             equity_values = [val for _, val in self.equity_curve]
             returns = pd.Series(equity_values).pct_change().dropna()
 
             if len(returns) > 0 and returns.std() > 0:
-                sharpe = float(returns.mean() / returns.std() * np.sqrt(252))
+                sharpe = float(
+                    returns.mean() / returns.std() * np.sqrt(TRADING_DAYS_PER_YEAR)
+                )
             else:
                 sharpe = None
         else:
             sharpe = None
 
-        # Calculate max drawdown
         equity_values = [val for _, val in self.equity_curve]
         max_dd, max_dd_pct = self._calculate_max_drawdown(equity_values)
 
-        # Trade statistics
         total_trades = len(self.trades)
         winning_trades = len([t for t in self.trades if t.pnl and t.pnl > 0])
         losing_trades = len([t for t in self.trades if t.pnl and t.pnl < 0])
         win_rate = winning_trades / total_trades if total_trades > 0 else 0.0
 
-        # Profit metrics
         wins = [t.pnl for t in self.trades if t.pnl and t.pnl > 0]
         losses = [t.pnl for t in self.trades if t.pnl and t.pnl < 0]
 
@@ -342,19 +324,15 @@ class Backtester:
         gross_losses = abs(sum(losses)) if losses else 0.0
         profit_factor = (gross_profits / gross_losses) if gross_losses > 0 else None
 
-        # Cost analysis
         total_commissions = sum(
             t.entry_commission + (t.exit_commission or 0) for t in self.trades
         )
 
-        # Estimate total slippage cost
         total_slippage = 0.0
         for t in self.trades:
-            # Entry slippage
             entry_slippage = t.shares * t.entry_price * self.config.slippage_pct
             total_slippage += entry_slippage
 
-            # Exit slippage (if closed)
             if t.exit_price is not None:
                 exit_slippage = t.shares * t.exit_price * self.config.slippage_pct
                 total_slippage += exit_slippage
@@ -452,14 +430,12 @@ class Backtester:
         """
         reasons = []
 
-        # Check return
         good_return = performance.total_return_pct > 10.0
         if good_return:
             reasons.append(f"Strong return ({performance.total_return_pct:.1f}%)")
         else:
             reasons.append(f"Low return ({performance.total_return_pct:.1f}%)")
 
-        # Check Sharpe ratio
         good_sharpe = (
             performance.sharpe_ratio is not None and performance.sharpe_ratio > 1.0
         )
@@ -471,7 +447,6 @@ class Backtester:
             else:
                 reasons.append("Sharpe ratio unavailable")
 
-        # Check max drawdown
         acceptable_dd = performance.max_drawdown_pct < 25.0
         if acceptable_dd:
             reasons.append(
@@ -482,14 +457,12 @@ class Backtester:
                 f"Excessive max drawdown ({performance.max_drawdown_pct:.1f}%)"
             )
 
-        # Check win rate
         decent_win_rate = performance.win_rate > 0.4
         if decent_win_rate:
             reasons.append(f"Decent win rate ({performance.win_rate * 100:.1f}%)")
         else:
             reasons.append(f"Low win rate ({performance.win_rate * 100:.1f}%)")
 
-        # Make recommendation
         if good_return and good_sharpe and acceptable_dd and decent_win_rate:
             recommendation = "DEPLOY"
         elif (good_return or good_sharpe) and acceptable_dd:

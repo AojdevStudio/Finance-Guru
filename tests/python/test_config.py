@@ -3,7 +3,7 @@
 Tests cover:
 - Default layer configuration
 - Path constants
-- YAML layer loading with fallbacks
+- YAML layer loading and typed errors for a bad layers file
 
 RUNNING TESTS:
     uv run pytest tests/python/test_config.py -v
@@ -11,12 +11,14 @@ RUNNING TESTS:
 
 from unittest.mock import mock_open, patch
 
+import pytest
+
 from src.config import FinGuruConfig
+from src.config.fin_guru_config import LayersConfigError
 
 
 class TestFinGuruConfig:
     def test_default_layers_have_three_layers(self):
-        # When no YAML exists, load_layers returns defaults
         with patch.object(FinGuruConfig, "LAYERS_FILE") as mock_file:
             mock_file.exists.return_value = False
             layers = FinGuruConfig.load_layers()
@@ -51,25 +53,55 @@ class TestFinGuruConfig:
         assert "AMD" in layers["layer1"]
         assert "SPY" in layers["layer2"]
 
-    def test_falls_back_on_invalid_yaml(self):
+    def test_raises_on_unreadable_file(self):
         with patch.object(FinGuruConfig, "LAYERS_FILE") as mock_file:
             mock_file.exists.return_value = True
-            with patch("builtins.open", side_effect=OSError("file error")):
-                layers = FinGuruConfig.load_layers()
+            with (
+                patch("builtins.open", side_effect=OSError("file error")),
+                pytest.raises(LayersConfigError, match="file error"),
+            ):
+                FinGuruConfig.load_layers()
 
-        # Should return defaults
-        assert "layer1" in layers
-        assert "PLTR" in layers["layer1"]
+    def test_raises_on_malformed_yaml(self):
+        yaml_content = "layer1: [nvda\n"
+        with patch.object(FinGuruConfig, "LAYERS_FILE") as mock_file:
+            mock_file.exists.return_value = True
+            with (
+                patch("builtins.open", mock_open(read_data=yaml_content)),
+                pytest.raises(LayersConfigError),
+            ):
+                FinGuruConfig.load_layers()
 
-    def test_falls_back_on_non_dict_yaml(self):
+    def test_raises_on_non_dict_yaml(self):
         yaml_content = "just a string\n"
         with patch.object(FinGuruConfig, "LAYERS_FILE") as mock_file:
             mock_file.exists.return_value = True
-            with patch("builtins.open", mock_open(read_data=yaml_content)):
-                layers = FinGuruConfig.load_layers()
+            with (
+                patch("builtins.open", mock_open(read_data=yaml_content)),
+                pytest.raises(LayersConfigError, match="mapping"),
+            ):
+                FinGuruConfig.load_layers()
 
-        assert "layer1" in layers
-        assert "PLTR" in layers["layer1"]
+    @pytest.mark.parametrize(
+        "yaml_content", ["[]\n", "false\n", "0\n"], ids=["list", "false", "zero"]
+    )
+    def test_raises_on_falsy_non_mapping_yaml(self, yaml_content):
+        with patch.object(FinGuruConfig, "LAYERS_FILE") as mock_file:
+            mock_file.exists.return_value = True
+            with (
+                patch("builtins.open", mock_open(read_data=yaml_content)),
+                pytest.raises(LayersConfigError, match="mapping"),
+            ):
+                FinGuruConfig.load_layers()
+
+    def test_raises_on_undecodable_file(self, tmp_path):
+        layers_file = tmp_path / "layers.yaml"
+        layers_file.write_bytes(b"layer1:\n  - \xff\xfe\n")
+        with (
+            patch.object(FinGuruConfig, "LAYERS_FILE", layers_file),
+            pytest.raises(LayersConfigError),
+        ):
+            FinGuruConfig.load_layers()
 
     def test_skips_non_list_values(self):
         yaml_content = "layer1:\n  - nvda\nlayer2: not_a_list\n"

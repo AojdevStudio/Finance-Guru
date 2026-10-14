@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Hedge Sizer CLI for Finance Guru Agents.
 
 This module provides a command-line interface for determining how many hedge
@@ -46,29 +45,17 @@ import json
 import sys
 from pathlib import Path
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
 from src.analysis.hedge_sizer import HedgeSizer
 from src.config.config_loader import load_hedge_config
 from src.config.instance_paths import InstancePaths
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 
 DISCLAIMER = (
     "DISCLAIMER: For educational purposes only. Not investment advice.\n"
     "Consult a qualified financial professional before executing any trades."
 )
 
-# ---------------------------------------------------------------------------
-# Human Output Formatting
-# ---------------------------------------------------------------------------
 
-
-def format_human_output(  # noqa: C901
+def format_human_output(
     sizing: dict,
     source: str,
     budget: dict | None = None,
@@ -103,7 +90,6 @@ def format_human_output(  # noqa: C901
     lines.append(f"Sizing Ratio: 1 contract per ${ratio:,.0f}")
     lines.append(f"Total Contracts: {total}")
 
-    # Allocation table
     lines.append("")
     lines.append("Allocation:")
     for ticker, count in allocations.items():
@@ -111,14 +97,12 @@ def format_human_output(  # noqa: C901
         label = "contract" if count == 1 else "contracts"
         lines.append(f"  {ticker}: {count} {label} (weight: {weight * 100:.1f}%)")
 
-    # Coverage ratio
     lines.append("")
     lines.append(
         f"Coverage: {total} contracts cover ~${notional:,.0f} notional "
         f"({coverage_pct:.1f}% of ${portfolio_value:,.0f} portfolio)"
     )
 
-    # Budget analysis
     if budget is not None:
         lines.append("")
         lines.append("Budget Analysis:")
@@ -138,7 +122,6 @@ def format_human_output(  # noqa: C901
                 f"by ${overage:,.2f} ({overage_pct:.1f}% over)"
             )
 
-        # Per-underlying breakdown
         per_ul = budget.get("per_underlying", [])
         if per_ul:
             lines.append("")
@@ -161,8 +144,6 @@ def format_human_output(  # noqa: C901
                     )
 
         if budget.get("budget_warning"):
-            # Only show general note warnings here (not the main warning
-            # which is already shown above)
             warning = budget["budget_warning"]
             if "could not be priced" in warning or "Note:" in warning:
                 lines.append("")
@@ -174,17 +155,11 @@ def format_human_output(  # noqa: C901
             "Actual costs may vary."
         )
 
-    # Disclaimer
     lines.append("")
     lines.append(DISCLAIMER)
     lines.append("")
 
     return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# JSON Output Formatting
-# ---------------------------------------------------------------------------
 
 
 def format_json_output(
@@ -225,11 +200,6 @@ def format_json_output(
     return json.dumps(output, indent=2, default=str)
 
 
-# ---------------------------------------------------------------------------
-# Main CLI
-# ---------------------------------------------------------------------------
-
-
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser for the hedge sizer CLI.
 
@@ -250,7 +220,6 @@ Examples:
         """,
     )
 
-    # Portfolio value
     parser.add_argument(
         "--portfolio",
         "--portfolio-value",
@@ -261,7 +230,6 @@ Examples:
         "If omitted, reads from Fidelity CSV.",
     )
 
-    # Underlyings
     parser.add_argument(
         "--underlyings",
         type=str,
@@ -270,7 +238,6 @@ Examples:
         "Defaults to config underlying_weights.",
     )
 
-    # Sizing ratio
     parser.add_argument(
         "--ratio",
         type=float,
@@ -278,7 +245,6 @@ Examples:
         help="Dollars per contract (default: 50000 from config).",
     )
 
-    # Budget override
     parser.add_argument(
         "--budget",
         type=float,
@@ -286,7 +252,6 @@ Examples:
         help="Monthly hedge budget override in dollars.",
     )
 
-    # Output format
     parser.add_argument(
         "--output",
         type=str,
@@ -295,7 +260,6 @@ Examples:
         help="Output format (default: human).",
     )
 
-    # Config path
     parser.add_argument(
         "--config",
         type=str,
@@ -303,7 +267,6 @@ Examples:
         help="Path to user-profile.yaml (default: auto-detect).",
     )
 
-    # Skip budget validation
     parser.add_argument(
         "--skip-budget",
         action="store_true",
@@ -326,7 +289,6 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        # Step 1: Load config with CLI overrides
         config_path = Path(args.config) if args.config else None
         cli_overrides: dict = {}
         if args.budget is not None:
@@ -337,7 +299,6 @@ def main() -> int:
             cli_overrides=cli_overrides if cli_overrides else None,
         )
 
-        # Step 2: Resolve portfolio value
         sizer = HedgeSizer(config)
         try:
             portfolio_value, source = sizer.resolve_portfolio_value(args.portfolio)
@@ -355,11 +316,10 @@ def main() -> int:
             file=sys.stderr,
         )
 
-        # Step 3: Parse underlyings
         underlyings: list[str] | None = None
         if args.underlyings:
             underlyings = [t.strip() for t in args.underlyings.upper().split(",")]
-            underlyings = [t for t in underlyings if t]  # drop empties
+            underlyings = [t for t in underlyings if t]
             print(f"Underlyings: {', '.join(underlyings)}", file=sys.stderr)
         else:
             print(
@@ -368,14 +328,12 @@ def main() -> int:
                 file=sys.stderr,
             )
 
-        # Step 4: Calculate sizing
         result = sizer.calculate(portfolio_value, underlyings, args.ratio)
         print(
             f"Sizing: {result['total_contracts']} contracts",
             file=sys.stderr,
         )
 
-        # Step 5: Optionally validate budget
         budget: dict | None = None
         if not args.skip_budget:
             print("Validating budget with live premiums...", file=sys.stderr)
@@ -390,7 +348,6 @@ def main() -> int:
         else:
             print("Budget validation: skipped (--skip-budget)", file=sys.stderr)
 
-        # Step 6: Format output
         if args.output == "json":
             output = format_json_output(result, source, budget)
         else:

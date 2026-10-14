@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 CLI interface for correlation and covariance analysis.
 
@@ -30,19 +29,16 @@ import argparse
 import json
 import sys
 from datetime import datetime, timedelta
-from pathlib import Path
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 import yfinance as yf
 
 from src.analysis.correlation import calculate_correlation
+from src.data.price_history import MIN_OVERLAPPING_PRICE_DAYS
 from src.models.correlation_inputs import (
     CorrelationConfig,
     PortfolioPriceData,
 )
+from src.utils.trading_calendar import calendar_days_for
 
 
 def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioPriceData:
@@ -63,12 +59,9 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioPriceData:
     Raises:
         ValueError: If data cannot be fetched or tickers have insufficient overlap
     """
-    # Fetch extra days to account for weekends/holidays
-    # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
-    start_date = datetime.now() - timedelta(days=int(days * 1.5))
+    start_date = datetime.now() - timedelta(days=calendar_days_for(days))
     end_date = datetime.now()
 
-    # Download all tickers at once for alignment
     print(f"Fetching {days} days of data for {len(tickers)} assets...", file=sys.stderr)
     data = yf.download(
         tickers, start=start_date, end=end_date, progress=False, group_by="ticker"
@@ -77,55 +70,35 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioPriceData:
     if data.empty:
         raise ValueError(f"No data found for tickers: {tickers}")
 
-    # Extract close prices for each ticker
     prices_dict = {}
+    for ticker in tickers:
+        if ticker not in data:
+            raise ValueError(f"No data found for {ticker}")
 
-    if len(tickers) == 1:
-        # Single ticker - yfinance returns different structure
-        ticker = tickers[0]
-        if "Close" not in data.columns:
-            raise ValueError(f"No close price data for {ticker}")
-        prices_dict[ticker] = data["Close"].dropna().tolist()
-        dates = data["Close"].dropna().index.tolist()
-    else:
-        # Multiple tickers
-        for ticker in tickers:
-            if ticker not in data:
-                raise ValueError(f"No data found for {ticker}")
-
-            closes = data[ticker]["Close"].dropna()
-            if len(closes) < 30:
-                raise ValueError(
-                    f"Insufficient data for {ticker}. Need at least 30 days, got {len(closes)}"
-                )
-
-            prices_dict[ticker] = closes.tolist()
-
-        # Get common dates (intersection across all tickers)
-        # This ensures synchronized data
-        common_index = data[tickers[0]]["Close"].dropna().index
-        for ticker in tickers[1:]:
-            ticker_index = data[ticker]["Close"].dropna().index
-            common_index = common_index.intersection(ticker_index)
-
-        if len(common_index) < 30:
+        closes = data[ticker]["Close"].dropna()
+        if len(closes) < MIN_OVERLAPPING_PRICE_DAYS:
             raise ValueError(
-                f"Insufficient overlapping dates. Need at least 30, got {len(common_index)}"
+                f"Insufficient data for {ticker}. Need at least "
+                f"{MIN_OVERLAPPING_PRICE_DAYS} days, got {len(closes)}"
             )
 
-        # Truncate to common dates
-        dates = common_index[-days:].tolist()
-        for ticker in tickers:
-            prices_dict[ticker] = data[ticker]["Close"].loc[dates].tolist()
+        prices_dict[ticker] = closes.tolist()
 
-    # Take only requested number of days
-    if len(tickers) == 1:
-        dates = dates[-days:]
-        prices_dict[tickers[0]] = prices_dict[tickers[0]][-days:]
-    else:
-        dates = dates[-days:]
+    common_index = data[tickers[0]]["Close"].dropna().index
+    for ticker in tickers[1:]:
+        ticker_index = data[ticker]["Close"].dropna().index
+        common_index = common_index.intersection(ticker_index)
 
-    # Convert datetime to date
+    if len(common_index) < MIN_OVERLAPPING_PRICE_DAYS:
+        raise ValueError(
+            "Insufficient overlapping dates. Need at least "
+            f"{MIN_OVERLAPPING_PRICE_DAYS}, got {len(common_index)}"
+        )
+
+    dates = common_index[-days:].tolist()
+    for ticker in tickers:
+        prices_dict[ticker] = data[ticker]["Close"].loc[dates].tolist()
+
     dates = [d.date() for d in dates]
 
     return PortfolioPriceData(
@@ -159,7 +132,6 @@ def format_human_output(result) -> str:  # noqa: C901
     lines.append(f"Assets: {', '.join(result.tickers)}")
     lines.append(f"{'=' * 60}\n")
 
-    # Diversification Score (most important summary)
     score = result.diversification_score
     if score > 0.6:
         score_emoji = "🟢"
@@ -184,7 +156,6 @@ def format_human_output(result) -> str:  # noqa: C901
 
     lines.append("")
 
-    # Position sizing guidance
     if score > 0.6:
         guidance = "Portfolio is well diversified - standard position sizing applies"
     elif score > 0.4:
@@ -197,15 +168,12 @@ def format_human_output(result) -> str:  # noqa: C901
     lines.append(f"💡 Portfolio Guidance: {guidance}")
     lines.append("")
 
-    # Correlation Matrix
     lines.append("CORRELATION MATRIX")
     lines.append("-" * 60)
 
-    # Header row
     header = "        " + "  ".join(f"{t:>8}" for t in result.tickers)
     lines.append(header)
 
-    # Matrix rows
     corr_matrix = result.correlation_matrix.correlation_matrix
     for ticker1 in result.tickers:
         row_values = []
@@ -217,22 +185,18 @@ def format_human_output(result) -> str:  # noqa: C901
 
     lines.append("")
 
-    # Highlight interesting pairs
     lines.append("KEY INSIGHTS")
     lines.append("-" * 60)
 
-    # Find strongest positive correlations (excluding diagonal)
     correlations_list = []
     for i, ticker1 in enumerate(result.tickers):
         for j, ticker2 in enumerate(result.tickers):
-            if i < j:  # Upper triangle only
+            if i < j:
                 corr = corr_matrix[ticker1][ticker2]
                 correlations_list.append((ticker1, ticker2, corr))
 
-    # Sort by absolute correlation (strongest relationships first)
     correlations_list.sort(key=lambda x: abs(x[2]), reverse=True)
 
-    # Show top correlations
     for ticker1, ticker2, corr in correlations_list[:5]:
         if corr > 0.7:
             emoji = "🔴"
@@ -254,12 +218,11 @@ def format_human_output(result) -> str:  # noqa: C901
 
     lines.append("")
 
-    # Rolling correlations summary (if available)
     if result.rolling_correlations:
         lines.append("ROLLING CORRELATION ANALYSIS")
         lines.append("-" * 60)
 
-        for rolling in result.rolling_correlations[:3]:  # Show first 3 pairs
+        for rolling in result.rolling_correlations[:3]:
             corr_min, corr_max = rolling.correlation_range
             range_width = corr_max - corr_min
 
@@ -294,7 +257,6 @@ def format_json_output(result) -> str:
     Returns:
         JSON string
     """
-    # Convert Pydantic model to dict, then to JSON
     return json.dumps(result.model_dump(), indent=2, default=str)
 
 
@@ -324,7 +286,6 @@ Agent Use Cases:
         """,
     )
 
-    # Required arguments
     parser.add_argument(
         "tickers",
         type=str,
@@ -339,7 +300,6 @@ Agent Use Cases:
         help="Number of days of historical data (default: 90)",
     )
 
-    # Correlation configuration
     parser.add_argument(
         "--method",
         choices=["pearson", "spearman"],
@@ -361,7 +321,6 @@ Agent Use Cases:
         help="Minimum periods for rolling correlation (default: 30)",
     )
 
-    # Output format
     parser.add_argument(
         "--output",
         choices=["human", "json"],
@@ -371,7 +330,6 @@ Agent Use Cases:
 
     args = parser.parse_args()
 
-    # Validate minimum tickers
     if len(args.tickers) < 2:
         print(
             "Error: At least 2 tickers required for correlation analysis",
@@ -380,25 +338,21 @@ Agent Use Cases:
         return 1
 
     try:
-        # Fetch portfolio data
         print(
             f"Fetching synchronized data for {len(args.tickers)} assets...",
             file=sys.stderr,
         )
         data = fetch_portfolio_data(args.tickers, args.days)
 
-        # Create configuration
         config = CorrelationConfig(
             method=args.method,
             rolling_window=args.rolling,
             min_periods=args.min_periods,
         )
 
-        # Calculate correlation
         print("Calculating correlation analysis...", file=sys.stderr)
         result = calculate_correlation(data, config)
 
-        # Output results
         if args.output == "json":
             print(format_json_output(result))
         else:

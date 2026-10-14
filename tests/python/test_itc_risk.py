@@ -24,7 +24,7 @@ Created: 2026-01-09
 
 import os
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -36,7 +36,6 @@ class TestITCRiskCalculatorInit:
 
     def test_calculator_requires_api_key(self):
         """Calculator should raise error without API key."""
-        # Ensure environment variable is not set
         original_key = os.environ.pop("ITC_API_KEY", None)
 
         try:
@@ -45,7 +44,6 @@ class TestITCRiskCalculatorInit:
             with pytest.raises(ValueError, match="ITC API key required"):
                 ITCRiskCalculator()
         finally:
-            # Restore original key if it existed
             if original_key:
                 os.environ["ITC_API_KEY"] = original_key
 
@@ -78,7 +76,6 @@ class TestITCRiskCalculatorValidation:
 
         calc = ITCRiskCalculator(api_key="dummy")
 
-        # These should NOT raise
         calc.validate_ticker("TSLA", "tradfi")
         calc.validate_ticker("AAPL", "tradfi")
         calc.validate_ticker("MSTR", "tradfi")
@@ -91,7 +88,6 @@ class TestITCRiskCalculatorValidation:
 
         calc = ITCRiskCalculator(api_key="dummy")
 
-        # These should NOT raise
         calc.validate_ticker("BTC", "crypto")
         calc.validate_ticker("ETH", "crypto")
         calc.validate_ticker("SOL", "crypto")
@@ -117,11 +113,9 @@ class TestITCRiskCalculatorValidation:
 
         calc = ITCRiskCalculator(api_key="dummy")
 
-        # Lowercase should work
         calc.validate_ticker("tsla", "tradfi")
         calc.validate_ticker("btc", "crypto")
 
-        # Mixed case should work
         calc.validate_ticker("TsLa", "tradfi")
 
     def test_is_ticker_supported_returns_boolean(self):
@@ -198,11 +192,11 @@ class TestITCRiskCalculatorParsing:
 
         data = {
             "risk_table": [
-                {"price": 100.0, "risk": 0.1},  # Valid
-                {"price": None, "risk": 0.5},  # Invalid - no price
-                {"price": -50.0, "risk": 0.3},  # Invalid - negative price
-                {"price": 200.0, "risk": None},  # Invalid - no risk
-                {"price": 300.0, "risk": 0.9},  # Valid
+                {"price": 100.0, "risk": 0.1},
+                {"price": None, "risk": 0.5},
+                {"price": -50.0, "risk": 0.3},
+                {"price": 200.0, "risk": None},
+                {"price": 300.0, "risk": 0.9},
             ]
         }
 
@@ -220,15 +214,93 @@ class TestITCRiskCalculatorParsing:
 
         data = {
             "risk_table": [
-                {"price": 100.0, "risk": -0.5},  # Below 0
-                {"price": 200.0, "risk": 1.5},  # Above 1
+                {"price": 100.0, "risk": -0.5},
+                {"price": 200.0, "risk": 1.5},
             ]
         }
 
         bands = calc._parse_risk_bands(data)
 
-        assert bands[0].risk_score == 0.0  # Clamped to 0
-        assert bands[1].risk_score == 1.0  # Clamped to 1
+        assert bands[0].risk_score == 0.0
+        assert bands[1].risk_score == 1.0
+
+
+class TestCurrentPrice:
+    """Tests for the yfinance price lookup that enriches ITC risk data."""
+
+    @pytest.mark.parametrize(
+        ("info", "expected"),
+        [
+            pytest.param(
+                {"currentPrice": 410.0, "regularMarketPrice": 409.0},
+                410.0,
+                id="live-quote-first",
+            ),
+            pytest.param(
+                {"regularMarketPrice": 409.0, "previousClose": 400.0},
+                409.0,
+                id="market-price-when-no-live-quote",
+            ),
+            pytest.param({"previousClose": 400.0}, 400.0, id="last-close"),
+            pytest.param({}, None, id="no-price-fields"),
+        ],
+    )
+    def test_first_quoted_price(self, info, expected):
+        from src.analysis.itc_risk import first_quoted_price
+
+        assert first_quoted_price(info) == expected
+
+    @patch("src.analysis.itc_risk.yf.Ticker")
+    def test_network_error_returns_none(self, mock_ticker):
+        from src.analysis.itc_risk import ITCRiskCalculator
+
+        type(mock_ticker.return_value).info = PropertyMock(
+            side_effect=OSError("connection reset")
+        )
+        calc = ITCRiskCalculator(api_key="test_key")
+
+        with pytest.warns(UserWarning, match="connection reset"):
+            assert calc._fetch_current_price("TSLA") is None
+
+    @patch("src.analysis.itc_risk.yf.Ticker")
+    def test_programming_error_is_not_swallowed(self, mock_ticker):
+        from src.analysis.itc_risk import ITCRiskCalculator
+
+        mock_ticker.side_effect = AttributeError("bug in caller")
+        calc = ITCRiskCalculator(api_key="test_key")
+
+        with pytest.raises(AttributeError):
+            calc._fetch_current_price("TSLA")
+
+    @pytest.mark.parametrize(
+        "parse_error",
+        [KeyError("result"), IndexError("list index out of range")],
+        ids=["quote-without-result", "empty-complementary-timeseries"],
+    )
+    @patch("src.analysis.itc_risk.requests.get")
+    @patch("src.analysis.itc_risk.yf.Ticker")
+    def test_yahoo_parse_failure_keeps_the_itc_result(
+        self, mock_ticker, mock_get, parse_error
+    ):
+        from src.analysis.itc_risk import ITCRiskCalculator
+
+        response = MagicMock(status_code=200)
+        response.json.return_value = {
+            "current_risk_score": 0.45,
+            "risk_table": [
+                {"price": 100.0, "risk": 0.1},
+                {"price": 450.0, "risk": 0.45},
+            ],
+        }
+        mock_get.return_value = response
+        type(mock_ticker.return_value).info = PropertyMock(side_effect=parse_error)
+        calc = ITCRiskCalculator(api_key="test_key")
+
+        with pytest.warns(UserWarning, match="without current price"):
+            result = calc.get_risk_score("TSLA", "tradfi")
+
+        assert result.current_risk_score == 0.45
+        assert result.current_price is None
 
 
 class TestITCRiskResponse:
@@ -255,7 +327,6 @@ class TestITCRiskResponse:
         nearest = response.get_nearest_bands(3)
 
         assert len(nearest) == 3
-        # Should be 400, 500, and one other near 450
         prices = [b.price for b in nearest]
         assert 400.0 in prices
         assert 500.0 in prices
@@ -291,7 +362,7 @@ class TestITCRiskResponse:
             risk_bands=[
                 RiskBand(price=100.0, risk_score=0.0),
                 RiskBand(price=500.0, risk_score=0.65),
-                RiskBand(price=700.0, risk_score=0.72),  # First high risk
+                RiskBand(price=700.0, risk_score=0.72),
                 RiskBand(price=1000.0, risk_score=0.9),
             ],
             timestamp=datetime.now(),
@@ -313,7 +384,7 @@ class TestITCRiskResponse:
             risk_bands=[
                 RiskBand(price=100.0, risk_score=0.0),
                 RiskBand(price=500.0, risk_score=0.5),
-                RiskBand(price=700.0, risk_score=0.65),  # Still below 0.7
+                RiskBand(price=700.0, risk_score=0.65),
             ],
             timestamp=datetime.now(),
         )
@@ -323,7 +394,6 @@ class TestITCRiskResponse:
 
     def test_get_risk_interpretation(self):
         """get_risk_interpretation should return correct interpretation."""
-        # Low risk
         low_risk = ITCRiskResponse(
             symbol="TSLA",
             universe="tradfi",
@@ -333,7 +403,6 @@ class TestITCRiskResponse:
         )
         assert "LOW RISK" in low_risk.get_risk_interpretation()
 
-        # Medium risk
         medium_risk = ITCRiskResponse(
             symbol="TSLA",
             universe="tradfi",
@@ -343,7 +412,6 @@ class TestITCRiskResponse:
         )
         assert "MEDIUM RISK" in medium_risk.get_risk_interpretation()
 
-        # High risk
         high_risk = ITCRiskResponse(
             symbol="TSLA",
             universe="tradfi",
@@ -362,7 +430,6 @@ class TestITCRiskCalculatorAPI:
         """Successful API call should return valid ITCRiskResponse."""
         from src.analysis.itc_risk import ITCRiskCalculator
 
-        # Mock successful API response
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -377,7 +444,6 @@ class TestITCRiskCalculatorAPI:
 
         calc = ITCRiskCalculator(api_key="test_key")
 
-        # Disable price enrichment for test
         result = calc.get_risk_score("TSLA", "tradfi", enrich_with_price=False)
 
         assert isinstance(result, ITCRiskResponse)
@@ -396,7 +462,6 @@ class TestITCRiskCalculatorAPI:
         with pytest.raises(ValueError, match="PLTR not supported"):
             calc.get_risk_score("PLTR", "tradfi")
 
-        # API should NOT have been called
         mock_get.assert_not_called()
 
     @patch("src.analysis.itc_risk.requests.get")
@@ -407,7 +472,6 @@ class TestITCRiskCalculatorAPI:
 
         from src.analysis.itc_risk import ITCRiskCalculator
 
-        # First two calls timeout, third succeeds
         mock_get.side_effect = [
             requests.Timeout("Connection timed out"),
             requests.Timeout("Connection timed out"),
@@ -420,7 +484,6 @@ class TestITCRiskCalculatorAPI:
         calc = ITCRiskCalculator(api_key="test_key")
         result = calc.get_risk_score("TSLA", "tradfi", enrich_with_price=False)
 
-        # Should have retried and eventually succeeded
         assert mock_get.call_count == 3
         assert result.current_risk_score == 0.5
 
@@ -431,7 +494,6 @@ class TestITCRiskCalculatorAPI:
 
         from src.analysis.itc_risk import ITCRiskCalculator
 
-        # All calls return 429
         mock_response = MagicMock()
         mock_response.status_code = 429
         mock_get.return_value = mock_response
@@ -444,7 +506,6 @@ class TestITCRiskCalculatorAPI:
             )
 
 
-# Integration tests (require actual API key)
 @pytest.mark.integration
 class TestITCRiskCalculatorIntegration:
     """
@@ -585,7 +646,6 @@ class TestITCRiskCLI:
 
         output = format_output_json([response])
 
-        # Should be valid JSON
         parsed = json.loads(output)
         assert parsed["symbol"] == "TSLA"
         assert parsed["current_risk_score"] == 0.5
@@ -615,7 +675,6 @@ class TestITCRiskCLI:
 
         output = format_output_json(responses)
 
-        # Should be valid JSON array
         parsed = json.loads(output)
         assert isinstance(parsed, list)
         assert len(parsed) == 2
@@ -647,7 +706,6 @@ class TestITCRiskCLI:
         output = format_output_human(response, full_table=True)
 
         assert "FULL RISK BAND TABLE" in output
-        # All prices should be in output
         assert "100.00" in output
         assert "800.00" in output
 
@@ -662,7 +720,7 @@ class TestITCRiskCLI:
             current_risk_score=0.5,
             risk_bands=[
                 RiskBand(price=400.0, risk_score=0.4),
-                RiskBand(price=600.0, risk_score=0.75),  # First high risk
+                RiskBand(price=600.0, risk_score=0.75),
                 RiskBand(price=800.0, risk_score=0.9),
             ],
             timestamp=datetime.now(),
@@ -670,5 +728,4 @@ class TestITCRiskCLI:
 
         output = format_output_human(response)
 
-        # Should show high risk price with distance calculation
         assert "High Risk at:" in output or "600.00" in output

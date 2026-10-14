@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 SQQQ vs Protective Puts Hedge Comparison CLI for Finance Guru
 
@@ -45,11 +44,6 @@ Created: 2026-02-18
 
 import argparse
 import sys
-from pathlib import Path
-
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 from src.analysis.hedge_comparison import HedgeComparisonCalculator
 from src.models.hedge_comparison_inputs import ComparisonOutput
@@ -102,7 +96,6 @@ def format_comparison_human(result: ComparisonOutput) -> str:
     output.append("=" * 70)
     output.append("")
 
-    # Parameters section
     strike = params.get("put_strike", 0.0)
     spot = params.get("spot_price", 0.0)
     otm_pct = ((spot - strike) / spot * 100) if spot > 0 else 0.0
@@ -119,7 +112,6 @@ def format_comparison_human(result: ComparisonOutput) -> str:
     )
     output.append("")
 
-    # Table header
     header = (
         f"{'Scenario':<20} {'SQQQ Return':>12} {'Naive -3x':>10} "
         f"{'Drag':>7} {'Put PnL':>10} {'Put PnL%':>10} {'Winner':>8}"
@@ -127,7 +119,6 @@ def format_comparison_human(result: ComparisonOutput) -> str:
     output.append(header)
     output.append("-" * len(header))
 
-    # Table rows
     for row in result.scenarios:
         sqqq = row.sqqq
         put = row.put
@@ -146,7 +137,6 @@ def format_comparison_human(result: ComparisonOutput) -> str:
 
     output.append("")
 
-    # Breakeven analysis
     output.append("Breakeven Analysis:")
     output.append(
         f"  SQQQ: Profitable when QQQ drops > {abs(result.sqqq_breakeven_drop):.1%} "
@@ -158,7 +148,6 @@ def format_comparison_human(result: ComparisonOutput) -> str:
     )
     output.append("")
 
-    # Disclaimers
     output.append("=" * 70)
     output.append("DISCLAIMERS:")
     for disclaimer in result.disclaimers:
@@ -209,7 +198,6 @@ Examples:
         """,
     )
 
-    # Required arguments
     parser.add_argument(
         "--scenarios",
         type=str,
@@ -220,7 +208,6 @@ Examples:
         ),
     )
 
-    # QQQ / Put parameters
     parser.add_argument(
         "--spot",
         type=float,
@@ -240,7 +227,6 @@ Examples:
         help="Put premium paid per share (default: 5.0)",
     )
 
-    # SQQQ parameters
     parser.add_argument(
         "--sqqq-allocation",
         type=float,
@@ -248,7 +234,6 @@ Examples:
         help="Dollar amount allocated to SQQQ (default: 10000.0)",
     )
 
-    # Volatility / IV parameters
     parser.add_argument(
         "--baseline-iv",
         type=float,
@@ -262,7 +247,6 @@ Examples:
         help="Expected daily QQQ volatility (default: 0.015 = 1.5%%)",
     )
 
-    # Holding period
     parser.add_argument(
         "--days",
         type=int,
@@ -270,7 +254,6 @@ Examples:
         help="Holding period in trading days (default: 30)",
     )
 
-    # Output format
     parser.add_argument(
         "--output",
         type=str,
@@ -282,15 +265,13 @@ Examples:
     args = parser.parse_args(_preprocess_argv(sys.argv[1:]))
 
     try:
-        # Step 1: Parse scenarios
         raw_scenarios = args.scenarios.split(",")
         scenarios: list[float] = []
         for s in raw_scenarios:
             s = s.strip()
-            val = float(s) / 100.0  # -5 becomes -0.05
+            val = float(s) / 100.0
             scenarios.append(val)
 
-        # Step 2: Validate scenarios
         for val in scenarios:
             if val >= 0:
                 print(
@@ -307,10 +288,8 @@ Examples:
                 )
                 return 1
 
-        # Step 3: Determine strike
         strike = args.strike if args.strike is not None else args.spot * 0.90
 
-        # Step 4: Create calculator
         print(
             f"Analyzing {len(scenarios)} market drop scenarios...",
             file=sys.stderr,
@@ -332,18 +311,15 @@ Examples:
             daily_volatility=args.daily_vol,
         )
 
-        # Step 5: Run comparison
         result = calc.compare_all(scenarios)
         print("Comparison complete.", file=sys.stderr)
         print("", file=sys.stderr)
 
-        # Step 6: Format output
         if args.output == "json":
             output_text = result.model_dump_json(indent=2)
         else:
             output_text = format_comparison_human(result)
 
-        # Step 7: Print to stdout
         print(output_text)
 
         return 0

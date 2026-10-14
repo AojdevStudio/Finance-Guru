@@ -4,6 +4,7 @@ Tests the RiskCalculator class and convenience function with synthetic data.
 No real API calls -- all data is generated with numpy/pandas.
 """
 
+import math
 import warnings
 from datetime import date, timedelta
 
@@ -16,10 +17,6 @@ from src.models.risk_inputs import (
     RiskCalculationConfig,
     RiskMetricsOutput,
 )
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
 
 
 def _make_dates(n: int, start: date | None = None) -> list[date]:
@@ -71,11 +68,6 @@ def calculator(config: RiskCalculationConfig) -> RiskCalculator:
 @pytest.fixture
 def benchmark_data() -> PriceDataInput:
     return _make_price_data(ticker="SPY", seed=99, daily_return_std=0.01)
-
-
-# ---------------------------------------------------------------------------
-# RiskCalculator -- happy path
-# ---------------------------------------------------------------------------
 
 
 class TestRiskCalculatorHappyPath:
@@ -144,11 +136,6 @@ class TestRiskCalculatorHappyPath:
         assert np.isfinite(result.alpha)
 
 
-# ---------------------------------------------------------------------------
-# VaR methods
-# ---------------------------------------------------------------------------
-
-
 class TestVaRMethods:
     """Historical vs parametric VaR."""
 
@@ -169,36 +156,27 @@ class TestVaRMethods:
         param = RiskCalculator(RiskCalculationConfig(var_method="parametric"))
         r1 = hist.calculate_risk_metrics(price_data)
         r2 = param.calculate_risk_metrics(price_data)
-        # They may be close but generally won't be identical
         assert r1.var_95 != pytest.approx(r2.var_95, abs=1e-10)
-
-
-# ---------------------------------------------------------------------------
-# Known-answer tests
-# ---------------------------------------------------------------------------
 
 
 class TestKnownAnswers:
     """Tests with synthetic data where expected results can be computed."""
 
     def test_zero_return_sharpe_is_negative(self):
-        """A flat price series has zero return, so Sharpe should be negative
-        (excess return below risk-free rate)."""
+        """A flat series earns less than the risk-free rate with zero volatility,
+        so Sharpe reports the negative limit without dividing by zero."""
         n = 60
-        prices = [100.0] * n
-        # Add tiny jitter to avoid zero std (which would give nan)
-        rng = np.random.default_rng(0)
-        prices = [100.0 + rng.normal(0, 0.001) for _ in range(n)]
-        prices.sort()  # ensure monotonic-ish for valid Pydantic dates
         data = PriceDataInput(
             ticker="FLAT",
-            prices=prices,
+            prices=[100.0] * n,
             dates=_make_dates(n),
         )
         config = RiskCalculationConfig(risk_free_rate=0.045)
-        result = RiskCalculator(config).calculate_risk_metrics(data)
-        # With near-zero returns and positive risk-free rate, Sharpe < 0
-        assert result.sharpe_ratio < 0
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            with pytest.warns(UserWarning, match="zero risk"):
+                result = RiskCalculator(config).calculate_risk_metrics(data)
+        assert result.sharpe_ratio == -math.inf
 
     def test_monotonically_increasing_no_drawdown(self):
         """Monotonically increasing prices should have zero max drawdown."""
@@ -238,11 +216,6 @@ class TestKnownAnswers:
         assert r_high.annual_volatility > r_low.annual_volatility
 
 
-# ---------------------------------------------------------------------------
-# Beta / Alpha
-# ---------------------------------------------------------------------------
-
-
 class TestBetaAlpha:
     """Beta and Alpha calculations."""
 
@@ -273,11 +246,6 @@ class TestBetaAlpha:
         result = RiskCalculator(config).calculate_risk_metrics(ast_data, mkt_data)
         assert result.beta is not None
         assert result.beta > 0
-
-
-# ---------------------------------------------------------------------------
-# Convenience function
-# ---------------------------------------------------------------------------
 
 
 class TestConvenienceFunction:

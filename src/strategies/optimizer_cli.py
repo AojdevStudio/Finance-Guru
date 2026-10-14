@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 CLI interface for portfolio optimization.
 
@@ -47,19 +46,19 @@ import argparse
 import json
 import sys
 from datetime import datetime, timedelta
-from pathlib import Path
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 import yfinance as yf
 
+from src.data.price_history import MIN_OVERLAPPING_PRICE_DAYS
 from src.models.portfolio_inputs import (
     OptimizationConfig,
     PortfolioDataInput,
 )
 from src.strategies.optimizer import optimize_portfolio
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR, calendar_days_for
+
+ALLOW_SHORT_POSITIONS = False
+"""The CLI builds long-only portfolios; every weight stays at or above zero."""
 
 
 def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioDataInput:
@@ -82,14 +81,11 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioDataInput:
     Raises:
         ValueError: If data cannot be fetched or insufficient overlap
     """
-    # Fetch extra days to account for weekends/holidays
-    # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
-    start_date = datetime.now() - timedelta(days=int(days * 1.5))
+    start_date = datetime.now() - timedelta(days=calendar_days_for(days))
     end_date = datetime.now()
 
     print(f"Fetching {days} days of data for {len(tickers)} assets...", file=sys.stderr)
 
-    # Download all tickers at once for alignment
     data = yf.download(
         tickers, start=start_date, end=end_date, progress=False, group_by="ticker"
     )
@@ -97,56 +93,34 @@ def fetch_portfolio_data(tickers: list[str], days: int) -> PortfolioDataInput:
     if data.empty:
         raise ValueError(f"No data found for tickers: {tickers}")
 
-    # Extract close prices for each ticker
     prices_dict = {}
+    min_required = min(days, MIN_OVERLAPPING_PRICE_DAYS)
+    for ticker in tickers:
+        if ticker not in data:
+            raise ValueError(f"No data found for {ticker}")
 
-    if len(tickers) == 1:
-        # Single ticker - yfinance returns different structure
-        ticker = tickers[0]
-        if "Close" not in data.columns:
-            raise ValueError(f"No close price data for {ticker}")
-        prices_dict[ticker] = data["Close"].dropna().tolist()
-        dates = data["Close"].dropna().index.tolist()
-    else:
-        # Multiple tickers
-        for ticker in tickers:
-            if ticker not in data:
-                raise ValueError(f"No data found for {ticker}")
-
-            closes = data[ticker]["Close"].dropna()
-            min_required = min(days, 30)  # At least 30 days, or requested days if less
-            if len(closes) < min_required:
-                raise ValueError(
-                    f"Insufficient data for {ticker}. Need at least {min_required} days, got {len(closes)}"
-                )
-
-            prices_dict[ticker] = closes.tolist()
-
-        # Get common dates (intersection across all tickers)
-        common_index = data[tickers[0]]["Close"].dropna().index
-        for ticker in tickers[1:]:
-            ticker_index = data[ticker]["Close"].dropna().index
-            common_index = common_index.intersection(ticker_index)
-
-        min_required = min(days, 30)
-        if len(common_index) < min_required:
+        closes = data[ticker]["Close"].dropna()
+        if len(closes) < min_required:
             raise ValueError(
-                f"Insufficient overlapping dates. Need at least {min_required}, got {len(common_index)}"
+                f"Insufficient data for {ticker}. Need at least {min_required} days, got {len(closes)}"
             )
 
-        # Truncate to common dates
-        dates = common_index[-days:].tolist()
-        for ticker in tickers:
-            prices_dict[ticker] = data[ticker]["Close"].loc[dates].tolist()
+        prices_dict[ticker] = closes.tolist()
 
-    # Take only requested number of days
-    if len(tickers) == 1:
-        dates = dates[-days:]
-        prices_dict[tickers[0]] = prices_dict[tickers[0]][-days:]
-    else:
-        dates = dates[-days:]
+    common_index = data[tickers[0]]["Close"].dropna().index
+    for ticker in tickers[1:]:
+        ticker_index = data[ticker]["Close"].dropna().index
+        common_index = common_index.intersection(ticker_index)
 
-    # Convert datetime to date
+    if len(common_index) < min_required:
+        raise ValueError(
+            f"Insufficient overlapping dates. Need at least {min_required}, got {len(common_index)}"
+        )
+
+    dates = common_index[-days:].tolist()
+    for ticker in tickers:
+        prices_dict[ticker] = data[ticker]["Close"].loc[dates].tolist()
+
     dates = [d.date() for d in dates]
 
     print(
@@ -187,7 +161,6 @@ def format_human_output(result, capital: float = 500000.0) -> str:
     lines.append(f"Capital: ${capital:,.0f}")
     lines.append(f"{'=' * 70}\n")
 
-    # Portfolio metrics
     lines.append("PORTFOLIO METRICS")
     lines.append("-" * 70)
     lines.append(f"Expected Annual Return:     {result.expected_return:>8.2%}")
@@ -196,7 +169,6 @@ def format_human_output(result, capital: float = 500000.0) -> str:
     lines.append(f"Diversification Ratio:      {result.diversification_ratio:>8.2f}")
     lines.append("")
 
-    # Interpret Sharpe ratio
     if result.sharpe_ratio > 2.0:
         sharpe_label = "EXCELLENT - Outstanding risk-adjusted returns"
     elif result.sharpe_ratio > 1.0:
@@ -209,7 +181,6 @@ def format_human_output(result, capital: float = 500000.0) -> str:
     lines.append(f"Sharpe Interpretation: {sharpe_label}")
     lines.append("")
 
-    # Interpret diversification ratio
     if result.diversification_ratio > 1.8:
         div_label = "EXCELLENT - Strong diversification benefit"
     elif result.diversification_ratio > 1.4:
@@ -222,13 +193,11 @@ def format_human_output(result, capital: float = 500000.0) -> str:
     lines.append(f"Diversification Interpretation: {div_label}")
     lines.append("")
 
-    # Optimal allocation
     lines.append("OPTIMAL ALLOCATION")
     lines.append("-" * 70)
     lines.append(f"{'Asset':<10} {'Weight':>10} {'Dollar Amount':>18}")
     lines.append("-" * 70)
 
-    # Sort by weight (largest first)
     sorted_assets = sorted(
         result.optimal_weights.items(), key=lambda x: x[1], reverse=True
     )
@@ -243,11 +212,9 @@ def format_human_output(result, capital: float = 500000.0) -> str:
     )
     lines.append("")
 
-    # Action plan
     lines.append("ACTION PLAN FOR DEPLOYMENT")
     lines.append("-" * 70)
 
-    # Check for concentrated positions
     max_weight = max(result.optimal_weights.values())
     if max_weight > 0.40:
         lines.append("WARNING: CONCENTRATION RISK")
@@ -255,7 +222,6 @@ def format_human_output(result, capital: float = 500000.0) -> str:
         lines.append("   Consider position limits (--max-position) for risk control.")
         lines.append("")
 
-    # Deployment steps
     lines.append("1. Review allocation aligns with your risk tolerance")
     lines.append("2. Check current prices before executing trades")
     lines.append("3. Use limit orders to avoid slippage on large positions")
@@ -263,7 +229,6 @@ def format_human_output(result, capital: float = 500000.0) -> str:
     lines.append("5. Set calendar reminder to rebalance quarterly")
     lines.append("")
 
-    # Method-specific guidance
     lines.append("METHOD NOTES")
     lines.append("-" * 70)
 
@@ -325,7 +290,6 @@ def format_json_output(result) -> str:
     Returns:
         JSON string
     """
-    # Convert Pydantic model to dict, then to JSON
     return json.dumps(result.model_dump(), indent=2, default=str)
 
 
@@ -363,7 +327,6 @@ Agent Use Cases:
         """,
     )
 
-    # Required arguments
     parser.add_argument(
         "tickers",
         type=str,
@@ -374,11 +337,10 @@ Agent Use Cases:
     parser.add_argument(
         "--days",
         type=int,
-        default=252,
+        default=TRADING_DAYS_PER_YEAR,
         help="Number of days of historical data (default: 252 = 1 year, minimum: 252)",
     )
 
-    # Optimization configuration
     parser.add_argument(
         "--method",
         choices=[
@@ -427,7 +389,6 @@ Agent Use Cases:
         help="Portfolio capital for dollar allocation (default: 500000 = $500k)",
     )
 
-    # Output format
     parser.add_argument(
         "--output",
         choices=["human", "json"],
@@ -437,7 +398,6 @@ Agent Use Cases:
 
     args = parser.parse_args()
 
-    # Validate minimum tickers
     if len(args.tickers) < 2:
         print(
             "Error: At least 2 tickers required for portfolio optimization",
@@ -445,8 +405,7 @@ Agent Use Cases:
         )
         return 1
 
-    # Validate days
-    if args.days < 252:
+    if args.days < TRADING_DAYS_PER_YEAR:
         print(
             f"Warning: {args.days} days is less than recommended minimum (252 days = 1 year)",
             file=sys.stderr,
@@ -456,14 +415,12 @@ Agent Use Cases:
         )
 
     try:
-        # Fetch portfolio data
         print(
             f"Starting optimization: method={args.method}, assets={len(args.tickers)}",
             file=sys.stderr,
         )
         data = fetch_portfolio_data(args.tickers, args.days)
 
-        # Parse views for Black-Litterman
         views = None
         if args.view:
             views = {}
@@ -478,24 +435,21 @@ Agent Use Cases:
                     )
                     return 1
 
-        # Create configuration
         config = OptimizationConfig(
             method=args.method,
             risk_free_rate=args.risk_free_rate,
             target_return=args.target_return,
-            allow_short=False,  # Long-only for retail investors
+            allow_short=ALLOW_SHORT_POSITIONS,
             position_limits=(0.0, args.max_position),
             views=views,
         )
 
-        # Optimize portfolio
         print("Running optimization...", file=sys.stderr)
         result = optimize_portfolio(data, config)
         print(
             f"Optimization complete: Sharpe={result.sharpe_ratio:.2f}", file=sys.stderr
         )
 
-        # Output results
         if args.output == "json":
             print(format_json_output(result))
         else:

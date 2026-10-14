@@ -41,11 +41,6 @@ def imports_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return path
 
 
-# ---------------------------------------------------------------------------
-# calculate_contract_count
-# ---------------------------------------------------------------------------
-
-
 class TestCalculateContractCount:
     """Test the floor(portfolio_value / ratio) formula."""
 
@@ -94,11 +89,6 @@ class TestCalculateContractCount:
         assert calculate_contract_count(10_000, 100_000) == 0
 
 
-# ---------------------------------------------------------------------------
-# allocate_contracts
-# ---------------------------------------------------------------------------
-
-
 class TestAllocateContracts:
     """Test weight-based contract distribution."""
 
@@ -128,7 +118,6 @@ class TestAllocateContracts:
         """Verify 3-way split works."""
         result = allocate_contracts(10, {"QQQ": 0.5, "SPY": 0.3, "IWM": 0.2})
         assert sum(result.values()) == 10
-        # QQQ should get most
         assert result["QQQ"] >= result["SPY"] >= result["IWM"]
 
     def test_zero_contracts(self) -> None:
@@ -147,11 +136,6 @@ class TestAllocateContracts:
         for total in range(20):
             result = allocate_contracts(total, {"QQQ": 0.6, "SPY": 0.4})
             assert sum(result.values()) == total
-
-
-# ---------------------------------------------------------------------------
-# read_portfolio_value_from_csv
-# ---------------------------------------------------------------------------
 
 
 class TestReadPortfolioValueFromCSV:
@@ -188,17 +172,14 @@ class TestReadPortfolioValueFromCSV:
         assert result is None
 
     def test_handles_dollar_sign_and_commas(self, imports_dir: Path) -> None:
-        """Parse values with $ and comma formatting."""
-        csv_content = ",Balance,Day change\nTotal account value,$1,234,567.89,0\n"
+        """Parse a quoted Fidelity money cell with $ and thousands separators."""
+        csv_content = ',Balance,Day change\nTotal account value,"$1,234,567.89",0\n'
         csv_file = imports_dir / "Balances_for_Account_TEST.csv"
         csv_file.write_text(csv_content)
 
         result = read_portfolio_value_from_csv()
 
-        # With commas in the value and splitting by comma, the parsing
-        # extracts the first part after the label -- "$1" -> 1.0
-        # This is expected behavior for the current CSV format (no commas in value)
-        assert result is not None
+        assert result == pytest.approx(1234567.89)
 
     def test_case_insensitive_match(self, imports_dir: Path) -> None:
         """Match 'total account value' regardless of case."""
@@ -209,11 +190,6 @@ class TestReadPortfolioValueFromCSV:
         result = read_portfolio_value_from_csv()
 
         assert result == pytest.approx(500000.00)
-
-
-# ---------------------------------------------------------------------------
-# HedgeSizer.resolve_portfolio_value
-# ---------------------------------------------------------------------------
 
 
 class TestResolvePortfolioValue:
@@ -274,11 +250,6 @@ class TestResolvePortfolioValue:
         assert source == "fidelity_csv"
 
 
-# ---------------------------------------------------------------------------
-# HedgeSizer.calculate
-# ---------------------------------------------------------------------------
-
-
 class TestHedgeSizerCalculate:
     """Test sizing and allocation integration."""
 
@@ -304,7 +275,6 @@ class TestHedgeSizerCalculate:
         sizer = HedgeSizer(config)
         result = sizer.calculate(200_000, ["QQQ", "SPY"])
 
-        # Weights should be re-normalized from config
         assert result["weights_used"]["QQQ"] == pytest.approx(0.7)
         assert result["weights_used"]["SPY"] == pytest.approx(0.3)
 
@@ -314,7 +284,6 @@ class TestHedgeSizerCalculate:
         sizer = HedgeSizer(config)
         result = sizer.calculate(200_000, ["QQQ", "IWM"])
 
-        # IWM not in config -> equal weighting
         assert result["weights_used"]["QQQ"] == pytest.approx(0.5)
         assert result["weights_used"]["IWM"] == pytest.approx(0.5)
 
@@ -339,7 +308,7 @@ class TestHedgeSizerCalculate:
         """Coverage percentage = notional / portfolio * 100."""
         config = HedgeConfig(underlying_weights={"QQQ": 1.0})
         sizer = HedgeSizer(config)
-        result = sizer.calculate(175_000)  # 3 contracts * 50k = 150k
+        result = sizer.calculate(175_000)
 
         expected_coverage = 150_000 / 175_000 * 100
         assert result["coverage_pct"] == pytest.approx(round(expected_coverage, 2))
@@ -352,11 +321,6 @@ class TestHedgeSizerCalculate:
 
         assert result["total_contracts"] == 0
         assert result["coverage_pct"] == 0.0
-
-
-# ---------------------------------------------------------------------------
-# HedgeSizer.validate_budget
-# ---------------------------------------------------------------------------
 
 
 class TestValidateBudget:
@@ -384,10 +348,9 @@ class TestValidateBudget:
         )
         sizer = HedgeSizer(config)
 
-        # 2 contracts * $5 median * 100 = $1000 < $2000 budget
         mock_result = self._make_mock_chain_result([4.0, 5.0, 6.0])
         with patch(
-            "src.analysis.options_chain_cli.scan_chain",
+            "src.analysis.rolling_tracker.scan_chain",
             return_value=mock_result,
         ):
             budget = sizer.validate_budget({"QQQ": 2}, config)
@@ -405,10 +368,9 @@ class TestValidateBudget:
         )
         sizer = HedgeSizer(config)
 
-        # 3 contracts * $8 median * 100 = $2400 > $500 budget
         mock_result = self._make_mock_chain_result([7.0, 8.0, 9.0])
         with patch(
-            "src.analysis.options_chain_cli.scan_chain",
+            "src.analysis.rolling_tracker.scan_chain",
             return_value=mock_result,
         ):
             budget = sizer.validate_budget({"QQQ": 3}, config)
@@ -427,7 +389,7 @@ class TestValidateBudget:
         sizer = HedgeSizer(config)
 
         with patch(
-            "src.analysis.options_chain_cli.scan_chain",
+            "src.analysis.rolling_tracker.scan_chain",
             side_effect=Exception("API error"),
         ):
             budget = sizer.validate_budget({"QQQ": 2}, config)
@@ -446,18 +408,15 @@ class TestValidateBudget:
         )
         sizer = HedgeSizer(config)
 
-        # SPY has 0 contracts -- should not trigger scan
         mock_result = self._make_mock_chain_result([5.0])
         with patch(
-            "src.analysis.options_chain_cli.scan_chain",
+            "src.analysis.rolling_tracker.scan_chain",
             return_value=mock_result,
         ) as mock_scan:
             result = sizer.validate_budget({"QQQ": 2, "SPY": 0}, config)
 
-        # scan_chain should only be called for QQQ (not SPY)
         assert mock_scan.call_count == 1
         assert mock_scan.call_args[1]["ticker"] == "QQQ"
-        # QQQ: 2 * $5 * 100 = $1000 < $2000 budget
         assert result["within_budget"] is True
 
     def test_no_valid_premiums_marks_unavailable(self) -> None:
@@ -468,10 +427,9 @@ class TestValidateBudget:
         )
         sizer = HedgeSizer(config)
 
-        # All premiums are 0 -- no valid data
         mock_result = self._make_mock_chain_result([0.0, 0.0])
         with patch(
-            "src.analysis.options_chain_cli.scan_chain",
+            "src.analysis.rolling_tracker.scan_chain",
             return_value=mock_result,
         ):
             budget = sizer.validate_budget({"QQQ": 2}, config)
@@ -491,7 +449,7 @@ class TestValidateBudget:
         mock_result = MagicMock()
         mock_result.contracts = []
         with patch(
-            "src.analysis.options_chain_cli.scan_chain",
+            "src.analysis.rolling_tracker.scan_chain",
             return_value=mock_result,
         ):
             budget = sizer.validate_budget({"QQQ": 2}, config)
@@ -516,19 +474,13 @@ class TestValidateBudget:
                 return self._make_mock_chain_result([4.0, 5.0, 6.0])
 
         with patch(
-            "src.analysis.options_chain_cli.scan_chain",
+            "src.analysis.rolling_tracker.scan_chain",
             side_effect=mock_scan,
         ):
             budget = sizer.validate_budget({"QQQ": 3, "SPY": 2}, config)
 
-        # QQQ: 3 * $10 * 100 = $3000; SPY: 2 * $5 * 100 = $1000
         assert budget["total_estimated_monthly_cost"] == 4000.0
         assert budget["within_budget"] is False
-
-
-# ---------------------------------------------------------------------------
-# CLI integration tests (subprocess)
-# ---------------------------------------------------------------------------
 
 
 class TestHedgeSizerCLI:
@@ -565,7 +517,6 @@ class TestHedgeSizerCLI:
             cwd=self._cwd,
         )
         assert result.returncode == 0
-        # Human output should mention contract count
         assert "contract" in result.stdout.lower()
 
     def test_cli_json_output(self) -> None:

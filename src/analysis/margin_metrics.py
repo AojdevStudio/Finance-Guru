@@ -17,7 +17,7 @@ from glob import glob
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.config.instance_paths import InstancePaths, load_instance_env
 
@@ -51,7 +51,7 @@ class FidelityBalances(BaseModel):
     total_account_day_change: float | None
     margin_buying_power: float | None
     margin_buying_power_day_change: float | None
-    net_debit: float
+    margin_debt: float = Field(ge=0.0)
     net_debit_day_change: float | None
     margin_interest_accrued_this_month: float | None
 
@@ -135,21 +135,32 @@ def latest_balances_csv() -> Path:
     return Path(matches[-1])
 
 
-def read_fidelity_balances(path: str | Path | None = None) -> FidelityBalances:
-    """Parse current facts from a Fidelity balances CSV."""
-    csv_path = Path(path) if path is not None else latest_balances_csv()
+def read_fidelity_rows(csv_path: Path) -> dict[str, list[str]]:
+    """Index a Fidelity balances CSV by its lowercased row label."""
     rows: dict[str, list[str]] = {}
     with csv_path.open(newline="") as f:
         for row in csv.reader(f):
             if not row:
                 continue
             rows[row[0].strip().lower()] = row
+    return rows
+
+
+def fidelity_cell(rows: dict[str, list[str]], label: str, index: int) -> float | None:
+    """Parse one money cell from rows indexed by ``read_fidelity_rows``."""
+    row = rows.get(label)
+    if row is None or len(row) <= index:
+        return None
+    return parse_money(row[index])
+
+
+def read_fidelity_balances(path: str | Path | None = None) -> FidelityBalances:
+    """Parse current facts from a Fidelity balances CSV."""
+    csv_path = Path(path) if path is not None else latest_balances_csv()
+    rows = read_fidelity_rows(csv_path)
 
     def cell(label: str, index: int) -> float | None:
-        row = rows.get(label)
-        if row is None or len(row) <= index:
-            return None
-        return parse_money(row[index])
+        return fidelity_cell(rows, label, index)
 
     total_account_value = cell("total account value", 1)
     net_debit = cell("net debit", 1)
@@ -166,7 +177,7 @@ def read_fidelity_balances(path: str | Path | None = None) -> FidelityBalances:
         total_account_day_change=cell("total account value", 2),
         margin_buying_power=cell("margin buying power", 1),
         margin_buying_power_day_change=cell("margin buying power", 2),
-        net_debit=net_debit,
+        margin_debt=abs(net_debit),
         net_debit_day_change=cell("net debit", 2),
         margin_interest_accrued_this_month=cell(
             "margin interest accrued this month", 1
@@ -191,15 +202,13 @@ def _broker_balances_from_snaptrade(client: Any, account_id: str) -> FidelityBal
     margin_debt, _gross = derive_margin_debt(
         client.get_positions(account_id), client.get_options(account_id), equity
     )
-    # Fidelity convention: net debit is negative; calculate_margin_metrics abs()-es it.
-    net_debit = -margin_debt if margin_debt and margin_debt > 0 else 0.0
     return FidelityBalances(
         source_file=f"snaptrade:{account_id}",
         total_account_value=equity,
         total_account_day_change=None,
         margin_buying_power=first.get("buying_power"),
         margin_buying_power_day_change=None,
-        net_debit=net_debit,
+        margin_debt=max(margin_debt or 0.0, 0.0),
         net_debit_day_change=None,
         margin_interest_accrued_this_month=None,
     )
@@ -319,16 +328,13 @@ def read_db_balances(
     if equity is None:
         msg = "Local DB balance row is missing account_equity"
         raise ValueError(msg)
-    margin_debt = row["margin_debt"] or 0.0
-    # Fidelity convention: net debit is negative; calculate_margin_metrics abs()-es it.
-    net_debit = -margin_debt if margin_debt > 0 else 0.0
     return FidelityBalances(
         source_file=f"db:{db}",
         total_account_value=equity,
         total_account_day_change=None,
         margin_buying_power=row["buying_power"],
         margin_buying_power_day_change=None,
-        net_debit=net_debit,
+        margin_debt=max(row["margin_debt"] or 0.0, 0.0),
         net_debit_day_change=None,
         margin_interest_accrued_this_month=None,
     )
@@ -353,7 +359,7 @@ class MarginMetricsCalculator:
     def calculate_all(self) -> MarginMetrics:
         """Return all derived margin metrics."""
         balances = self.inputs.balances
-        margin_balance = abs(balances.net_debit)
+        margin_balance = balances.margin_debt
         monthly_interest_cost = margin_balance * self.inputs.annual_rate / 12
         annual_interest_cost = monthly_interest_cost * 12
         coverage_ratio = (

@@ -49,6 +49,22 @@ from src.models.factors_inputs import (
     FactorDataInput,
     FactorExposureOutput,
 )
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
+
+HIGH_MARKET_BETA = 1.5
+LOW_MARKET_BETA = 0.5
+
+
+def _importance_share(contribution: float, total_return: float) -> float:
+    """Return a contribution's share of total return, capped at 100% for display.
+
+    A single factor can contribute more than the whole return when other
+    factors offset it, so the raw ratio is unbounded. The output model reports
+    importance on a 0 to 1 scale.
+    """
+    if total_return == 0:
+        return 0.0
+    return min(abs(contribution / total_return), 1.0)
 
 
 class FactorAnalyzer:
@@ -94,12 +110,10 @@ class FactorAnalyzer:
         3. Calculates return attribution
         4. Generates summary and recommendations
         """
-        # Calculate excess returns
-        daily_rf = data.risk_free_rate / 252
+        daily_rf = data.risk_free_rate / TRADING_DAYS_PER_YEAR
         excess_asset = np.array(data.asset_returns) - daily_rf
         excess_market = np.array(data.market_returns) - daily_rf
 
-        # Determine model type and run regression
         exposure = self._estimate_exposures(
             excess_asset=excess_asset,
             excess_market=excess_market,
@@ -109,7 +123,6 @@ class FactorAnalyzer:
             ticker=data.ticker,
         )
 
-        # Calculate attribution
         attribution = self._calculate_attribution(
             exposure=exposure,
             market_returns=np.array(data.market_returns),
@@ -120,7 +133,6 @@ class FactorAnalyzer:
             ticker=data.ticker,
         )
 
-        # Generate summary and recommendations
         summary = self._generate_summary(exposure, attribution)
         recommendations = self._generate_recommendations(exposure, attribution)
 
@@ -154,7 +166,6 @@ class FactorAnalyzer:
         The slope coefficients are our factor betas.
         The intercept is alpha (excess return not explained by factors).
         """
-        # Build factor matrix X
         factors = [excess_market]
         factor_names = ["market"]
 
@@ -173,40 +184,32 @@ class FactorAnalyzer:
         X = np.column_stack(factors)
         y = excess_asset
 
-        # Run OLS regression
         model = LinearRegression()
         model.fit(X, y)
 
-        # Extract coefficients
         alpha_daily = model.intercept_
         betas = model.coef_
 
-        # Annualize alpha
-        alpha_annual = alpha_daily * 252
+        alpha_annual = alpha_daily * TRADING_DAYS_PER_YEAR
 
-        # Calculate R-squared
         y_pred = model.predict(X)
         ss_res = np.sum((y - y_pred) ** 2)
         ss_tot = np.sum((y - y.mean()) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
 
-        # Calculate standard errors and t-statistics
         n = len(y)
         k = X.shape[1]
         residuals = y - y_pred
         mse = np.sum(residuals**2) / (n - k - 1)
 
-        # Standard error of alpha
         X_with_intercept = np.column_stack([np.ones(n), X])
         var_coef = mse * np.linalg.inv(X_with_intercept.T @ X_with_intercept).diagonal()
-        se_alpha = np.sqrt(var_coef[0]) * np.sqrt(252)  # Annualize
+        se_alpha = np.sqrt(var_coef[0]) * np.sqrt(TRADING_DAYS_PER_YEAR)
         se_betas = np.sqrt(var_coef[1:])
 
-        # T-statistics
         alpha_tstat = alpha_annual / se_alpha if se_alpha > 0 else 0
         beta_tstats = betas / se_betas
 
-        # Extract individual betas
         market_beta = float(betas[0])
         market_beta_tstat = float(beta_tstats[0])
 
@@ -259,35 +262,28 @@ class FactorAnalyzer:
         - 1% value tilt (positive HML beta)
         - 2% alpha (skill or luck)
         """
-        # Annualize returns
-        total_return = float(asset_returns.mean() * 252)
-        market_return_annual = float(market_returns.mean() * 252)
+        total_return = float(asset_returns.mean() * TRADING_DAYS_PER_YEAR)
+        market_return_annual = float(market_returns.mean() * TRADING_DAYS_PER_YEAR)
 
-        # Market attribution
         market_attribution = exposure.market_beta * market_return_annual
 
-        # Size attribution
         size_attribution = None
         if exposure.size_beta is not None and smb_returns is not None:
-            smb_return_annual = float(smb_returns.mean() * 252)
+            smb_return_annual = float(smb_returns.mean() * TRADING_DAYS_PER_YEAR)
             size_attribution = exposure.size_beta * smb_return_annual
 
-        # Value attribution
         value_attribution = None
         if exposure.value_beta is not None and hml_returns is not None:
-            hml_return_annual = float(hml_returns.mean() * 252)
+            hml_return_annual = float(hml_returns.mean() * TRADING_DAYS_PER_YEAR)
             value_attribution = exposure.value_beta * hml_return_annual
 
-        # Momentum attribution
         momentum_attribution = None
         if exposure.momentum_beta is not None and mom_returns is not None:
-            mom_return_annual = float(mom_returns.mean() * 252)
+            mom_return_annual = float(mom_returns.mean() * TRADING_DAYS_PER_YEAR)
             momentum_attribution = exposure.momentum_beta * mom_return_annual
 
-        # Alpha attribution
         alpha_attribution = exposure.alpha
 
-        # Residual (unexplained)
         explained = market_attribution
         if size_attribution:
             explained += size_attribution
@@ -299,17 +295,8 @@ class FactorAnalyzer:
 
         residual = total_return - explained
 
-        # Calculate importance percentages
-        # NOTE: We cap at 1.0 (100%) because offsetting factors can produce
-        # values > 100%. For example: market +150%, other factors -50% = 100% total.
-        # In this case, market "importance" would be 1.5 mathematically, but we
-        # cap it at 1.0 for display purposes (market dominated the return).
-        if total_return != 0:
-            market_importance = min(abs(market_attribution / total_return), 1.0)
-            alpha_importance = min(abs(alpha_attribution / total_return), 1.0)
-        else:
-            market_importance = 0.0
-            alpha_importance = 0.0
+        market_importance = _importance_share(market_attribution, total_return)
+        alpha_importance = _importance_share(alpha_attribution, total_return)
 
         return AttributionOutput(
             ticker=ticker,
@@ -361,17 +348,15 @@ class FactorAnalyzer:
         """Generate actionable recommendations."""
         recs = []
 
-        # Beta interpretation
-        if exposure.market_beta > 1.5:
+        if exposure.market_beta > HIGH_MARKET_BETA:
             recs.append(
                 "High market beta (>1.5) suggests aggressive positioning - consider hedging in downturns"
             )
-        elif exposure.market_beta < 0.5:
+        elif exposure.market_beta < LOW_MARKET_BETA:
             recs.append(
                 "Low market beta (<0.5) suggests defensive positioning - suitable for risk-averse investors"
             )
 
-        # Alpha significance
         if exposure.alpha_tstat > 2.0:
             recs.append(
                 f"Significant positive alpha ({exposure.alpha:.1%}) - strategy shows skill beyond factor exposure"
@@ -381,7 +366,6 @@ class FactorAnalyzer:
                 f"Significant negative alpha ({exposure.alpha:.1%}) - underperforming risk-adjusted expectations"
             )
 
-        # R-squared interpretation
         if exposure.r_squared < 0.30:
             recs.append(
                 "Low R² (<30%) suggests returns are driven by idiosyncratic factors, not systematic ones"
@@ -391,7 +375,6 @@ class FactorAnalyzer:
                 "High R² (>80%) suggests returns closely track factor exposures - limited diversification"
             )
 
-        # Factor tilts
         if exposure.size_beta and exposure.size_beta > 0.5:
             recs.append(
                 "Strong small-cap tilt detected - adds size premium but increases volatility"
@@ -402,7 +385,6 @@ class FactorAnalyzer:
         return recs
 
 
-# Convenience function
 def analyze_factors(
     ticker: str,
     asset_returns: list[float],
@@ -434,7 +416,6 @@ def analyze_factors(
             risk_free_rate=0.045
         )
     """
-    # Create input model
     factor_data = FactorDataInput(
         ticker=ticker,
         asset_returns=asset_returns,
@@ -445,12 +426,10 @@ def analyze_factors(
         risk_free_rate=risk_free_rate,
     )
 
-    # Analyze
     analyzer = FactorAnalyzer()
     return analyzer.analyze(factor_data)
 
 
-# Type exports
 __all__ = [
     "FactorAnalyzer",
     "analyze_factors",

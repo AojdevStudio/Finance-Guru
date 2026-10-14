@@ -50,7 +50,7 @@ src/
 
 1. **Pandas + Pydantic**: Always add `class Config: arbitrary_types_allowed = True`
 2. **Returns vs Prices**: Be explicit — name params `prices` or `returns`, never `data`
-3. **Annualization**: Use `TRADING_DAYS_PER_YEAR = 252` constant
+3. **Annualization**: Use `TRADING_DAYS_PER_YEAR` and `calendar_days_for` from `src/utils/trading_calendar.py`. `tests/python/test_trading_calendar.py` fails on a literal 252 in `src/`
 4. **Division by zero**: Guard `std_dev > 0` before computing ratios
 5. **No business logic in CLI**: CLI handles I/O only; calculations live in Layer 2
 

@@ -22,6 +22,7 @@ from src.analysis.margin_metrics import (
     parse_rate,
     read_fidelity_balances,
 )
+from src.analysis.options import OPTION_CONTRACT_MULTIPLIER
 
 
 def write_balances(path):
@@ -96,7 +97,7 @@ def test_read_fidelity_balances_parses_current_facts(tmp_path):
 
     assert balances.total_account_value == 100000
     assert balances.margin_buying_power == 50000
-    assert balances.net_debit == -10000
+    assert balances.margin_debt == 10000
     assert balances.margin_interest_accrued_this_month == 12.34
 
 
@@ -107,7 +108,7 @@ def test_read_fidelity_balances_parses_accounting_paren_net_debit(tmp_path):
     )
     balances = read_fidelity_balances(csv_path)
     assert balances.total_account_value == pytest.approx(1000)
-    assert balances.net_debit == pytest.approx(-123.45)
+    assert balances.margin_debt == pytest.approx(123.45)
 
 
 def test_calculate_margin_metrics_derives_values_from_live_balances(tmp_path):
@@ -159,17 +160,21 @@ def test_metrics_from_runtime_uses_latest_csv_and_env_config(tmp_path, monkeypat
 class _FakeSnapClient:
     """Minimal SnapTrade client double for the balance adapter."""
 
+    EQUITY = 185294.88
+    STOCK = {"price": 100.0, "quantity": 2668.029}
+    OPTION = {"price": 3.93, "quantity": 2.0}
+
     def get_balances(self, account_id):
         return [{"currency": "USD", "cash": 0.0, "buying_power": 0.0}]
 
     def get_account_equity(self, account_id):
-        return 185294.88
+        return self.EQUITY
 
     def get_positions(self, account_id):
-        return [{"price": 100.0, "quantity": 2668.029}]  # ~266,802.90 MV
+        return [self.STOCK]
 
     def get_options(self, account_id):
-        return [{"price": 3.93, "quantity": 2.0}]  # 786.00 MV (x100)
+        return [self.OPTION]
 
 
 def test_metrics_from_runtime_defaults_to_db(monkeypatch):
@@ -180,7 +185,7 @@ def test_metrics_from_runtime_defaults_to_db(monkeypatch):
         total_account_day_change=None,
         margin_buying_power=0.0,
         margin_buying_power_day_change=None,
-        net_debit=-83820.02,
+        margin_debt=83820.02,
         net_debit_day_change=None,
         margin_interest_accrued_this_month=None,
     )
@@ -202,7 +207,7 @@ def test_metrics_from_runtime_snaptrade_source_reads_api(monkeypatch):
         total_account_day_change=None,
         margin_buying_power=0.0,
         margin_buying_power_day_change=None,
-        net_debit=-83820.02,
+        margin_debt=83820.02,
         net_debit_day_change=None,
         margin_interest_accrued_this_month=None,
     )
@@ -223,7 +228,7 @@ def test_metrics_from_runtime_rejects_unsupported_source(monkeypatch):
         total_account_day_change=None,
         margin_buying_power=1000.0,
         margin_buying_power_day_change=None,
-        net_debit=-10000.0,
+        margin_debt=10000.0,
         net_debit_day_change=None,
         margin_interest_accrued_this_month=None,
     )
@@ -264,7 +269,7 @@ def test_read_db_balances_reads_latest_snapshot(tmp_path, monkeypatch):
 
     assert balances.source_file == f"db:{db_path}"
     assert balances.total_account_value == 150000.00
-    assert balances.net_debit == pytest.approx(-50000.00)
+    assert balances.margin_debt == pytest.approx(50000.00)
     assert balances.margin_interest_accrued_this_month is None
 
 
@@ -306,7 +311,7 @@ def test_read_db_balances_routes_to_unique_enabled_taxable_margin_account(
     balances = mm.read_db_balances()
 
     assert balances.total_account_value == 150000.0
-    assert balances.net_debit == -50000.0
+    assert balances.margin_debt == 50000.0
 
 
 def test_read_db_balances_rejects_missing_taxable_margin_account(tmp_path, monkeypatch):
@@ -445,13 +450,19 @@ def test_margin_cli_json_includes_educational_disclaimer(tmp_path, monkeypatch, 
     assert "loss of principal" in output["disclaimer"].lower()
 
 
-def test_broker_balances_from_snaptrade_derives_net_debit():
-    """SnapTrade adapter yields a Fidelity-shaped balance with derived net debit."""
+def test_broker_balances_from_snaptrade_derives_margin_debt():
+    """SnapTrade adapter yields broker balances with the derived margin debt."""
     balances = _broker_balances_from_snaptrade(_FakeSnapClient(), "acct-1")
 
     assert balances.source_file == "snaptrade:acct-1"
-    assert balances.total_account_value == 185294.88
-    # gross MV 266802.90 + 786.00 = 267588.90; minus equity -> debt 82294.02
-    # net_debit is the negative (Fidelity convention)
-    assert balances.net_debit == pytest.approx(-82294.02, abs=0.01)
+    stock_value = _FakeSnapClient.STOCK["price"] * _FakeSnapClient.STOCK["quantity"]
+    option_value = (
+        _FakeSnapClient.OPTION["price"]
+        * _FakeSnapClient.OPTION["quantity"]
+        * OPTION_CONTRACT_MULTIPLIER
+    )
+    expected_margin_debt = stock_value + option_value - _FakeSnapClient.EQUITY
+
+    assert balances.total_account_value == _FakeSnapClient.EQUITY
+    assert balances.margin_debt == pytest.approx(expected_margin_debt)
     assert balances.margin_interest_accrued_this_month is None

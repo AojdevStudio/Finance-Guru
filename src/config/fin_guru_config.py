@@ -13,10 +13,14 @@ from pathlib import Path
 import yaml
 
 
+class LayersConfigError(ValueError):
+    """The layers file exists but cannot be read as a layer-to-tickers mapping."""
+
+
 class FinGuruConfig:
     """Central configuration for Finance Guru TUI Dashboard.
 
-    Provides paths, settings, and layer mappings with safe fallbacks.
+    Provides paths, settings, and layer mappings.
     """
 
     PROJECT_ROOT = Path(__file__).parent.parent.parent
@@ -25,13 +29,17 @@ class FinGuruConfig:
 
     @classmethod
     def load_layers(cls) -> dict[str, list[str]]:
-        """Load layer configuration with safe fallback to defaults.
+        """Load layer configuration, using defaults when no layers file exists.
 
         Reads from ~/.config/finance-guru/layers.yaml if it exists,
         otherwise uses hard-coded defaults from user profile.
 
         Returns:
             Dictionary mapping layer names to lists of ticker symbols
+
+        Raises:
+            LayersConfigError: If the layers file exists but cannot be read or
+                is not a mapping.
 
         EDUCATIONAL NOTE:
         Layer classification determines portfolio strategy:
@@ -66,16 +74,21 @@ class FinGuruConfig:
             return default_layers
 
         try:
-            with open(cls.LAYERS_FILE) as f:
-                data = yaml.safe_load(f) or {}
-        except Exception:
-            # On any parse error, fall back to defaults
-            return default_layers
+            with open(cls.LAYERS_FILE, encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+        except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
+            msg = f"Cannot read layers file {cls.LAYERS_FILE}: {exc}"
+            raise LayersConfigError(msg) from exc
 
+        if data is None:
+            return default_layers
         if not isinstance(data, dict):
-            return default_layers
+            msg = (
+                f"Layers file {cls.LAYERS_FILE} must be a mapping of layer name "
+                f"to tickers, got {type(data).__name__}"
+            )
+            raise LayersConfigError(msg)
 
-        # Normalize keys and ensure values are lists of symbols
         normalized: dict[str, list[str]] = {}
         for layer, symbols in data.items():
             if not isinstance(symbols, (list, tuple)):

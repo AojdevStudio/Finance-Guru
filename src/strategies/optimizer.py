@@ -19,13 +19,6 @@ Created: 2025-10-13
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -36,6 +29,17 @@ from src.models.portfolio_inputs import (
     OptimizationOutput,
     PortfolioDataInput,
 )
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
+
+BLACK_LITTERMAN_RISK_AVERSION = 2.5
+"""Market risk aversion used to back equilibrium returns out of market weights."""
+
+BLACK_LITTERMAN_TAU = 0.025
+"""Scale on the covariance prior; the usual range is 0.025 to 0.05."""
+
+
+class TargetReturnInfeasibleError(ValueError):
+    """The solver found no portfolio that reaches a frontier target return."""
 
 
 class PortfolioOptimizer:
@@ -97,7 +101,6 @@ class PortfolioOptimizer:
         Raises:
             ValueError: If optimization fails or constraints are infeasible
         """
-        # Route to appropriate optimization method
         if self.config.method == "mean_variance":
             return self.optimize_mean_variance(data)
         elif self.config.method == "risk_parity":
@@ -142,21 +145,15 @@ class PortfolioOptimizer:
         Returns:
             OptimizationOutput with optimal allocation
         """
-        # Calculate inputs
         returns = self._calculate_expected_returns(data)
         cov_matrix = self._calculate_covariance_matrix(data)
         n_assets = len(data.tickers)
 
-        # Objective: minimize portfolio variance
         def objective(weights):
             return weights @ cov_matrix @ weights
 
-        # Constraints
-        constraints = [
-            {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}  # Fully invested
-        ]
+        constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}]
 
-        # Add return constraint if target specified
         if self.config.target_return is not None:
             constraints.append(
                 {
@@ -165,13 +162,10 @@ class PortfolioOptimizer:
                 }
             )
 
-        # Bounds (position limits)
         bounds = [self.config.position_limits for _ in range(n_assets)]
 
-        # Initial guess (equal weight)
         x0 = np.array([1.0 / n_assets] * n_assets)
 
-        # Optimize
         result = minimize(
             objective,
             x0,
@@ -184,7 +178,6 @@ class PortfolioOptimizer:
         if not result.success:
             raise ValueError(f"Optimization failed: {result.message}")
 
-        # Validate and return
         weights = self._validate_weights(result.x, data.tickers)
         return self._create_output(weights, data, returns, cov_matrix)
 
@@ -238,7 +231,6 @@ class PortfolioOptimizer:
         if np.any(~np.isfinite(asset_variances) | (asset_variances <= 0)):
             raise ValueError("Risk Parity requires positive finite asset variance")
 
-        # Target 1/n requires relative risk contributions, which sum to one.
         def objective(weights):
             portfolio_var = float(weights @ cov_matrix @ weights)
             if portfolio_var <= 0 or not np.isfinite(portfolio_var):
@@ -246,22 +238,15 @@ class PortfolioOptimizer:
             marginal_contrib = cov_matrix @ weights
             risk_contrib = weights * marginal_contrib / portfolio_var
 
-            # Minimize sum of squared deviations from equal risk
             target_contrib = 1.0 / n_assets
             return np.sum((risk_contrib - target_contrib) ** 2)
 
-        # Constraints
-        constraints = [
-            {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}  # Fully invested
-        ]
+        constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}]
 
-        # Bounds
         bounds = [self.config.position_limits for _ in range(n_assets)]
 
-        # Initial guess (equal weight)
         x0 = np.array([1.0 / n_assets] * n_assets)
 
-        # Optimize
         result = minimize(
             objective,
             x0,
@@ -317,22 +302,15 @@ class PortfolioOptimizer:
         cov_matrix = self._calculate_covariance_matrix(data)
         n_assets = len(data.tickers)
 
-        # Objective: minimize portfolio variance
         def objective(weights):
             return weights @ cov_matrix @ weights
 
-        # Constraints
-        constraints = [
-            {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}  # Fully invested
-        ]
+        constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}]
 
-        # Bounds
         bounds = [self.config.position_limits for _ in range(n_assets)]
 
-        # Initial guess (equal weight)
         x0 = np.array([1.0 / n_assets] * n_assets)
 
-        # Optimize
         result = minimize(
             objective,
             x0,
@@ -397,25 +375,18 @@ class PortfolioOptimizer:
         cov_matrix = self._calculate_covariance_matrix(data)
         n_assets = len(data.tickers)
 
-        # Objective: maximize Sharpe ratio (minimize negative Sharpe)
         def objective(weights):
             portfolio_return = weights @ returns
             portfolio_vol = np.sqrt(weights @ cov_matrix @ weights)
             sharpe = (portfolio_return - self.config.risk_free_rate) / portfolio_vol
-            return -sharpe  # Minimize negative = maximize
+            return -sharpe
 
-        # Constraints
-        constraints = [
-            {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}  # Fully invested
-        ]
+        constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}]
 
-        # Bounds
         bounds = [self.config.position_limits for _ in range(n_assets)]
 
-        # Initial guess (equal weight)
         x0 = np.array([1.0 / n_assets] * n_assets)
 
-        # Optimize
         result = minimize(
             objective,
             x0,
@@ -493,22 +464,15 @@ class PortfolioOptimizer:
         if self.config.views is None:
             raise ValueError("Black-Litterman requires views in config")
 
-        # Calculate covariance matrix
         cov_matrix = self._calculate_covariance_matrix(data)
         n_assets = len(data.tickers)
 
-        # Step 1: Calculate market equilibrium returns (reverse optimization)
-        # Assume equal weights as proxy for market cap weights
         market_weights = np.array([1.0 / n_assets] * n_assets)
-        risk_aversion = 2.5  # Typical value
+        risk_aversion = BLACK_LITTERMAN_RISK_AVERSION
         equilibrium_excess_returns = risk_aversion * cov_matrix @ market_weights
 
-        # Step 2: Incorporate investor views
-        # For simplicity, we'll use absolute views (each view is independent)
-        tau = 0.025  # Scaling factor (uncertainty in equilibrium)
+        tau = BLACK_LITTERMAN_TAU
 
-        # Build view matrix P (which assets have views)
-        # Build view vector Q (what are the views)
         view_tickers = list(self.config.views.keys())
         P = np.zeros((len(view_tickers), n_assets))
         view_excess_returns = np.zeros(len(view_tickers))
@@ -520,13 +484,10 @@ class PortfolioOptimizer:
                 self.config.views[view_ticker] - self.config.risk_free_rate
             )
 
-        # Scale view uncertainty with tau so views and equilibrium share units.
         Omega = tau * np.diag(
             [P[i] @ cov_matrix @ P[i].T for i in range(len(view_tickers))]
         )
 
-        # Step 3: Compute posterior (blended) returns
-        # Posterior = [(τΣ)^-1 + P^T Ω^-1 P]^-1 [(τΣ)^-1 π + P^T Ω^-1 Q]
         tau_cov_inv = np.linalg.inv(tau * cov_matrix)
         omega_inv = np.linalg.inv(Omega)
 
@@ -538,7 +499,6 @@ class PortfolioOptimizer:
             + P.T @ omega_inv @ view_excess_returns
         )
 
-        # Step 4: Maximize mean-variance utility using posterior excess returns.
         def objective(weights: np.ndarray) -> float:
             """Return negative posterior mean-variance utility."""
             variance_penalty = 0.5 * risk_aversion * (weights @ cov_matrix @ weights)
@@ -592,14 +552,11 @@ class PortfolioOptimizer:
         cov_matrix = self._calculate_covariance_matrix(data)
         n_assets = len(data.tickers)
 
-        # Find min and max possible returns on frontier
         min_var_weights = self._find_min_variance_weights(cov_matrix, n_assets)
         min_return = min_var_weights @ returns
 
-        # Max return (subject to constraints)
         max_return = np.max(returns)
 
-        # Generate target returns across range
         target_returns = np.linspace(min_return, max_return * 0.95, n_points)
 
         frontier_returns = []
@@ -608,7 +565,6 @@ class PortfolioOptimizer:
 
         for target_ret in target_returns:
             try:
-                # Optimize for this target return
                 weights = self._optimize_for_target_return(
                     returns, cov_matrix, target_ret, n_assets
                 )
@@ -621,14 +577,12 @@ class PortfolioOptimizer:
                 frontier_vols.append(float(port_vol))
                 frontier_sharpes.append(float(port_sharpe))
 
-            except Exception:
-                # Skip infeasible points
+            except TargetReturnInfeasibleError:
                 continue
 
         if len(frontier_returns) == 0:
             raise ValueError("Failed to generate efficient frontier")
 
-        # Find optimal (max Sharpe) portfolio
         optimal_idx = int(np.argmax(frontier_sharpes))
 
         return EfficientFrontierOutput(
@@ -637,8 +591,6 @@ class PortfolioOptimizer:
             sharpe_ratios=frontier_sharpes,
             optimal_portfolio_index=optimal_idx,
         )
-
-    # Helper Methods
 
     def _calculate_expected_returns(self, data: PortfolioDataInput) -> np.ndarray:
         """Calculate or use provided expected returns.
@@ -657,19 +609,15 @@ class PortfolioOptimizer:
             Array of expected annual returns
         """
         if data.expected_returns is not None:
-            # Use provided returns
             return np.array([data.expected_returns[t] for t in data.tickers])
 
-        # Estimate from historical data
         df = pd.DataFrame(data.prices, index=data.dates)
         returns = df.pct_change().dropna()
 
-        # Use geometric mean (more conservative)
         expected = []
         for ticker in data.tickers:
-            # Annualize: (1 + daily_return)^252 - 1
             mean_daily = returns[ticker].mean()
-            annual_return = (1 + mean_daily) ** 252 - 1
+            annual_return = (1 + mean_daily) ** TRADING_DAYS_PER_YEAR - 1
             expected.append(annual_return)
 
         return np.array(expected)
@@ -694,11 +642,9 @@ class PortfolioOptimizer:
         df = pd.DataFrame(data.prices, index=data.dates)
         returns = df.pct_change().dropna()
 
-        # Calculate covariance matrix (daily)
         cov_daily = returns.cov().values
 
-        # Annualize (multiply by 252 trading days)
-        cov_annual = cov_daily * 252
+        cov_annual = cov_daily * TRADING_DAYS_PER_YEAR
 
         return cov_annual
 
@@ -717,10 +663,8 @@ class PortfolioOptimizer:
         Raises:
             ValueError: If weights are invalid
         """
-        # Normalize to exactly 1.0 (handle numerical precision)
         weights = weights / weights.sum()
 
-        # Check all within bounds
         for w in weights:
             if w < self.config.position_limits[0] - 1e-6:
                 raise ValueError(
@@ -731,7 +675,6 @@ class PortfolioOptimizer:
                     f"Weight {w:.4f} above maximum {self.config.position_limits[1]}"
                 )
 
-        # Convert to dictionary
         return {
             ticker: float(weight)
             for ticker, weight in zip(tickers, weights, strict=True)
@@ -757,17 +700,13 @@ class PortfolioOptimizer:
         """
         w = np.array([weights[t] for t in tickers])
 
-        # Portfolio return
         port_return = float(w @ returns)
 
-        # Portfolio volatility
         port_variance = w @ cov_matrix @ w
         port_vol = float(np.sqrt(port_variance))
 
-        # Sharpe ratio
         sharpe = (port_return - self.config.risk_free_rate) / port_vol
 
-        # Diversification ratio = weighted_avg_vol / portfolio_vol
         individual_vols = np.sqrt(np.diag(cov_matrix))
         weighted_avg_vol = w @ individual_vols
         diversification_ratio = weighted_avg_vol / port_vol
@@ -852,12 +791,13 @@ class PortfolioOptimizer:
         )
 
         if not result.success:
-            raise ValueError(f"Cannot achieve target return {target_return}")
+            raise TargetReturnInfeasibleError(
+                f"Cannot achieve target return {target_return}"
+            )
 
         return result.x
 
 
-# Convenience function for quick optimization
 def optimize_portfolio(
     data: PortfolioDataInput,
     config: OptimizationConfig | None = None,

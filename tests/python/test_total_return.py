@@ -44,10 +44,6 @@ from src.models.total_return_inputs import (
     TotalReturnInput,
 )
 
-# ---------------------------------------------------------------------------
-# Mock dividend schedules for CI instances without a schedule file.
-# ---------------------------------------------------------------------------
-
 MOCK_DIVIDEND_SCHEDULES = {
     "SCHD": {"frequency": 4, "label": "quarterly"},
     "VYM": {"frequency": 4, "label": "quarterly"},
@@ -59,10 +55,6 @@ MOCK_DIVIDEND_SCHEDULES = {
     "JEPI": {"frequency": 12, "label": "monthly"},
     "JEPQ": {"frequency": 12, "label": "monthly"},
 }
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 
 def _make_input(
@@ -110,11 +102,6 @@ def _mock_yfinance_history(
     return yfinance, ticker
 
 
-# ---------------------------------------------------------------------------
-# 1. TestPriceReturn
-# ---------------------------------------------------------------------------
-
-
 class TestPriceReturn:
     """Known-answer tests for price return calculation."""
 
@@ -157,11 +144,6 @@ class TestPriceReturn:
         calc = TotalReturnCalculator(inp, prices=prices)
         result = calc.calculate_price_return()
         assert result == pytest.approx(0.10)
-
-
-# ---------------------------------------------------------------------------
-# 2. TestDividendReturn
-# ---------------------------------------------------------------------------
 
 
 class TestDividendReturn:
@@ -207,18 +189,12 @@ class TestDividendReturn:
         assert result == pytest.approx(0.08)
 
 
-# ---------------------------------------------------------------------------
-# 3. TestTotalReturn
-# ---------------------------------------------------------------------------
-
-
 class TestTotalReturn:
     """Known-answer tests for total return (price + dividend)."""
 
     def test_total_return_is_sum(self):
         """Total return = price return + dividend return."""
         inp = _make_input()
-        # Price: 100 -> 95 = -5%, Dividend: $8 / $100 = 8%, Total: 3%
         dividends = [_div(date(2025, 3, 15), 8.0)]
         prices = [100.0, 95.0]
         calc = TotalReturnCalculator(inp, prices=prices, dividends=dividends)
@@ -232,16 +208,13 @@ class TestTotalReturn:
         CLM-like scenario: price down 3.95%, dividends 8.2%, total up 4.25%.
         """
         inp = _make_input(ticker="CLM")
-        # Price: 100 -> 96.05 = -3.95%
-        # Dividends: $8.20 total
-        # Total: -3.95% + 8.2% = 4.25%
         dividends = [
             _div(date(2025, 2, 1), 1.3667),
             _div(date(2025, 3, 1), 1.3667),
             _div(date(2025, 4, 1), 1.3667),
             _div(date(2025, 5, 1), 1.3667),
             _div(date(2025, 6, 1), 1.3667),
-            _div(date(2025, 7, 1), 1.3665),  # Rounding last to get exactly 8.20
+            _div(date(2025, 7, 1), 1.3665),
         ]
         prices = [100.0, 96.05]
         calc = TotalReturnCalculator(inp, prices=prices, dividends=dividends)
@@ -273,11 +246,6 @@ class TestTotalReturn:
         assert calc.calculate_total_return() == pytest.approx(0.03)
 
 
-# ---------------------------------------------------------------------------
-# 4. TestDRIPReturn
-# ---------------------------------------------------------------------------
-
-
 class TestDRIPReturn:
     """Known-answer tests for DRIP (dividend reinvestment) return."""
 
@@ -291,15 +259,28 @@ class TestDRIPReturn:
         """
         inp = _make_input()
         dividends = [_div(date(2025, 3, 15), 2.0)]
-        # ex-date close prices needed for DRIP reinvestment
         ex_date_prices = {date(2025, 3, 15): 100.0}
-        prices = [100.0, 100.0]  # Flat price
+        prices = [100.0, 100.0]
         calc = TotalReturnCalculator(
             inp, prices=prices, dividends=dividends, ex_date_prices=ex_date_prices
         )
         drip_return, final_shares, breakdown = calc.calculate_drip_return()
         assert final_shares == pytest.approx(1.02)
         assert drip_return == pytest.approx(0.02)
+
+    def test_missing_ex_date_close_reinvests_at_period_last_close(self):
+        """Without an ex-date close, the dividend buys at the last close."""
+        inp = _make_input()
+        last_close = 125.0
+        dividend = 5.0
+        dividends = [_div(date(2025, 3, 15), dividend)]
+        calc = TotalReturnCalculator(
+            inp, prices=[100.0, last_close], dividends=dividends, ex_date_prices={}
+        )
+        _drip_return, final_shares, breakdown = calc.calculate_drip_return()
+        assert breakdown[0]["reinvest_price"] == last_close
+        assert breakdown[0]["reinvest_price_source"] == "period_last_close"
+        assert final_shares == pytest.approx(1.0 + dividend / last_close)
 
     def test_drip_share_growth_with_price_change(self):
         """DRIP with price appreciation.
@@ -344,8 +325,6 @@ class TestDRIPReturn:
             inp, prices=prices, dividends=dividends, ex_date_prices=ex_date_prices
         )
         drip_return, final_shares, breakdown = calc.calculate_drip_return()
-        # After div 1: 1 + (1*2/100) = 1.02 shares
-        # After div 2: 1.02 + (1.02*2/102) = 1.02 + 0.02 = 1.04 shares
         assert final_shares == pytest.approx(1.04)
         assert len(breakdown) == 2
 
@@ -379,11 +358,6 @@ class TestDRIPReturn:
         assert drip_return >= total_return
 
 
-# ---------------------------------------------------------------------------
-# 5. TestAnnualizedReturn
-# ---------------------------------------------------------------------------
-
-
 class TestAnnualizedReturn:
     """Calendar days (365) validation for annualization."""
 
@@ -395,14 +369,13 @@ class TestAnnualizedReturn:
         """
         inp = _make_input(
             start_date=date(2025, 1, 1),
-            end_date=date(2025, 7, 2),  # ~182 days
+            end_date=date(2025, 7, 2),
         )
         prices = [100.0, 110.0]
         calc = TotalReturnCalculator(inp, prices=prices, dividends=[])
         total = calc.calculate_total_return()
         annualized = calc.calculate_annualized_return(total)
-        # 182 calendar days
-        days = (date(2025, 7, 2) - date(2025, 1, 1)).days  # 182
+        days = (date(2025, 7, 2) - date(2025, 1, 1)).days
         expected = (1.0 + total) ** (365.0 / days) - 1.0
         assert annualized == pytest.approx(expected, abs=1e-6)
 
@@ -422,7 +395,7 @@ class TestAnnualizedReturn:
         """Short period returns annualize to larger numbers."""
         inp = _make_input(
             start_date=date(2025, 1, 1),
-            end_date=date(2025, 2, 1),  # 31 days
+            end_date=date(2025, 2, 1),
         )
         prices = [100.0, 105.0]
         calc = TotalReturnCalculator(inp, prices=prices, dividends=[])
@@ -441,11 +414,6 @@ class TestAnnualizedReturn:
         total = calc.calculate_total_return()
         annualized = calc.calculate_annualized_return(total)
         assert annualized < 0
-
-
-# ---------------------------------------------------------------------------
-# 6. TestDataQualityValidation
-# ---------------------------------------------------------------------------
 
 
 @patch(
@@ -504,7 +472,6 @@ class TestDataQualityValidation:
         prices = [100.0, 100.0]
         calc = TotalReturnCalculator(inp, prices=prices, dividends=dividends)
         warnings_list = calc.validate_dividend_data()
-        # No gap warnings (may have other types but not count-based)
         gap_warnings = [
             w
             for w in warnings_list
@@ -522,7 +489,6 @@ class TestDataQualityValidation:
         dividends = [_div(date(2025, 3, 15), 0.65)]
         prices = [100.0, 102.0]
         calc = TotalReturnCalculator(inp, prices=prices, dividends=dividends)
-        # Should NOT raise with force=True
         result = calc.calculate_all(force=True)
         assert isinstance(result, TotalReturnResult)
         assert len(result.data_quality_warnings) > 0
@@ -547,7 +513,7 @@ class TestDataQualityValidation:
             _div(date(2025, 2, 1), 0.50),
             _div(date(2025, 3, 1), 0.50),
             _div(date(2025, 4, 1), 0.50),
-            _div(date(2025, 5, 1), 5.00),  # >3x median of 0.50
+            _div(date(2025, 5, 1), 5.00),
             _div(date(2025, 6, 1), 0.50),
         ]
         prices = [100.0, 100.0]
@@ -599,11 +565,6 @@ class TestDataQualityValidation:
         assert len(payer_warnings) == 0
 
 
-# ---------------------------------------------------------------------------
-# 7. TestScheduleLoader
-# ---------------------------------------------------------------------------
-
-
 @patch(
     "src.analysis.total_return.load_dividend_schedules",
     return_value=MOCK_DIVIDEND_SCHEDULES,
@@ -646,11 +607,6 @@ class TestScheduleLoader:
         assert schedules == {}
 
 
-# ---------------------------------------------------------------------------
-# 8. TestCalculateAll (integration of all methods)
-# ---------------------------------------------------------------------------
-
-
 class TestCalculateAll:
     """Integration tests for calculate_all() orchestration."""
 
@@ -689,7 +645,7 @@ class TestCalculateAll:
         result = calc.calculate_all(force=True)
         assert result.drip_total_return is not None
         assert result.drip_share_growth is not None
-        assert result.drip_share_growth > 1.0  # Shares grew
+        assert result.drip_share_growth > 1.0
 
     def test_calculate_all_no_dividends(self):
         """calculate_all() works with growth stock (no dividends)."""
@@ -705,11 +661,6 @@ class TestCalculateAll:
         assert result.dividend_return == pytest.approx(0.0)
         assert result.total_return == pytest.approx(0.25)
         assert result.drip_total_return == pytest.approx(0.25)
-
-
-# ---------------------------------------------------------------------------
-# CLI Test Helpers
-# ---------------------------------------------------------------------------
 
 
 def _make_result(
@@ -752,11 +703,6 @@ def _make_result(
     )
 
 
-# ---------------------------------------------------------------------------
-# 9. TestCLIArgParsing
-# ---------------------------------------------------------------------------
-
-
 class TestCLIArgParsing:
     """CLI argument parsing tests."""
 
@@ -772,7 +718,7 @@ class TestCLIArgParsing:
         parser = build_parser()
         args = parser.parse_args(["SCHD"])
         assert args.tickers == ["SCHD"]
-        assert args.days == 252  # Default
+        assert args.days == 252
 
     def test_multiple_tickers(self):
         """Multiple tickers parsed correctly."""
@@ -824,11 +770,6 @@ class TestCLIArgParsing:
         assert exc_info.value.code != 0
 
 
-# ---------------------------------------------------------------------------
-# 10. TestPortfolioCSVReader
-# ---------------------------------------------------------------------------
-
-
 class TestPortfolioCSVReader:
     """Portfolio CSV loading tests with temp files."""
 
@@ -846,7 +787,6 @@ class TestPortfolioCSVReader:
             csv_path = f.name
 
         try:
-            # Use exact file path as glob pattern (matches the file itself)
             shares = load_portfolio_shares(csv_glob=csv_path)
             assert shares["SCHD"] == pytest.approx(100.5)
             assert shares["JEPI"] == pytest.approx(200.0)
@@ -861,8 +801,6 @@ class TestPortfolioCSVReader:
     def test_latest_csv_selected(self):
         """When multiple CSVs exist, the last in sorted order is used."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Create two CSVs -- sorted order picks the last one
-            # Use names that sort deterministically: A before B
             for name, qty in [
                 ("Portfolio_Positions_A.csv", "50.0"),
                 ("Portfolio_Positions_B.csv", "100.0"),
@@ -874,7 +812,6 @@ class TestPortfolioCSVReader:
 
             pattern = os.path.join(tmpdir, "Portfolio_Positions_*.csv")
             shares = load_portfolio_shares(csv_glob=pattern)
-            # The B CSV (sorted last) should be used -> 100.0
             assert shares["SCHD"] == pytest.approx(100.0)
 
     def test_invalid_quantity_skipped(self):
@@ -884,22 +821,17 @@ class TestPortfolioCSVReader:
         ) as f:
             f.write("Symbol,Quantity\n")
             f.write("SCHD,100.0\n")
-            f.write("JEPI,N/A\n")  # Invalid quantity
+            f.write("JEPI,N/A\n")
             f.write("VYM,50.0\n")
             csv_path = f.name
 
         try:
             shares = load_portfolio_shares(csv_glob=csv_path)
             assert "SCHD" in shares
-            assert "JEPI" not in shares  # Skipped due to invalid quantity
+            assert "JEPI" not in shares
             assert "VYM" in shares
         finally:
             os.unlink(csv_path)
-
-
-# ---------------------------------------------------------------------------
-# 11. TestVerdictFormatting
-# ---------------------------------------------------------------------------
 
 
 class TestVerdictFormatting:
@@ -946,7 +878,6 @@ class TestVerdictFormatting:
         r3 = _make_result(ticker="VYM", total_return=0.08)
         output = format_human_output([r1, r2, r3], {})
         assert "LEAGUE TABLE" in output
-        # Should show ranking numbers for all 3 tickers
         assert "#1" in output
         assert "#3" in output
 
@@ -1095,18 +1026,11 @@ class TestVerdictFormatting:
         assert "Distributions received" in output
 
 
-# ---------------------------------------------------------------------------
-# 12. TestFinnhubIntegration
-# ---------------------------------------------------------------------------
-
-
 class TestFinnhubIntegration:
     """Graceful fallback when Finnhub is unavailable."""
 
     def test_finnhub_exception_fallback(self):
         """fetch_ticker_data handles Finnhub exception gracefully."""
-        # We test that fetch_ticker_data doesn't crash when get_prices raises.
-        # We mock yfinance via the import inside fetch_ticker_data.
         mock_yf, _ = _mock_yfinance_history([100.0, 105.0, 110.0], [0.0, 0.5, 0.0])
 
         with (
@@ -1122,7 +1046,6 @@ class TestFinnhubIntegration:
                 "TEST", days=252, realtime=True
             )
 
-            # Should succeed despite Finnhub error
             assert len(prices) == 3
             assert len(divs) == 1
             assert inp.ticker == "TEST"

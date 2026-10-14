@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 ITC Risk CLI for Finance Guru™ Agents
 
@@ -47,14 +46,8 @@ Created: 2026-01-09
 
 import argparse
 import sys
-from pathlib import Path
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
-# Import our type-safe components
-from src.analysis.itc_risk import ITCRiskCalculator
+from src.analysis.itc_risk import HIGH_RISK_FLOOR, LOW_RISK_CEILING, ITCRiskCalculator
 from src.models.itc_risk_inputs import ITCRiskResponse
 
 
@@ -84,16 +77,14 @@ def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> st
     output.append("=" * 70)
     output.append("")
 
-    # Current Risk Score Section
     output.append("🎯 CURRENT RISK LEVEL")
     output.append("-" * 70)
 
-    # Risk score with visual indicator
     score = result.current_risk_score
-    if score < 0.3:
+    if score < LOW_RISK_CEILING:
         risk_emoji = "🟢"
         risk_bar = "█" * int(score * 20) + "░" * (20 - int(score * 20))
-    elif score < 0.7:
+    elif score < HIGH_RISK_FLOOR:
         risk_emoji = "🟡"
         risk_bar = "█" * int(score * 20) + "░" * (20 - int(score * 20))
     else:
@@ -104,13 +95,11 @@ def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> st
     output.append(f"  Interpretation: {result.get_risk_interpretation()}")
     output.append("")
 
-    # Current Price Section (if available)
     if result.current_price:
         output.append("💵 CURRENT PRICE")
         output.append("-" * 70)
         output.append(f"  Market Price:  ${result.current_price:,.2f}")
 
-        # Calculate distance to high risk zone
         high_risk = result.get_high_risk_threshold()
         if high_risk:
             distance_pct = ((high_risk.price / result.current_price) - 1) * 100
@@ -126,7 +115,6 @@ def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> st
                 )
         output.append("")
 
-    # Risk Bands Section
     if result.risk_bands:
         if full_table:
             output.append("📈 FULL RISK BAND TABLE")
@@ -137,15 +125,13 @@ def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> st
             output.append(f"  {'-' * 12}  {'-' * 8}  {'-' * 12}  {'-' * 10}")
 
             for band in result.risk_bands:
-                # Determine risk level label
-                if band.risk_score < 0.3:
+                if band.risk_score < LOW_RISK_CEILING:
                     level = "LOW"
-                elif band.risk_score < 0.7:
+                elif band.risk_score < HIGH_RISK_FLOOR:
                     level = "MEDIUM"
                 else:
                     level = "HIGH"
 
-                # Mark current price location
                 marker = ""
                 if result.current_price and (
                     abs(band.price - result.current_price) / result.current_price < 0.02
@@ -164,13 +150,12 @@ def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> st
             output.append(f"  {'-' * 12}  {'-' * 8}  {'-' * 12}  {'-' * 10}")
 
             nearest = result.get_nearest_bands(7)
-            # Sort by price for display
             nearest_sorted = sorted(nearest, key=lambda b: b.price)
 
             for band in nearest_sorted:
-                if band.risk_score < 0.3:
+                if band.risk_score < LOW_RISK_CEILING:
                     level = "LOW"
-                elif band.risk_score < 0.7:
+                elif band.risk_score < HIGH_RISK_FLOOR:
                     level = "MEDIUM"
                 else:
                     level = "HIGH"
@@ -187,7 +172,6 @@ def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> st
 
         output.append("")
 
-    # Footer
     output.append("=" * 70)
     output.append(f"📡 Source: {result.source}")
     output.append(
@@ -216,10 +200,8 @@ def format_output_json(results: list[ITCRiskResponse]) -> str:
     import json
 
     if len(results) == 1:
-        # Single result - return just the object
         return results[0].model_dump_json(indent=2)
     else:
-        # Multiple results - return array
         data = [result.model_dump(mode="json") for result in results]
         return json.dumps(data, indent=2, default=str)
 
@@ -231,7 +213,6 @@ def list_supported_tickers(universe: str) -> None:
     Args:
         universe: "crypto" or "tradfi"
     """
-    # Use class attributes directly without instantiation (no API key needed)
     if universe == "crypto":
         tickers = sorted(ITCRiskCalculator.SUPPORTED_CRYPTO)
         title = "CRYPTO"
@@ -246,7 +227,6 @@ def list_supported_tickers(universe: str) -> None:
     print(f"  Total: {len(tickers)} assets")
     print("")
 
-    # Display in columns
     cols = 6
     for i in range(0, len(tickers), cols):
         row = tickers[i : i + cols]
@@ -297,7 +277,6 @@ For unsupported tickers, use risk_metrics_cli.py instead.
         """,
     )
 
-    # Positional arguments - tickers (optional if using --list-supported)
     parser.add_argument(
         "tickers",
         nargs="*",
@@ -305,7 +284,6 @@ For unsupported tickers, use risk_metrics_cli.py instead.
         help="Ticker symbol(s) to analyze (e.g., TSLA BTC AAPL)",
     )
 
-    # Universe selection
     parser.add_argument(
         "--universe",
         "-u",
@@ -315,7 +293,6 @@ For unsupported tickers, use risk_metrics_cli.py instead.
         help="Asset universe: 'crypto' or 'tradfi' (default: tradfi)",
     )
 
-    # Output format
     parser.add_argument(
         "--output",
         "-o",
@@ -325,14 +302,12 @@ For unsupported tickers, use risk_metrics_cli.py instead.
         help="Output format (default: human)",
     )
 
-    # Full table flag
     parser.add_argument(
         "--full-table",
         action="store_true",
         help="Show complete risk band table (default: show nearest bands only)",
     )
 
-    # List supported tickers
     parser.add_argument(
         "--list-supported",
         type=str,
@@ -341,22 +316,18 @@ For unsupported tickers, use risk_metrics_cli.py instead.
         help="List supported tickers for a universe and exit",
     )
 
-    # Skip price enrichment
     parser.add_argument(
         "--no-price",
         action="store_true",
         help="Skip current price enrichment from yfinance (faster, but no price context)",
     )
 
-    # Parse arguments
     args = parser.parse_args()
 
-    # Handle --list-supported
     if args.list_supported:
         list_supported_tickers(args.list_supported)
         sys.exit(0)
 
-    # Validate that tickers were provided
     if not args.tickers:
         print("❌ ERROR: No tickers provided.", file=sys.stderr)
         print("", file=sys.stderr)
@@ -375,12 +346,10 @@ For unsupported tickers, use risk_metrics_cli.py instead.
         sys.exit(1)
 
     try:
-        # Initialize calculator
         print("🔑 Initializing ITC Risk Calculator...", file=sys.stderr)
         calculator = ITCRiskCalculator()
         print("✅ API key loaded", file=sys.stderr)
 
-        # Process each ticker
         results: list[ITCRiskResponse] = []
         errors: list[str] = []
 
@@ -389,7 +358,6 @@ For unsupported tickers, use risk_metrics_cli.py instead.
             print(f"📥 Fetching risk data for {ticker_upper}...", file=sys.stderr)
 
             try:
-                # Check if ticker is supported before API call
                 if not calculator.is_ticker_supported(ticker_upper, args.universe):
                     supported = calculator.get_supported_tickers(args.universe)
                     errors.append(
@@ -399,7 +367,6 @@ For unsupported tickers, use risk_metrics_cli.py instead.
                     )
                     continue
 
-                # Fetch risk data
                 result = calculator.get_risk_score(
                     symbol=ticker_upper,
                     universe=args.universe,
@@ -418,31 +385,26 @@ For unsupported tickers, use risk_metrics_cli.py instead.
 
         print("", file=sys.stderr)
 
-        # Display errors if any
         if errors:
             for error in errors:
                 print(error, file=sys.stderr)
             print("", file=sys.stderr)
 
-        # Exit if no successful results
         if not results:
             print("❌ No valid results to display.", file=sys.stderr)
             sys.exit(1)
 
-        # Format and display output
         if args.output == "json":
             output = format_output_json(results)
             print(output)
         else:
-            # Human format - display each result
             for i, result in enumerate(results):
                 if i > 0:
-                    print("")  # Separator between results
+                    print("")
                 output = format_output_human(result, full_table=args.full_table)
                 print(output)
 
     except ValueError as e:
-        # API key missing or invalid
         print(f"❌ CONFIGURATION ERROR: {e}", file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:

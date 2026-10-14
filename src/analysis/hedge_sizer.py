@@ -52,29 +52,24 @@ Created: 2026-02-18
 
 from __future__ import annotations
 
-import contextlib
-import io
 import logging
 import math
 import statistics
-from glob import glob
-from pathlib import Path
 
+from src.analysis.margin_metrics import (
+    fidelity_cell,
+    latest_balances_csv,
+    read_fidelity_rows,
+)
+from src.analysis.options import OPTION_CONTRACT_MULTIPLIER
 from src.config.config_loader import HedgeConfig
 from src.config.instance_paths import InstancePaths
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 
 DEFAULT_RATIO_PER_CONTRACT = 50_000.0
 """Default portfolio value per contract: $50,000. HS-01."""
-
-# ---------------------------------------------------------------------------
-# Module-level helper functions
-# ---------------------------------------------------------------------------
 
 
 def calculate_contract_count(
@@ -120,19 +115,16 @@ def allocate_contracts(
     if total_contracts <= 0:
         return {ticker: 0 for ticker in underlying_weights}
 
-    # Sort underlyings by weight descending
     sorted_tickers = sorted(
         underlying_weights.keys(),
         key=lambda t: underlying_weights[t],
         reverse=True,
     )
 
-    # Floor-allocate
     allocations: dict[str, int] = {}
     for ticker in sorted_tickers:
         allocations[ticker] = math.floor(total_contracts * underlying_weights[ticker])
 
-    # Distribute remainder to highest-weight underlyings first
     allocated = sum(allocations.values())
     remainder = total_contracts - allocated
     for ticker in sorted_tickers:
@@ -154,33 +146,18 @@ def read_portfolio_value_from_csv() -> float | None:
     Returns:
         Portfolio value as float, or None if not found / parse error.
     """
-    balances_glob = str(InstancePaths.resolve().imports / "Balances_for_Account_*.csv")
-    csv_files = sorted(glob(balances_glob), key=lambda p: Path(p).stat().st_mtime)
-    if not csv_files:
-        logger.debug("No Fidelity balance CSV files found at %s", balances_glob)
+    try:
+        latest = latest_balances_csv()
+    except FileNotFoundError as exc:
+        logger.debug("%s", exc)
         return None
 
-    latest = csv_files[-1]  # most recent by mtime
     logger.debug("Reading portfolio value from %s", latest)
-
     try:
-        with open(latest) as f:
-            for line in f:
-                if "total account value" in line.lower():
-                    # Format: "Total account value,202688.46,-764.66"
-                    parts = line.strip().split(",")
-                    if len(parts) >= 2:
-                        value_str = parts[1].strip().replace("$", "").replace(",", "")
-                        return float(value_str)
+        return fidelity_cell(read_fidelity_rows(latest), "total account value", 1)
     except (OSError, ValueError) as exc:
         logger.warning("Failed to read portfolio value from %s: %s", latest, exc)
-
-    return None
-
-
-# ---------------------------------------------------------------------------
-# HedgeSizer class
-# ---------------------------------------------------------------------------
+        return None
 
 
 class HedgeSizer:
@@ -202,8 +179,6 @@ class HedgeSizer:
         """
         self.config = config
 
-    # ----- Portfolio value cascade -----
-
     def resolve_portfolio_value(
         self,
         cli_value: float | None = None,
@@ -224,24 +199,19 @@ class HedgeSizer:
         Raises:
             ValueError: If no portfolio value can be resolved.
         """
-        # 1. CLI flag
         if cli_value is not None and cli_value > 0:
             return (cli_value, "cli_flag")
 
-        # 2. Fidelity CSV
         csv_value = read_portfolio_value_from_csv()
         if csv_value is not None:
             return (csv_value, "fidelity_csv")
 
-        # 3. No value found
         msg = (
             "No portfolio value found. Provide --portfolio-value flag or "
             "ensure a Fidelity balance CSV exists under "
             f"{InstancePaths.resolve().imports}."
         )
         raise ValueError(msg)
-
-    # ----- Contract sizing and allocation -----
 
     def calculate(
         self,
@@ -264,14 +234,11 @@ class HedgeSizer:
         effective_ratio = ratio if ratio is not None else DEFAULT_RATIO_PER_CONTRACT
         total_contracts = calculate_contract_count(portfolio_value, effective_ratio)
 
-        # Determine weights
         if underlyings is not None:
-            # Check if all requested underlyings are in config weights
             config_weights = self.config.underlying_weights
             all_in_config = all(t in config_weights for t in underlyings)
 
             if all_in_config:
-                # Use config weights, re-normalized to requested underlyings
                 raw = {t: config_weights[t] for t in underlyings}
                 weight_sum = sum(raw.values())
                 weights = (
@@ -280,14 +247,12 @@ class HedgeSizer:
                     else {t: 1.0 / len(underlyings) for t in underlyings}
                 )
             else:
-                # Fall back to equal weighting
                 weights = {t: 1.0 / len(underlyings) for t in underlyings}
         else:
             weights = dict(self.config.underlying_weights)
 
         allocations = allocate_contracts(total_contracts, weights)
 
-        # Notional coverage
         notional_coverage = total_contracts * effective_ratio
         coverage_pct = (
             (notional_coverage / portfolio_value * 100) if portfolio_value > 0 else 0.0
@@ -303,8 +268,6 @@ class HedgeSizer:
             "coverage_pct": round(coverage_pct, 2),
             "underlyings": list(weights.keys()),
         }
-
-    # ----- Budget validation -----
 
     def validate_budget(
         self,
@@ -324,7 +287,7 @@ class HedgeSizer:
         Returns:
             Dict with budget validation results.
         """
-        from src.analysis.options_chain_cli import scan_chain
+        from src.analysis.rolling_tracker import scan_chain_quiet
 
         per_underlying: list[dict] = []
         total_cost = 0.0
@@ -343,19 +306,16 @@ class HedgeSizer:
                 continue
 
             try:
-                # Suppress stderr from scan_chain (same pattern as plan notes)
-                stderr_capture = io.StringIO()
-                with contextlib.redirect_stderr(stderr_capture):
-                    result = scan_chain(
-                        ticker=ticker,
-                        option_type="put",
-                        otm_min=config.min_otm_pct,
-                        otm_max=config.max_otm_pct,
-                        days_min=config.target_dte_min,
-                        days_max=config.target_dte_max,
-                        budget=None,
-                        target_contracts=1,
-                    )
+                result = scan_chain_quiet(
+                    ticker=ticker,
+                    option_type="put",
+                    otm_min=config.min_otm_pct,
+                    otm_max=config.max_otm_pct,
+                    days_min=config.target_dte_min,
+                    days_max=config.target_dte_max,
+                    budget=None,
+                    target_contracts=1,
+                )
 
                 if result.contracts:
                     premiums = [
@@ -363,9 +323,7 @@ class HedgeSizer:
                     ]
                     if premiums:
                         median_premium = statistics.median(premiums)
-                        cost = (
-                            contracts * median_premium * 100
-                        )  # 100 shares per contract
+                        cost = contracts * median_premium * OPTION_CONTRACT_MULTIPLIER
                         per_underlying.append(
                             {
                                 "ticker": ticker,
@@ -377,7 +335,6 @@ class HedgeSizer:
                         total_cost += cost
                         continue
 
-                # No valid premiums found
                 per_underlying.append(
                     {
                         "ticker": ticker,
@@ -434,10 +391,6 @@ class HedgeSizer:
             "budget_warning": budget_warning,
         }
 
-
-# ---------------------------------------------------------------------------
-# Exports
-# ---------------------------------------------------------------------------
 
 __all__ = [
     "HedgeSizer",
