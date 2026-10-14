@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Rolling Tracker CLI for Finance Guru Agents.
 
 This module provides a subcommand-based CLI for monitoring and managing hedge
@@ -59,24 +58,15 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
 from src.analysis.rolling_tracker import RollingTracker
 from src.config.config_loader import load_hedge_config
 from src.config.instance_paths import InstancePaths
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 
 DISCLAIMER = (
     "DISCLAIMER: For educational purposes only. Not investment advice. "
     "Consult a qualified financial advisor before making investment decisions."
 )
 
-# ANSI color codes for DTE status
 COLOR_RED = "\033[91m"
 COLOR_YELLOW = "\033[93m"
 COLOR_GREEN = "\033[92m"
@@ -87,11 +77,6 @@ DTE_COLORS = {
     "yellow": COLOR_YELLOW,
     "green": COLOR_GREEN,
 }
-
-
-# ---------------------------------------------------------------------------
-# Formatting Helpers
-# ---------------------------------------------------------------------------
 
 
 def _colorize(text: str, color: str) -> str:
@@ -140,12 +125,7 @@ def _format_currency(value: float) -> str:
     return f"${value:,.2f}"
 
 
-# ---------------------------------------------------------------------------
-# Subcommand Handlers
-# ---------------------------------------------------------------------------
-
-
-def handle_status(args: argparse.Namespace, tracker: RollingTracker) -> int:  # noqa: C901
+def handle_status(args: argparse.Namespace, tracker: RollingTracker) -> int:
     """Handle the 'status' subcommand: display all hedge positions.
 
     Args:
@@ -176,7 +156,6 @@ def handle_status(args: argparse.Namespace, tracker: RollingTracker) -> int:  # 
         positions_path = InstancePaths.resolve().hedging / "positions.yaml"
         lines.append(f"  Add positions to {positions_path}")
     else:
-        # Table header
         lines.append("")
         lines.append(
             f"  {'Ticker':<8} {'Type':<12} {'Strike':>8} {'Expiry':<12} "
@@ -184,7 +163,6 @@ def handle_status(args: argparse.Namespace, tracker: RollingTracker) -> int:  # 
         )
         lines.append(f"  {'-' * 78}")
 
-        # Table rows
         for pos in positions:
             ticker = pos["ticker"]
             hedge_type = pos["hedge_type"]
@@ -198,7 +176,6 @@ def handle_status(args: argparse.Namespace, tracker: RollingTracker) -> int:  # 
             status_label = pos.get("status", "OK")
             dte_color = pos.get("dte_color", "green")
 
-            # Format entry cost based on hedge type
             if hedge_type == "put":
                 entry_str = f"${entry_premium:,.2f}"
             else:
@@ -207,7 +184,6 @@ def handle_status(args: argparse.Namespace, tracker: RollingTracker) -> int:  # 
             current_str = _format_currency(current_value)
             pnl_str = _format_currency(pnl)
 
-            # Apply DTE color and text marker
             marker = _dte_marker(status_label)
             colored_dte = _colorize(dte_str, dte_color)
             status_display = _colorize(f"{status_label} {marker}".strip(), dte_color)
@@ -218,7 +194,6 @@ def handle_status(args: argparse.Namespace, tracker: RollingTracker) -> int:  # 
                 f"{pnl_str:>10} {status_display:<12}"
             )
 
-    # Summary row
     lines.append("")
     lines.append("-" * 80)
     lines.append(
@@ -229,7 +204,6 @@ def handle_status(args: argparse.Namespace, tracker: RollingTracker) -> int:  # 
     )
     lines.append("-" * 80)
 
-    # Disclaimer
     lines.append("")
     lines.append(DISCLAIMER)
     lines.append("")
@@ -299,7 +273,6 @@ def handle_suggest_roll(args: argparse.Namespace, tracker: RollingTracker) -> in
                 message = suggestion.get("message", "no candidates found")
                 lines.append(f"  {message}")
 
-    # Disclaimer
     lines.append("")
     lines.append("-" * 80)
     lines.append(DISCLAIMER)
@@ -392,7 +365,6 @@ def handle_history(args: argparse.Namespace, tracker: RollingTracker) -> int:
         lines.append("")
         lines.append("  No roll history found.")
     else:
-        # Table header
         lines.append("")
         lines.append(
             f"  {'Date':<12} {'Ticker':<8} {'Old Strike':>10} "
@@ -422,7 +394,6 @@ def handle_history(args: argparse.Namespace, tracker: RollingTracker) -> int:
                 f"{str(new_expiry):<12} {reason:<10}"
             )
 
-    # Disclaimer
     lines.append("")
     lines.append("-" * 80)
     lines.append(DISCLAIMER)
@@ -430,11 +401,6 @@ def handle_history(args: argparse.Namespace, tracker: RollingTracker) -> int:
 
     print("\n".join(lines))
     return 0
-
-
-# ---------------------------------------------------------------------------
-# Parser Construction
-# ---------------------------------------------------------------------------
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -447,7 +413,6 @@ def build_parser() -> argparse.ArgumentParser:
         Configured ArgumentParser with status, suggest-roll, log-roll,
         and history subcommands.
     """
-    # Shared arguments inherited by every subcommand
     shared = argparse.ArgumentParser(add_help=False)
     shared.add_argument(
         "--output",
@@ -499,14 +464,12 @@ Agent Use Cases:
 """,
     )
 
-    # Subcommands
     subparsers = parser.add_subparsers(
         dest="command",
         required=True,
         help="Available commands",
     )
 
-    # --- status ---
     status_parser = subparsers.add_parser(
         "status",
         parents=[shared],
@@ -523,7 +486,6 @@ Agent Use Cases:
     )
     status_parser.set_defaults(func=handle_status)
 
-    # --- suggest-roll ---
     suggest_parser = subparsers.add_parser(
         "suggest-roll",
         parents=[shared],
@@ -540,7 +502,6 @@ Agent Use Cases:
     )
     suggest_parser.set_defaults(func=handle_suggest_roll)
 
-    # --- log-roll ---
     log_parser = subparsers.add_parser(
         "log-roll",
         parents=[shared],
@@ -582,7 +543,6 @@ Agent Use Cases:
     )
     log_parser.set_defaults(func=handle_log_roll)
 
-    # --- history ---
     history_parser = subparsers.add_parser(
         "history",
         parents=[shared],
@@ -602,11 +562,6 @@ Agent Use Cases:
     return parser
 
 
-# ---------------------------------------------------------------------------
-# Main Entry Point
-# ---------------------------------------------------------------------------
-
-
 def main() -> int:
     """Main CLI entry point.
 
@@ -620,17 +575,11 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        # Load hedge config with priority chain: CLI > YAML > defaults
-        cli_overrides: dict = {}  # No config-overrideable CLI flags currently
         config_path = Path(args.config) if args.config else None
-        config = load_hedge_config(
-            profile_path=config_path,
-            cli_overrides=cli_overrides,
-        )
+        config = load_hedge_config(profile_path=config_path)
 
         tracker = RollingTracker(config)
 
-        # Dispatch to subcommand handler
         result: int = args.func(args, tracker)
         return result
 

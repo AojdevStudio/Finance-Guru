@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -141,9 +142,47 @@ class HedgeConfig(BaseModel):
         return self
 
 
+def resolve_profile_path(profile_path: Path | None = None) -> Path:
+    """Return the explicit profile path, or the profile under the instance root."""
+    return profile_path or InstancePaths.resolve().profile
+
+
+def load_hedging_section(profile_path: Path) -> dict[str, Any]:
+    """Return the ``hedging:`` mapping from a profile YAML file.
+
+    A missing file, unreadable or malformed YAML, or a missing or non-mapping
+    ``hedging:`` section all yield an empty mapping, so defaults apply (CFG-03).
+    A read or parse failure is logged as a warning.
+    """
+    if not profile_path.exists():
+        return {}
+    try:
+        with open(profile_path) as f:
+            data = yaml.safe_load(f)
+    except (OSError, yaml.YAMLError):
+        logger.warning("Failed to parse %s, using defaults", profile_path)
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    section = data.get("hedging", {})
+    return section if isinstance(section, dict) else {}
+
+
+def apply_cli_overrides(
+    config_data: dict[str, Any], cli_overrides: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Return ``config_data`` with every non-None CLI value laid over it."""
+    if not cli_overrides:
+        return config_data
+    return {
+        **config_data,
+        **{k: v for k, v in cli_overrides.items() if v is not None},
+    }
+
+
 def load_hedge_config(
     profile_path: Path | None = None,
-    cli_overrides: dict | None = None,
+    cli_overrides: dict[str, Any] | None = None,
 ) -> HedgeConfig:
     """Load hedging configuration with the priority chain: CLI > YAML > defaults.
 
@@ -161,26 +200,5 @@ def load_hedge_config(
         returns a valid HedgeConfig, falling back to Pydantic defaults when
         the YAML source is unavailable or unparseable (CFG-03).
     """
-    config_data: dict = {}
-
-    # --- Resolve profile path ---
-    resolved_path = profile_path or InstancePaths.resolve().profile
-
-    # --- Load YAML hedging section ---
-    if resolved_path is not None and resolved_path.exists():
-        try:
-            with open(resolved_path) as f:
-                data = yaml.safe_load(f)
-            if isinstance(data, dict):
-                config_data = data.get("hedging", {})
-                if not isinstance(config_data, dict):
-                    config_data = {}
-        except Exception:
-            logger.warning("Failed to parse %s, using defaults", resolved_path)
-            config_data = {}
-
-    # --- Apply CLI overrides (filter out None values) ---
-    if cli_overrides:
-        config_data.update({k: v for k, v in cli_overrides.items() if v is not None})
-
-    return HedgeConfig(**config_data)
+    config_data = load_hedging_section(resolve_profile_path(profile_path))
+    return HedgeConfig(**apply_cli_overrides(config_data, cli_overrides))

@@ -18,10 +18,6 @@ from src.models.correlation_inputs import (
     PortfolioPriceData,
 )
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
 
 def _make_dates(n: int) -> list[date]:
     start = date(2025, 1, 2)
@@ -41,15 +37,14 @@ def _make_portfolio_data(
     tickers = tickers or ["AAAA", "BBBB", "CCCC"]
     rng = np.random.default_rng(seed)
 
-    # Common market factor
     factor_returns = rng.normal(0.0005, 0.01, n - 1)
 
     prices: dict[str, list[float]] = {}
     for i, ticker in enumerate(tickers):
-        loading = correlation  # how much of factor this asset tracks
+        loading = correlation
         idio = rng.normal(0, 0.01 * (1 - correlation), n - 1)
         asset_returns = factor_returns * loading + idio
-        p = [100.0 + i * 10]  # offset start prices
+        p = [100.0 + i * 10]
         for r in asset_returns:
             p.append(p[-1] * (1 + r))
         prices[ticker] = p
@@ -74,11 +69,6 @@ def portfolio_data() -> PortfolioPriceData:
 @pytest.fixture
 def engine(config: CorrelationConfig) -> CorrelationEngine:
     return CorrelationEngine(config)
-
-
-# ---------------------------------------------------------------------------
-# Correlation Matrix
-# ---------------------------------------------------------------------------
 
 
 class TestCorrelationMatrix:
@@ -143,11 +133,6 @@ class TestCorrelationMatrix:
             assert cm.correlation_matrix[ticker][ticker] == pytest.approx(1.0, abs=1e-6)
 
 
-# ---------------------------------------------------------------------------
-# Covariance Matrix
-# ---------------------------------------------------------------------------
-
-
 class TestCovarianceMatrix:
     """Tests for covariance matrix."""
 
@@ -178,11 +163,6 @@ class TestCovarianceMatrix:
                 )
 
 
-# ---------------------------------------------------------------------------
-# Diversification Score
-# ---------------------------------------------------------------------------
-
-
 class TestDiversificationScore:
     """Tests for diversification scoring."""
 
@@ -204,13 +184,7 @@ class TestDiversificationScore:
         data = _make_portfolio_data(correlation=0.99, seed=10)
         engine = CorrelationEngine(CorrelationConfig())
         result = engine.calculate_portfolio_correlation(data)
-        # With near-perfect correlation the average should be very high
         assert result.correlation_matrix.average_correlation > 0.5
-
-
-# ---------------------------------------------------------------------------
-# Rolling Correlations
-# ---------------------------------------------------------------------------
 
 
 class TestRollingCorrelations:
@@ -241,11 +215,6 @@ class TestRollingCorrelations:
             assert -1.0 <= rc.average_correlation <= 1.0
 
 
-# ---------------------------------------------------------------------------
-# Full Output
-# ---------------------------------------------------------------------------
-
-
 class TestFullOutput:
     """Tests for complete portfolio correlation output."""
 
@@ -255,11 +224,6 @@ class TestFullOutput:
         result = engine.calculate_portfolio_correlation(portfolio_data)
         assert isinstance(result, PortfolioCorrelationOutput)
         assert result.tickers == portfolio_data.tickers
-
-
-# ---------------------------------------------------------------------------
-# Convenience Function
-# ---------------------------------------------------------------------------
 
 
 class TestConvenienceFunction:

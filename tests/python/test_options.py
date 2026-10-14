@@ -375,6 +375,22 @@ class TestConvenienceFunction:
         assert result.option_price > 0
 
 
+def test_deep_itm_european_put_can_price_below_intrinsic() -> None:
+    greeks = price_option(
+        spot=50.0,
+        strike=100.0,
+        days_to_expiry=365,
+        volatility=0.20,
+        option_type="put",
+        risk_free_rate=0.05,
+    )
+
+    assert greeks.intrinsic_value == pytest.approx(50.0)
+    assert greeks.option_price < greeks.intrinsic_value
+    assert greeks.time_value < 0
+    assert greeks.theta > 0
+
+
 def test_positive_theta_reads_as_a_daily_gain() -> None:
     from types import SimpleNamespace
 

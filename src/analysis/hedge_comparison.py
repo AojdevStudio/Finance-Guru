@@ -15,14 +15,16 @@ CRITICAL DESIGN DECISIONS:
   Leveraged ETFs reset daily, so the cumulative return depends on the path taken.
 - Three representative paths (gradual, crash-then-flat, volatile) capture
   the range of outcomes for any given total market decline.
-- IV expansion uses a VIX-SPX regression table calibrated from historical crashes
-  (2008 GFC, 2018 Volmageddon, 2020 COVID, 2025 Tariffs).
+- IV expansion interpolates ``VIX_CALIBRATION_POINTS``, conservative VIX levels
+  from historical crashes (2008 GFC, 2018 Volmageddon, 2020 COVID, 2025 Tariffs).
 
 Author: Finance Guru Development Team
 Created: 2026-02-18
 """
 
-from typing import Literal
+from collections.abc import Callable
+from datetime import date
+from typing import Literal, NamedTuple
 
 import numpy as np
 from scipy.optimize import brentq
@@ -36,24 +38,45 @@ from src.models.hedge_comparison_inputs import (
     SQQQResult,
 )
 from src.models.options_inputs import BlackScholesInput
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
 
-# --- Module-level constants ---
+SQQQ_EXPENSE_RATIO = 0.0095
+"""ProShares SQQQ net expense ratio, which includes a fee waiver."""
 
-SQQQ_EXPENSE_RATIO = (
-    0.0095  # 0.95% annual (ProShares net, with fee waiver through Sep 2026)
+SQQQ_EXPENSE_RATIO_AS_OF = date(2026, 2, 2)
+"""Date ``SQQQ_EXPENSE_RATIO`` was sourced."""
+
+SQQQ_FEE_WAIVER_THROUGH = date(2026, 9, 30)
+"""Last day of the fee waiver that ``SQQQ_EXPENSE_RATIO`` assumes."""
+
+SQQQ_DAILY_FEE = SQQQ_EXPENSE_RATIO / TRADING_DAYS_PER_YEAR
+SQQQ_LEVERAGE = -3
+
+SQQQ_VALUE_FLOOR = 0.0
+"""A long SQQQ position cannot lose more than the cash put into it."""
+
+BREAKEVEN_SEARCH_SHALLOWEST_DROP = -0.001
+BREAKEVEN_SEARCH_DEEPEST_DROP = -0.50
+
+
+class VixCalibrationPoint(NamedTuple):
+    """One market drop paired with the VIX level seen at that drop."""
+
+    market_drop: float
+    vix: float
+    regime: str
+
+
+VIX_CALIBRATION_POINTS: tuple[VixCalibrationPoint, ...] = (
+    VixCalibrationPoint(0.00, 18.0, "normal baseline, long-term VIX median 17 to 19"),
+    VixCalibrationPoint(-0.05, 28.0, "mild correction"),
+    VixCalibrationPoint(-0.10, 38.0, "moderate correction"),
+    VixCalibrationPoint(-0.20, 55.0, "bear market territory"),
+    VixCalibrationPoint(-0.40, 80.0, "crisis, 2008 and 2020 levels"),
 )
-SQQQ_DAILY_FEE = SQQQ_EXPENSE_RATIO / 252  # ~0.00377% per trading day
-SQQQ_LEVERAGE = -3  # -3x daily target
 
-# VIX-SPX regression table: conservative estimates from historical crash data
-# Sources: 2008 GFC (VIX 80-89), 2018 Volmageddon (VIX 37), 2020 COVID (VIX 82), 2025 Tariffs (VIX ~45)
-# See: 09-RESEARCH.md for full calibration data
 VIX_SPX_TABLE: dict[float, float] = {
-    0.00: 18.0,  # Normal baseline (long-term VIX median ~17-19)
-    -0.05: 28.0,  # Mild correction
-    -0.10: 38.0,  # Moderate correction
-    -0.20: 55.0,  # Bear market territory
-    -0.40: 80.0,  # Crisis (2008/2020 levels)
+    point.market_drop: point.vix for point in VIX_CALIBRATION_POINTS
 }
 
 DEFAULT_DISCLAIMERS: list[str] = [
@@ -67,7 +90,6 @@ DEFAULT_DISCLAIMERS: list[str] = [
     "SQQQ simulation assumes perfect daily rebalancing. Actual SQQQ may deviate during extreme volatility.",
 ]
 
-# Scenario labels for common market drops
 _SCENARIO_LABELS: dict[float, str] = {
     -0.05: "-5% correction",
     -0.10: "-10% correction",
@@ -157,10 +179,9 @@ class HedgeComparisonCalculator:
             self._simulate_sqqq_single_path(path, initial_value) for path in paths
         ]
         avg_final = sum(final_values) / len(final_values)
-        avg_final = max(avg_final, 0.0)
 
         actual_return = (avg_final - initial_value) / initial_value
-        naive_return = -3.0 * scenario.market_drop_pct
+        naive_return = SQQQ_LEVERAGE * scenario.market_drop_pct
         drag = naive_return - actual_return
 
         return SQQQResult(
@@ -188,7 +209,6 @@ class HedgeComparisonCalculator:
         new_spot = self.spot_price * (1.0 + scenario.market_drop_pct)
         new_iv = self._estimate_iv_at_drop(scenario.market_drop_pct)
 
-        # Price the put at new spot with expanded IV
         bs_input = BlackScholesInput(
             spot_price=new_spot,
             strike=self.put_strike,
@@ -228,26 +248,24 @@ class HedgeComparisonCalculator:
             Tuple of (sqqq_breakeven_drop, put_breakeven_drop)
         """
 
-        # SQQQ breakeven: find drop where position value == initial allocation
-        # Use gradual decline path (conservative) for breakeven calculation
         def sqqq_pnl_at_drop(drop: float) -> float:
             """SQQQ PnL as function of market drop (for root finding)."""
             days = self.holding_days
-            # Gradual path for breakeven (deterministic, no path noise)
             daily_r = (1.0 + drop) ** (1.0 / days) - 1.0
             daily_returns = [daily_r] * days
             final = self._simulate_sqqq_single_path(daily_returns, self.sqqq_allocation)
             return final - self.sqqq_allocation
 
         try:
-            sqqq_be = brentq(sqqq_pnl_at_drop, -0.50, -0.001, xtol=1e-6)
+            sqqq_be = brentq(
+                sqqq_pnl_at_drop,
+                BREAKEVEN_SEARCH_DEEPEST_DROP,
+                BREAKEVEN_SEARCH_SHALLOWEST_DROP,
+                xtol=1e-6,
+            )
         except ValueError:
-            # If no root in range, SQQQ is always profitable in this range
-            # or never profitable -- return boundary
-            sqqq_be = -0.001 if sqqq_pnl_at_drop(-0.001) >= 0 else -0.50
+            sqqq_be = _breakeven_without_sign_change(sqqq_pnl_at_drop)
 
-        # Put breakeven (analytical): spot must drop enough for put to be worth more than premium
-        # breakeven_spot = strike - premium, then drop = (breakeven_spot - spot) / spot
         breakeven_spot = self.put_strike - self.put_premium
         put_be = (breakeven_spot - self.spot_price) / self.spot_price
 
@@ -278,11 +296,6 @@ class HedgeComparisonCalculator:
             sqqq_result = self.simulate_sqqq(scenario)
             put_result = self.calculate_put_payoff(scenario)
 
-            # Determine winner by comparing return percentages
-            # SQQQ return % is sqqq_return_pct
-            # Put return % is pnl_pct (pnl / premium)
-            # For fair comparison, normalize: SQQQ uses % return on allocation,
-            # Put uses % return on premium invested
             sqqq_pnl = sqqq_result.final_value - sqqq_result.initial_value
             put_pnl = put_result.pnl
 
@@ -331,8 +344,6 @@ class HedgeComparisonCalculator:
             parameters=parameters,
         )
 
-    # --- Private helpers ---
-
     def _simulate_sqqq_single_path(
         self, daily_qqq_returns: list[float], initial_value: float
     ) -> float:
@@ -355,7 +366,7 @@ class HedgeComparisonCalculator:
         value = initial_value
         for r in daily_qqq_returns:
             value *= 1.0 + SQQQ_LEVERAGE * r - SQQQ_DAILY_FEE
-            value = max(value, 0.0)
+            value = max(value, SQQQ_VALUE_FLOOR)
         return value
 
     def _generate_scenario_paths(
@@ -379,11 +390,9 @@ class HedgeComparisonCalculator:
         Returns:
             List of 3 paths, each a list of daily returns
         """
-        # Path 1: Gradual decline -- uniform daily drops
         daily_r = (1.0 + target_drop_pct) ** (1.0 / days) - 1.0
         path_gradual = [daily_r] * days
 
-        # Path 2: Crash-then-flat -- sharp drop in first few days, then 0
         crash_days = min(5, days)
         if crash_days > 0:
             crash_daily_r = (1.0 + target_drop_pct) ** (1.0 / crash_days) - 1.0
@@ -391,27 +400,20 @@ class HedgeComparisonCalculator:
         else:
             path_crash = path_gradual[:]
 
-        # Path 3: Volatile -- random walk conditioned on matching target
-        # Generate random noise, then adjust final day to hit target
         rng = np.random.default_rng(seed=42)
         noise = rng.normal(0, daily_volatility, days)
 
-        # Start with gradual base, add noise
         base_returns = np.full(days, daily_r)
         volatile_returns = base_returns + noise
 
-        # Adjust so cumulative product matches target
-        # Current cumulative product
         current_cum = float(np.prod(1.0 + volatile_returns))
         target_cum = 1.0 + target_drop_pct
 
-        if current_cum > 0 and target_cum > 0:
-            # Multiplicative adjustment spread across all days
+        rescalable_to_target = current_cum > 0 and target_cum > 0
+        if rescalable_to_target:
             adjustment = (target_cum / current_cum) ** (1.0 / days)
-            adjusted = [(1.0 + r) * adjustment - 1.0 for r in volatile_returns]
-            path_volatile = adjusted
+            path_volatile = [(1.0 + r) * adjustment - 1.0 for r in volatile_returns]
         else:
-            # Fallback to gradual if adjustment would produce invalid values
             path_volatile = path_gradual[:]
 
         return [path_gradual, path_crash, path_volatile]
@@ -446,42 +448,50 @@ class HedgeComparisonCalculator:
         Returns:
             Estimated VIX level
         """
-        # Guard: drops above 0 return baseline
         if drop >= 0:
             return self.baseline_vix
 
-        keys = sorted(VIX_SPX_TABLE.keys(), reverse=True)  # [0.00, -0.05, -0.10, ...]
+        keys = sorted(VIX_SPX_TABLE.keys(), reverse=True)
 
-        # If drop is less extreme than smallest key, interpolate toward baseline
         if drop > keys[0]:
             return VIX_SPX_TABLE[keys[0]]
 
-        # Find bounding keys
         for i in range(len(keys) - 1):
             upper = keys[i]
             lower = keys[i + 1]
             if lower <= drop <= upper:
-                # Linear interpolation
                 frac = (drop - upper) / (lower - upper)
                 vix_upper = VIX_SPX_TABLE[upper]
                 vix_lower = VIX_SPX_TABLE[lower]
                 return vix_upper + frac * (vix_lower - vix_upper)
 
-        # Extrapolate beyond table (more extreme than -0.40)
-        # Use last two keys for slope
         k1, k2 = keys[-2], keys[-1]
         v1, v2 = VIX_SPX_TABLE[k1], VIX_SPX_TABLE[k2]
         slope = (v2 - v1) / (k2 - k1)
         extrapolated = v2 + slope * (drop - k2)
-        return max(extrapolated, v2)  # Don't go below crisis VIX
+        return max(extrapolated, v2)
 
 
-# Type exports
+def _breakeven_without_sign_change(pnl_at_drop: Callable[[float], float]) -> float:
+    """Return the search boundary when SQQQ P&L keeps one sign over the range.
+
+    ``brentq`` needs a sign change. Without one, SQQQ either pays from the
+    shallowest drop searched or never pays inside the range, so the result is
+    the boundary on that side.
+    """
+    if pnl_at_drop(BREAKEVEN_SEARCH_SHALLOWEST_DROP) >= 0:
+        return BREAKEVEN_SEARCH_SHALLOWEST_DROP
+    return BREAKEVEN_SEARCH_DEEPEST_DROP
+
+
 __all__ = [
     "HedgeComparisonCalculator",
     "DEFAULT_DISCLAIMERS",
     "SQQQ_EXPENSE_RATIO",
+    "SQQQ_EXPENSE_RATIO_AS_OF",
+    "SQQQ_FEE_WAIVER_THROUGH",
     "SQQQ_DAILY_FEE",
     "SQQQ_LEVERAGE",
+    "VIX_CALIBRATION_POINTS",
     "VIX_SPX_TABLE",
 ]

@@ -14,6 +14,8 @@ ANALYTICS:
 Used by: Strategy Advisor (diversification), Quant Analyst (optimization), Risk Assessment
 """
 
+from datetime import date, datetime
+
 import numpy as np
 import pandas as pd
 
@@ -25,6 +27,18 @@ from src.models.correlation_inputs import (
     PortfolioPriceData,
     RollingCorrelationOutput,
 )
+
+NO_PAIRS_DIVERSIFICATION_SCORE = 1.0
+"""Score for a matrix with no asset pairs, the formula's value at zero correlation."""
+
+
+def _calendar_date(label: date | datetime) -> date:
+    """Return the calendar date of a returns index label.
+
+    ``PortfolioPriceData`` supplies ``date`` labels, while a DatetimeIndex
+    supplies ``pd.Timestamp``, which is a ``datetime``.
+    """
+    return label.date() if isinstance(label, datetime) else label
 
 
 class CorrelationEngine:
@@ -77,25 +91,19 @@ class CorrelationEngine:
         Returns:
             PortfolioCorrelationOutput with full correlation analysis
         """
-        # Convert to DataFrame for calculations
         df = pd.DataFrame(data.prices, index=data.dates)
 
-        # Calculate returns (correlation uses returns, not prices)
         returns = df.pct_change().dropna()
 
-        # Calculate correlation matrix
         corr_matrix = self._calculate_correlation_matrix(returns, data.tickers)
 
-        # Calculate covariance matrix
         cov_matrix = self._calculate_covariance_matrix(returns, data.tickers)
 
-        # Calculate portfolio-level metrics
         div_score = self._calculate_diversification_score(
             corr_matrix.correlation_matrix
         )
         concentration_warning = corr_matrix.average_correlation > 0.7
 
-        # Calculate rolling correlations if requested
         rolling_corrs = None
         if self.config.rolling_window is not None:
             rolling_corrs = self._calculate_rolling_correlations(returns, data.tickers)
@@ -143,33 +151,26 @@ class CorrelationEngine:
         Returns:
             CorrelationMatrixOutput with full correlation matrix
         """
-        # Calculate correlation matrix using pandas
         if self.config.method == "pearson":
             corr_df = returns.corr(method="pearson")
-        else:  # spearman
+        else:
             corr_df = returns.corr(method="spearman")
 
-        # Convert to nested dict format
         corr_dict = {}
         for ticker1 in tickers:
             corr_dict[ticker1] = {}
             for ticker2 in tickers:
                 corr_dict[ticker1][ticker2] = float(corr_df.loc[ticker1, ticker2])
 
-        # Calculate average correlation (excluding diagonal)
-        # This tells us overall portfolio concentration
         off_diagonal_values = []
         for i, ticker1 in enumerate(tickers):
             for j, ticker2 in enumerate(tickers):
-                if i < j:  # Only upper triangle (avoid counting twice and diagonal)
+                if i < j:
                     off_diagonal_values.append(corr_dict[ticker1][ticker2])
 
         avg_corr = float(np.mean(off_diagonal_values)) if off_diagonal_values else 0.0
 
-        # Get calculation date (handle both datetime and date objects)
-        calc_date = returns.index[-1]
-        if hasattr(calc_date, "date"):
-            calc_date = calc_date.date()
+        calc_date = _calendar_date(returns.index[-1])
 
         return CorrelationMatrixOutput(
             tickers=tickers,
@@ -220,20 +221,15 @@ class CorrelationEngine:
         Returns:
             CovarianceMatrixOutput with full covariance matrix
         """
-        # Calculate covariance matrix using pandas
         cov_df = returns.cov()
 
-        # Convert to nested dict format
         cov_dict = {}
         for ticker1 in tickers:
             cov_dict[ticker1] = {}
             for ticker2 in tickers:
                 cov_dict[ticker1][ticker2] = float(cov_df.loc[ticker1, ticker2])
 
-        # Get calculation date (handle both datetime and date objects)
-        calc_date = returns.index[-1]
-        if hasattr(calc_date, "date"):
-            calc_date = calc_date.date()
+        calc_date = _calendar_date(returns.index[-1])
 
         return CovarianceMatrixOutput(
             tickers=tickers,
@@ -270,7 +266,6 @@ class CorrelationEngine:
         Returns:
             Diversification score between 0 and 1
         """
-        # Extract off-diagonal correlations
         tickers = list(correlation_matrix.keys())
         off_diagonal = []
 
@@ -280,12 +275,10 @@ class CorrelationEngine:
                     off_diagonal.append(correlation_matrix[ticker1][ticker2])
 
         if not off_diagonal:
-            return 1.0  # Single asset = "perfectly diversified" by definition
+            return NO_PAIRS_DIVERSIFICATION_SCORE
 
         avg_corr = np.mean(off_diagonal)
 
-        # Diversification score = 1 - average correlation
-        # Higher score = better diversification
         return float(1.0 - avg_corr)
 
     def _calculate_rolling_correlations(
@@ -322,11 +315,9 @@ class CorrelationEngine:
         """
         rolling_outputs = []
 
-        # Calculate for all pairs
         for i, ticker1 in enumerate(tickers):
             for j, ticker2 in enumerate(tickers):
-                if i < j:  # Only upper triangle (avoid duplicates)
-                    # Calculate rolling correlation
+                if i < j:
                     rolling_corr = (
                         returns[ticker1]
                         .rolling(
@@ -336,17 +327,12 @@ class CorrelationEngine:
                         .corr(returns[ticker2])
                     )
 
-                    # Drop NaN values from beginning
                     rolling_corr = rolling_corr.dropna()
 
                     if len(rolling_corr) == 0:
                         continue
 
-                    # Extract values (handle both datetime and date index types)
-                    dates = [
-                        d.date() if hasattr(d, "date") and callable(d.date) else d
-                        for d in rolling_corr.index
-                    ]
+                    dates = [_calendar_date(d) for d in rolling_corr.index]
                     correlations = rolling_corr.tolist()
                     current_corr = float(correlations[-1])
                     avg_corr = float(np.mean(correlations))
@@ -368,7 +354,6 @@ class CorrelationEngine:
         return rolling_outputs
 
 
-# Convenience function for quick calculations
 def calculate_correlation(
     data: PortfolioPriceData,
     config: CorrelationConfig | None = None,

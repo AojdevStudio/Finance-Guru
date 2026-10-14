@@ -60,11 +60,6 @@ def _constraint_value(field, attr: str):
     return None
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Named constants in src/ — strongest contract; import and compare directly.
-# ─────────────────────────────────────────────────────────────────────────────
-
-
 class TestNamedConstants:
     def test_portfolio_per_contract(self, doc_text):
         from src.analysis.hedge_sizer import DEFAULT_RATIO_PER_CONTRACT
@@ -114,10 +109,26 @@ class TestNamedConstants:
             f"definitions.md says RFR default = {documented!r} but src says {RT_RFR}."
         )
 
+    def test_trading_days_per_year(self, doc_text):
+        from src.analysis import risk_metrics
+        from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Pydantic field defaults & bounds — `model_fields` inspection.
-# ─────────────────────────────────────────────────────────────────────────────
+        assert TRADING_DAYS_PER_YEAR == 252
+        assert risk_metrics.TRADING_DAYS_PER_YEAR is TRADING_DAYS_PER_YEAR, (
+            "risk_metrics.py must annualize with the shared trading-calendar constant."
+        )
+        documented = _row_value("TRADING_DAYS_PER_YEAR", doc_text)
+        assert "252" in documented
+
+    def test_put_call_parity_tolerance(self, doc_text):
+        from src.analysis.options import PUT_CALL_PARITY_ARBITRAGE_DOLLARS
+
+        assert PUT_CALL_PARITY_ARBITRAGE_DOLLARS == 0.10, (
+            "The put-call parity tolerance moved. Update definitions.md §1 "
+            "(PUT_CALL_PARITY_TOLERANCE) and §10.4."
+        )
+        documented = _row_value("PUT_CALL_PARITY_TOLERANCE", doc_text)
+        assert "0.10" in documented
 
 
 class TestPydanticFields:
@@ -168,25 +179,7 @@ class TestPydanticFields:
         )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Inline literals — no named symbol in src/; verify via regex on source text.
-# ─────────────────────────────────────────────────────────────────────────────
-
-
 class TestInlineLiterals:
-    def test_annualization_factor_252_in_risk_metrics(self, doc_text):
-        rm = (REPO_ROOT / "src" / "analysis" / "risk_metrics.py").read_text()
-        assert "np.sqrt(252)" in rm, (
-            "risk_metrics.py must annualize via np.sqrt(252). If you really did "
-            "change the trading-day count, update definitions.md §1 (TRADING_DAYS_PER_YEAR) "
-            "and every annualization mention in §6."
-        )
-        # Also ensure the linear-time annualization (mean × 252) survived.
-        assert "* 252" in rm
-
-        documented = _row_value("TRADING_DAYS_PER_YEAR", doc_text)
-        assert "252" in documented
-
     def test_calendar_days_365_in_total_return(self, doc_text):
         tr = (REPO_ROOT / "src" / "analysis" / "total_return.py").read_text()
         assert re.search(r"365\.0\s*/\s*calendar_days", tr), (
@@ -197,23 +190,6 @@ class TestInlineLiterals:
         )
         documented = _row_value("CALENDAR_DAYS_PER_YEAR", doc_text)
         assert "365" in documented
-
-    def test_put_call_parity_tolerance_in_options(self, doc_text):
-        opt = (REPO_ROOT / "src" / "analysis" / "options.py").read_text()
-        assert re.search(r"\bdifference\s*>\s*0\.10\b", opt), (
-            "options.py no longer enforces the $0.10 put-call parity tolerance "
-            "via the canonical `difference > 0.10` comparison. "
-            "If the threshold moved, update definitions.md §1 (PUT_CALL_PARITY_TOLERANCE) "
-            "and §10.4."
-        )
-        documented = _row_value("PUT_CALL_PARITY_TOLERANCE", doc_text)
-        assert "0.10" in documented
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Skill-file constants — markdown sources outside src/ that the glossary cites.
-# Both the skill and the glossary must agree.
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 class TestSkillConstants:
@@ -246,12 +222,6 @@ class TestSkillConstants:
         assert "0.30" in documented or "30%" in documented
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Cross-reference: every constant the test names must appear in the doc table.
-# Catches the "constant deleted from doc but still in test" failure mode.
-# ─────────────────────────────────────────────────────────────────────────────
-
-
 CONSTANTS_TESTED = (
     "PORTFOLIO_PER_CONTRACT",
     "IMPLIED_VOLATILITY_DEFAULT",
@@ -269,4 +239,4 @@ CONSTANTS_TESTED = (
 @pytest.mark.parametrize("constant", CONSTANTS_TESTED)
 def test_every_tested_constant_is_documented(doc_text, constant):
     """If a constant has a test below, it must also have a row in §1."""
-    _row_value(constant, doc_text)  # raises if missing
+    _row_value(constant, doc_text)

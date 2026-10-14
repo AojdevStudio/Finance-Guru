@@ -42,11 +42,6 @@ def hedging_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return path
 
 
-# ---------------------------------------------------------------------------
-# price_american_put
-# ---------------------------------------------------------------------------
-
-
 class TestPriceAmericanPut:
     """Tests for the price_american_put helper function."""
 
@@ -59,30 +54,23 @@ class TestPriceAmericanPut:
         """OTM put should return a small positive value from BS model."""
         result = price_american_put(100.0, 80.0, 30, 0.30)
         assert result > 0.0
-        assert result < 5.0  # OTM put should be cheap
+        assert result < 5.0
 
     def test_atm_put_has_time_value(self):
         """ATM put should have meaningful time value."""
         result = price_american_put(100.0, 100.0, 60, 0.30)
-        assert result > 2.0  # ATM 60-day put should have decent value
+        assert result > 2.0
 
     def test_zero_days_returns_intrinsic(self):
         """Put at expiry is worth only intrinsic value."""
-        # DTE=0 causes BS to fail (time_to_expiry=0 not valid)
-        # The function should gracefully handle this
-        result = price_american_put(100.0, 120.0, 0, 0.30)
-        # Should be at least intrinsic (20.0) via fallback
-        assert result >= 20.0
+        spot, strike = 100.0, 120.0
+        result = price_american_put(spot, strike, 0, 0.30)
+        assert result == max(strike - spot, 0.0)
 
     def test_far_otm_near_zero(self):
         """Far OTM put should be nearly worthless."""
         result = price_american_put(100.0, 50.0, 30, 0.30)
         assert result < 0.01
-
-
-# ---------------------------------------------------------------------------
-# _dte_status
-# ---------------------------------------------------------------------------
 
 
 class TestDteStatus:
@@ -131,11 +119,6 @@ class TestDteStatus:
         assert color == "green"
 
 
-# ---------------------------------------------------------------------------
-# _rank_contract_score
-# ---------------------------------------------------------------------------
-
-
 class TestRankContractScore:
     """Tests for the _rank_contract_score helper function."""
 
@@ -161,7 +144,7 @@ class TestRankContractScore:
         contract.otm_pct = 12.5
         contract.days_to_expiry = 85
         score = _rank_contract_score(contract, 12.5, 75.0)
-        assert score == pytest.approx(1.0)  # 10 / 10.0
+        assert score == pytest.approx(1.0)
 
     def test_closer_contract_scores_lower(self):
         """Contract closer to targets should score lower."""
@@ -176,11 +159,6 @@ class TestRankContractScore:
         score_close = _rank_contract_score(close, 12.5, 75.0)
         score_far = _rank_contract_score(far, 12.5, 75.0)
         assert score_close < score_far
-
-
-# ---------------------------------------------------------------------------
-# load_positions / save_positions (filesystem tests)
-# ---------------------------------------------------------------------------
 
 
 class TestPositionPersistence:
@@ -231,7 +209,7 @@ class TestPositionPersistence:
         positions_file = hedging_dir / "positions.yaml"
         data = {
             "positions": [
-                {"ticker": "QQQ", "hedge_type": "put"},  # missing required fields
+                {"ticker": "QQQ", "hedge_type": "put"},
                 {
                     "ticker": "SPY",
                     "hedge_type": "put",
@@ -281,11 +259,6 @@ class TestPositionPersistence:
         assert result == []
 
 
-# ---------------------------------------------------------------------------
-# load_roll_history / save_roll_history
-# ---------------------------------------------------------------------------
-
-
 class TestRollHistoryPersistence:
     """Tests for roll history YAML load/save."""
 
@@ -318,11 +291,6 @@ class TestRollHistoryPersistence:
 
         assert len(result) == 1
         assert result[0]["reason"] == "rolled"
-
-
-# ---------------------------------------------------------------------------
-# RollingTracker.get_status
-# ---------------------------------------------------------------------------
 
 
 class TestRollingTrackerGetStatus:
@@ -373,10 +341,8 @@ class TestRollingTrackerGetStatus:
         with patch.dict("os.environ", {"FIN_GURU_DATA_ROOT": str(hedging_dir.parent)}):
             status = tracker.get_status()
 
-        # Position should be archived
         assert status["summary"]["position_count"] == 0
 
-        # Check roll history was updated
         with open(hedging_dir / "roll-history.yaml") as f:
             history_data = yaml.safe_load(f)
         assert len(history_data["rolls"]) == 1
@@ -404,7 +370,6 @@ class TestRollingTrackerGetStatus:
         history_file = hedging_dir / "roll-history.yaml"
         history_file.write_text("rolls: []\n")
 
-        # Mock get_prices to return a known spot price
         mock_price = MagicMock()
         mock_price.price = 450.0
 
@@ -463,13 +428,7 @@ class TestRollingTrackerGetStatus:
 
         pos = status["positions"][0]
         assert pos.get("pricing_error") is True
-        # Current value should be entry cost (fallback)
-        assert pos["current_value"] == 850.0  # 8.50 * 100 * 1
-
-
-# ---------------------------------------------------------------------------
-# RollingTracker.log_roll
-# ---------------------------------------------------------------------------
+        assert pos["current_value"] == 850.0
 
 
 class TestRollingTrackerLogRoll:
@@ -506,9 +465,8 @@ class TestRollingTrackerLogRoll:
 
         assert result["old_position"]["strike"] == 420.0
         assert result["new_position"]["strike"] == 430.0
-        assert result["new_position"]["quantity"] == 2  # inherited
+        assert result["new_position"]["quantity"] == 2
 
-        # Check files updated
         with open(hedging_dir / "positions.yaml") as f:
             pos_data = yaml.safe_load(f)
         assert len(pos_data["positions"]) == 1
@@ -534,11 +492,6 @@ class TestRollingTrackerLogRoll:
             pytest.raises(ValueError, match="No active put position"),
         ):
             tracker.log_roll("QQQ", 430.0, date.today() + timedelta(days=75), 9.00)
-
-
-# ---------------------------------------------------------------------------
-# RollingTracker.get_history
-# ---------------------------------------------------------------------------
 
 
 class TestRollingTrackerGetHistory:
@@ -577,11 +530,6 @@ class TestRollingTrackerGetHistory:
             result = tracker.get_history()
         assert len(result) == 1
         assert result[0]["reason"] == "rolled"
-
-
-# ---------------------------------------------------------------------------
-# RollingTracker.suggest_rolls
-# ---------------------------------------------------------------------------
 
 
 class TestRollingTrackerSuggestRolls:
@@ -668,11 +616,9 @@ class TestRollingTrackerSuggestRolls:
         positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text(yaml.dump(data))
 
-        # Mock get_prices for remaining value calculation
         mock_price = MagicMock()
         mock_price.price = 450.0
 
-        # Mock scan_chain_quiet to return a candidate contract
         mock_contract = MagicMock()
         mock_contract.otm_pct = 12.0
         mock_contract.days_to_expiry = 75
@@ -715,11 +661,6 @@ class TestRollingTrackerSuggestRolls:
         assert suggestion["remaining_value"] >= 0.0
 
 
-# ---------------------------------------------------------------------------
-# CLI integration tests (subprocess)
-# ---------------------------------------------------------------------------
-
-
 class TestRollingTrackerCLI:
     """CLI integration tests using subprocess."""
 
@@ -737,7 +678,6 @@ class TestRollingTrackerCLI:
 
     def test_cli_status_json(self, hedging_dir: Path):
         """status --output json exits 0 and returns valid JSON."""
-        # Create empty positions and history files so status returns cleanly
         positions_file = hedging_dir / "positions.yaml"
         positions_file.write_text("positions: []\n")
         history_file = hedging_dir / "roll-history.yaml"
@@ -746,7 +686,8 @@ class TestRollingTrackerCLI:
         result = subprocess.run(
             [
                 sys.executable,
-                "src/analysis/rolling_tracker_cli.py",
+                "-m",
+                "src.analysis.rolling_tracker_cli",
                 "status",
                 "--output",
                 "json",
@@ -759,12 +700,10 @@ class TestRollingTrackerCLI:
                 "FIN_GURU_DATA_ROOT": str(hedging_dir.parent),
             },
         )
-        # The CLI may fail if config file is missing, but if it succeeds
-        # the JSON should be valid. Either exit 0 with valid JSON or
-        # exit 1 with config error (acceptable in CI without config).
-        if result.returncode == 0:
-            data = json.loads(result.stdout)
-            assert "positions" in data or "summary" in data
+        assert result.returncode == 0, result.stderr
+        data = json.loads(result.stdout)
+        assert data["positions"] == []
+        assert data["summary"]["position_count"] == 0
 
 
 class TestInstanceDataRoot:

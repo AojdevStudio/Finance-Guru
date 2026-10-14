@@ -18,10 +18,6 @@ import pytest
 from src.models.backtest_inputs import BacktestConfig, TradeSignal
 from src.strategies.backtester import Backtester
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
 
 @pytest.fixture
 def default_config():
@@ -61,11 +57,6 @@ def _make_signals(prices, actions, ticker="TSLA"):
     return signals
 
 
-# ---------------------------------------------------------------------------
-# Initialization
-# ---------------------------------------------------------------------------
-
-
 class TestBacktesterInit:
     def test_initializes_with_config(self, default_config):
         bt = Backtester(default_config)
@@ -76,11 +67,6 @@ class TestBacktesterInit:
         bt = Backtester(default_config)
         assert bt.trades == []
         assert bt.current_position is None
-
-
-# ---------------------------------------------------------------------------
-# Basic execution
-# ---------------------------------------------------------------------------
 
 
 class TestBacktestExecution:
@@ -97,7 +83,7 @@ class TestBacktestExecution:
         assert result.ticker == "TSLA"
         assert result.strategy_name == "Test Strategy"
         assert len(result.trades) == 1
-        assert result.trades[0].pnl > 0  # bought at 100, sold at 120
+        assert result.trades[0].pnl > 0
 
     def test_hold_signal_does_nothing(self, default_config):
         signals = _make_signals([100.0, 110.0, 120.0], ["HOLD", "HOLD", "HOLD"])
@@ -112,7 +98,6 @@ class TestBacktestExecution:
         bt = Backtester(default_config)
         result = bt.run_backtest(signals, "TSLA")
 
-        # Position should be auto-closed at end
         assert len(result.trades) == 1
         assert result.trades[0].exit_date is not None
 
@@ -128,7 +113,6 @@ class TestBacktestExecution:
         bt = Backtester(default_config)
         result = bt.run_backtest(signals, "TSLA")
 
-        # Only one trade (second BUY ignored)
         assert len(result.trades) == 1
 
     def test_multiple_round_trips(self):
@@ -136,7 +120,7 @@ class TestBacktestExecution:
             initial_capital=100_000.0,
             commission_per_trade=0.0,
             slippage_pct=0.0,
-            position_size_pct=0.5,  # 50% so second BUY has capital
+            position_size_pct=0.5,
             allow_fractional_shares=True,
         )
         prices = [100.0, 120.0, 110.0, 130.0]
@@ -149,16 +133,11 @@ class TestBacktestExecution:
         assert result.performance.total_trades == 2
 
 
-# ---------------------------------------------------------------------------
-# Transaction costs
-# ---------------------------------------------------------------------------
-
-
 class TestTransactionCosts:
     def test_slippage_increases_buy_price(self):
         config = BacktestConfig(
             initial_capital=100_000.0,
-            slippage_pct=0.01,  # 1% slippage
+            slippage_pct=0.01,
             commission_per_trade=0.0,
         )
         signals = _make_signals([100.0, 100.0], ["BUY", "SELL"])
@@ -166,9 +145,7 @@ class TestTransactionCosts:
         result = bt.run_backtest(signals, "TSLA")
 
         trade = result.trades[0]
-        # Entry price should be 100 * 1.01 = 101
         assert trade.entry_price == pytest.approx(101.0, rel=1e-6)
-        # Exit price should be 100 * 0.99 = 99
         assert trade.exit_price == pytest.approx(99.0, rel=1e-6)
 
     def test_commission_deducted(self):
@@ -176,19 +153,18 @@ class TestTransactionCosts:
             initial_capital=100_000.0,
             commission_per_trade=50.0,
             slippage_pct=0.0,
-            position_size_pct=0.5,  # Use 50% so capital_needed+commission < capital
+            position_size_pct=0.5,
         )
         signals = _make_signals([100.0, 100.0], ["BUY", "SELL"])
         bt = Backtester(config)
         result = bt.run_backtest(signals, "TSLA")
 
-        # Should have paid 50 on entry + 50 on exit = 100 total
         assert result.performance.total_commissions == 100.0
 
     def test_insufficient_capital_skips_trade(self):
         config = BacktestConfig(
             initial_capital=100.0,
-            commission_per_trade=200.0,  # More than capital
+            commission_per_trade=200.0,
             slippage_pct=0.0,
         )
         signals = _make_signals([100.0, 120.0], ["BUY", "SELL"])
@@ -196,6 +172,7 @@ class TestTransactionCosts:
         result = bt.run_backtest(signals, "TSLA")
 
         assert len(result.trades) == 0
+        assert bt.skipped_signals == [signals[0]]
 
     def test_integer_shares_when_fractional_disabled(self):
         config = BacktestConfig(
@@ -214,7 +191,7 @@ class TestTransactionCosts:
     def test_position_sizing(self):
         config = BacktestConfig(
             initial_capital=100_000.0,
-            position_size_pct=0.5,  # 50% of capital
+            position_size_pct=0.5,
             slippage_pct=0.0,
             commission_per_trade=0.0,
         )
@@ -223,13 +200,7 @@ class TestTransactionCosts:
         result = bt.run_backtest(signals, "TSLA")
 
         trade = result.trades[0]
-        # Should use 50% of capital = 50,000 / 100 = 500 shares
         assert trade.shares == pytest.approx(500.0)
-
-
-# ---------------------------------------------------------------------------
-# Performance metrics
-# ---------------------------------------------------------------------------
 
 
 class TestPerformanceMetrics:
@@ -282,7 +253,6 @@ class TestPerformanceMetrics:
         bt = Backtester(default_config)
         result = bt.run_backtest(signals, "TSLA")
 
-        # Initial point + one per signal
         assert len(result.equity_dates) == 4
         assert len(result.equity_values) == 4
 
@@ -291,7 +261,7 @@ class TestPerformanceMetrics:
             initial_capital=100_000.0,
             slippage_pct=0.01,
             commission_per_trade=10.0,
-            position_size_pct=0.5,  # Use 50% so capital_needed+costs < capital
+            position_size_pct=0.5,
         )
         signals = _make_signals([100.0, 120.0], ["BUY", "SELL"])
         bt = Backtester(config)
@@ -299,12 +269,7 @@ class TestPerformanceMetrics:
 
         perf = result.performance
         assert perf.total_slippage > 0
-        assert perf.total_commissions == 20.0  # 10 entry + 10 exit
-
-
-# ---------------------------------------------------------------------------
-# Max drawdown
-# ---------------------------------------------------------------------------
+        assert perf.total_commissions == 20.0
 
 
 class TestMaxDrawdown:
@@ -317,7 +282,6 @@ class TestMaxDrawdown:
     def test_drawdown_calculated_correctly(self, default_config):
         bt = Backtester(default_config)
         dd, dd_pct = bt._calculate_max_drawdown([100, 120, 90, 110])
-        # Peak was 120, trough was 90 = 30 drawdown = 25%
         assert dd == pytest.approx(30.0)
         assert dd_pct == pytest.approx(25.0)
 
@@ -327,15 +291,9 @@ class TestMaxDrawdown:
         assert dd == 0.0
 
 
-# ---------------------------------------------------------------------------
-# Recommendations
-# ---------------------------------------------------------------------------
-
-
 class TestRecommendations:
     def test_deploy_recommendation(self, default_config):
         """Strong performance should recommend DEPLOY."""
-        # Create a profitable multi-trade scenario
         prices = [100.0, 120.0, 100.0, 125.0, 100.0, 130.0, 100.0, 135.0, 100.0, 140.0]
         actions = [
             "BUY",
@@ -353,12 +311,10 @@ class TestRecommendations:
         bt = Backtester(default_config)
         result = bt.run_backtest(signals, "TSLA")
 
-        # Strong return + good win rate + low drawdown should be DEPLOY or OPTIMIZE
         assert result.recommendation in ("DEPLOY", "OPTIMIZE")
 
     def test_reject_recommendation_for_poor_performance(self, default_config):
         """Poor performance should recommend REJECT."""
-        # Only losing trades
         prices = [100.0, 50.0, 100.0, 50.0]
         actions = ["BUY", "SELL", "BUY", "SELL"]
         signals = _make_signals(prices, actions)
@@ -373,17 +329,11 @@ class TestRecommendations:
         bt = Backtester(default_config)
         result = bt.run_backtest(signals, "TSLA")
 
-        # Should not crash even with None Sharpe
         assert result.recommendation in ("DEPLOY", "OPTIMIZE", "REJECT")
         assert (
             "Sharpe ratio unavailable" in result.reasoning
             or "Sharpe" in result.reasoning
         )
-
-
-# ---------------------------------------------------------------------------
-# Results structure
-# ---------------------------------------------------------------------------
 
 
 class TestBacktestResults:
@@ -418,6 +368,5 @@ class TestBacktestResults:
         bt = Backtester(default_config)
         result = bt.run_backtest(signals, "TSLA")
 
-        # Should work correctly despite out-of-order input
         assert result.start_date == date(2025, 1, 1)
         assert len(result.trades) == 1

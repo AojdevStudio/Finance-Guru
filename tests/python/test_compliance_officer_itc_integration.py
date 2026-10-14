@@ -25,9 +25,17 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Import ITC components
-from src.analysis.itc_risk import ITCRiskCalculator
+from src.analysis.itc_risk import HIGH_RISK_FLOOR, LOW_RISK_CEILING, ITCRiskCalculator
 from src.models.itc_risk_inputs import ITCRiskResponse, RiskBand
+
+CRITICAL_RISK_FLOOR = 0.85
+"""DR-4: ITC risk above this blocks the trade."""
+
+MAX_DAILY_VAR = 0.05
+"""Internal daily VaR limit that normalizes VaR onto the ITC 0 to 1 scale."""
+
+MAX_DIVERGENCE_PCT = 30
+"""DR-4: ITC and normalized internal risk this far apart blocks the trade."""
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 ITC_REFERENCE = (
@@ -118,13 +126,11 @@ class TestScenarioNormalFlow:
     def test_tsla_validation_passes(self):
         """Ticker validation for TSLA should not raise."""
         calc = ITCRiskCalculator(api_key="dummy")
-        # This should NOT raise
         calc.validate_ticker("TSLA", "tradfi")
 
     @patch("src.analysis.itc_risk.requests.get")
     def test_normal_flow_gets_risk_score(self, mock_get):
         """Normal flow should successfully retrieve ITC risk score for TSLA."""
-        # Mock successful API response with medium risk
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -159,12 +165,8 @@ class TestScenarioNormalFlow:
         calc = ITCRiskCalculator(api_key="test_key")
         result = calc.get_risk_score("TSLA", "tradfi", enrich_with_price=False)
 
-        # Verify interpretation
         interpretation = result.get_risk_interpretation()
         assert "MEDIUM RISK" in interpretation
-
-        # Medium risk should be approved with note per DR-2
-        # (0.3-0.7 OR elevated but manageable volatility -> APPROVE WITH NOTE)
 
 
 class TestScenarioDivergenceDetection:
@@ -191,23 +193,15 @@ class TestScenarioDivergenceDetection:
 
     def test_divergence_scenario_identified(self):
         """High ITC (0.82) + Low internal VaR (2.1%) = Divergence scenario DIV-1."""
-        # This tests the conceptual detection of divergence
-        # In the agent, this would trigger:
-        # - Document the divergence
-        # - TRUST ITC (forward-looking)
-        # - Apply enhanced monitoring per DR-3
 
-        itc_risk = 0.82  # HIGH
-        internal_var = 0.021  # 2.1% - LOW (well under 5% threshold)
+        itc_risk = 0.82
+        internal_var = 0.021
 
-        # Normalized internal risk (VaR-based): VaR / 5% max threshold
-        normalized_internal = internal_var / 0.05  # = 0.42
+        normalized_internal = internal_var / MAX_DAILY_VAR
 
-        # Divergence calculation
-        divergence_pct = abs(itc_risk - normalized_internal) * 100  # 40%
+        divergence_pct = abs(itc_risk - normalized_internal) * 100
 
-        # Significant divergence (>30%) should trigger enhanced review
-        assert divergence_pct > 30, f"Expected >30% divergence, got {divergence_pct}%"
+        assert divergence_pct > MAX_DIVERGENCE_PCT
 
     @patch("src.analysis.itc_risk.requests.get")
     def test_divergence_flow_returns_high_risk(self, mock_get):
@@ -253,7 +247,7 @@ class TestScenarioUnsupportedTicker:
 
         error_message = str(exc_info.value)
         assert "NVDA not supported" in error_message
-        assert "risk_metrics_cli" in error_message  # Points to alternative
+        assert "risk_metrics_cli" in error_message
 
     def test_pltr_is_not_supported(self):
         """PLTR must NOT be in the ITC supported tradfi list."""
@@ -273,7 +267,6 @@ class TestScenarioUnsupportedTicker:
         with pytest.raises(ValueError, match="NVDA not supported"):
             calc.get_risk_score("NVDA", "tradfi")
 
-        # API should never have been called
         mock_get.assert_not_called()
 
 
@@ -308,7 +301,7 @@ class TestScenarioHighRisk:
             current_risk_score=0.92,
             risk_bands=[
                 RiskBand(price=400.0, risk_score=0.5),
-                RiskBand(price=500.0, risk_score=0.75),  # First high risk
+                RiskBand(price=500.0, risk_score=0.75),
                 RiskBand(price=600.0, risk_score=0.9),
             ],
             timestamp=datetime.now(),
@@ -322,12 +315,9 @@ class TestScenarioHighRisk:
 
     def test_critical_risk_triggers_dr4(self):
         """Risk > 0.85 should trigger DR-4 (Critical Risk Block)."""
-        # Per decision rules in the agent:
-        # DR-4: ITC risk score > 0.85 -> BLOCK - Immediate attention required
         itc_risk = 0.92
 
-        # This should trigger DR-4
-        assert itc_risk > 0.85, "Risk 0.92 should trigger critical block (DR-4)"
+        assert itc_risk > CRITICAL_RISK_FLOOR
 
     @patch("src.analysis.itc_risk.requests.get")
     def test_high_risk_flow_returns_very_high_score(self, mock_get):
@@ -348,7 +338,7 @@ class TestScenarioHighRisk:
         result = calc.get_risk_score("TSLA", "tradfi", enrich_with_price=False)
 
         assert result.current_risk_score == 0.92
-        assert result.current_risk_score > 0.85  # Critical threshold
+        assert result.current_risk_score > CRITICAL_RISK_FLOOR
 
 
 class TestDecisionRulesCompliance:
@@ -356,41 +346,35 @@ class TestDecisionRulesCompliance:
 
     def test_dr1_low_risk_approval(self):
         """DR-1: ITC 0.0-0.3 AND internal VaR within limits -> APPROVE."""
-        itc_risk = 0.2  # LOW
-        internal_var = 0.03  # 3% - within 5% limit
+        itc_risk = 0.2
+        internal_var = 0.03
 
-        assert itc_risk < 0.3, "Should be low risk"
-        assert internal_var < 0.05, "Should be within VaR limits"
-        # Decision: APPROVE - Standard monitoring applies
+        assert itc_risk < LOW_RISK_CEILING
+        assert internal_var < MAX_DAILY_VAR
 
     def test_dr2_medium_risk_note(self):
         """DR-2: ITC 0.3-0.7 OR elevated but manageable -> APPROVE WITH NOTE."""
-        itc_risk = 0.52  # MEDIUM
+        itc_risk = 0.52
 
-        assert 0.3 <= itc_risk < 0.7, "Should be medium risk"
-        # Decision: APPROVE WITH NOTE - Enhanced monitoring recommended
+        assert LOW_RISK_CEILING <= itc_risk < HIGH_RISK_FLOOR
 
     def test_dr3_high_risk_review(self):
         """DR-3: ITC 0.7-0.85 -> ENHANCED REVIEW - Position limit review required."""
-        itc_risk = 0.78  # HIGH but not critical
+        itc_risk = 0.78
 
-        assert 0.7 <= itc_risk < 0.85, "Should be high risk"
-        # Decision: ENHANCED REVIEW - Full risk disclosure, notify user
+        assert HIGH_RISK_FLOOR <= itc_risk < CRITICAL_RISK_FLOOR
 
     def test_dr4_critical_risk_block(self):
         """DR-4: ITC > 0.85 OR divergence > 30% -> BLOCK."""
-        itc_risk = 0.92  # CRITICAL
+        itc_risk = 0.92
 
-        assert itc_risk > 0.85, "Should be critical risk"
-        # Decision: BLOCK - Immediate attention required
+        assert itc_risk > CRITICAL_RISK_FLOOR
 
     def test_dr5_unsupported_ticker(self):
         """DR-5: Unsupported ticker -> INTERNAL ONLY."""
         calc = ITCRiskCalculator(api_key="dummy")
 
-        # NVDA is not supported
         assert not calc.is_ticker_supported("NVDA", "tradfi")
-        # Decision: INTERNAL ONLY - Use internal metrics exclusively
 
 
 class TestCLIOutputFormats:
@@ -472,7 +456,6 @@ class TestEndToEndIntegration:
 
     def test_risk_interpretation_boundaries(self):
         """Verify risk interpretation at exact boundaries."""
-        # At 0.3 boundary
         low = ITCRiskResponse(
             symbol="TEST",
             universe="tradfi",
@@ -482,7 +465,6 @@ class TestEndToEndIntegration:
         )
         assert "LOW" in low.get_risk_interpretation()
 
-        # At 0.3 (medium starts)
         medium_start = ITCRiskResponse(
             symbol="TEST",
             universe="tradfi",
@@ -492,7 +474,6 @@ class TestEndToEndIntegration:
         )
         assert "MEDIUM" in medium_start.get_risk_interpretation()
 
-        # At 0.7 boundary
         high_start = ITCRiskResponse(
             symbol="TEST",
             universe="tradfi",

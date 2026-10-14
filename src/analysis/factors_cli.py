@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Factor Analysis CLI for Finance Guru™ Agents
 
@@ -28,22 +27,18 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
 from src.analysis.factors import FactorAnalyzer
 from src.models.factors_inputs import FactorDataInput
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR, calendar_days_for
 
 
 def fetch_returns(ticker: str, days: int) -> list[float]:
     """Fetch returns for a ticker."""
     try:
-        import pandas as pd  # noqa: F401
         import yfinance as yf
 
         end_date = date.today()
-        # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
-        start_date = end_date - timedelta(days=int(days * 1.5))
+        start_date = end_date - timedelta(days=calendar_days_for(days))
 
         ticker_obj = yf.Ticker(ticker)
         hist = ticker_obj.history(start=start_date, end=end_date)
@@ -78,7 +73,10 @@ Examples:
 
     parser.add_argument("ticker", type=str, help="Stock ticker to analyze")
     parser.add_argument(
-        "--days", type=int, default=252, help="Days of data (default: 252)"
+        "--days",
+        type=int,
+        default=TRADING_DAYS_PER_YEAR,
+        help="Days of data (default: 252)",
     )
     parser.add_argument(
         "--benchmark", type=str, default="SPY", help="Market benchmark (default: SPY)"
@@ -105,14 +103,12 @@ Examples:
         asset_returns = fetch_returns(args.ticker, args.days)
         market_returns = fetch_returns(args.benchmark, args.days)
 
-        # Align lengths
         min_len = min(len(asset_returns), len(market_returns))
         asset_returns = asset_returns[-min_len:]
         market_returns = market_returns[-min_len:]
 
         print(f"✅ Fetched {len(asset_returns)} returns", file=sys.stderr)
 
-        # Create factor data
         factor_data = FactorDataInput(
             ticker=args.ticker,
             asset_returns=asset_returns,

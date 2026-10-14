@@ -30,6 +30,7 @@ Created: 2026-02-18
 import pytest
 
 from src.analysis.hedge_comparison import (
+    BREAKEVEN_SEARCH_SHALLOWEST_DROP,
     SQQQ_DAILY_FEE,
     SQQQ_EXPENSE_RATIO,
     SQQQ_LEVERAGE,
@@ -39,6 +40,10 @@ from src.models.hedge_comparison_inputs import (
     ComparisonRow,
     ScenarioInput,
 )
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
+
+NEAR_FLAT_DROP = -0.001
+"""A drop close enough to zero to stand in for a flat market."""
 
 
 class TestSQQQSimulation:
@@ -60,15 +65,13 @@ class TestSQQQSimulation:
             spot_price=100.0,
             sqqq_allocation=10000.0,
             holding_days=10,
-            daily_volatility=0.0,  # No noise
+            daily_volatility=0.0,
         )
 
-        # Manually calculate expected value for constant -1% daily
         daily_r = -0.01
         multiplier = 1.0 + SQQQ_LEVERAGE * daily_r - SQQQ_DAILY_FEE
         expected = 10000.0 * (multiplier**10)
 
-        # Use the internal single-path method with constant returns
         daily_returns = [daily_r] * 10
         actual = calc._simulate_sqqq_single_path(daily_returns, 10000.0)
 
@@ -80,22 +83,23 @@ class TestSQQQSimulation:
         SQQQ charges 0.95% annually. Over 252 trading days of flat market,
         the position should lose close to that amount from daily fee erosion.
         """
+        allocation = 10000.0
         calc = HedgeComparisonCalculator(
             spot_price=100.0,
-            sqqq_allocation=10000.0,
-            holding_days=252,
+            sqqq_allocation=allocation,
+            holding_days=TRADING_DAYS_PER_YEAR,
         )
 
-        # Simulate flat market: 0% daily return for 252 days
-        daily_returns = [0.0] * 252
-        final = calc._simulate_sqqq_single_path(daily_returns, 10000.0)
+        daily_returns = [0.0] * TRADING_DAYS_PER_YEAR
+        final = calc._simulate_sqqq_single_path(daily_returns, allocation)
 
-        # Loss should be approximately expense ratio
-        actual_loss = 10000.0 - final
-        expected_loss = 10000.0 * SQQQ_EXPENSE_RATIO
+        actual_loss = allocation - final
+        compounded_fee_loss = allocation * (
+            1 - (1 - SQQQ_DAILY_FEE) ** TRADING_DAYS_PER_YEAR
+        )
 
-        # Allow $5 tolerance (compounding vs simple interest difference)
-        assert actual_loss == pytest.approx(expected_loss, abs=5.0)
+        assert actual_loss == pytest.approx(compounded_fee_loss)
+        assert actual_loss < allocation * SQQQ_EXPENSE_RATIO
 
     def test_volatile_flat_market_has_drag(self):
         """Alternating +2%/-2% daily returns create volatility drag.
@@ -109,12 +113,9 @@ class TestSQQQSimulation:
             sqqq_allocation=10000.0,
         )
 
-        # Alternating +2%, -2% for 20 days
         daily_returns = [0.02, -0.02] * 10
         final = calc._simulate_sqqq_single_path(daily_returns, 10000.0)
 
-        # QQQ is nearly flat: (1.02 * 0.98)^10 ~ 0.996
-        # But SQQQ should lose at least 2% from drag
         sqqq_return = (final - 10000.0) / 10000.0
         assert sqqq_return < -0.02, "Volatile flat market should cause > 2% drag"
         assert sqqq_return > -0.10, "Drag should not exceed 10% for 20 days"
@@ -130,7 +131,6 @@ class TestSQQQSimulation:
             sqqq_allocation=10000.0,
         )
 
-        # Single +40% daily QQQ return (extreme, tests zero floor)
         daily_returns = [0.40]
         final = calc._simulate_sqqq_single_path(daily_returns, 10000.0)
 
@@ -156,7 +156,7 @@ class TestSQQQSimulation:
 
         result = calc.simulate_sqqq(scenario)
 
-        naive = result.naive_3x_return_pct  # Should be +0.60
+        naive = result.naive_3x_return_pct
         actual = result.sqqq_return_pct
 
         assert naive == pytest.approx(0.60, abs=0.001)
@@ -231,9 +231,8 @@ class TestPutPayoff:
             put_premium=2.0,
             baseline_iv=0.20,
         )
-        # Use a very small drop to avoid ScenarioInput lt=0 constraint
         scenario = ScenarioInput(
-            market_drop_pct=-0.001,
+            market_drop_pct=NEAR_FLAT_DROP,
             holding_days=30,
             daily_volatility=0.015,
         )
@@ -299,7 +298,6 @@ class TestBreakeven:
 
         _sqqq_be, put_be = calc.find_breakevens()
 
-        # Analytical: (100 - 5 - 100) / 100 = -0.05
         assert put_be == pytest.approx(-0.05, abs=0.001)
 
     def test_sqqq_breakeven_is_small_drop(self):
@@ -318,7 +316,7 @@ class TestBreakeven:
 
         assert sqqq_be < 0, "SQQQ breakeven should be negative (need a drop)"
         assert sqqq_be > -0.05, "SQQQ breakeven should be > -5%"
-        assert sqqq_be <= -0.001, "SQQQ breakeven should be <= -0.1%"
+        assert sqqq_be <= BREAKEVEN_SEARCH_SHALLOWEST_DROP
 
 
 class TestComparisonOutput:

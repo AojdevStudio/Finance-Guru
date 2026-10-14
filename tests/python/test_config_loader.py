@@ -16,7 +16,6 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-# Add project root for imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -86,7 +85,6 @@ class TestHedgeConfig:
         with pytest.raises(ValidationError, match="target_dte_min"):
             HedgeConfig(target_dte_min=100, target_dte_max=50)
 
-        # Equal values should also fail
         with pytest.raises(ValidationError, match="target_dte_min"):
             HedgeConfig(target_dte_min=60, target_dte_max=60)
 
@@ -95,9 +93,8 @@ class TestHedgeConfig:
         with pytest.raises(ValidationError, match="min_otm_pct"):
             HedgeConfig(min_otm_pct=20.0, max_otm_pct=10.0)
 
-    def test_underlying_weights_must_be_uppercase(self):
+    def test_underlying_weight_keys_are_normalized_to_uppercase(self):
         """Lowercase ticker keys should be auto-uppercased by validator."""
-        # The validator uppercases keys, so {"qqq": 1.0} becomes {"QQQ": 1.0}
         config = HedgeConfig(underlying_weights={"qqq": 1.0})
         assert "QQQ" in config.underlying_weights
 
@@ -120,6 +117,11 @@ class TestHedgeConfig:
             HedgeConfig(monthly_budget=-100.0)
 
 
+YAML_BUDGET = 800
+CLI_BUDGET = 1000
+DEFAULT_BUDGET = HedgeConfig().monthly_budget
+
+
 class TestLoadHedgeConfig:
     """Validate load_hedge_config() YAML loading and override chain."""
 
@@ -128,7 +130,7 @@ class TestLoadHedgeConfig:
         nonexistent = tmp_path / "does-not-exist.yaml"
         config = load_hedge_config(profile_path=nonexistent)
 
-        assert config.monthly_budget == 500.0
+        assert config.monthly_budget == DEFAULT_BUDGET
         assert config.roll_window_days == 7
 
     def test_uses_profile_from_instance_data_root(
@@ -147,7 +149,6 @@ class TestLoadHedgeConfig:
         config = load_hedge_config(profile_path=path)
 
         assert config.monthly_budget == 800.0
-        # Other fields should still use defaults
         assert config.roll_window_days == 7
 
     def test_ignores_missing_hedging_section(self, tmp_path: Path):
@@ -155,7 +156,7 @@ class TestLoadHedgeConfig:
         path = _write_profile(tmp_path, hedging_data=None)
         config = load_hedge_config(profile_path=path)
 
-        assert config.monthly_budget == 500.0
+        assert config.monthly_budget == DEFAULT_BUDGET
 
     def test_handles_malformed_yaml(self, tmp_path: Path):
         """Invalid YAML content should return defaults (not crash)."""
@@ -164,29 +165,27 @@ class TestLoadHedgeConfig:
             f.write(": : : [invalid yaml\n{{{not closed")
         config = load_hedge_config(profile_path=path)
 
-        assert config.monthly_budget == 500.0
+        assert config.monthly_budget == DEFAULT_BUDGET
 
     def test_cli_overrides_take_priority(self, tmp_path: Path):
         """CLI overrides should win over YAML values."""
-        path = _write_profile(tmp_path, {"monthly_budget": 800})
+        path = _write_profile(tmp_path, {"monthly_budget": YAML_BUDGET})
         config = load_hedge_config(
             profile_path=path,
-            cli_overrides={"monthly_budget": 1000},
+            cli_overrides={"monthly_budget": CLI_BUDGET},
         )
 
-        assert config.monthly_budget == 1000.0
+        assert config.monthly_budget == CLI_BUDGET
 
     def test_none_cli_overrides_are_ignored(self, tmp_path: Path):
         """None values in cli_overrides should be filtered out, keeping YAML values."""
-        path = _write_profile(tmp_path, {"monthly_budget": 800})
+        path = _write_profile(tmp_path, {"monthly_budget": YAML_BUDGET})
         config = load_hedge_config(
             profile_path=path,
             cli_overrides={"monthly_budget": None, "roll_window_days": 14},
         )
 
-        # None override ignored -- YAML value kept
-        assert config.monthly_budget == 800.0
-        # Non-None override applied
+        assert config.monthly_budget == YAML_BUDGET
         assert config.roll_window_days == 14
 
     def test_cli_overrides_with_no_yaml(self):
@@ -228,24 +227,23 @@ class TestLoadHedgeConfig:
 
     def test_empty_cli_overrides_dict(self, tmp_path: Path):
         """Empty cli_overrides dict should not affect YAML values."""
-        path = _write_profile(tmp_path, {"monthly_budget": 750})
+        path = _write_profile(tmp_path, {"monthly_budget": YAML_BUDGET})
         config = load_hedge_config(
             profile_path=path,
             cli_overrides={},
         )
 
-        assert config.monthly_budget == 750.0
+        assert config.monthly_budget == YAML_BUDGET
 
     def test_full_override_chain(self, tmp_path: Path):
         """Full chain: default < YAML < CLI for same field."""
-        # Default monthly_budget = 500
-        # YAML monthly_budget = 800
-        # CLI monthly_budget = 1500
-        path = _write_profile(tmp_path, {"monthly_budget": 800})
+        assert len({DEFAULT_BUDGET, YAML_BUDGET, CLI_BUDGET}) == 3
+        path = _write_profile(tmp_path, {"monthly_budget": YAML_BUDGET})
+        yaml_only = load_hedge_config(profile_path=path)
         config = load_hedge_config(
             profile_path=path,
-            cli_overrides={"monthly_budget": 1500},
+            cli_overrides={"monthly_budget": CLI_BUDGET},
         )
 
-        # CLI wins
-        assert config.monthly_budget == 1500.0
+        assert yaml_only.monthly_budget == YAML_BUDGET
+        assert config.monthly_budget == CLI_BUDGET

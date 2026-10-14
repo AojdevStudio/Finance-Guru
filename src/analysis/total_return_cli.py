@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Total Return CLI for Finance Guru Agents.
 
 This module provides a command-line interface for calculating total returns
@@ -47,10 +46,6 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
 from src.analysis.total_return import (
     DividendDataError,
     TotalReturnCalculator,
@@ -61,19 +56,15 @@ from src.models.total_return_inputs import (
     DividendRecord,
     TotalReturnInput,
 )
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR, calendar_days_for
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
+PER_SHARE_BASIS = 1.0
+"""Returns are computed for one share held, so each dividend is recorded per share."""
 
 DISCLAIMER = (
     "DISCLAIMER: For educational purposes only. Not investment advice. "
     "Consult a qualified financial advisor before making investment decisions."
 )
-
-# ---------------------------------------------------------------------------
-# Data Fetching
-# ---------------------------------------------------------------------------
 
 
 def fetch_ticker_data(
@@ -97,8 +88,7 @@ def fetch_ticker_data(
     """
     import yfinance as yf
 
-    # Fetch extra days to account for weekends/holidays
-    start_date = date.today() - timedelta(days=int(days * 1.5))
+    start_date = date.today() - timedelta(days=calendar_days_for(days))
     end_date = date.today()
 
     stock = yf.Ticker(ticker)
@@ -107,7 +97,6 @@ def fetch_ticker_data(
     if hist.empty:
         raise ValueError(f"No data found for ticker {ticker}")
 
-    # Extract prices and dates (raw Close; dividends counted separately below)
     prices = hist["Close"].tolist()
     dates_list = [d.date() for d in hist.index]
 
@@ -117,14 +106,11 @@ def fetch_ticker_data(
             f"Try increasing --days parameter."
         )
 
-    # Trim to requested number of trading days
     if len(prices) > days:
         prices = prices[-days:]
         dates_list = dates_list[-days:]
-        # Re-filter hist for dividend extraction below
         hist = hist.iloc[-days:]
 
-    # Extract non-zero dividend records and ex-date close prices
     dividends: list[DividendRecord] = []
     ex_date_prices: dict[date, float] = {}
     div_mask = hist["Dividends"] > 0
@@ -134,12 +120,11 @@ def fetch_ticker_data(
             DividendRecord(
                 ex_date=ex_dt,
                 amount=float(row["Dividends"]),
-                shares_at_ex=1.0,  # Per-share basis; scaled later by portfolio shares
+                shares_at_ex=PER_SHARE_BASIS,
             )
         )
         ex_date_prices[ex_dt] = float(row["Close"])
 
-    # Optionally append Finnhub real-time price
     if realtime:
         try:
             from src.utils.market_data import get_prices
@@ -158,7 +143,6 @@ def fetch_ticker_data(
                 file=sys.stderr,
             )
 
-    # Build validated input model
     inp = TotalReturnInput(
         ticker=ticker.upper(),
         start_date=dates_list[0],
@@ -167,11 +151,6 @@ def fetch_ticker_data(
     )
 
     return inp, prices, dividends, ex_date_prices
-
-
-# ---------------------------------------------------------------------------
-# Portfolio CSV Reader
-# ---------------------------------------------------------------------------
 
 
 def load_portfolio_shares(csv_glob: str | None = None) -> dict[str, float]:
@@ -215,11 +194,6 @@ def load_portfolio_shares(csv_glob: str | None = None) -> dict[str, float]:
     return shares
 
 
-# ---------------------------------------------------------------------------
-# Human Output Formatting
-# ---------------------------------------------------------------------------
-
-
 def format_human_output(  # noqa: C901
     results: list[TotalReturnResult],
     portfolio_shares: dict[str, float],
@@ -248,7 +222,6 @@ def format_human_output(  # noqa: C901
     lines.append(f"Period: {period_label}")
     lines.append("=" * 70)
 
-    # ---- Per-ticker detail ----
     for r in results:
         lines.append("")
         lines.append("-" * 70)
@@ -258,7 +231,6 @@ def format_human_output(  # noqa: C901
         lines.append(f"  {r.ticker}{shares_label}")
         lines.append("-" * 70)
 
-        # Side-by-side: non-DRIP | DRIP
         lines.append(f"  {'Metric':<25} {'Non-DRIP':>12}  {'DRIP':>12}")
         lines.append(f"  {'-' * 51}")
 
@@ -288,7 +260,6 @@ def format_human_output(  # noqa: C901
                 f"{r.drip_final_shares:>11.4f}"
             )
 
-        # Dollar amounts if portfolio shares known
         if shares:
             lines.append("")
             lines.append(f"  Dollar Impact ({shares:.2f} shares):")
@@ -301,7 +272,6 @@ def format_human_output(  # noqa: C901
                     f"(${total_divs:.4f}/share x {shares:.2f})"
                 )
 
-        # Verdict narrative (sign-flip detection)
         if r.price_return < 0 and r.total_return > 0:
             lines.append("")
             lines.append(
@@ -310,13 +280,11 @@ def format_human_output(  # noqa: C901
                 f"distributions. Price is MISLEADING."
             )
 
-        # Data quality warnings
         if r.data_quality_warnings:
             lines.append("")
             for w in r.data_quality_warnings:
                 lines.append(f"  WARNING: {w}")
 
-        # Period breakdown (every dividend event)
         if r.period_breakdown:
             lines.append("")
             lines.append(
@@ -337,7 +305,6 @@ def format_human_output(  # noqa: C901
 
         lines.append(f"  Dividends in period: {r.dividend_count}")
 
-    # ---- League Table ----
     if len(results) > 1:
         lines.append("")
         lines.append("=" * 70)
@@ -357,7 +324,6 @@ def format_human_output(  # noqa: C901
 
         lines.append("-" * 70)
 
-    # ---- Disclaimer ----
     lines.append("")
     lines.append("=" * 70)
     lines.append(DISCLAIMER)
@@ -365,11 +331,6 @@ def format_human_output(  # noqa: C901
     lines.append("")
 
     return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# JSON Output Formatting
-# ---------------------------------------------------------------------------
 
 
 def format_json_output(
@@ -424,12 +385,10 @@ def format_json_output(
             ],
         }
 
-        # Verdict flag
         entry["verdict"] = (
             "Price misleading" if r.price_return < 0 and r.total_return > 0 else None
         )
 
-        # Dollar impact
         shares = portfolio_shares.get(r.ticker)
         if shares:
             total_divs = sum(
@@ -448,11 +407,6 @@ def format_json_output(
         "disclaimer": DISCLAIMER,
     }
     return json.dumps(wrapper, indent=2, default=str)
-
-
-# ---------------------------------------------------------------------------
-# Main CLI
-# ---------------------------------------------------------------------------
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -496,7 +450,6 @@ Key Insight:
         """,
     )
 
-    # Positional: ticker(s)
     parser.add_argument(
         "tickers",
         type=str,
@@ -504,11 +457,10 @@ Key Insight:
         help="Stock ticker symbols (e.g., SCHD JEPI VYM CLM)",
     )
 
-    # Data parameters
     parser.add_argument(
         "--days",
         type=int,
-        default=252,
+        default=TRADING_DAYS_PER_YEAR,
         help="Number of days of historical data (default: 252 = 1 year)",
     )
 
@@ -518,14 +470,12 @@ Key Insight:
         help="Use Finnhub for real-time current price (requires FINNHUB_API_KEY)",
     )
 
-    # Control flags
     parser.add_argument(
         "--force",
         action="store_true",
         help="Calculate despite data quality warnings (missing dividends, gaps)",
     )
 
-    # Output parameters
     parser.add_argument(
         "--output",
         type=str,
@@ -557,7 +507,6 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        # Load portfolio shares for dollar amounts
         portfolio_shares = load_portfolio_shares()
         if portfolio_shares:
             print(
@@ -571,7 +520,6 @@ def main() -> int:
                 file=sys.stderr,
             )
 
-        # Fetch and calculate for each ticker
         results: list[TotalReturnResult] = []
         for ticker in args.tickers:
             ticker = ticker.upper()
@@ -593,7 +541,7 @@ def main() -> int:
                     ticker=ticker,
                     start_date=inp.start_date,
                     end_date=inp.end_date,
-                    initial_shares=1.0,  # Always calculate per-share
+                    initial_shares=1.0,
                 )
                 calc = TotalReturnCalculator(
                     data=inp_with_shares,
@@ -628,13 +576,11 @@ def main() -> int:
             )
             return 1
 
-        # Format output
         if args.output == "json":
             output = format_json_output(results, portfolio_shares)
         else:
             output = format_human_output(results, portfolio_shares)
 
-        # Display or save
         if args.save_to:
             save_path = Path(args.save_to)
             save_path.parent.mkdir(parents=True, exist_ok=True)

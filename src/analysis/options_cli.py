@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Options Analytics CLI for Finance Guru™ Agents
 
@@ -29,11 +28,11 @@ import argparse
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
 from src.analysis.options import OptionsCalculator
 from src.models.options_inputs import BlackScholesInput, ImpliedVolInput
+
+NEAR_EXPIRY_YEARS = 0.1
+"""Under about five weeks to expiry, theta decay speeds up enough to warn."""
 
 
 def main():
@@ -130,8 +129,7 @@ Examples:
                 dividend_yield=args.dividend_yield,
             )
 
-            iv_result = calculator.calculate_implied_vol(iv_input)
-            iv_result.ticker = args.ticker
+            iv_result = calculator.calculate_implied_vol(iv_input, ticker=args.ticker)
 
             print(
                 f"✅ Converged in {iv_result.iterations} iterations\n", file=sys.stderr
@@ -155,8 +153,7 @@ Examples:
                 option_type=args.type,
             )
 
-            greeks = calculator.price_option(bs_input)
-            greeks.ticker = args.ticker
+            greeks = calculator.price_option(bs_input, ticker=args.ticker)
 
             print("✅ Calculation complete!\n", file=sys.stderr)
 
@@ -259,7 +256,7 @@ def format_greeks(greeks, args) -> str:
 
     output.append(f"  • {_theta_reading(greeks.theta)}")
 
-    if greeks.time_to_expiry < 0.1:
+    if greeks.time_to_expiry < NEAR_EXPIRY_YEARS:
         output.append("  ⚠️  WARNING: Option near expiry - theta decay accelerating")
 
     output.append("")

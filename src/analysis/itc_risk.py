@@ -27,13 +27,33 @@ Created: 2026-01-09
 import os
 import time
 import warnings
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
 
 import requests
 import yfinance as yf
+from yfinance.exceptions import YFException
 
 from src.models.itc_risk_inputs import ITCRiskResponse, RiskBand
+
+LOW_RISK_CEILING = 0.3
+"""ITC risk scores below this are the low-risk (green) band."""
+
+HIGH_RISK_FLOOR = 0.7
+"""ITC risk scores at or above this are the high-risk (red) band."""
+
+QUOTED_PRICE_FIELDS = ("currentPrice", "regularMarketPrice", "previousClose")
+"""yfinance ``info`` price fields, from the live quote back to the last close."""
+
+
+def first_quoted_price(info: Mapping[str, Any]) -> float | None:
+    """Return the first price yfinance reports in ``QUOTED_PRICE_FIELDS`` order."""
+    for field in QUOTED_PRICE_FIELDS:
+        price = info.get(field)
+        if price is not None:
+            return float(price)
+    return None
 
 
 class ITCRiskCalculator:
@@ -72,22 +92,15 @@ class ITCRiskCalculator:
         After 3 failed attempts, raises exception for caller to handle.
     """
 
-    # ITC Risk Models API base URL
     BASE_URL = "https://app.intothecryptoverse.com/api/v2"
 
-    # Supported assets for each universe
-    # NOTE: These are the ONLY assets ITC covers. For others, use risk_metrics_cli.py
     SUPPORTED_TRADFI: list[str] = [
-        # Stocks (4)
         "TSLA",
         "AAPL",
         "MSTR",
         "NFLX",
-        # Index (1)
         "SP500",
-        # Currency (1)
         "DXY",
-        # Commodities (7)
         "XAUUSD",
         "XAGUSD",
         "XPDUSD",
@@ -97,7 +110,6 @@ class ITCRiskCalculator:
     ]
 
     SUPPORTED_CRYPTO: list[str] = [
-        # Major coins
         "BTC",
         "ETH",
         "BNB",
@@ -124,7 +136,6 @@ class ITCRiskCalculator:
         "XMR",
         "XTZ",
         "SKY",
-        # Meta metrics
         "BTC.D",
         "TOTAL",
         "TOTAL6",
@@ -178,10 +189,8 @@ class ITCRiskCalculator:
         2. Give user immediate feedback
         3. Provide clear guidance on alternatives
         """
-        # Normalize symbol to uppercase
         symbol_upper = symbol.upper().strip()
 
-        # Select correct supported list
         if universe == "crypto":
             supported = self.SUPPORTED_CRYPTO
         else:
@@ -236,28 +245,21 @@ class ITCRiskCalculator:
 
         Price enrichment is optional and fails gracefully (returns None).
         """
-        # Normalize symbol to uppercase
         symbol_upper = symbol.upper().strip()
 
-        # Validate ticker before making API call
         self.validate_ticker(symbol_upper, universe)
 
-        # Build API request
         url = f"{self.BASE_URL}/risk-models/price-based/{universe}/{symbol_upper}"
         params = {
             "apikey": self.api_key,
             "format": "json",
         }
 
-        # Retry logic with exponential backoff
         for attempt in range(retry_count):
             try:
-                # Make API request with timeout
                 response = requests.get(url, params=params, timeout=10)
 
-                # Handle HTTP errors
                 if response.status_code == 429:
-                    # Rate limit hit - log and retry
                     warnings.warn(
                         f"ITC API rate limit hit (attempt {attempt + 1}/{retry_count}). "
                         f"Retrying in {2**attempt} seconds..."
@@ -271,10 +273,8 @@ class ITCRiskCalculator:
                             "Try again in a few minutes."
                         )
 
-                # Raise for other HTTP errors
                 response.raise_for_status()
 
-                # Parse JSON response
                 data = response.json()
                 break
 
@@ -292,7 +292,6 @@ class ITCRiskCalculator:
                     ) from e
 
             except requests.RequestException as e:
-                # Network or HTTP error
                 if attempt < retry_count - 1:
                     warnings.warn(
                         f"ITC API error (attempt {attempt + 1}/{retry_count}): {e}. "
@@ -305,16 +304,13 @@ class ITCRiskCalculator:
                         "Use risk_metrics_cli.py for internal risk analysis."
                     ) from e
 
-        # Parse risk bands from response
         risk_bands = self._parse_risk_bands(data)
 
-        # Get current risk score
         current_risk = data.get("current_risk_score", 0.0)
 
-        # Ensure current_risk is a valid float between 0 and 1
         try:
             current_risk = float(current_risk)
-            current_risk = max(0.0, min(1.0, current_risk))  # Clamp to [0, 1]
+            current_risk = max(0.0, min(1.0, current_risk))
         except (TypeError, ValueError):
             warnings.warn(
                 f"Invalid current_risk_score from ITC API: {current_risk}. "
@@ -322,12 +318,10 @@ class ITCRiskCalculator:
             )
             current_risk = 0.0
 
-        # Enrich with current price from yfinance (tradfi only)
         current_price = None
         if enrich_with_price and universe == "tradfi":
             current_price = self._fetch_current_price(symbol_upper)
 
-        # Build and return validated response
         return ITCRiskResponse(
             symbol=symbol_upper,
             universe=universe,
@@ -394,29 +388,23 @@ class ITCRiskCalculator:
                 price = entry.get("price")
                 risk_score = entry.get("risk")
 
-                # Skip invalid entries
                 if price is None or risk_score is None:
                     continue
 
-                # Convert to floats
                 price = float(price)
                 risk_score = float(risk_score)
 
-                # Validate price is positive
                 if price <= 0:
                     continue
 
-                # Clamp risk score to [0, 1]
                 risk_score = max(0.0, min(1.0, risk_score))
 
                 risk_bands.append(RiskBand(price=price, risk_score=risk_score))
 
             except (TypeError, ValueError) as e:
-                # Skip malformed entries, log warning
                 warnings.warn(f"Skipping invalid risk band entry: {entry}. Error: {e}")
                 continue
 
-        # Sort by price ascending
         risk_bands.sort(key=lambda b: b.price)
 
         return risk_bands
@@ -446,27 +434,13 @@ class ITCRiskCalculator:
         - Already in our dependencies
         """
         try:
-            ticker_obj = yf.Ticker(symbol)
-
-            # Try multiple price fields (different availability)
-            info = ticker_obj.info
-            price = info.get("currentPrice")
-            if price is None:
-                price = info.get("regularMarketPrice")
-            if price is None:
-                price = info.get("previousClose")
-
-            if price is not None:
-                return float(price)
-
-        except Exception as e:
-            # Fail gracefully - price enrichment is optional
+            return first_quoted_price(yf.Ticker(symbol).info)
+        except (YFException, OSError, TypeError, ValueError) as e:
             warnings.warn(
                 f"Could not fetch current price for {symbol} from yfinance: {e}. "
                 "Risk data will be displayed without current price context."
             )
-
-        return None
+            return None
 
     def is_ticker_supported(self, symbol: str, universe: str) -> bool:
         """Check if a ticker is supported without raising an exception.
@@ -505,7 +479,6 @@ class ITCRiskCalculator:
             return sorted(self.SUPPORTED_TRADFI)
 
 
-# Type exports for convenience
 __all__ = [
     "ITCRiskCalculator",
 ]

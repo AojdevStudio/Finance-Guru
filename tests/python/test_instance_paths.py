@@ -163,7 +163,7 @@ def _margin_ledger(monkeypatch: pytest.MonkeyPatch, process_url: str) -> Path:
             total_account_day_change=None,
             margin_buying_power=1_000.0,
             margin_buying_power_day_change=None,
-            net_debit=-10_000.0,
+            margin_debt=10_000.0,
             net_debit_day_change=None,
             margin_interest_accrued_this_month=None,
         )

@@ -17,7 +17,6 @@ from pathlib import Path
 
 import pytest
 
-# Add project root for imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -223,7 +222,7 @@ class TestBudgetSizing:
     def test_contracts_in_budget_calculation(self):
         """contracts_in_budget = floor(budget / total_cost)."""
         budget = 4407.0
-        total_cost = 520.0  # premium * 100
+        total_cost = 520.0
         contracts_in_budget = math.floor(budget / total_cost)
         assert contracts_in_budget == 8
 
@@ -263,13 +262,13 @@ class TestExpirationFiltering:
         """Only expirations within days_min to days_max should pass."""
         today = date(2026, 2, 2)
         expirations = [
-            "2026-02-21",  # 19 days - too soon
-            "2026-03-20",  # 46 days - too soon for 60-90
-            "2026-04-03",  # 60 days - min boundary
-            "2026-04-17",  # 74 days - in range
-            "2026-05-03",  # 90 days - max boundary
-            "2026-05-15",  # 102 days - too far
-            "2026-06-19",  # 137 days - too far
+            "2026-02-21",
+            "2026-03-20",
+            "2026-04-03",
+            "2026-04-17",
+            "2026-05-03",
+            "2026-05-15",
+            "2026-06-19",
         ]
 
         days_min = 60

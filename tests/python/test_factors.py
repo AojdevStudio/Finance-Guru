@@ -16,12 +16,11 @@ RUNNING TESTS:
 import numpy as np
 import pytest
 
-from src.analysis.factors import FactorAnalyzer, analyze_factors
+from src.analysis.factors import HIGH_MARKET_BETA, FactorAnalyzer, analyze_factors
 from src.models.factors_inputs import FactorDataInput
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
+FIXTURE_MARKET_BETA = 1.2
+AGGRESSIVE_MARKET_BETA = 2.0
 
 
 def _make_factor_data(
@@ -32,8 +31,9 @@ def _make_factor_data(
 
     market_returns = rng.normal(0.0004, 0.01, n).tolist()
 
-    # Asset returns correlated with market (beta ~1.2)
-    asset_returns = [m * 1.2 + rng.normal(0.0001, 0.005) for m in market_returns]
+    asset_returns = [
+        m * FIXTURE_MARKET_BETA + rng.normal(0.0001, 0.005) for m in market_returns
+    ]
 
     smb_returns = rng.normal(0.0001, 0.005, n).tolist() if include_smb else None
     hml_returns = rng.normal(-0.0001, 0.004, n).tolist() if include_hml else None
@@ -68,11 +68,6 @@ def factor_data_4f():
     return _make_factor_data(include_smb=True, include_hml=True, include_mom=True)
 
 
-# ---------------------------------------------------------------------------
-# Analyzer
-# ---------------------------------------------------------------------------
-
-
 class TestFactorAnalyzer:
     def test_capm_analysis(self, factor_data_1f):
         analyzer = FactorAnalyzer()
@@ -104,17 +99,11 @@ class TestFactorAnalyzer:
         assert result.exposure.momentum_beta is not None
 
 
-# ---------------------------------------------------------------------------
-# Exposures
-# ---------------------------------------------------------------------------
-
-
 class TestExposures:
     def test_market_beta_reasonable(self, factor_data_3f):
         analyzer = FactorAnalyzer()
         result = analyzer.analyze(factor_data_3f)
 
-        # We constructed data with beta ~1.2
         assert 0.5 < result.exposure.market_beta < 2.5
 
     def test_r_squared_between_0_and_1(self, factor_data_3f):
@@ -129,11 +118,6 @@ class TestExposures:
 
         assert isinstance(result.exposure.alpha_tstat, float)
         assert isinstance(result.exposure.market_beta_tstat, float)
-
-
-# ---------------------------------------------------------------------------
-# Attribution
-# ---------------------------------------------------------------------------
 
 
 class TestAttribution:
@@ -159,11 +143,6 @@ class TestAttribution:
         assert 0 <= result.attribution.alpha_importance <= 1
 
 
-# ---------------------------------------------------------------------------
-# Summary and recommendations
-# ---------------------------------------------------------------------------
-
-
 class TestSummaryAndRecommendations:
     def test_summary_is_string(self, factor_data_3f):
         analyzer = FactorAnalyzer()
@@ -179,12 +158,13 @@ class TestSummaryAndRecommendations:
         assert isinstance(result.recommendations, list)
 
     def test_high_beta_recommendation(self):
-        """High beta (>1.5) should generate hedging recommendation."""
+        """A beta above HIGH_MARKET_BETA generates the hedging recommendation."""
         rng = np.random.RandomState(99)
         n = 60
         market_returns = rng.normal(0.0004, 0.01, n).tolist()
-        # Very high beta asset
-        asset_returns = [m * 2.0 + rng.normal(0.0, 0.003) for m in market_returns]
+        asset_returns = [
+            m * AGGRESSIVE_MARKET_BETA + rng.normal(0.0, 0.003) for m in market_returns
+        ]
 
         data = FactorDataInput(
             ticker="TSLA",
@@ -194,16 +174,8 @@ class TestSummaryAndRecommendations:
         analyzer = FactorAnalyzer()
         result = analyzer.analyze(data)
 
-        # Should recommend hedging for high beta
-        recs_text = " ".join(result.recommendations).lower()
-        assert (
-            "beta" in recs_text or len(result.recommendations) >= 0
-        )  # At least no crash
-
-
-# ---------------------------------------------------------------------------
-# Convenience function
-# ---------------------------------------------------------------------------
+        assert result.exposure.market_beta > HIGH_MARKET_BETA
+        assert any(rec.startswith("High market beta") for rec in result.recommendations)
 
 
 class TestConvenienceFunction:
@@ -211,7 +183,9 @@ class TestConvenienceFunction:
         rng = np.random.RandomState(42)
         n = 60
         market_returns = rng.normal(0.0004, 0.01, n).tolist()
-        asset_returns = [m * 1.2 + rng.normal(0.0001, 0.005) for m in market_returns]
+        asset_returns = [
+            m * FIXTURE_MARKET_BETA + rng.normal(0.0001, 0.005) for m in market_returns
+        ]
 
         result = analyze_factors(
             ticker="TSLA",
@@ -226,7 +200,9 @@ class TestConvenienceFunction:
         rng = np.random.RandomState(42)
         n = 60
         market_returns = rng.normal(0.0004, 0.01, n).tolist()
-        asset_returns = [m * 1.2 + rng.normal(0.0001, 0.005) for m in market_returns]
+        asset_returns = [
+            m * FIXTURE_MARKET_BETA + rng.normal(0.0001, 0.005) for m in market_returns
+        ]
         smb = rng.normal(0.0001, 0.005, n).tolist()
         hml = rng.normal(-0.0001, 0.004, n).tolist()
         mom = rng.normal(0.0002, 0.006, n).tolist()

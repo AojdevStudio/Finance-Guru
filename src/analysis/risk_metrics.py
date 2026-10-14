@@ -31,6 +31,7 @@ Author: Finance Guru™ Development Team
 Created: 2025-10-13
 """
 
+import math
 import warnings
 
 import numpy as np
@@ -42,6 +43,40 @@ from src.models.risk_inputs import (
     RiskCalculationConfig,
     RiskMetricsOutput,
 )
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
+
+
+def _cvar_at_var_threshold(var: float) -> float:
+    """Return CVaR for an empty tail: no return falls at or below VaR, so report VaR."""
+    warnings.warn(
+        f"No returns found beyond VaR threshold of {var:.4f}. "
+        "This suggests insufficient data or unusual return distribution."
+    )
+    return var
+
+
+def _zero_risk_sharpe(mean_excess_return: float) -> float:
+    """Return the Sharpe limit for a series with zero volatility.
+
+    With no risk in the denominator the ratio is unbounded in the direction of
+    the excess return, and zero when there is no excess return either.
+    """
+    warnings.warn(
+        "Return volatility is zero, so the Sharpe ratio has zero risk in its "
+        "denominator. Reporting its limit."
+    )
+    if mean_excess_return == 0:
+        return 0.0
+    return math.copysign(math.inf, mean_excess_return)
+
+
+def _calmar_without_drawdown() -> float:
+    """Return the Calmar ratio for a series that never fell from a peak."""
+    warnings.warn(
+        "Maximum drawdown is zero. Calmar ratio is undefined. "
+        "This suggests the price only went up (very rare) or insufficient data."
+    )
+    return math.inf
 
 
 class RiskCalculator:
@@ -108,7 +143,6 @@ class RiskCalculator:
         The flow is: Validated Input → Calculations → Validated Output
         This prevents calculation errors from propagating to agents.
         """
-        # Convert to pandas DataFrame for easier calculations
         df = pd.DataFrame(
             {
                 "date": price_data.dates,
@@ -117,11 +151,8 @@ class RiskCalculator:
         )
         df = df.set_index("date")
 
-        # Calculate daily returns (percentage changes)
-        # FORMULA: return_t = (price_t - price_{t-1}) / price_{t-1}
         returns = df["price"].pct_change().dropna()
 
-        # Calculate each risk metric
         var_95 = self._calculate_var(returns, self.config.confidence_level)
         cvar_95 = self._calculate_cvar(returns, self.config.confidence_level)
         sharpe = self._calculate_sharpe(returns, self.config.risk_free_rate)
@@ -130,7 +161,6 @@ class RiskCalculator:
         calmar = self._calculate_calmar(returns, max_dd, self.config.risk_free_rate)
         vol = self._calculate_annual_volatility(returns)
 
-        # Calculate beta/alpha if benchmark provided
         beta_val = None
         alpha_val = None
         if benchmark_data is not None:
@@ -140,10 +170,9 @@ class RiskCalculator:
                 self.config.risk_free_rate,
             )
 
-        # Return validated output (Pydantic ensures all fields are correct types)
         return RiskMetricsOutput(
             ticker=price_data.ticker,
-            calculation_date=price_data.dates[-1],  # Most recent date
+            calculation_date=price_data.dates[-1],
             var_95=var_95,
             cvar_95=cvar_95,
             sharpe_ratio=sharpe,
@@ -184,15 +213,11 @@ class RiskCalculator:
             VaR value (negative number representing loss)
         """
         if self.config.var_method == "historical":
-            # Historical method: Use actual data percentile
-            # This makes no assumptions about distribution shape
             var = float(np.percentile(returns, (1 - confidence) * 100))
         else:
-            # Parametric method: Assume normal distribution
-            # This requires fewer data points but may be inaccurate for fat-tailed distributions
             mean_return = returns.mean()
             std_return = returns.std()
-            z_score = stats.norm.ppf(1 - confidence)  # e.g., -1.645 for 95%
+            z_score = stats.norm.ppf(1 - confidence)
             var = float(mean_return + (z_score * std_return))
 
         return var
@@ -227,15 +252,10 @@ class RiskCalculator:
             CVaR value (negative number, more extreme than VaR)
         """
         var = self._calculate_var(returns, confidence)
-        # Get all returns worse than (more negative than) VaR
         tail_returns = returns[returns <= var]
 
         if len(tail_returns) == 0:
-            warnings.warn(
-                f"No returns found beyond VaR threshold of {var:.4f}. "
-                "This suggests insufficient data or unusual return distribution."
-            )
-            return var  # Return VaR as fallback
+            return _cvar_at_var_threshold(var)
 
         return float(tail_returns.mean())
 
@@ -271,19 +291,16 @@ class RiskCalculator:
         Returns:
             Annualized Sharpe Ratio
         """
-        # Convert annual risk-free rate to daily
-        daily_rf = risk_free_rate / 252
+        daily_rf = risk_free_rate / TRADING_DAYS_PER_YEAR
 
-        # Calculate excess returns (returns above risk-free rate)
         excess_returns = returns - daily_rf
+        volatility = returns.std()
+        if volatility == 0:
+            return _zero_risk_sharpe(excess_returns.mean())
 
-        # Calculate Sharpe Ratio
-        sharpe = excess_returns.mean() / returns.std()
+        sharpe = excess_returns.mean() / volatility
 
-        # Annualize by multiplying by sqrt(252)
-        # WHY sqrt(252)? Because variance scales linearly with time,
-        # but std dev (what we divide by) scales with sqrt(time)
-        annualized_sharpe = sharpe * np.sqrt(252)
+        annualized_sharpe = sharpe * np.sqrt(TRADING_DAYS_PER_YEAR)
 
         return float(annualized_sharpe)
 
@@ -320,13 +337,10 @@ class RiskCalculator:
         Returns:
             Annualized Sortino Ratio
         """
-        # Convert annual risk-free rate to daily
-        daily_rf = risk_free_rate / 252
+        daily_rf = risk_free_rate / TRADING_DAYS_PER_YEAR
 
-        # Calculate excess returns
         excess_returns = returns - daily_rf
 
-        # Calculate downside returns (only negative returns)
         downside_returns = returns[returns < 0]
 
         if len(downside_returns) == 0:
@@ -334,17 +348,13 @@ class RiskCalculator:
                 "No negative returns found. Sortino ratio may be unreliable. "
                 "This suggests either insufficient data or an unusual return distribution."
             )
-            # Fallback to Sharpe if no downside
             return self._calculate_sharpe(returns, risk_free_rate)
 
-        # Calculate downside deviation
         downside_std = downside_returns.std()
 
-        # Calculate Sortino Ratio
         sortino = excess_returns.mean() / downside_std
 
-        # Annualize
-        annualized_sortino = sortino * np.sqrt(252)
+        annualized_sortino = sortino * np.sqrt(TRADING_DAYS_PER_YEAR)
 
         return float(annualized_sortino)
 
@@ -382,14 +392,10 @@ class RiskCalculator:
         Returns:
             Maximum drawdown (negative value or zero)
         """
-        # Calculate running maximum (the peak at each point in time)
         running_max = prices.expanding().max()
 
-        # Calculate drawdown at each point
-        # FORMULA: (current_price - peak_price) / peak_price
         drawdowns = (prices - running_max) / running_max
 
-        # Maximum drawdown is the most negative value
         max_dd = float(drawdowns.min())
 
         return max_dd
@@ -432,20 +438,11 @@ class RiskCalculator:
         Returns:
             Calmar Ratio
         """
-        # Calculate annualized return
-        # FORMULA: mean_daily_return * 252
-        annualized_return = returns.mean() * 252
+        annualized_return = returns.mean() * TRADING_DAYS_PER_YEAR
 
-        # Handle edge case: no drawdown
         if max_drawdown == 0:
-            warnings.warn(
-                "Maximum drawdown is zero. Calmar ratio is undefined. "
-                "This suggests the price only went up (very rare) or insufficient data."
-            )
-            return float("inf")  # Infinite Calmar if no drawdown
+            return _calmar_without_drawdown()
 
-        # Calculate Calmar Ratio
-        # Use absolute value of max_drawdown since it's negative
         calmar = annualized_return / abs(max_drawdown)
 
         return float(calmar)
@@ -488,11 +485,9 @@ class RiskCalculator:
         Returns:
             Annualized volatility (always positive)
         """
-        # Calculate daily standard deviation
         daily_std = returns.std()
 
-        # Annualize by multiplying by sqrt(252)
-        annual_vol = daily_std * np.sqrt(252)
+        annual_vol = daily_std * np.sqrt(TRADING_DAYS_PER_YEAR)
 
         return float(annual_vol)
 
@@ -547,7 +542,6 @@ class RiskCalculator:
         Returns:
             Tuple of (beta, alpha)
         """
-        # Convert benchmark data to returns
         benchmark_df = pd.DataFrame(
             {
                 "date": benchmark_data.dates,
@@ -557,7 +551,6 @@ class RiskCalculator:
         benchmark_df = benchmark_df.set_index("date")
         benchmark_returns = benchmark_df["price"].pct_change().dropna()
 
-        # Align dates (only use overlapping dates)
         aligned_data = pd.DataFrame(
             {
                 "asset": returns,
@@ -575,30 +568,25 @@ class RiskCalculator:
         asset_returns = aligned_data["asset"]
         bench_returns = aligned_data["benchmark"]
 
-        # Calculate Beta using covariance method
-        # FORMULA: Beta = Cov(asset, benchmark) / Var(benchmark)
         covariance = asset_returns.cov(bench_returns)
         benchmark_variance = bench_returns.var()
 
         beta = float(covariance / benchmark_variance)
 
-        # Calculate Alpha using CAPM
-        # FORMULA: Alpha = Return - (Rf + Beta * (Benchmark_Return - Rf))
-        daily_rf = risk_free_rate / 252
+        daily_rf = risk_free_rate / TRADING_DAYS_PER_YEAR
 
-        asset_excess_return = (asset_returns.mean() - daily_rf) * 252  # Annualized
-        benchmark_excess_return = (bench_returns.mean() - daily_rf) * 252  # Annualized
+        asset_excess_return = (asset_returns.mean() - daily_rf) * TRADING_DAYS_PER_YEAR
+        benchmark_excess_return = (
+            bench_returns.mean() - daily_rf
+        ) * TRADING_DAYS_PER_YEAR
 
-        # CAPM expected return
         expected_return = risk_free_rate + beta * benchmark_excess_return
 
-        # Alpha is the difference
         alpha = float(asset_excess_return - expected_return + risk_free_rate)
 
         return (beta, alpha)
 
 
-# Convenience function for quick calculations
 def calculate_risk_metrics(
     ticker: str,
     prices: list[float],
@@ -638,17 +626,14 @@ def calculate_risk_metrics(
     """
     from datetime import date as date_type
 
-    # Convert string dates to date objects
     date_objects = [date_type.fromisoformat(d) for d in dates]
 
-    # Create input model
     price_data = PriceDataInput(
         ticker=ticker,
         prices=prices,
         dates=date_objects,
     )
 
-    # Create benchmark model if provided
     benchmark_data = None
     if benchmark_ticker and benchmark_prices and benchmark_dates:
         benchmark_date_objects = [date_type.fromisoformat(d) for d in benchmark_dates]
@@ -658,15 +643,12 @@ def calculate_risk_metrics(
             dates=benchmark_date_objects,
         )
 
-    # Create config
     config = RiskCalculationConfig(**config_kwargs)
 
-    # Calculate
     calculator = RiskCalculator(config)
     return calculator.calculate_risk_metrics(price_data, benchmark_data)
 
 
-# Type exports
 __all__ = [
     "RiskCalculator",
     "calculate_risk_metrics",

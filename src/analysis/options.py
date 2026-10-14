@@ -45,6 +45,21 @@ from src.models.options_inputs import (
     PutCallParityInput,
 )
 
+OPTION_CONTRACT_MULTIPLIER = 100
+"""Shares of the underlying covered by one listed equity option contract."""
+
+PERCENT_POINTS_PER_UNIT = 100
+"""Vega and rho are quoted per percentage point; sigma and r are unit decimals."""
+
+IV_PRICE_TOLERANCE_DOLLARS = 0.0001
+"""Implied-vol solve stops when the model price is this close to market, per share."""
+
+PUT_CALL_PARITY_ARBITRAGE_DOLLARS = 0.10
+"""A parity gap above this, per share, survives transaction costs and flags arbitrage."""
+
+UNNAMED_UNDERLYING = "UNKNOWN"
+"""Ticker reported when a caller prices an option without naming its underlying."""
+
 
 class OptionsCalculator:
     """Black-Scholes options pricing and Greeks calculator.
@@ -73,11 +88,14 @@ class OptionsCalculator:
         print(f"Delta: {greeks.delta:.3f}")
     """
 
-    def price_option(self, params: BlackScholesInput) -> GreeksOutput:
+    def price_option(
+        self, params: BlackScholesInput, *, ticker: str = UNNAMED_UNDERLYING
+    ) -> GreeksOutput:
         """Calculate option price and all Greeks.
 
         Args:
             params: Validated Black-Scholes parameters
+            ticker: Underlying ticker to report on the result
 
         Returns:
             GreeksOutput: Price and all sensitivities
@@ -90,7 +108,6 @@ class OptionsCalculator:
         4. Intrinsic and time value
         5. Moneyness classification
         """
-        # Extract parameters
         S = params.spot_price
         K = params.strike
         T = params.time_to_expiry
@@ -99,27 +116,22 @@ class OptionsCalculator:
         q = params.dividend_yield
         is_call = params.option_type == "call"
 
-        # Calculate d1 and d2
         d1, d2 = self._calculate_d1_d2(S, K, T, sigma, r, q)
 
-        # Calculate option price
         if is_call:
             price = self._call_price(S, K, T, r, q, d1, d2)
         else:
             price = self._put_price(S, K, T, r, q, d1, d2)
 
-        # Calculate Greeks
         delta = self._calculate_delta(is_call, d1, T, q)
         gamma = self._calculate_gamma(S, d1, T, sigma, q)
         theta = self._calculate_theta(is_call, S, K, T, r, q, sigma, d1, d2)
         vega = self._calculate_vega(S, T, d1, q)
         rho = self._calculate_rho(is_call, K, T, r, d2)
 
-        # Calculate intrinsic and time value
         intrinsic = max(S - K, 0.0) if is_call else max(K - S, 0.0)
         time_value = price - intrinsic
 
-        # Determine moneyness
         if is_call:
             if S > K * 1.02:
                 moneyness = "ITM"
@@ -136,7 +148,7 @@ class OptionsCalculator:
                 moneyness = "ATM"
 
         return GreeksOutput(
-            ticker="UNKNOWN",  # Will be set by caller
+            ticker=ticker,
             option_type=params.option_type,
             calculation_date=date.today(),
             option_price=float(price),
@@ -147,14 +159,16 @@ class OptionsCalculator:
             theta=float(theta),
             vega=float(vega),
             rho=float(rho),
-            moneyness=moneyness,  # type: ignore
+            moneyness=moneyness,
             spot_price=S,
             strike=K,
             time_to_expiry=T,
             volatility=sigma,
         )
 
-    def calculate_implied_vol(self, params: ImpliedVolInput) -> ImpliedVolOutput:
+    def calculate_implied_vol(
+        self, params: ImpliedVolInput, *, ticker: str = UNNAMED_UNDERLYING
+    ) -> ImpliedVolOutput:
         """Calculate implied volatility using Newton-Raphson method.
 
         WHAT: Reverse-engineer volatility from market price
@@ -179,13 +193,10 @@ class OptionsCalculator:
         r = params.risk_free_rate
         q = params.dividend_yield
 
-        # Initial guess: 30% vol
         vol = 0.30
-        tolerance = 0.0001  # $0.01 price tolerance
         max_iterations = 100
 
         for iteration in range(max_iterations):
-            # Create BS input with current vol guess
             bs_input = BlackScholesInput(
                 spot_price=S,
                 strike=K,
@@ -196,16 +207,14 @@ class OptionsCalculator:
                 option_type=params.option_type,
             )
 
-            # Calculate price and vega at current vol
             greeks = self.price_option(bs_input)
             calc_price = greeks.option_price
             vega = greeks.vega
 
-            # Check convergence
             price_diff = target_price - calc_price
-            if abs(price_diff) < tolerance:
+            if abs(price_diff) < IV_PRICE_TOLERANCE_DOLLARS:
                 return ImpliedVolOutput(
-                    ticker="UNKNOWN",
+                    ticker=ticker,
                     implied_volatility=float(vol),
                     iterations=iteration + 1,
                     converged=True,
@@ -214,19 +223,14 @@ class OptionsCalculator:
                     pricing_error=abs(price_diff),
                 )
 
-            # Newton-Raphson update
-            # New vol = old vol + (target - calculated) / vega
-            # Vega is in dollar terms per 1% vol change, so divide by 100
             if vega > 0:
-                vol = vol + price_diff / (vega * 100)
+                price_change_per_unit_vol = vega * PERCENT_POINTS_PER_UNIT
+                vol = vol + price_diff / price_change_per_unit_vol
             else:
-                # Vega should never be zero, but handle edge case
                 break
 
-            # Ensure vol stays within bounds
             vol = max(0.01, min(vol, 5.0))
 
-        # Failed to converge
         bs_input = BlackScholesInput(
             spot_price=S,
             strike=K,
@@ -239,7 +243,7 @@ class OptionsCalculator:
         greeks = self.price_option(bs_input)
 
         return ImpliedVolOutput(
-            ticker="UNKNOWN",
+            ticker=ticker,
             implied_volatility=float(vol),
             iterations=max_iterations,
             converged=False,
@@ -273,16 +277,13 @@ class OptionsCalculator:
         r = params.risk_free_rate
         q = params.dividend_yield
 
-        # Left-hand side: C - P
         lhs = C - P
 
-        # Right-hand side: S * e^(-qT) - K * e^(-rT)
         rhs = S * exp(-q * T) - K * exp(-r * T)
 
         difference = abs(lhs - rhs)
 
-        # Arbitrage if difference > $0.10 (accounting for transaction costs)
-        arbitrage_exists = difference > 0.10
+        arbitrage_exists = difference > PUT_CALL_PARITY_ARBITRAGE_DOLLARS
 
         return {
             "lhs": float(lhs),
@@ -295,8 +296,6 @@ class OptionsCalculator:
                 f"difference = ${difference:.2f}"
             ),
         }
-
-    # Private helper methods
 
     def _calculate_d1_d2(
         self, S: float, K: float, T: float, sigma: float, r: float, q: float
@@ -320,7 +319,7 @@ class OptionsCalculator:
             C = S * e^(-qT) * N(d1) - K * e^(-rT) * N(d2)
         """
         call = S * exp(-q * T) * norm.cdf(d1) - K * exp(-r * T) * norm.cdf(d2)
-        return max(call, 0.0)  # Price can't be negative
+        return max(call, 0.0)
 
     def _put_price(
         self, S: float, K: float, T: float, r: float, q: float, d1: float, d2: float
@@ -400,7 +399,6 @@ class OptionsCalculator:
             term3 = -q * S * exp(-q * T) * norm.cdf(-d1)
             theta = term1 + term2 + term3
 
-        # Convert to per-day theta (divide by 365)
         return theta / 365
 
     def _calculate_vega(self, S: float, T: float, d1: float, q: float) -> float:
@@ -417,8 +415,7 @@ class OptionsCalculator:
         Short-dated and far OTM/ITM options have low vega.
         """
         vega = S * exp(-q * T) * sqrt(T) * norm.pdf(d1)
-        # Divide by 100 to get per-1% change
-        return vega / 100
+        return vega / PERCENT_POINTS_PER_UNIT
 
     def _calculate_rho(
         self, is_call: bool, K: float, T: float, r: float, d2: float
@@ -437,11 +434,9 @@ class OptionsCalculator:
         else:
             rho = -K * T * exp(-r * T) * norm.cdf(-d2)
 
-        # Divide by 100 to get per-1% change
-        return rho / 100
+        return rho / PERCENT_POINTS_PER_UNIT
 
 
-# Convenience functions
 def price_option(
     spot: float,
     strike: float,
@@ -472,14 +467,13 @@ def price_option(
         volatility=volatility,
         risk_free_rate=risk_free_rate,
         dividend_yield=dividend_yield,
-        option_type=option_type,  # type: ignore
+        option_type=option_type,
     )
 
     calculator = OptionsCalculator()
     return calculator.price_option(bs_input)
 
 
-# Type exports
 __all__ = [
     "OptionsCalculator",
     "price_option",

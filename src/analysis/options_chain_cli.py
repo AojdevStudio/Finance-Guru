@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Options Chain Scanner CLI for Finance Guru Agents
 
@@ -49,13 +48,10 @@ import sys
 from datetime import date
 from pathlib import Path
 
-# Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
-# Constants
-DEFAULT_RISK_FREE_RATE = 0.045  # 4.5% risk-free rate for Black-Scholes
-MAX_TICKER_LENGTH = 5  # Maximum length for stock ticker symbols
+DEFAULT_RISK_FREE_RATE = 0.045
+MAX_TICKER_LENGTH = 5
 
 import yfinance as yf
 
@@ -216,7 +212,6 @@ def scan_chain(  # noqa: C901
     """
     today = date.today()
 
-    # Step 1: Get spot price
     print(f"Fetching spot price for {ticker}...", file=sys.stderr)
     try:
         price_data = get_prices(ticker)
@@ -226,7 +221,6 @@ def scan_chain(  # noqa: C901
         print(f"Error getting spot price: {e}", file=sys.stderr)
         raise ValueError(f"Could not get spot price for {ticker}: {e}") from e
 
-    # Step 2: Get available expirations
     print("Fetching available expirations...", file=sys.stderr)
     all_expirations = list_expiries(ticker)
     if not all_expirations:
@@ -234,7 +228,6 @@ def scan_chain(  # noqa: C901
 
     print(f"Found {len(all_expirations)} expiration dates", file=sys.stderr)
 
-    # Step 3: Filter expirations by days range
     matching_expirations = filter_expirations(
         all_expirations, days_min, days_max, today
     )
@@ -263,7 +256,6 @@ def scan_chain(  # noqa: C901
             total_found=0,
         )
 
-    # Step 4: Scan each matching expiration
     contracts: list[OptionContractData] = []
 
     for exp_str in matching_expirations:
@@ -275,14 +267,12 @@ def scan_chain(  # noqa: C901
             t = yf.Ticker(ticker)
             chain = t.option_chain(exp_str)
 
-            # Select calls or puts
             df = chain.puts if option_type == "put" else chain.calls
 
             if df.empty:
                 print(f"  No {option_type}s found for {exp_str}", file=sys.stderr)
                 continue
 
-            # Step 5: Filter by OTM%
             for _, row in df.iterrows():
                 strike = float(row.get("strike", 0))
                 if strike <= 0:
@@ -290,11 +280,9 @@ def scan_chain(  # noqa: C901
 
                 otm_pct = calculate_otm_pct(spot_price, strike, option_type)
 
-                # Only keep contracts in OTM range
                 if otm_pct < otm_min or otm_pct > otm_max:
                     continue
 
-                # Extract market data (handle NaN values from yfinance)
                 contract_symbol = str(row.get("contractSymbol", ""))
                 last_price = float(row.get("lastPrice", 0.0) or 0.0)
                 bid = float(row.get("bid", 0.0) or 0.0)
@@ -321,7 +309,6 @@ def scan_chain(  # noqa: C901
                 except (ValueError, TypeError):
                     open_interest = 0
 
-                # Sanitize any NaN floats
                 if math.isnan(last_price):
                     last_price = 0.0
                 if math.isnan(bid):
@@ -331,19 +318,15 @@ def scan_chain(  # noqa: C901
                 if math.isnan(iv):
                     iv = 0.0
 
-                # Calculate mid price
                 mid = calculate_mid_price(bid, ask, last_price)
 
-                # Calculate total cost per contract
                 price_for_cost = last_price if last_price > 0 else mid
                 total_cost = price_for_cost * 100
 
-                # Calculate contracts in budget
                 contracts_in_budget = None
                 if budget is not None and total_cost > 0:
                     contracts_in_budget = math.floor(budget / total_cost)
 
-                # Step 6: Calculate Greeks (skip if IV is bad)
                 delta = None
                 gamma = None
                 theta = None
@@ -370,7 +353,6 @@ def scan_chain(  # noqa: C901
                             file=sys.stderr,
                         )
 
-                # Build contract data
                 contract = OptionContractData(
                     contract_symbol=contract_symbol,
                     expiration=exp_str,
@@ -397,7 +379,6 @@ def scan_chain(  # noqa: C901
             print(f"  Error scanning {exp_str}: {e}", file=sys.stderr)
             continue
 
-    # Step 7: Sort by expiration then strike
     contracts.sort(key=lambda c: (c.expiration, c.strike))
 
     print(f"Found {len(contracts)} matching contracts", file=sys.stderr)
@@ -459,7 +440,6 @@ def format_output_human(result: OptionsChainOutput) -> str:
         if len(result.expirations_available) > 10:
             output.append(f"  ... and {len(result.expirations_available) - 10} more")
     else:
-        # Table header
         header = (
             f"{'Expiry':<12} {'Strike':>8} {'OTM%':>6} "
             f"{'Bid':>7} {'Ask':>7} {'Mid':>7} {'Last':>7} "
@@ -549,12 +529,10 @@ Examples:
         """,
     )
 
-    # Required arguments
     parser.add_argument(
         "ticker", type=str, help="Stock ticker symbol (e.g., QQQ, SPY, TSLA)"
     )
 
-    # Option type
     parser.add_argument(
         "--type",
         type=str,
@@ -564,7 +542,6 @@ Examples:
         help="Option type to scan (default: put)",
     )
 
-    # OTM filters
     parser.add_argument(
         "--otm-min",
         type=float,
@@ -579,7 +556,6 @@ Examples:
         help="Maximum OTM percentage (default: 20.0)",
     )
 
-    # Days to expiry filters
     parser.add_argument(
         "--days-min",
         type=int,
@@ -594,7 +570,6 @@ Examples:
         help="Maximum days to expiration (default: 90)",
     )
 
-    # Budget sizing
     parser.add_argument(
         "--budget",
         type=float,
@@ -609,14 +584,12 @@ Examples:
         help="Target number of contracts (default: 1)",
     )
 
-    # List expiries mode
     parser.add_argument(
         "--list-expiries",
         action="store_true",
         help="Just list available expiration dates and exit",
     )
 
-    # Output parameters
     parser.add_argument(
         "--output",
         type=str,
@@ -629,10 +602,8 @@ Examples:
         "--save-to", type=str, default=None, help="Save output to file (optional)"
     )
 
-    # Parse arguments
     args = parser.parse_args()
 
-    # Validate ticker format
     ticker = args.ticker.strip().upper()
     if not ticker.isalpha() or len(ticker) > MAX_TICKER_LENGTH or len(ticker) == 0:
         print(
@@ -643,7 +614,6 @@ Examples:
         return 1
 
     try:
-        # Handle --list-expiries mode
         if args.list_expiries:
             print(
                 f"Fetching expiration dates for {args.ticker}...",
@@ -675,7 +645,6 @@ Examples:
             print("DISCLAIMER: For educational purposes only. Not investment advice.")
             return 0
 
-        # Validate numeric parameter bounds
         if args.otm_min < 0 or args.otm_max < 0:
             print(
                 "ERROR: OTM percentages must be non-negative",
@@ -704,7 +673,6 @@ Examples:
             )
             return 1
 
-        # Validate parameter combinations
         if args.otm_min >= args.otm_max:
             print(
                 "ERROR: --otm-min must be less than --otm-max",
@@ -719,7 +687,6 @@ Examples:
             )
             return 1
 
-        # Run the scan
         print(
             f"Scanning {args.ticker} {args.option_type}s...",
             file=sys.stderr,
@@ -735,13 +702,11 @@ Examples:
             target_contracts=args.contracts,
         )
 
-        # Format output
         if args.output == "json":
             output_str = format_output_json(result)
         else:
             output_str = format_output_human(result)
 
-        # Display or save
         if args.save_to:
             save_path = Path(args.save_to).resolve()
             project_dir = project_root.resolve()

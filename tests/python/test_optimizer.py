@@ -21,11 +21,11 @@ from src.models.portfolio_inputs import (
     OptimizationConfig,
     PortfolioDataInput,
 )
-from src.strategies.optimizer import PortfolioOptimizer, optimize_portfolio
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
+from src.strategies.optimizer import (
+    PortfolioOptimizer,
+    TargetReturnInfeasibleError,
+    optimize_portfolio,
+)
 
 
 def _make_portfolio_data(n_days=60, tickers=None, seed=42):
@@ -37,7 +37,6 @@ def _make_portfolio_data(n_days=60, tickers=None, seed=42):
 
     prices = {}
     for i, t in enumerate(tickers):
-        # Generate realistic price series (random walk with drift)
         daily_returns = rng.normal(0.0005 * (i + 1), 0.02, n_days)
         price_series = [100.0]
         for r in daily_returns[1:]:
@@ -75,20 +74,10 @@ def default_config():
     return OptimizationConfig(method="max_sharpe")
 
 
-# ---------------------------------------------------------------------------
-# Optimizer initialization
-# ---------------------------------------------------------------------------
-
-
 class TestOptimizerInit:
     def test_creates_with_config(self, default_config):
         opt = PortfolioOptimizer(default_config)
         assert opt.config == default_config
-
-
-# ---------------------------------------------------------------------------
-# Mean-Variance optimization
-# ---------------------------------------------------------------------------
 
 
 class TestMeanVariance:
@@ -108,11 +97,6 @@ class TestMeanVariance:
 
         assert result.method == "mean_variance"
         assert abs(sum(result.optimal_weights.values()) - 1.0) < 0.01
-
-
-# ---------------------------------------------------------------------------
-# Risk Parity optimization
-# ---------------------------------------------------------------------------
 
 
 class TestRiskParity:
@@ -155,11 +139,6 @@ class TestRiskParity:
             PortfolioOptimizer(OptimizationConfig(method="risk_parity")).optimize(data)
 
 
-# ---------------------------------------------------------------------------
-# Min Variance optimization
-# ---------------------------------------------------------------------------
-
-
 class TestMinVariance:
     def test_min_variance_produces_valid_weights(self, portfolio_data):
         config = OptimizationConfig(method="min_variance")
@@ -174,13 +153,7 @@ class TestMinVariance:
         opt = PortfolioOptimizer(config)
         result = opt.optimize(portfolio_data)
 
-        # Min variance should have low volatility
         assert result.expected_volatility >= 0
-
-
-# ---------------------------------------------------------------------------
-# Max Sharpe optimization
-# ---------------------------------------------------------------------------
 
 
 class TestMaxSharpe:
@@ -197,13 +170,7 @@ class TestMaxSharpe:
         opt = PortfolioOptimizer(config)
         result = opt.optimize(portfolio_data)
 
-        # Sharpe ratio should be a real number
         assert isinstance(result.sharpe_ratio, float)
-
-
-# ---------------------------------------------------------------------------
-# Black-Litterman optimization
-# ---------------------------------------------------------------------------
 
 
 class TestBlackLitterman:
@@ -219,7 +186,6 @@ class TestBlackLitterman:
         assert abs(sum(result.optimal_weights.values()) - 1.0) < 0.01
 
     def test_bl_without_views_raises(self, portfolio_data):
-        # OptimizationConfig should raise if BL without views
         with pytest.raises(ValueError, match="views"):
             OptimizationConfig(method="black_litterman", views=None)
 
@@ -253,11 +219,6 @@ class TestBlackLitterman:
         assert result.optimal_weights["LOW"] == pytest.approx(0.5, abs=0.03)
 
 
-# ---------------------------------------------------------------------------
-# Routing
-# ---------------------------------------------------------------------------
-
-
 class TestOptimizeRouting:
     def test_unknown_method_raises(self, portfolio_data):
         config = OptimizationConfig.__new__(OptimizationConfig)
@@ -271,11 +232,6 @@ class TestOptimizeRouting:
         opt = PortfolioOptimizer(config)
         with pytest.raises(ValueError, match="Unknown optimization method"):
             opt.optimize(portfolio_data)
-
-
-# ---------------------------------------------------------------------------
-# Weight validation
-# ---------------------------------------------------------------------------
 
 
 class TestWeightValidation:
@@ -300,11 +256,6 @@ class TestWeightValidation:
             assert w <= 0.5 + 1e-4
 
 
-# ---------------------------------------------------------------------------
-# Portfolio metrics
-# ---------------------------------------------------------------------------
-
-
 class TestPortfolioMetrics:
     def test_output_has_required_fields(self, portfolio_data, default_config):
         opt = PortfolioOptimizer(default_config)
@@ -323,11 +274,6 @@ class TestPortfolioMetrics:
 
         assert set(result.tickers) == set(portfolio_data.tickers)
         assert set(result.optimal_weights.keys()) == set(portfolio_data.tickers)
-
-
-# ---------------------------------------------------------------------------
-# Expected returns calculation
-# ---------------------------------------------------------------------------
 
 
 class TestExpectedReturns:
@@ -353,13 +299,7 @@ class TestExpectedReturns:
         returns = opt._calculate_expected_returns(portfolio_data)
 
         assert len(returns) == len(portfolio_data.tickers)
-        # Returns should be finite
         assert all(np.isfinite(r) for r in returns)
-
-
-# ---------------------------------------------------------------------------
-# Covariance matrix
-# ---------------------------------------------------------------------------
 
 
 class TestCovarianceMatrix:
@@ -376,13 +316,7 @@ class TestCovarianceMatrix:
         opt = PortfolioOptimizer(config)
         cov = opt._calculate_covariance_matrix(portfolio_data)
 
-        # Diagonal (variances) should be positive
         assert all(cov[i, i] > 0 for i in range(cov.shape[0]))
-
-
-# ---------------------------------------------------------------------------
-# Efficient frontier
-# ---------------------------------------------------------------------------
 
 
 class TestEfficientFrontier:
@@ -396,10 +330,33 @@ class TestEfficientFrontier:
         assert len(frontier.sharpe_ratios) == len(frontier.returns)
         assert frontier.optimal_portfolio_index >= 0
 
+    def test_infeasible_targets_are_skipped(self, portfolio_data, monkeypatch):
+        opt = PortfolioOptimizer(OptimizationConfig())
+        solve = opt._optimize_for_target_return
+        calls = {"n": 0}
 
-# ---------------------------------------------------------------------------
-# Convenience function
-# ---------------------------------------------------------------------------
+        def first_target_infeasible(*args, **kwargs):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise TargetReturnInfeasibleError("no portfolio reaches it")
+            return solve(*args, **kwargs)
+
+        monkeypatch.setattr(opt, "_optimize_for_target_return", first_target_infeasible)
+        n_points = 15
+        frontier = opt.generate_efficient_frontier(portfolio_data, n_points=n_points)
+
+        assert len(frontier.returns) == n_points - 1
+
+    def test_other_solver_errors_propagate(self, portfolio_data, monkeypatch):
+        opt = PortfolioOptimizer(OptimizationConfig())
+
+        def broken(*args, **kwargs):
+            raise np.linalg.LinAlgError("singular matrix")
+
+        monkeypatch.setattr(opt, "_optimize_for_target_return", broken)
+
+        with pytest.raises(np.linalg.LinAlgError):
+            opt.generate_efficient_frontier(portfolio_data, n_points=5)
 
 
 class TestConvenienceFunction:
