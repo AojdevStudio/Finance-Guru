@@ -213,7 +213,8 @@ def _build_layer3_specs(
 
     itc_command = [
         sys.executable,
-        "src/analysis/itc_risk_cli.py",
+        "-m",
+        "src.analysis.itc_risk_cli",
         primary_ticker,
         "--universe",
         universe,
@@ -223,7 +224,8 @@ def _build_layer3_specs(
     ]
     risk_command = [
         sys.executable,
-        "src/analysis/risk_metrics_cli.py",
+        "-m",
+        "src.analysis.risk_metrics_cli",
         primary_ticker,
         "--days",
         str(days),
@@ -238,7 +240,8 @@ def _build_layer3_specs(
         "risk": risk_command,
         "mom": [
             sys.executable,
-            "src/utils/momentum_cli.py",
+            "-m",
+            "src.utils.momentum_cli",
             primary_ticker,
             "--days",
             str(days),
@@ -247,7 +250,8 @@ def _build_layer3_specs(
         ],
         "vol": [
             sys.executable,
-            "src/utils/volatility_cli.py",
+            "-m",
+            "src.utils.volatility_cli",
             primary_ticker,
             "--days",
             str(days),
@@ -256,7 +260,8 @@ def _build_layer3_specs(
         ],
         "opt": [
             sys.executable,
-            "src/strategies/optimizer_cli.py",
+            "-m",
+            "src.strategies.optimizer_cli",
             *tickers,
             "--days",
             str(optimizer_days),
@@ -534,7 +539,7 @@ def run_layer3_smoke_cli(project_root: Path) -> CliEnvelope:
         if os.getenv("ITC_API_KEY")
         else ["--list-supported", "tradfi"]
     )
-    run_command = [sys.executable, "src/analysis/itc_risk_cli.py", *command_args]
+    run_command = [sys.executable, "-m", "src.analysis.itc_risk_cli", *command_args]
     logged_command = ["python", *run_command[1:]]
     try:
         result = subprocess.run(

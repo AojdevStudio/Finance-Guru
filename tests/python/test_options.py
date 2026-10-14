@@ -409,3 +409,23 @@ def test_positive_theta_reads_as_a_daily_gain() -> None:
 
     assert "Losing" not in text
     assert f"Gaining ${greeks.theta:.2f} per day" in text
+
+
+def test_positive_theta_near_expiry_does_not_warn_of_decay() -> None:
+    from types import SimpleNamespace
+
+    from src.analysis.options_cli import format_greeks
+
+    greeks = price_option(
+        spot=50.0,
+        strike=100.0,
+        days_to_expiry=30,
+        volatility=0.20,
+        option_type="put",
+        risk_free_rate=0.05,
+    )
+
+    text = format_greeks(greeks, SimpleNamespace(risk_free_rate=0.05))
+
+    assert greeks.theta > 0
+    assert "decay accelerating" not in text

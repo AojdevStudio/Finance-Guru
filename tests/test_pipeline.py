@@ -78,7 +78,8 @@ def test_run_pipeline_exercises_all_five_cli_specs_for_two_tickers(
     commands = {spec.key: spec.logged_command for spec in calls}
     assert commands["itc"] == [
         "python",
-        "src/analysis/itc_risk_cli.py",
+        "-m",
+        "src.analysis.itc_risk_cli",
         "TSLA",
         "--universe",
         "tradfi",
@@ -88,7 +89,8 @@ def test_run_pipeline_exercises_all_five_cli_specs_for_two_tickers(
     ]
     assert commands["risk"] == [
         "python",
-        "src/analysis/risk_metrics_cli.py",
+        "-m",
+        "src.analysis.risk_metrics_cli",
         "TSLA",
         "--days",
         "90",
@@ -97,9 +99,10 @@ def test_run_pipeline_exercises_all_five_cli_specs_for_two_tickers(
         "--benchmark",
         "SPY",
     ]
-    assert commands["opt"][:5] == [
+    assert commands["opt"][:6] == [
         "python",
-        "src/strategies/optimizer_cli.py",
+        "-m",
+        "src.strategies.optimizer_cli",
         "TSLA",
         "SPY",
         "--days",

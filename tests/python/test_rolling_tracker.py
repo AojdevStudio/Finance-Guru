@@ -667,7 +667,7 @@ class TestRollingTrackerCLI:
     def test_cli_help(self):
         """--help exits 0 and shows subcommand names."""
         result = subprocess.run(
-            [sys.executable, "src/analysis/rolling_tracker_cli.py", "--help"],
+            [sys.executable, "-m", "src.analysis.rolling_tracker_cli", "--help"],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).parent.parent.parent),

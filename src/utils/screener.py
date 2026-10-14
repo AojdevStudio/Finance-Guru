@@ -64,6 +64,22 @@ _MIN_SIGNALS_TO_MATCH: dict[SignalStrength, int] = {
 }
 
 
+_BULLISH_PATTERNS = frozenset(
+    {
+        PatternType.GOLDEN_CROSS,
+        PatternType.RSI_OVERSOLD,
+        PatternType.MACD_BULLISH,
+        PatternType.BREAKOUT,
+    }
+)
+
+
+def _signed_points(signal: TechnicalSignal) -> float:
+    """Strength points, negative for a bearish pattern."""
+    points = _SIGNAL_POINTS[signal.strength]
+    return points if signal.signal_type in _BULLISH_PATTERNS else -points
+
+
 def _momentum_input(df: pd.DataFrame) -> MomentumDataInput:
     """Wrap a screener price frame as close-only momentum input."""
     return MomentumDataInput(
@@ -160,7 +176,7 @@ class TechnicalScreener:
 
         matches = self._meets_criteria(signals)
 
-        recommendation, confidence = self._generate_recommendation(signals, score)
+        recommendation, confidence = self._generate_recommendation(signals)
 
         current_price = float(df["price"].iloc[-1])
         current_rsi = self._get_current_rsi(df)
@@ -582,59 +598,40 @@ class TechnicalScreener:
         )
 
     def _generate_recommendation(
-        self, signals: list[TechnicalSignal], score: float
+        self, signals: list[TechnicalSignal]
     ) -> tuple[str, float]:
-        """Generate recommendation based on signals.
+        """Generate a recommendation from the direction of the signals.
+
+        Bullish signals add their strength points and bearish signals subtract
+        them, so bearish evidence never reads as a reason to buy.
 
         Returns:
             (recommendation, confidence)
 
-        LOGIC:
-        - Score >= 6: Strong Buy (high confidence)
-        - Score >= 4: Buy (moderate confidence)
-        - Score >= 2: Hold (low confidence)
-        - Score < 2: Sell/Strong Sell
+        LOGIC (signed, weighted score):
+        - >= 6: Strong Buy
+        - >= 4: Buy
+        - >= 2: Hold
+        - < 2: Sell, or Strong Sell when a strong bearish signal dominates
         """
         if not signals:
             return ("hold", 0.5)
 
-        bullish_patterns = {
-            PatternType.GOLDEN_CROSS,
-            PatternType.RSI_OVERSOLD,
-            PatternType.MACD_BULLISH,
-            PatternType.BREAKOUT,
-        }
-        bearish_patterns = {
-            PatternType.DEATH_CROSS,
-            PatternType.RSI_OVERBOUGHT,
-            PatternType.MACD_BEARISH,
-            PatternType.BREAKDOWN,
-        }
-
-        bullish_score = (
-            sum(
-                s.strength == "strong" and s.signal_type in bullish_patterns
-                for s in signals
-            )
-            * 3
+        directional_score = (
+            sum(_signed_points(signal) for signal in signals)
+            * self.criteria.pattern_weight
         )
-        bearish_score = (
-            sum(
-                s.strength == "strong" and s.signal_type in bearish_patterns
-                for s in signals
-            )
-            * 3
+        strong_net = sum(
+            _signed_points(signal) for signal in signals if signal.strength == "strong"
         )
 
-        net_score = bullish_score - bearish_score
-
-        if score >= 6:
+        if directional_score >= 6:
             return ("strong_buy", 0.85)
-        elif score >= 4:
+        elif directional_score >= 4:
             return ("buy", 0.70)
-        elif score >= 2:
+        elif directional_score >= 2:
             return ("hold", 0.55)
-        elif net_score < -2:
+        elif strong_net < -2:
             return ("strong_sell", 0.75)
         else:
             return ("sell", 0.60)
