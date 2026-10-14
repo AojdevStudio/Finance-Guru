@@ -94,7 +94,7 @@ Also compare the generation date with today's UTC date from `date -u +"%Y-%m-%d"
 
 - The refresh printed `positions: ok` for this run.
 - The `--show` generation equals the refresh `generation` line.
-- `--show` printed at least one balances row and at least one position.
+- `--show` printed at least one balances row. An account block with `0 positions` is a valid cash-only snapshot.
 - When the margin command succeeded, `portfolio_value` is greater than 0 and `source_file` starts with `db:`.
 - When it failed, its typed error is under data gaps. The positions snapshot is still valid context.
 
