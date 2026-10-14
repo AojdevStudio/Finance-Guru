@@ -84,3 +84,32 @@ def test_a_zero_price_in_history_still_screens(screener) -> None:
     result = screener.screen_ticker("TEST", prices, dates)
 
     assert result.ticker == "TEST"
+
+
+def _business_dates(count: int) -> list[date]:
+    return [d.date() for d in pd.bdate_range("2026-01-02", periods=count)]
+
+
+def test_bearish_only_screen_never_recommends_buying() -> None:
+    prices = [100.0 + 2 * day for day in range(60)] + [
+        218.0 + 0.1 * (day + 1) for day in range(20)
+    ]
+    screener = TechnicalScreener(ScreeningCriteria(patterns=list(PatternType)))
+
+    result = screener.screen_ticker("TEST", prices, _business_dates(len(prices)))
+
+    detected = {signal.signal_type for signal in result.signals}
+    assert detected <= {PatternType.RSI_OVERBOUGHT, PatternType.MACD_BEARISH}
+    assert detected
+    assert result.recommendation in {"sell", "strong_sell"}
+
+
+def test_weighted_bearish_signal_never_recommends_buying() -> None:
+    prices = [200.0 - day for day in range(80)]
+    screener = TechnicalScreener(
+        ScreeningCriteria(patterns=[PatternType.MACD_BEARISH], pattern_weight=2)
+    )
+
+    result = screener.screen_ticker("TEST", prices, _business_dates(len(prices)))
+
+    assert result.recommendation in {"hold", "sell", "strong_sell"}
