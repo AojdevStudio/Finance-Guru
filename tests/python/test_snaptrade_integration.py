@@ -17,46 +17,53 @@ from src.integrations.snaptrade.models import (
     SnapTradeCredentials,
 )
 
-# Three activities across the page boundary: a normal-symbol dividend, a
-# null-symbol dividend that must fall back to the description ticker, and a buy.
-_ACTIVITY_FIXTURE = [
-    {
-        "id": "a1",
-        "type": "DIVIDEND",
-        "symbol": {"symbol": "SCHD"},
-        "units": 0,
-        "price": 0,
-        "amount": 51.63,
-        "currency": {"code": "USD"},
-        "description": "DIVIDEND RECEIVED SCHWAB US DIVIDEND EQUITY ETF (SCHD)",
-        "trade_date": "2026-01-05",
-        "account": {"id": "acct-1"},
-    },
-    {
-        "id": "a2",
-        "type": "DIVIDEND",
-        "symbol": None,
-        "units": 0,
-        "price": 0,
-        "amount": 78.62,
-        "currency": {"code": "USD"},
-        "description": "DIVIDEND RECEIVED JPMORGAN NASDAQ EQTY PREM INC ETF (JEPQ)",
-        "trade_date": "2026-01-05",
-        "account": {"id": "acct-1"},
-    },
-    {
-        "id": "a3",
-        "type": "BUY",
-        "symbol": {"symbol": "TSLA"},
-        "units": 10,
-        "price": 200,
-        "amount": -2000,
-        "currency": {"code": "USD"},
-        "description": "YOU BOUGHT TSLA",
-        "trade_date": "2026-01-03",
-        "account": {"id": "acct-1"},
-    },
-]
+OPTION_CONTRACT_MULTIPLIER = 100
+
+_SCHD_DIVIDEND = {
+    "id": "a1",
+    "type": "DIVIDEND",
+    "symbol": {"symbol": "SCHD"},
+    "units": 0,
+    "price": 0,
+    "amount": 51.63,
+    "currency": {"code": "USD"},
+    "description": "DIVIDEND RECEIVED SCHWAB US DIVIDEND EQUITY ETF (SCHD)",
+    "trade_date": "2026-01-05",
+    "account": {"id": "acct-1"},
+}
+
+_JEPQ_NULL_SYMBOL_DIVIDEND = {
+    "id": "a2",
+    "type": "DIVIDEND",
+    "symbol": None,
+    "units": 0,
+    "price": 0,
+    "amount": 78.62,
+    "currency": {"code": "USD"},
+    "description": "DIVIDEND RECEIVED JPMORGAN NASDAQ EQTY PREM INC ETF (JEPQ)",
+    "trade_date": "2026-01-05",
+    "account": {"id": "acct-1"},
+}
+
+_TSLA_BUY = {
+    "id": "a3",
+    "type": "BUY",
+    "symbol": {"symbol": "TSLA"},
+    "units": 10,
+    "price": 200,
+    "amount": -2000,
+    "currency": {"code": "USD"},
+    "description": "YOU BOUGHT TSLA",
+    "trade_date": "2026-01-03",
+    "account": {"id": "acct-1"},
+}
+
+_ACTIVITY_FIXTURE = [_SCHD_DIVIDEND, _JEPQ_NULL_SYMBOL_DIVIDEND, _TSLA_BUY]
+
+
+def _activity(activities: list[dict], raw: dict) -> dict:
+    """Return the normalized activity that came from fixture record ``raw``."""
+    return next(a for a in activities if a["id"] == raw["id"])
 
 
 class FakeResponse:
@@ -352,7 +359,6 @@ def test_positions_command_syncs_enabled_account(
     by_symbol = {p["symbol"]: p for p in out["accounts"][0]["positions"]}
     assert by_symbol["TSLA"]["quantity"] == 10
     assert by_symbol["SPAXX"]["average_purchase_price"] == 1.0
-    # options are merged in, Fidelity-symbolled, with per-share (÷100) cost
     opt = by_symbol["-SPY260918P620"]
     assert opt["instrument"] == "option"
     assert opt["quantity"] == 2
@@ -372,13 +378,12 @@ def test_activities_command_emits_normalized_json(
     exit_code = main(["activities", "--config", str(config_path), "--output", "json"])
 
     assert exit_code == 0
-    out = json.loads(capsys.readouterr().out)  # criterion: valid JSON
+    out = json.loads(capsys.readouterr().out)
     assert out["kind"] == "activities"
     assert out["synced_account_count"] == 1
     activities = out["accounts"][0]["activities"]
-    assert len(activities) == 3
-    null_div = next(a for a in activities if a["amount"] == 78.62)
-    assert null_div["symbol"] == "JEPQ"
+    assert len(activities) == len(_ACTIVITY_FIXTURE)
+    assert _activity(activities, _JEPQ_NULL_SYMBOL_DIVIDEND)["symbol"] == "JEPQ"
 
 
 def test_activities_command_refuses_unassigned_without_network(
@@ -419,7 +424,6 @@ def test_balances_command_derives_margin_debt(
     assert exit_code == 0
     bal = json.loads(capsys.readouterr().out)["accounts"][0]["balances"]
     assert bal["settled_cash"] == 100.5
-    # stock MV 250.5 + 2000 = 2250.5; option MV 3.93*2*100 = 786; equity 1000
     assert bal["gross_market_value"] == 3036.5
     assert bal["account_equity"] == 1000.0
     assert bal["margin_debt"] == 2036.5
@@ -476,7 +480,6 @@ def test_occ_to_fidelity_symbol_conversion():
 
     assert _occ_to_fidelity_symbol("SPY   260918P00620000") == "-SPY260918P620"
     assert _occ_to_fidelity_symbol("QQQ   260918P00595000") == "-QQQ260918P595"
-    # non-OCC input is returned unchanged
     assert _occ_to_fidelity_symbol("AAPL") == "AAPL"
 
 
@@ -487,14 +490,15 @@ def test_derive_margin_debt_math():
         derive_margin_debt,
     )
 
-    stocks = [{"price": 100, "quantity": 10}]  # 1000
-    options = [{"price": 2.0, "quantity": 3}]  # 2*3*100 = 600
-    debt, gross = derive_margin_debt(stocks, options, equity=1200.0)
-    assert gross == 1600.0
-    assert debt == 400.0
+    stocks = [{"price": 100, "quantity": 10}]
+    options = [{"price": 2.0, "quantity": 3}]
+    expected_gross = 100 * 10 + 2.0 * 3 * OPTION_CONTRACT_MULTIPLIER
+    equity = 1200.0
+    debt, gross = derive_margin_debt(stocks, options, equity=equity)
+    assert gross == expected_gross
+    assert debt == expected_gross - equity
     with pytest.raises(MissingAccountEquityError):
         derive_margin_debt(stocks, options, equity=None)
-    # net-cash account (equity > gross) clamps to 0, never a negative loan
     debt3, _ = derive_margin_debt(stocks, options, equity=2000.0)
     assert debt3 == 0.0
     # settled cash rides inside the SPAXX position, so a cash balance does NOT
@@ -502,52 +506,42 @@ def test_derive_margin_debt_math():
     with_spaxx = [{"price": 100, "quantity": 10}, {"price": 1.0, "quantity": 100}]
     debt4, gross4 = derive_margin_debt(with_spaxx, [], equity=800.0)
     assert gross4 == 1100.0
-    assert debt4 == 300.0  # = loan, not loan - cash
+    assert debt4 == 300.0
 
 
 def test_get_activities_pages_through_full_result_set():
     """Activities fetch follows offset/limit pagination until total is reached."""
     client = SnapTradeClientWrapper(_credentials(), sdk_client=FakeSDKClient())
 
-    # page_size 2 forces >1 page over the 3-record fixture (pages of 2 then 1).
-    activities = client.get_activities("acct-1", page_size=2)
+    activities = client.get_activities("acct-1", page_size=len(_ACTIVITY_FIXTURE) - 1)
 
-    assert len(activities) == 3
-    assert [a["type"] for a in activities] == ["DIVIDEND", "DIVIDEND", "BUY"]
+    assert [a["id"] for a in activities] == [raw["id"] for raw in _ACTIVITY_FIXTURE]
 
 
 def test_dividend_with_null_symbol_resolves_ticker_from_description():
     """A DIVIDEND whose symbol is null derives its ticker from the description."""
     client = SnapTradeClientWrapper(_credentials(), sdk_client=FakeSDKClient())
 
-    activities = client.get_activities("acct-1", page_size=2)
-    by_id = {a["account"]: a for a in activities}  # all on acct-1
-    null_symbol_div = next(
-        a for a in activities if a["type"] == "DIVIDEND" and a["amount"] == 78.62
-    )
+    activities = client.get_activities("acct-1", page_size=len(_ACTIVITY_FIXTURE) - 1)
 
-    assert by_id  # sanity: account field is populated
-    # symbol was null on the wire; parsed "(JEPQ)" out of the description
-    assert null_symbol_div["symbol"] == "JEPQ"
-    # the normal-symbol dividend still resolves straight from the symbol object
-    schd = next(a for a in activities if a["amount"] == 51.63)
-    assert schd["symbol"] == "SCHD"
+    assert _activity(activities, _JEPQ_NULL_SYMBOL_DIVIDEND)["symbol"] == "JEPQ"
+    assert _activity(activities, _SCHD_DIVIDEND)["symbol"] == "SCHD"
 
 
 def test_summarize_activity_emits_stable_shape():
     """Each normalized activity carries the documented stable field set."""
     from src.integrations.snaptrade.client import _summarize_activity
 
-    record = _summarize_activity(_ACTIVITY_FIXTURE[2])  # the TSLA buy
+    record = _summarize_activity(_TSLA_BUY)
 
     assert record == {
-        "id": "a3",
-        "type": "BUY",
-        "date": "2026-01-03",
+        "id": _TSLA_BUY["id"],
+        "type": _TSLA_BUY["type"],
+        "date": _TSLA_BUY["trade_date"],
         "symbol": "TSLA",
-        "amount": -2000.0,
-        "quantity": 10.0,
+        "amount": float(_TSLA_BUY["amount"]),
+        "quantity": float(_TSLA_BUY["units"]),
         "currency": "USD",
-        "description": "YOU BOUGHT TSLA",
+        "description": _TSLA_BUY["description"],
         "account": "acct-1",
     }

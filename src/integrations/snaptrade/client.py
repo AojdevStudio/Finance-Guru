@@ -17,6 +17,8 @@ from src.integrations.snaptrade.models import (
 
 T = TypeVar("T")
 
+OPTION_CONTRACT_MULTIPLIER = 100
+
 
 class SnapTradeAPIError(RuntimeError):
     """Sanitized SnapTrade SDK failure safe to show in CLI output."""
@@ -155,8 +157,6 @@ class SnapTradeClientWrapper:
             page, total = self._activities_page(account_id, offset, page_size)
             activities.extend(_summarize_activity(item) for item in page)
             offset += len(page)
-            # ponytail: any of empty page / short page / total reached ends the
-            # loop, so it terminates even if the broker omits `total`.
             if not page or len(page) < page_size:
                 break
             if total is not None and offset >= total:
@@ -332,7 +332,6 @@ def _summarize_balance(raw_balance: Any) -> dict[str, Any]:
     raw = _to_plain(raw_balance)
     if not isinstance(raw, Mapping):
         return {}
-    # The SnapTrade Balance model only carries currency, cash, buying_power.
     return {
         "currency": _currency_code(_first_present(raw, "currency")),
         "cash": _to_float(_first_present(raw, "cash")),
@@ -371,7 +370,7 @@ def _summarize_option(raw_option: Any) -> dict[str, Any]:
         "occ_symbol": occ,
         "quantity": _to_float(_first_present(raw, "units", "quantity")),
         # SnapTrade reports cost per contract (x100); normalize to per-share.
-        "average_purchase_price": (avg_contract / 100)
+        "average_purchase_price": (avg_contract / OPTION_CONTRACT_MULTIPLIER)
         if avg_contract is not None
         else None,
         "price": _to_float(_first_present(raw, "price", "last_price")),
@@ -498,8 +497,6 @@ def _activity_id(raw: Mapping[str, Any], fields: Mapping[str, Any]) -> str:
 
 
 def _activity_symbol(raw: Mapping[str, Any]) -> str | None:
-    # Reuse the position symbol parser (nested symbol objects), then the option
-    # ticker helper, then the DIVIDEND-from-description fallback. No fork.
     symbol = _position_symbol(raw)
     if symbol:
         return symbol
@@ -520,14 +517,14 @@ def _ticker_from_description(description: Any) -> str | None:
     parenthesized all-caps ticker (e.g. "... ETF (SCHD)") is the reliable
     broker signal, with a bare all-caps token scan as the backstop.
     """
-    # ponytail: heuristic over free text — covers Fidelity's "(TICKER)" form and
-    # bare-token descriptions; add a broker-specific rule if one slips past both.
     if not isinstance(description, str):
         return None
-    candidates = _PAREN_TICKER.findall(description) + _BARE_TICKER.findall(description)
+    candidates: list[str] = _PAREN_TICKER.findall(description) + _BARE_TICKER.findall(
+        description
+    )
     for candidate in candidates:
         if candidate not in _DESC_TICKER_STOPWORDS:
-            return str(candidate)  # regex groups are str; cast satisfies mypy
+            return candidate
     return None
 
 
@@ -589,7 +586,10 @@ def derive_margin_debt(
     if equity is None:
         raise MissingAccountEquityError
     stock_mv = sum(_position_market_value(position, 1) for position in stocks)
-    option_mv = sum(_position_market_value(position, 100) for position in options)
+    option_mv = sum(
+        _position_market_value(position, OPTION_CONTRACT_MULTIPLIER)
+        for position in options
+    )
     gross_mv = round(stock_mv + option_mv, 2)
     return max(round(gross_mv - equity, 2), 0.0), gross_mv
 

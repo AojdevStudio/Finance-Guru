@@ -539,7 +539,7 @@ class TestHedgeSizerCLI:
     def test_cli_help(self) -> None:
         """--help exits 0 and shows --portfolio flag."""
         result = subprocess.run(
-            [sys.executable, "src/analysis/hedge_sizer_cli.py", "--help"],
+            [sys.executable, "-m", "src.analysis.hedge_sizer_cli", "--help"],
             capture_output=True,
             text=True,
             cwd=self._cwd,
@@ -552,7 +552,8 @@ class TestHedgeSizerCLI:
         result = subprocess.run(
             [
                 sys.executable,
-                "src/analysis/hedge_sizer_cli.py",
+                "-m",
+                "src.analysis.hedge_sizer_cli",
                 "--portfolio",
                 "200000",
                 "--underlyings",
@@ -572,7 +573,8 @@ class TestHedgeSizerCLI:
         result = subprocess.run(
             [
                 sys.executable,
-                "src/analysis/hedge_sizer_cli.py",
+                "-m",
+                "src.analysis.hedge_sizer_cli",
                 "--portfolio",
                 "200000",
                 "--underlyings",

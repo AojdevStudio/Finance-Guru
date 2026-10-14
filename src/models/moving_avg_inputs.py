@@ -33,6 +33,12 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from src.models.ticker import Ticker
+
+MAType = Literal["SMA", "EMA", "WMA", "HMA"]
+
+DEFAULT_MA_PERIOD = 50
+
 
 class MovingAverageDataInput(BaseModel):
     """Price data for moving average calculations.
@@ -54,24 +60,21 @@ class MovingAverageDataInput(BaseModel):
     More data points = more reliable signals
     """
 
-    ticker: str = Field(
+    ticker: Ticker = Field(
         ...,
         description="Stock ticker symbol (e.g., 'TSLA', 'AAPL', 'BRK-B')",
-        min_length=1,
-        max_length=10,
-        pattern=r"^[A-Z\-\.]+$",  # Uppercase letters, hyphens, and dots (e.g., BRK-B, BRK.B)
     )
 
     dates: list[date] = Field(
         ...,
         description="Trading dates in chronological order",
-        min_length=50,  # Minimum for 50-day MA
+        min_length=DEFAULT_MA_PERIOD,
     )
 
     prices: list[float] = Field(
         ...,
         description="Closing prices (used for all MA calculations)",
-        min_length=50,
+        min_length=DEFAULT_MA_PERIOD,
     )
 
     @field_validator("prices")
@@ -153,19 +156,18 @@ class MovingAverageConfig(BaseModel):
     - 10/30: Short-term crossover
     """
 
-    ma_type: Literal["SMA", "EMA", "WMA", "HMA"] = Field(
+    ma_type: MAType = Field(
         default="SMA", description="Type of moving average to calculate"
     )
 
     period: int = Field(
-        default=50,
+        default=DEFAULT_MA_PERIOD,
         ge=5,
         le=200,
         description="MA period in days (default: 50, range: 5-200)",
     )
 
-    # Optional second MA for crossover detection
-    secondary_ma_type: Literal["SMA", "EMA", "WMA", "HMA"] | None = Field(
+    secondary_ma_type: MAType | None = Field(
         default=None, description="Type of second MA for crossover detection (optional)"
     )
 
@@ -183,7 +185,6 @@ class MovingAverageConfig(BaseModel):
         WHY: For crossovers, we need two different periods.
         Fast MA (shorter period) must be less than slow MA (longer period).
         """
-        # If one crossover parameter is set, both must be set
         has_secondary_type = self.secondary_ma_type is not None
         has_secondary_period = self.secondary_period is not None
 
@@ -193,19 +194,11 @@ class MovingAverageConfig(BaseModel):
                 "must be specified, or neither."
             )
 
-        # If both are set, ensure periods are different and properly ordered
-        if (
-            has_secondary_type
-            and has_secondary_period
-            and self.period == self.secondary_period
-        ):
+        if self.secondary_period is not None and self.period >= self.secondary_period:
             raise ValueError(
-                f"Primary period ({self.period}) must differ from "
-                f"secondary period ({self.secondary_period}) for crossover detection"
+                f"Primary (fast) period ({self.period}) must be shorter than "
+                f"secondary (slow) period ({self.secondary_period}) for crossover detection"
             )
-
-        # Warn if the "fast" MA is actually slower (unusual but not invalid)
-        # We'll just ensure they're different - user decides which is fast/slow
 
         return self
 
@@ -247,9 +240,7 @@ class MovingAverageOutput(BaseModel):
     calculation_date: date = Field(
         ..., description="Most recent date in calculation (today's value)"
     )
-    ma_type: Literal["SMA", "EMA", "WMA", "HMA"] = Field(
-        ..., description="Type of moving average calculated"
-    )
+    ma_type: MAType = Field(..., description="Type of moving average calculated")
     period: int = Field(..., description="Period used for calculation (in days)")
     current_value: float | None = Field(
         ...,
@@ -315,11 +306,11 @@ class CrossoverOutput(BaseModel):
 
     ticker: str
     calculation_date: date
-    fast_ma_type: Literal["SMA", "EMA", "WMA", "HMA"]
+    fast_ma_type: MAType
     fast_period: int
     fast_value: float = Field(..., gt=0.0)
 
-    slow_ma_type: Literal["SMA", "EMA", "WMA", "HMA"]
+    slow_ma_type: MAType
     slow_period: int
     slow_value: float = Field(..., gt=0.0)
 
@@ -406,7 +397,6 @@ class MovingAverageAnalysis(BaseModel):
     }
 
 
-# Type exports
 __all__ = [
     "MovingAverageDataInput",
     "MovingAverageConfig",

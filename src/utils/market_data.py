@@ -14,8 +14,9 @@ USAGE:
 
 import argparse
 import os
-from datetime import datetime
-from typing import Any
+import sys
+from datetime import date, datetime
+from typing import Any, Literal
 
 import requests
 import yfinance as yf
@@ -34,7 +35,7 @@ class PriceData(BaseModel):
     change: float
     change_percent: float
     timestamp: str
-    source: str = "yfinance"  # Track data source
+    source: Literal["yfinance", "finnhub"] = "yfinance"
 
 
 def get_prices(
@@ -60,7 +61,6 @@ def get_prices(
         >>> get_prices(["TSLA", "PLTR"], realtime=True)  # Multiple, real-time
         {'TSLA': PriceData(...), 'PLTR': PriceData(...)}
     """
-    # Normalize input to list
     if isinstance(symbols, str):
         symbols = [symbols]
 
@@ -113,7 +113,6 @@ def _get_prices_polygon(symbols: list[str]) -> dict[str, PriceData]:
 
     for symbol in symbols:
         try:
-            # Finnhub quote endpoint (real-time data, 60 calls/min!)
             url = "https://finnhub.io/api/v1/quote"
             params = {"symbol": symbol.upper(), "token": api_key}
 
@@ -122,17 +121,12 @@ def _get_prices_polygon(symbols: list[str]) -> dict[str, PriceData]:
 
             data = response.json()
 
-            # Check for API error
             if "error" in data:
                 raise ValueError(f"Finnhub error: {data['error']}")
 
-            # Finnhub returns empty dict {} for invalid symbols
             if not data or data.get("c") == 0:
                 raise ValueError(f"No quote data returned for {symbol}")
 
-            # Finnhub quote structure
-            # c = current price, d = change, dp = change percent
-            # h = high, l = low, o = open, pc = previous close
             current_price = float(data.get("c", 0))
             change = float(data.get("d", 0))
             change_percent = float(data.get("dp", 0))
@@ -162,6 +156,43 @@ def _get_prices_polygon(symbols: list[str]) -> dict[str, PriceData]:
     return results
 
 
+def append_live_quote(
+    ticker: str, dates: list[date], *price_series: list[float]
+) -> None:
+    """Append today's live quote to end-of-day series as a flat OHLC bar.
+
+    A live quote is one price, so the new bar uses it for every series passed
+    in (open, high, low, and close alike). When no live quote is available the
+    series keep end-of-day data only and a warning goes to stderr.
+
+    Args:
+        ticker: Ticker symbol to quote.
+        dates: Bar dates, extended in place with today's date.
+        *price_series: Price lists, each extended in place with the quote.
+    """
+    try:
+        quote = get_prices(ticker, realtime=True).get(ticker.upper())
+    except Exception as e:
+        print(
+            f"⚠️  Real-time price unavailable, using EOD data only: {e}", file=sys.stderr
+        )
+        return
+    if quote is None:
+        print(
+            f"⚠️  Real-time price unavailable for {ticker.upper()}, using EOD data only",
+            file=sys.stderr,
+        )
+        return
+
+    dates.append(date.today())
+    for series in price_series:
+        series.append(quote.price)
+    print(
+        f"✅ Real-time price appended: ${quote.price:.2f} ({quote.source})",
+        file=sys.stderr,
+    )
+
+
 def get_option_chain(symbol: str, expiration: str | None = None) -> dict[str, Any]:
     """Get option chain data for a symbol.
 
@@ -175,7 +206,7 @@ def get_option_chain(symbol: str, expiration: str | None = None) -> dict[str, An
     ticker = yf.Ticker(symbol)
 
     if expiration is None:
-        expiration = ticker.options[0]  # Get nearest expiration
+        expiration = ticker.options[0]
 
     opt = ticker.option_chain(expiration)
 
@@ -221,7 +252,6 @@ Examples:
 
     args = parser.parse_args()
 
-    # Fetch prices
     print(f"\n{'=' * 60}")
     if args.realtime:
         print("📊 REAL-TIME MARKET DATA (Finnhub - 60 calls/min)")
@@ -235,7 +265,6 @@ Examples:
         print("❌ No data retrieved. Check ticker symbols and try again.")
         exit(1)
 
-    # Display results
     for symbol, price_info in data.items():
         source_label = f"[{price_info.source.upper()}]"
         change_symbol = "📈" if price_info.change >= 0 else "📉"

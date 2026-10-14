@@ -45,11 +45,6 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
-# Import our type-safe components
 from src.models.validation_inputs import (
     OutlierMethod,
     PriceSeriesInput,
@@ -57,6 +52,10 @@ from src.models.validation_inputs import (
     ValidationOutput,
 )
 from src.utils.data_validator import DataValidator
+from src.utils.trading_calendar import calendar_days_for
+
+_MAX_CRITICAL_SHOWN = 5
+_MAX_HIGH_SHOWN = 3
 
 
 def fetch_price_data(ticker: str, days: int) -> PriceSeriesInput:
@@ -80,30 +79,24 @@ def fetch_price_data(ticker: str, days: int) -> PriceSeriesInput:
     try:
         import yfinance as yf
 
-        # Calculate date range
         end_date = date.today()
-        # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
-        start_date = end_date - timedelta(days=int(days * 1.5))
+        start_date = end_date - timedelta(days=calendar_days_for(days))
 
-        # Fetch data
         ticker_obj = yf.Ticker(ticker)
         hist = ticker_obj.history(start=start_date, end=end_date)
 
         if hist.empty:
             raise ValueError(f"No data found for ticker {ticker}")
 
-        # Extract prices, dates, volumes
         prices = hist["Close"].tolist()
         dates = [d.date() for d in hist.index]
         volumes = hist["Volume"].tolist()
 
-        # Ensure minimum data points
         if len(prices) < 10:
             raise ValueError(
                 f"Insufficient data: got {len(prices)} days, need at least 10."
             )
 
-        # Create validated model
         return PriceSeriesInput(
             ticker=ticker.upper(),
             prices=prices,
@@ -136,14 +129,12 @@ def format_output_human(results: ValidationOutput) -> str:  # noqa: C901
     output.append("=" * 70)
     output.append("")
 
-    # Overall Status
     if results.is_valid:
         output.append("✅ OVERALL STATUS: VALID - Data is suitable for analysis")
     else:
         output.append("❌ OVERALL STATUS: INVALID - Data has critical issues")
     output.append("")
 
-    # Quality Scores
     output.append("📊 QUALITY SCORES")
     output.append("-" * 70)
     output.append(f"  Completeness:             {results.completeness_score:>10.1%}")
@@ -151,7 +142,6 @@ def format_output_human(results: ValidationOutput) -> str:  # noqa: C901
     output.append(f"  Overall Reliability:      {results.reliability_score:>10.1%}")
     output.append("")
 
-    # Interpret reliability score
     if results.reliability_score >= 0.99:
         reliability_rating = "Excellent"
     elif results.reliability_score >= 0.95:
@@ -163,7 +153,6 @@ def format_output_human(results: ValidationOutput) -> str:  # noqa: C901
     output.append(f"  💡 Quality Rating: {reliability_rating}")
     output.append("")
 
-    # Data Summary
     output.append("📈 DATA SUMMARY")
     output.append("-" * 70)
     output.append(f"  Total Data Points:        {results.total_points:>10,}")
@@ -173,12 +162,10 @@ def format_output_human(results: ValidationOutput) -> str:  # noqa: C901
     output.append(f"  Potential Splits:         {results.potential_splits:>10,}")
     output.append("")
 
-    # Anomalies (if any)
     if results.anomalies:
         output.append("🚨 ANOMALIES DETECTED")
         output.append("-" * 70)
 
-        # Group by severity
         critical = [a for a in results.anomalies if a.severity == "critical"]
         high = [a for a in results.anomalies if a.severity == "high"]
         medium = [a for a in results.anomalies if a.severity == "medium"]
@@ -186,22 +173,26 @@ def format_output_human(results: ValidationOutput) -> str:  # noqa: C901
 
         if critical:
             output.append(f"  🔴 CRITICAL ({len(critical)} issues):")
-            for i, anomaly in enumerate(critical[:5], 1):  # Show max 5
+            for i, anomaly in enumerate(critical[:_MAX_CRITICAL_SHOWN], 1):
                 output.append(f"     {i}. {anomaly.description}")
                 if anomaly.location:
                     output.append(f"        Location: {anomaly.location}")
                 output.append(f"        → {anomaly.recommendation}")
-            if len(critical) > 5:
-                output.append(f"     ... and {len(critical) - 5} more critical issues")
+            if len(critical) > _MAX_CRITICAL_SHOWN:
+                output.append(
+                    f"     ... and {len(critical) - _MAX_CRITICAL_SHOWN} more critical issues"
+                )
 
         if high:
             output.append(f"  🟠 HIGH ({len(high)} issues):")
-            for i, anomaly in enumerate(high[:3], 1):  # Show max 3
+            for i, anomaly in enumerate(high[:_MAX_HIGH_SHOWN], 1):
                 output.append(f"     {i}. {anomaly.description}")
                 if anomaly.location:
                     output.append(f"        Location: {anomaly.location}")
-            if len(high) > 3:
-                output.append(f"     ... and {len(high) - 3} more high-severity issues")
+            if len(high) > _MAX_HIGH_SHOWN:
+                output.append(
+                    f"     ... and {len(high) - _MAX_HIGH_SHOWN} more high-severity issues"
+                )
 
         if medium:
             output.append(f"  🟡 MEDIUM ({len(medium)} issues) - Review recommended")
@@ -211,7 +202,6 @@ def format_output_human(results: ValidationOutput) -> str:  # noqa: C901
 
         output.append("")
 
-    # Warnings
     if results.warnings:
         output.append("⚠️  WARNINGS")
         output.append("-" * 70)
@@ -219,7 +209,6 @@ def format_output_human(results: ValidationOutput) -> str:  # noqa: C901
             output.append(f"  • {warning}")
         output.append("")
 
-    # Recommendations
     if results.recommendations:
         output.append("💡 RECOMMENDATIONS")
         output.append("-" * 70)
@@ -227,7 +216,6 @@ def format_output_human(results: ValidationOutput) -> str:  # noqa: C901
             output.append(f"  {i}. {rec}")
         output.append("")
 
-    # Footer
     output.append("=" * 70)
     output.append("ℹ️  Use --output json for machine-readable format")
     output.append("=" * 70)
@@ -260,7 +248,6 @@ def main():
     4. Runs validation checks
     5. Formats and displays/saves results
     """
-    # Create argument parser
     parser = argparse.ArgumentParser(
         description="Validate data quality for Finance Guru™",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -286,12 +273,10 @@ Examples:
         """,
     )
 
-    # Required arguments
     parser.add_argument(
         "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
     )
 
-    # Data parameters
     parser.add_argument(
         "--days",
         type=int,
@@ -299,7 +284,6 @@ Examples:
         help="Number of days of historical data (default: 90)",
     )
 
-    # Validation parameters
     parser.add_argument(
         "--outlier-method",
         type=str,
@@ -350,7 +334,6 @@ Examples:
         help="Price change threshold for split detection (default: 0.25 = 25%%)",
     )
 
-    # Output parameters
     parser.add_argument(
         "--output",
         type=str,
@@ -363,10 +346,8 @@ Examples:
         "--save-to", type=str, default=None, help="Save output to file (optional)"
     )
 
-    # Parse arguments
     args = parser.parse_args()
 
-    # Validate parameters
     if args.days < 10:
         print("ERROR: --days must be at least 10", file=sys.stderr)
         sys.exit(1)
@@ -382,7 +363,6 @@ Examples:
         sys.exit(1)
 
     try:
-        # Step 1: Fetch price data
         print(
             f"📥 Fetching {args.days} days of data for {args.ticker}...",
             file=sys.stderr,
@@ -394,7 +374,6 @@ Examples:
             file=sys.stderr,
         )
 
-        # Step 2: Create configuration
         config = ValidationConfig(
             outlier_method=OutlierMethod(args.outlier_method),
             outlier_threshold=args.outlier_threshold,
@@ -404,25 +383,21 @@ Examples:
             split_threshold=args.split_threshold,
         )
 
-        # Step 3: Run validation
         print("🔍 Running data quality checks...", file=sys.stderr)
         validator = DataValidator(config)
         results = validator.validate(price_series)
 
-        # Show quick status
         if results.is_valid:
             print("✅ Validation complete - Data is VALID", file=sys.stderr)
         else:
             print("❌ Validation complete - Data has ISSUES", file=sys.stderr)
-        print("", file=sys.stderr)  # Blank line before output
+        print("", file=sys.stderr)
 
-        # Step 4: Format output
         if args.output == "json":
             output = format_output_json(results)
         else:
             output = format_output_human(results)
 
-        # Step 5: Display or save
         if args.save_to:
             save_path = Path(args.save_to)
             save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -431,7 +406,6 @@ Examples:
         else:
             print(output)
 
-        # Exit with appropriate code
         sys.exit(0 if results.is_valid else 1)
 
     except KeyboardInterrupt:

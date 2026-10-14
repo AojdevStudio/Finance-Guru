@@ -25,6 +25,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from src.models.ticker import Ticker
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
+
 
 class OutlierMethod(StrEnum):
     """Methods for detecting outliers in data.
@@ -68,12 +71,9 @@ class PriceSeriesInput(BaseModel):
         )
     """
 
-    ticker: str = Field(
+    ticker: Ticker = Field(
         ...,
         description="Stock ticker symbol (e.g., 'TSLA', 'AAPL', 'SPY', 'BRK-B')",
-        min_length=1,
-        max_length=10,
-        pattern=r"^[A-Z\-\.]+$",  # Uppercase letters, hyphens, and dots (e.g., BRK-B, BRK.B)
     )
 
     prices: list[float] = Field(
@@ -247,7 +247,6 @@ class ValidationOutput(BaseModel):
         ..., description="Overall validation result (True = data is usable)"
     )
 
-    # Counts
     total_points: int = Field(
         ..., ge=0, description="Total number of data points analyzed"
     )
@@ -268,7 +267,6 @@ class ValidationOutput(BaseModel):
         default=0, ge=0, description="Number of potential stock splits detected"
     )
 
-    # Quality Scores (0.0 to 1.0)
     completeness_score: float = Field(
         ..., ge=0.0, le=1.0, description="Data completeness (1.0 = no missing data)"
     )
@@ -281,12 +279,10 @@ class ValidationOutput(BaseModel):
         ..., ge=0.0, le=1.0, description="Overall reliability (weighted average)"
     )
 
-    # Detailed Anomalies
     anomalies: list[DataAnomaly] = Field(
         default_factory=list, description="List of all detected anomalies"
     )
 
-    # Summary
     warnings: list[str] = Field(
         default_factory=list, description="General warnings about data quality"
     )
@@ -316,7 +312,7 @@ class ValidationOutput(BaseModel):
                     "ticker": "TSLA",
                     "validation_date": "2025-10-13",
                     "is_valid": True,
-                    "total_points": 252,
+                    "total_points": TRADING_DAYS_PER_YEAR,
                     "missing_count": 2,
                     "outlier_count": 5,
                     "gap_count": 1,
@@ -345,7 +341,6 @@ class ValidationOutput(BaseModel):
     }
 
 
-# Type exports
 __all__ = [
     "OutlierMethod",
     "PriceSeriesInput",

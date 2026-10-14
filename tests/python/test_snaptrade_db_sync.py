@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from src.config.instance_paths import InstancePaths, _db_path
+from src.integrations.simplefin.categorize import categorize_expense
 from src.integrations.snaptrade.sync_db import (
     _net_positions,
 )
@@ -84,16 +85,20 @@ def test_dedupe_key_stable_and_distinguishes_same_day_dividends() -> None:
     assert _dedupe_key("acct1", a) != _dedupe_key("acct1", b)
 
 
+@pytest.mark.parametrize(
+    "database_url",
+    [
+        pytest.param("sqlite:///family_office.db", id="sqlite-url"),
+        pytest.param("family_office.db", id="bare-path"),
+    ],
+)
 def test_db_path_resolves_relative_locations_under_instance_root(
-    tmp_path: Path,
+    tmp_path: Path, database_url: str
 ) -> None:
     """SQLite URLs and bare paths resolve under the instance root."""
     paths = InstancePaths(root=tmp_path)
 
-    assert _db_path("sqlite:///family_office.db", paths) == (
-        tmp_path / "family_office.db"
-    )
-    assert _db_path("family_office.db", paths) == tmp_path / "family_office.db"
+    assert _db_path(database_url, paths) == tmp_path / "family_office.db"
 
 
 def test_sync_cli_reads_default_account_config_from_instance_root(
@@ -115,15 +120,17 @@ def test_sync_cli_reads_default_account_config_from_instance_root(
     assert (instance_root / "family_office.db").exists()
 
 
-def test_categorize_matches_and_prioritizes_transfers() -> None:
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        pytest.param("H-E-B #063 Anytown TX", "Groceries", id="grocery"),
+        pytest.param("CVS/PHARMACY # ANYTOWN TX", "Health & Wellness", id="pharmacy"),
+        pytest.param("Delta Airlines", "Travel", id="airline"),
+        pytest.param("American Express Travel", "Travel", id="amex-travel"),
+        pytest.param("Taptap Send", "Transfer", id="transfer"),
+        pytest.param("Some Random LLC 12345", "Uncategorized", id="unknown"),
+    ],
+)
+def test_categorize_matches_and_prioritizes_transfers(text: str, expected: str) -> None:
     """Merchant text maps to the right category; transfers win over merchant reads."""
-    from src.integrations.simplefin.categorize import categorize_expense as categorize
-
-    assert categorize("H-E-B #063 Anytown TX") == "Groceries"
-    assert categorize("CVS/PHARMACY # ANYTOWN TX") == "Health & Wellness"
-    assert categorize("Delta Airlines") == "Travel"
-    # "American Express Travel" must read as Travel, not a bank/transfer
-    assert categorize("American Express Travel") == "Travel"
-    # explicit remittance stays a Transfer, not miscategorized as a merchant
-    assert categorize("Taptap Send") == "Transfer"
-    assert categorize("Some Random LLC 12345") == "Uncategorized"
+    assert categorize_expense(text) == expected

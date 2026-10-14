@@ -14,6 +14,37 @@ from src.integrations.snaptrade.sync_db import unpriced_lot_warning
 from src.integrations.snaptrade.sync_transactions_db import sync as sync_transactions
 
 
+def _run_source(name: str, operation: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+    """Run one source sync and record its failure instead of stopping the refresh.
+
+    Each source writes its own tables, so a failed source must not block the
+    others. The error becomes an ``"error"`` status that ``main`` turns into a
+    nonzero exit.
+
+    Args:
+        name: Source label reported in the result.
+        operation: Sync callable that returns the source summary.
+
+    Returns:
+        The source status record.
+    """
+    try:
+        return {"source": name, "status": "ok", "summary": operation()}
+    except Exception as exc:
+        return {"source": name, "status": "error", "error": str(exc)}
+
+
+def _print_positions_summary(summary: dict[str, Any]) -> None:
+    """Print the positions generation and any unpriced-lot warnings."""
+    if not summary["accounts"]:
+        print("  no enabled, routed account synced")
+        return
+    print(f"  generation {summary['synced_at']}")
+    for account in summary["accounts"]:
+        for lot in account["unpriced_lots"]:
+            print(f"  warning: {unpriced_lot_warning(lot)}")
+
+
 def refresh(database_url: str | None, *, months: int = 12) -> dict[str, Any]:
     """Run every financial sync independently in dependency order.
 
@@ -36,15 +67,9 @@ def refresh(database_url: str | None, *, months: int = 12) -> dict[str, Any]:
             ),
         ),
     )
-    sources: list[dict[str, Any]] = []
-    for name, operation in operations:
-        try:
-            sources.append({"source": name, "status": "ok", "summary": operation()})
-        except Exception as exc:  # Each source must be isolated from sibling failures.
-            sources.append({"source": name, "status": "error", "error": str(exc)})
     return {
         "synced_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
-        "sources": sources,
+        "sources": [_run_source(name, operation) for name, operation in operations],
     }
 
 
@@ -85,16 +110,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         print(f"{source['source']}: ok")
         if source["source"] == "positions":
-            # The generation `sync_db --show` must match, and every basis gap.
-            # A sync that wrote no account has no generation to match.
-            summary = source["summary"]
-            if not summary["accounts"]:
-                print("  no enabled, routed account synced")
-                continue
-            print(f"  generation {summary['synced_at']}")
-            for account in summary["accounts"]:
-                for lot in account["unpriced_lots"]:
-                    print(f"  warning: {unpriced_lot_warning(lot)}")
+            _print_positions_summary(source["summary"])
     return 0 if all(source["status"] == "ok" for source in result["sources"]) else 1
 
 

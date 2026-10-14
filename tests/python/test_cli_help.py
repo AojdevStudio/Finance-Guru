@@ -14,7 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 @pytest.mark.parametrize(
     ("command", "expected_option"),
     (
-        ([sys.executable, "src/utils/momentum_cli.py", "--help"], "--stoch-k"),
+        ([sys.executable, "-m", "src.utils.momentum_cli", "--help"], "--stoch-k"),
         (
             [sys.executable, "-m", "src.utils.input_validation_cli", "--help"],
             "--outlier-method",

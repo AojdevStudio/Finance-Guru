@@ -52,12 +52,10 @@ import argparse
 import sys
 from datetime import date, timedelta
 from pathlib import Path
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+from typing import Literal, assert_never, get_args
 
 from src.models.momentum_inputs import (
+    DEFAULT_RSI_PERIOD,
     AllMomentumOutput,
     MACDOutput,
     MomentumConfig,
@@ -67,8 +65,11 @@ from src.models.momentum_inputs import (
     StochasticOutput,
     WilliamsROutput,
 )
-from src.utils.market_data import get_prices  # Finnhub integration
+from src.utils.market_data import append_live_quote
 from src.utils.momentum import MomentumIndicators
+from src.utils.trading_calendar import calendar_days_for
+
+Indicator = Literal["all", "rsi", "macd", "stochastic", "williams", "roc"]
 
 
 def fetch_momentum_data(
@@ -91,56 +92,29 @@ def fetch_momentum_data(
     try:
         import yfinance as yf
 
-        # Calculate date range
         end_date = date.today()
-        # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
-        start_date = end_date - timedelta(days=int(days * 1.5))
+        start_date = end_date - timedelta(days=calendar_days_for(days))
 
-        # Fetch data
         ticker_obj = yf.Ticker(ticker)
         hist = ticker_obj.history(start=start_date, end=end_date)
 
         if hist.empty:
             raise ValueError(f"No data found for ticker {ticker}")
 
-        # Extract OHLC data
         dates_list = [d.date() for d in hist.index]
         close_list = hist["Close"].tolist()
         high_list = hist["High"].tolist()
         low_list = hist["Low"].tolist()
 
-        # FINNHUB INTEGRATION: Append real-time intraday price if requested
         if realtime:
-            try:
-                # Get real-time price from Finnhub
-                rt_data = get_prices(ticker, realtime=True)
-                if ticker.upper() in rt_data:
-                    price_data = rt_data[ticker.upper()]
-                    current_price = price_data.price
-                    # Append today's date and current price to the data
-                    # For momentum, we use current price for all OHLC values (conservative approach)
-                    dates_list.append(date.today())
-                    close_list.append(current_price)
-                    high_list.append(current_price)  # Conservative: use current as high
-                    low_list.append(current_price)  # Conservative: use current as low
-                    print(
-                        f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)",
-                        file=sys.stderr,
-                    )
-            except Exception as e:
-                print(
-                    f"⚠️  Real-time price unavailable, using EOD data only: {e}",
-                    file=sys.stderr,
-                )
+            append_live_quote(ticker, dates_list, close_list, high_list, low_list)
 
-        # Ensure minimum data points
-        if len(dates_list) < 14:
+        if len(dates_list) < DEFAULT_RSI_PERIOD:
             raise ValueError(
-                f"Insufficient data: got {len(dates_list)} days, need at least 14. "
+                f"Insufficient data: got {len(dates_list)} days, need at least {DEFAULT_RSI_PERIOD}. "
                 "Try increasing --days parameter."
             )
 
-        # Create validated model
         return MomentumDataInput(
             ticker=ticker.upper(),
             dates=dates_list,
@@ -152,7 +126,6 @@ def fetch_momentum_data(
     except ImportError as e:
         raise ImportError("yfinance not installed. Run: uv add yfinance") from e
     except ValueError:
-        # Re-raise ValueError as-is (from empty data or insufficient data checks)
         raise
     except Exception as e:
         raise ValueError(f"Failed to fetch data for {ticker}: {e}") from e
@@ -173,7 +146,6 @@ def format_rsi_output(rsi: RSIOutput) -> str:
     output.append(f"  Period:                   {rsi.period:>10} days")
     output.append("")
 
-    # Interpretation
     if rsi.rsi_signal == "overbought":
         output.append(
             "  🔴 OVERBOUGHT: RSI above 70 suggests potential selling pressure"
@@ -205,7 +177,6 @@ def format_all_output(results: AllMomentumOutput) -> str:  # noqa: C901
     output.append("=" * 70)
     output.append("")
 
-    # RSI Section
     output.append("📈 RELATIVE STRENGTH INDEX (RSI)")
     output.append("-" * 70)
     output.append(f"  Current RSI:              {results.rsi.current_rsi:>10.2f}")
@@ -218,7 +189,6 @@ def format_all_output(results: AllMomentumOutput) -> str:  # noqa: C901
         output.append("  💡 Neutral: No extreme condition")
     output.append("")
 
-    # MACD Section
     output.append("📉 MACD (Moving Average Convergence Divergence)")
     output.append("-" * 70)
     output.append(f"  MACD Line:                {results.macd.macd_line:>10.2f}")
@@ -231,7 +201,6 @@ def format_all_output(results: AllMomentumOutput) -> str:  # noqa: C901
         output.append("  💡 Bearish: MACD below signal line (downward momentum)")
     output.append("")
 
-    # Stochastic Section
     output.append("🎯 STOCHASTIC OSCILLATOR")
     output.append("-" * 70)
     output.append(f"  %K (Fast):                {results.stochastic.k_value:>10.2f}")
@@ -245,7 +214,6 @@ def format_all_output(results: AllMomentumOutput) -> str:  # noqa: C901
         output.append("  💡 Neutral: %K between 20-80")
     output.append("")
 
-    # Williams %R Section
     output.append("📊 WILLIAMS %R")
     output.append("-" * 70)
     output.append(f"  Williams %R:              {results.williams_r.williams_r:>10.2f}")
@@ -258,7 +226,6 @@ def format_all_output(results: AllMomentumOutput) -> str:  # noqa: C901
         output.append("  💡 Neutral: %R between -20 and -80")
     output.append("")
 
-    # ROC Section
     output.append("🚀 RATE OF CHANGE (ROC)")
     output.append("-" * 70)
     output.append(f"  ROC:                      {results.roc.roc:>9.2f}%")
@@ -273,11 +240,9 @@ def format_all_output(results: AllMomentumOutput) -> str:  # noqa: C901
         output.append("  💡 Neutral: No significant change")
     output.append("")
 
-    # Confluence Analysis
     output.append("🎯 MOMENTUM CONFLUENCE")
     output.append("-" * 70)
 
-    # Count bullish/bearish signals
     bullish_count = 0
     bearish_count = 0
 
@@ -363,12 +328,10 @@ Examples:
         """,
     )
 
-    # Required arguments
     parser.add_argument(
         "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL)"
     )
 
-    # Data parameters
     parser.add_argument(
         "--days",
         type=int,
@@ -385,12 +348,11 @@ Examples:
     parser.add_argument(
         "--indicator",
         type=str,
-        choices=["all", "rsi", "macd", "stochastic", "williams", "roc"],
+        choices=get_args(Indicator),
         default="all",
         help="Calculate specific indicator or all (default: all)",
     )
 
-    # Configuration parameters
     parser.add_argument(
         "--rsi-period", type=int, default=14, help="RSI period (default: 14)"
     )
@@ -426,7 +388,6 @@ Examples:
         "--roc-period", type=int, default=12, help="ROC period (default: 12)"
     )
 
-    # Output parameters
     parser.add_argument(
         "--output",
         type=str,
@@ -439,16 +400,13 @@ Examples:
         "--save-to", type=str, default=None, help="Save output to file (optional)"
     )
 
-    # Parse arguments
     args = parser.parse_args()
 
-    # Validate days parameter
     if args.days < 30:
         print("ERROR: --days must be at least 30", file=sys.stderr)
         sys.exit(1)
 
     try:
-        # Step 1: Fetch data
         data_source = (
             "real-time (Finnhub + yfinance)"
             if args.realtime
@@ -464,7 +422,6 @@ Examples:
         print(f"✅ Fetched {len(momentum_data.dates)} data points", file=sys.stderr)
         print(f"📅 Latest data: {momentum_data.dates[-1]}", file=sys.stderr)
 
-        # Step 2: Create configuration
         config = MomentumConfig(
             rsi_period=args.rsi_period,
             macd_fast=args.macd_fast,
@@ -476,27 +433,29 @@ Examples:
             roc_period=args.roc_period,
         )
 
-        # Step 3: Calculate indicators
         print("🧮 Calculating momentum indicators...", file=sys.stderr)
         calculator = MomentumIndicators(config)
 
-        if args.indicator == "all":
-            results = calculator.calculate_all(momentum_data)
-        elif args.indicator == "rsi":
-            results = calculator.calculate_rsi(momentum_data)
-        elif args.indicator == "macd":
-            results = calculator.calculate_macd(momentum_data)
-        elif args.indicator == "stochastic":
-            results = calculator.calculate_stochastic(momentum_data)
-        elif args.indicator == "williams":
-            results = calculator.calculate_williams_r(momentum_data)
-        else:  # roc
-            results = calculator.calculate_roc(momentum_data)
+        indicator: Indicator = args.indicator
+        match indicator:
+            case "all":
+                results = calculator.calculate_all(momentum_data)
+            case "rsi":
+                results = calculator.calculate_rsi(momentum_data)
+            case "macd":
+                results = calculator.calculate_macd(momentum_data)
+            case "stochastic":
+                results = calculator.calculate_stochastic(momentum_data)
+            case "williams":
+                results = calculator.calculate_williams_r(momentum_data)
+            case "roc":
+                results = calculator.calculate_roc(momentum_data)
+            case _:
+                assert_never(indicator)
 
         print("✅ Calculation complete!", file=sys.stderr)
         print("", file=sys.stderr)
 
-        # Step 4: Format output
         if args.output == "json":
             output = format_json_output(results)
         else:
@@ -505,10 +464,8 @@ Examples:
             elif isinstance(results, RSIOutput):
                 output = format_rsi_output(results)
             else:
-                # For other individual indicators, fall back to JSON-style output
                 output = format_json_output(results)
 
-        # Step 5: Display or save
         if args.save_to:
             save_path = Path(args.save_to)
             save_path.parent.mkdir(parents=True, exist_ok=True)

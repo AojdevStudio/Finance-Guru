@@ -30,6 +30,11 @@ from src.models.yaml_generation_inputs import (
 )
 
 
+def possessive(name: str) -> str:
+    """Return the possessive of a name: "Alex's", but "James'" for a name ending in s."""
+    return f"{name}'" if name.lower().endswith("s") else f"{name}'s"
+
+
 class YAMLGenerator:
     """Configuration file generator from templates.
 
@@ -94,28 +99,18 @@ class YAMLGenerator:
         now = date.today()
         user_name = data.identity.user_name
 
-        # Compute possessive form (simple, just add 's)
-        possessive_name = (
-            f"{user_name}'" if user_name.endswith("s") else f"{user_name}'s"
-        )
-
-        # Format currency values
         def format_currency(value: float) -> str:
             """Format currency as $X,XXX.XX."""
             return f"${value:,.2f}"
 
-        # Build template data dictionary
         template_data = {
-            # Identity
             "user_name": user_name,
-            "possessive_name": possessive_name,
+            "possessive_name": possessive(user_name),
             "language": data.identity.language,
-            # Liquid assets
             "liquid_assets_total": data.liquid_assets.total,
             "liquid_assets_count": data.liquid_assets.accounts_count,
             "liquid_assets_yield": data.liquid_assets.average_yield,
             "liquid_assets_structure": data.liquid_assets.structure or "",
-            # Portfolio
             "portfolio_value": data.portfolio.total_value,
             "portfolio_value_formatted": format_currency(data.portfolio.total_value),
             "brokerage": data.portfolio.brokerage or "Not specified",
@@ -125,7 +120,6 @@ class YAMLGenerator:
             "risk_tolerance": data.portfolio.risk_tolerance.value,
             "google_sheets_id": data.portfolio.google_sheets_id or "",
             "account_number": data.portfolio.account_number or "",
-            # Cash flow
             "monthly_income": data.cash_flow.monthly_income,
             "monthly_income_formatted": format_currency(data.cash_flow.monthly_income),
             "fixed_expenses": data.cash_flow.fixed_expenses,
@@ -135,7 +129,6 @@ class YAMLGenerator:
             "investment_capacity_formatted": format_currency(
                 data.cash_flow.investment_capacity
             ),
-            # Debt
             "has_mortgage": data.debt.has_mortgage,
             "mortgage_balance": data.debt.mortgage_balance or 0,
             "mortgage_payment": data.debt.mortgage_payment or 0,
@@ -149,21 +142,17 @@ class YAMLGenerator:
             "credit_card_balance": data.debt.credit_card_balance or 0,
             "weighted_rate": data.debt.weighted_rate or 0,
             "other_debt": data.debt.other_debt or "",
-            # Preferences
             "investment_philosophy": data.preferences.investment_philosophy.value,
             "focus_areas": data.preferences.focus_areas,
             "focus_areas_list": ", ".join(data.preferences.focus_areas),
             "emergency_fund_months": data.preferences.emergency_fund_months,
-            # MCP
             "has_alphavantage": data.mcp.has_alphavantage,
             "alphavantage_key": data.mcp.alphavantage_key or "",
             "has_brightdata": data.mcp.has_brightdata,
             "brightdata_key": data.mcp.brightdata_key or "",
-            # Environment
             "project_root": data.project_root or ".",
             "google_sheets_credentials": data.google_sheets_credentials or "",
             "repository_name": "family-office",
-            # Timestamps
             "timestamp": now.isoformat(),
             "date": now.strftime("%Y-%m-%d"),
         }
@@ -188,8 +177,6 @@ class YAMLGenerator:
 
         result = template
 
-        # Handle conditional blocks {{#if variable}}...{{/if}}
-        # Matches {{#if var}}content{{/if}} with optional whitespace
         if_pattern = re.compile(r"\{\{#if\s+(\w+)\}\}(.*?)\{\{/if\}\}", re.DOTALL)
 
         def replace_conditional(match: re.Match) -> str:
@@ -197,12 +184,10 @@ class YAMLGenerator:
             condition = match.group(1)
             content = match.group(2)
             value = data.get(condition)
-            # Include block if value is truthy (not None, False, 0, or empty string)
             return content if value else ""
 
         result = if_pattern.sub(replace_conditional, result)
 
-        # Replace simple variables {{variable}}
         var_pattern = re.compile(r"\{\{(\w+)\}\}")
 
         def replace_variable(match: re.Match) -> str:
@@ -276,7 +261,7 @@ class YAMLGenerator:
         Returns:
             Generated .env content
         """
-        template = self._load_template("env", "")  # env.template (no extension)
+        template = self._load_template("env", "")
         prepared_data = self._prepare_user_data(data)
         return self._process_template(template, prepared_data)
 
@@ -323,7 +308,6 @@ def write_config_files(output: YAMLGenerationOutput, base_dir: str = ".") -> Non
     """
     paths = InstancePaths(root=Path(base_dir).expanduser().resolve())
 
-    # Define output paths
     files = {
         paths.profile: output.user_profile_yaml,
         paths.config: output.config_yaml,
@@ -333,7 +317,6 @@ def write_config_files(output: YAMLGenerationOutput, base_dir: str = ".") -> Non
         paths.root / ".claude" / "mcp.json": output.mcp_json,
     }
 
-    # Write files
     for file_path, content in files.items():
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_text(content, encoding="utf-8")

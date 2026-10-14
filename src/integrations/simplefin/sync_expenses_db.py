@@ -10,7 +10,7 @@ import sys
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from src.config.instance_paths import InstancePaths, _db_path, load_instance_env
 from src.integrations.simplefin.categorize import (
@@ -136,7 +136,10 @@ _WITHDRAWAL_MARKERS = (
 _DEPOSIT_MARKERS = ("direct deposit", "direct dep", "transferred from")
 
 
-def resolve_direction(text: str | None, amount: float | None) -> str:
+Direction = Literal["credit", "debit"]
+
+
+def resolve_direction(text: str | None, amount: float | None) -> Direction:
     """Resolve credit/debit, preferring explicit feed wording over amount sign.
 
     Fidelity's sign is unreliable in BOTH directions, so sign alone is not
@@ -165,6 +168,18 @@ def resolve_direction(text: str | None, amount: float | None) -> str:
     return "debit" if amount is not None and amount < 0 else "credit"
 
 
+def _category_text(txn: dict[str, Any]) -> str:
+    """Join payee and description, since either one can carry the merchant."""
+    return " ".join(part for part in (txn.get("payee"), txn.get("description")) if part)
+
+
+def _signed_amount(amount: float | None, direction: Direction) -> float | None:
+    """Return the amount positive for a credit and negative for a debit."""
+    if amount is None:
+        return None
+    return abs(amount) if direction == "credit" else -abs(amount)
+
+
 def normalize_transaction(
     account: dict[str, Any],
     txn: dict[str, Any],
@@ -188,20 +203,11 @@ def normalize_transaction(
         posted_ts = int(posted) if posted is not None else None
     except (TypeError, ValueError):
         posted_ts = None
-    amount = _to_float(txn.get("amount"))
-    text = txn.get("description") or txn.get("payee")
-    # Categorize against BOTH fields. `description` is the raw bank memo
-    # ("DIRECT DEBIT AMEX EPAYMENT ACH PMT"), while `payee` is SimpleFIN's
-    # normalized merchant name ("American Express Credit Card"). Matching only
-    # description missed every payee-shaped pattern and left 67% of debit volume
-    # Uncategorized (found 2026-08-04).
-    category_text = " ".join(
-        part for part in (txn.get("payee"), txn.get("description")) if part
+    raw_amount = _to_float(txn.get("amount"))
+    direction = resolve_direction(
+        txn.get("description") or txn.get("payee"), raw_amount
     )
-    direction = resolve_direction(text, amount)
-    # Keep sign consistent with direction so SUM(amount) reflects real cash flow.
-    if amount is not None:
-        amount = abs(amount) if direction == "credit" else -abs(amount)
+    amount = _signed_amount(raw_amount, direction)
     return (
         account["id"],
         account.get("name"),
@@ -213,7 +219,7 @@ def normalize_transaction(
         txn.get("description"),
         amount,
         direction,
-        categorize_expense(category_text, amount, account.get("name"), patterns),
+        categorize_expense(_category_text(txn), amount, account.get("name"), patterns),
         now,
     )
 

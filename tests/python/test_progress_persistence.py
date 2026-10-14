@@ -68,12 +68,10 @@ class TestStateManagement:
 
     def test_save_and_load_state(self):
         """State should persist correctly to disk."""
-        # Create and save state
         original_state = create_new_state()
         original_state.current_section = "liquid_assets"
         save_state(original_state)
 
-        # Load state
         loaded_state = load_state()
 
         assert loaded_state is not None
@@ -83,14 +81,11 @@ class TestStateManagement:
 
     def test_has_existing_state(self):
         """Should correctly detect if state file exists."""
-        # Initially no state
         assert not has_existing_state()
 
-        # Create state
         state = create_new_state()
         save_state(state)
 
-        # Now should exist
         assert has_existing_state()
 
     def test_load_nonexistent_state(self):
@@ -100,18 +95,16 @@ class TestStateManagement:
 
     def test_clear_state(self):
         """Clear should remove state file."""
-        # Create state
         state = create_new_state()
         save_state(state)
         assert has_existing_state()
 
-        # Clear
         clear_state()
         assert not has_existing_state()
 
     def test_clear_nonexistent_state(self):
         """Clearing nonexistent state should not error."""
-        clear_state()  # Should not raise
+        clear_state()
 
     def test_clear_state_tolerates_concurrent_removal(self, monkeypatch):
         """A concurrent delete should leave the state cleared without error."""
@@ -132,18 +125,13 @@ class TestStateManagement:
     def test_save_updates_timestamp(self):
         """Saving should update the last_updated timestamp."""
         state = create_new_state()
-        original_timestamp = state.last_updated
+        saved_at = datetime(2026, 10, 14, 9, 30)
 
-        # Small delay to ensure timestamp difference
-        import time
-
-        time.sleep(0.01)
-
-        save_state(state)
+        save_state(state, clock=lambda: saved_at)
         loaded_state = load_state()
 
         assert loaded_state is not None
-        assert loaded_state.last_updated > original_timestamp
+        assert loaded_state.last_updated == saved_at.isoformat()
 
 
 class TestSectionTracking:
@@ -153,7 +141,6 @@ class TestSectionTracking:
         """Should add section to completed list."""
         state = create_new_state()
 
-        # Mark first section complete
         state = mark_section_complete(state, "liquid_assets", "investments")
 
         assert "liquid_assets" in state.completed_sections
@@ -180,14 +167,12 @@ class TestSectionTracking:
         state = mark_section_complete(state, "liquid_assets", "investments")
         state = mark_section_complete(state, "liquid_assets", "investments")
 
-        # Should only appear once
         assert state.completed_sections.count("liquid_assets") == 1
 
     def test_mark_final_section_complete(self):
         """Should set current_section to None when done."""
         state = create_new_state()
 
-        # Complete all sections
         for i, section in enumerate(ALL_SECTIONS):
             next_section = ALL_SECTIONS[i + 1] if i + 1 < len(ALL_SECTIONS) else None
             state = mark_section_complete(state, section, next_section)
@@ -246,10 +231,8 @@ class TestDataPersistence:
         """Should allow overwriting existing section data."""
         state = create_new_state()
 
-        # Save initial data
         state = save_section_data(state, "debt", {"balance": 100000})
 
-        # Overwrite
         new_data = {"balance": 90000}
         state = save_section_data(state, "debt", new_data)
 
@@ -272,7 +255,6 @@ class TestProgressCalculation:
         """Should return next uncompleted section."""
         state = create_new_state()
 
-        # Complete first two sections
         state.completed_sections = ["liquid_assets", "investments"]
 
         next_section = get_next_section(state)
@@ -283,7 +265,6 @@ class TestProgressCalculation:
         """Should return None when all sections complete."""
         state = create_new_state()
 
-        # Mark all sections complete
         state.completed_sections = list(ALL_SECTIONS)
 
         next_section = get_next_section(state)
@@ -326,7 +307,6 @@ class TestTimeTracking:
         """Should show minutes for recent updates."""
         state = create_new_state()
 
-        # Manually set last_updated to 5 minutes ago
         past_time = datetime.now() - timedelta(minutes=5)
         state.last_updated = past_time.isoformat()
 
@@ -339,7 +319,6 @@ class TestTimeTracking:
         """Should show hours for older updates."""
         state = create_new_state()
 
-        # Set to 3 hours ago
         past_time = datetime.now() - timedelta(hours=3)
         state.last_updated = past_time.isoformat()
 
@@ -352,7 +331,6 @@ class TestTimeTracking:
         """Should show days for very old updates."""
         state = create_new_state()
 
-        # Set to 2 days ago
         past_time = datetime.now() - timedelta(days=2)
         state.last_updated = past_time.isoformat()
 
@@ -365,12 +343,10 @@ class TestTimeTracking:
         """Should use singular/plural correctly."""
         state = create_new_state()
 
-        # 1 day
         past_time = datetime.now() - timedelta(days=1)
         state.last_updated = past_time.isoformat()
         assert "day ago" in get_time_since_last_update(state)
 
-        # 2 days
         past_time = datetime.now() - timedelta(days=2)
         state.last_updated = past_time.isoformat()
         assert "days ago" in get_time_since_last_update(state)
@@ -381,7 +357,6 @@ class TestEdgeCases:
 
     def test_corrupted_state_file(self):
         """Should handle corrupted JSON gracefully."""
-        # Write invalid JSON
         state_path = get_state_path()
         state_path.write_text("{ invalid json }", encoding="utf-8")
 
@@ -402,7 +377,6 @@ class TestEdgeCases:
         """Should handle state files with extra fields."""
         state_path = get_state_path()
 
-        # Create state with extra field
         data = {
             "version": "1.0",
             "started_at": datetime.now().isoformat(),
@@ -417,19 +391,16 @@ class TestEdgeCases:
 
         result = load_state()
 
-        # Should load successfully (Pydantic ignores extra fields)
         assert result is not None
         assert result.version == "1.0"
 
     def test_resume_after_interruption(self):
         """Should properly resume onboarding after interruption."""
-        # Start onboarding
         state = create_new_state()
         state = mark_section_complete(state, "liquid_assets", "investments")
         state = save_section_data(state, "liquid_assets", {"total": 50000})
         save_state(state)
 
-        # Simulate interruption and resume
         resumed_state = load_state()
 
         assert resumed_state is not None
@@ -445,11 +416,9 @@ class TestEdgeCases:
         state2 = create_new_state()
         state2.current_section = "investments"
 
-        # Save both
         save_state(state1)
         save_state(state2)
 
-        # Last save should win
         loaded = load_state()
         assert loaded is not None
         assert loaded.current_section == "investments"

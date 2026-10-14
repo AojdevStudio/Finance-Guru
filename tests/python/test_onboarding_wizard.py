@@ -40,10 +40,6 @@ from src.models.yaml_generation_inputs import (
     UserPreferencesInput,
 )
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
 
 @pytest.fixture
 def completed_state() -> OnboardingState:
@@ -56,7 +52,7 @@ def completed_state() -> OnboardingState:
     state.data[SectionName.LIQUID_ASSETS.value] = {
         "total": 25000.0,
         "accounts_count": 3,
-        "average_yield": 0.045,  # decimal (converted by section runner)
+        "average_yield": 0.045,
         "structure": "2 checking, 1 HYSA",
     }
     state.data[SectionName.INVESTMENTS.value] = {
@@ -64,8 +60,8 @@ def completed_state() -> OnboardingState:
         "brokerage": "Fidelity",
         "has_retirement": True,
         "retirement_value": 60000.0,
-        "allocation_strategy": "aggressive_growth",  # string, not enum
-        "risk_tolerance": "aggressive",  # string, not enum
+        "allocation_strategy": "aggressive_growth",
+        "risk_tolerance": "aggressive",
         "google_sheets_id": "abc123",
         "account_number": "4567",
     }
@@ -92,7 +88,7 @@ def completed_state() -> OnboardingState:
         "other_debt": None,
     }
     state.data[SectionName.PREFERENCES.value] = {
-        "investment_philosophy": "growth",  # string, not enum
+        "investment_philosophy": "growth",
         "focus_areas": ["Dividend income", "Growth investing"],
         "emergency_fund_months": 6,
     }
@@ -158,16 +154,11 @@ def valid_user_data() -> UserDataInput:
     )
 
 
-# ---------------------------------------------------------------------------
-# SECTION_ORDER structure
-# ---------------------------------------------------------------------------
-
-
 class TestSectionOrder:
     """Test the SECTION_ORDER configuration."""
 
-    def test_has_eight_entries(self):
-        assert len(SECTION_ORDER) == 8
+    def test_runs_every_section_in_enum_order(self):
+        assert [name for name, _ in SECTION_ORDER] == list(SectionName)
 
     def test_first_is_liquid_assets(self):
         assert SECTION_ORDER[0][0] == SectionName.LIQUID_ASSETS
@@ -179,11 +170,6 @@ class TestSectionOrder:
         section_names = [name for name, _ in SECTION_ORDER]
         for section in SectionName:
             assert section in section_names, f"{section} missing from SECTION_ORDER"
-
-
-# ---------------------------------------------------------------------------
-# State-to-model conversion
-# ---------------------------------------------------------------------------
 
 
 class TestConvertStateToUserData:
@@ -250,13 +236,11 @@ class TestConvertStateToUserData:
 
         with pytest.warns(UserWarning, match="Unknown RiskTolerance"):
             result = convert_state_to_user_data(completed_state, "/tmp/test")
-        # Falls back to default (MODERATE)
         assert result.portfolio.risk_tolerance == RiskTolerance.MODERATE
 
     def test_missing_section_uses_defaults(self):
         """Missing section data uses sensible defaults."""
         state = OnboardingState.create_new()
-        # Only provide env_setup (for identity) and minimal cash_flow
         state.data[SectionName.ENV_SETUP.value] = {
             "user_name": "Minimal",
             "language": "English",
@@ -276,11 +260,6 @@ class TestConvertStateToUserData:
         assert result.debt.has_mortgage is False
 
 
-# ---------------------------------------------------------------------------
-# Config file generation
-# ---------------------------------------------------------------------------
-
-
 class TestGenerateConfigFiles:
     """Test config file generation to correct paths."""
 
@@ -288,7 +267,6 @@ class TestGenerateConfigFiles:
         """All config files are created at correct locations."""
         monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
 
-        # Copy templates to tmp_path so we can use it as project root
         import shutil
 
         template_src = Path("scripts/onboarding/modules/templates")
@@ -298,18 +276,15 @@ class TestGenerateConfigFiles:
         template_dest = tmp_path / "scripts" / "onboarding" / "modules" / "templates"
         shutil.copytree(template_src, template_dest)
 
-        # Also create .claude dir
         (tmp_path / ".claude").mkdir(exist_ok=True)
 
         valid_user_data.project_root = str(tmp_path)
         generate_config_files(valid_user_data, tmp_path)
 
-        # Verify instance files
         assert (tmp_path / "user-profile.yaml").exists()
         assert (tmp_path / "config.yaml").exists()
         assert (tmp_path / "system-context.md").exists()
 
-        # Verify project-root files
         assert (tmp_path / "CLAUDE.md").exists()
         assert (tmp_path / ".env").exists()
         assert (tmp_path / ".claude" / "mcp.json").exists()
@@ -348,7 +323,6 @@ class TestGenerateConfigFiles:
         template_dest = tmp_path / "scripts" / "onboarding" / "modules" / "templates"
         shutil.copytree(template_src, template_dest)
 
-        # Create fake existing files
         (tmp_path / "CLAUDE.md").write_text("existing claude", encoding="utf-8")
         (tmp_path / ".env").write_text("existing env", encoding="utf-8")
         claude_dir = tmp_path / ".claude"
@@ -358,17 +332,14 @@ class TestGenerateConfigFiles:
         valid_user_data.project_root = str(tmp_path)
         generate_config_files(valid_user_data, tmp_path)
 
-        # Verify backups exist
         assert (tmp_path / "CLAUDE.md.backup").exists()
         assert (tmp_path / ".env.backup").exists()
         assert (claude_dir / "mcp.json.backup").exists()
 
-        # Verify backup contents are the old files
         assert (tmp_path / "CLAUDE.md.backup").read_text() == "existing claude"
         assert (tmp_path / ".env.backup").read_text() == "existing env"
         assert (claude_dir / "mcp.json.backup").read_text() == "existing mcp"
 
-        # Verify new files overwrite the old
         new_claude = (tmp_path / "CLAUDE.md").read_text()
         assert new_claude != "existing claude"
         assert "TestUser" in new_claude
@@ -402,11 +373,6 @@ class TestGenerateConfigFiles:
 
         claude_md = (tmp_path / "CLAUDE.md").read_text()
         assert "gdrive" not in claude_md
-
-
-# ---------------------------------------------------------------------------
-# Save/Resume progress persistence (Phase 4)
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -454,7 +420,9 @@ class TestSaveProgress:
         assert progress_file.exists()
         data = json.loads(progress_file.read_text())
         assert data["current_section"] == "cash_flow"
-        assert len(data["completed_sections"]) == 2
+        assert data["completed_sections"] == [
+            section.value for section in partial_state.completed_sections
+        ]
 
     def test_round_trips_to_equivalent_state(self, progress_file, partial_state):
         """Saved state can be loaded back into an equivalent OnboardingState."""
@@ -470,7 +438,6 @@ class TestSaveProgress:
         progress_path = tmp_path / ".onboarding-progress.json"
         monkeypatch.setattr("src.cli.onboarding_wizard.PROGRESS_FILE", progress_path)
         state = OnboardingState.create_new()
-        # Inject an unserializable object to force an error
         state.data["bad"] = {"value": object()}
         with pytest.raises(ValueError):
             save_progress(state)
@@ -486,7 +453,7 @@ class TestLoadProgress:
         loaded = load_progress()
         assert loaded is not None
         assert loaded.current_section == SectionName.CASH_FLOW
-        assert len(loaded.completed_sections) == 2
+        assert loaded.completed_sections == partial_state.completed_sections
         assert loaded.data[SectionName.LIQUID_ASSETS.value]["total"] == 25000.0
 
     def test_returns_none_for_missing_file(self, progress_file):
@@ -503,8 +470,6 @@ class TestLoadProgress:
 
     def test_returns_none_for_invalid_schema(self, progress_file):
         """load_progress returns None when JSON has wrong schema that fails validation."""
-        # current_section must be a valid SectionName enum value;
-        # an invalid value triggers a Pydantic ValidationError.
         progress_file.write_text(
             json.dumps({"current_section": "nonexistent_section_xyz"})
         )
@@ -525,7 +490,7 @@ class TestDeleteProgress:
     def test_noop_if_no_file(self, progress_file):
         """delete_progress does not raise when no file exists."""
         assert not progress_file.exists()
-        delete_progress()  # Should not raise
+        delete_progress()
 
 
 class TestWizardSaveResume:
@@ -537,16 +502,15 @@ class TestWizardSaveResume:
 
         from src.cli.onboarding_wizard import run_wizard
 
-        # Track section calls
         call_count = 0
         sections_completed = 0
+        sections_before_interrupt = 2
 
         def mock_section_runner(state):
             nonlocal call_count, sections_completed
             call_count += 1
             section_name = SECTION_ORDER[sections_completed][0]
 
-            # Simulate filling in data
             state.data[section_name.value] = {"mock": True}
             next_idx = sections_completed + 1
             next_section = (
@@ -555,12 +519,10 @@ class TestWizardSaveResume:
             state.mark_complete(section_name, next_section)
             sections_completed += 1
 
-            # After 2 sections, simulate Ctrl+C by raising KeyboardInterrupt
-            if sections_completed == 2:
+            if sections_completed == sections_before_interrupt:
                 raise KeyboardInterrupt()
             return state
 
-        # Patch all section runners
         with (
             patch(
                 "src.cli.onboarding_wizard.SECTION_ORDER",
@@ -570,10 +532,9 @@ class TestWizardSaveResume:
         ):
             run_wizard()
 
-        # Verify progress file was created with 2 completed sections
         assert progress_file.exists()
         data = json.loads(progress_file.read_text())
-        assert len(data["completed_sections"]) == 2
+        assert len(data["completed_sections"]) == sections_before_interrupt
 
     def test_wizard_resumes_from_saved_progress(
         self, progress_file, partial_state, monkeypatch
@@ -583,18 +544,14 @@ class TestWizardSaveResume:
 
         from src.cli.onboarding_wizard import run_wizard
 
-        # Save the partial state
         save_progress(partial_state)
 
-        # Track which sections get executed
         executed_sections = []
 
         def mock_section_runner(state):
-            # Find which section this is by looking at current_section
             section_name = state.current_section
             executed_sections.append(section_name)
             state.data[section_name.value] = {"mock": True}
-            # Mark complete and advance
             section_names = [name for name, _ in SECTION_ORDER]
             idx = section_names.index(section_name)
             next_section = (
@@ -602,12 +559,10 @@ class TestWizardSaveResume:
             )
             state.mark_complete(section_name, next_section)
 
-            # On summary section, mark confirmed
             if section_name == SectionName.SUMMARY:
                 state.data[SectionName.SUMMARY.value] = {"confirmed": False}
             return state
 
-        # Patch questionary.confirm to return True (resume)
         mock_confirm = MagicMock()
         mock_confirm.ask.return_value = True
 
@@ -619,10 +574,8 @@ class TestWizardSaveResume:
             ):
                 run_wizard()
 
-        # Should have skipped the first 2 sections (LIQUID_ASSETS, INVESTMENTS)
         assert SectionName.LIQUID_ASSETS not in executed_sections
         assert SectionName.INVESTMENTS not in executed_sections
-        # Should have executed remaining 6 sections starting from CASH_FLOW
         assert SectionName.CASH_FLOW in executed_sections
 
     def test_wizard_deletes_progress_on_completion(
@@ -633,16 +586,12 @@ class TestWizardSaveResume:
 
         from src.cli.onboarding_wizard import run_wizard
 
-        # Save progress first
         save_progress(completed_state)
         assert progress_file.exists()
 
-        # Mock all sections to just pass through (already complete)
         def passthrough(state):
             return state
 
-        # Patch load_progress to return None so it starts fresh,
-        # and mock all sections to fill data and confirm
         section_index = 0
 
         def mock_runner(state):
@@ -674,5 +623,4 @@ class TestWizardSaveResume:
             mock_convert.return_value = MagicMock()
             run_wizard()
 
-        # Progress file should be deleted after completion
         assert not progress_file.exists()

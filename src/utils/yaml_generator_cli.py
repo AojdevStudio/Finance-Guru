@@ -73,7 +73,6 @@ def load_user_data_from_json(json_path: str) -> UserDataInput:
     with open(json_file, encoding="utf-8") as f:
         raw_data = json.load(f)
 
-    # Parse nested structures
     try:
         user_data = UserDataInput(
             identity=UserIdentityInput(**raw_data["identity"]),
@@ -195,7 +194,6 @@ Examples:
     args = parser.parse_args()
 
     try:
-        # Load and validate user data
         print(f"Loading user data from {args.input}...")
         user_data = load_user_data_from_json(args.input)
         print(f"✓ User data validated for: {user_data.identity.user_name}")
@@ -204,30 +202,25 @@ Examples:
             print("\n✓ Validation successful. Use --generate to create config files.")
             sys.exit(0)
 
-        # Initialize generator
         print(f"Loading templates from {args.template_dir}...")
         generator = YAMLGenerator(args.template_dir)
 
-        # Generate configurations
         print("Generating configuration files...")
 
         if args.type == "all":
             output = generator.generate_all_configs(user_data)
 
-            # Pretty-print if requested
             if args.pretty_print:
                 print("\n--- user-profile.yaml ---")
                 print(output.user_profile_yaml)
                 print("\n--- config.yaml ---")
                 print(output.config_yaml)
 
-            # Write files
             if not args.pretty_print:
                 write_config_files(output, args.output)
                 print_generation_summary(output, args.output)
 
         else:
-            # Generate specific config
             config_map = {
                 "user-profile": generator.generate_user_profile,
                 "config": generator.generate_config,
@@ -242,7 +235,6 @@ Examples:
                 print(f"\n--- {args.type} ---")
                 print(generated_content)
             else:
-                # Write single file
                 paths = InstancePaths(root=Path(args.output).expanduser().resolve())
                 file_map = {
                     "user-profile": paths.profile,
@@ -256,7 +248,6 @@ Examples:
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 output_path.write_text(generated_content, encoding="utf-8")
 
-                # Create minimal output object for summary
                 from datetime import date
 
                 from src.models.yaml_generation_inputs import YAMLGenerationOutput

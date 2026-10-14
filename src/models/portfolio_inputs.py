@@ -17,6 +17,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
+
 
 class PortfolioDataInput(BaseModel):
     """Historical price data for portfolio optimization.
@@ -91,26 +93,22 @@ class PortfolioDataInput(BaseModel):
         if not v:
             raise ValueError("Prices dictionary cannot be empty")
 
-        # Check all prices are positive
         for ticker, price_list in v.items():
             if any(p <= 0 for p in price_list):
                 raise ValueError(f"All prices for {ticker} must be positive")
 
-        # Check all series have same length
         lengths = [len(price_list) for price_list in v.values()]
         if len(set(lengths)) > 1:
             raise ValueError(
                 f"All price series must have same length. Found: {dict(zip(v.keys(), lengths, strict=False))}"
             )
 
-        # Check minimum length (30 days minimum, 252 recommended)
         if lengths[0] < 30:
             raise ValueError(
                 f"Price series must have at least 30 days. Found: {lengths[0]} days. "
                 f"Note: 252 days (1 year) recommended for reliable optimization."
             )
 
-        # Check tickers match
         tickers_in_data = info.data.get("tickers", [])
         if tickers_in_data:
             for ticker in tickers_in_data:
@@ -136,7 +134,6 @@ class PortfolioDataInput(BaseModel):
         if v is None:
             return v
 
-        # Check all returns are reasonable
         for ticker, ret in v.items():
             if ret < -0.90:
                 raise ValueError(
@@ -149,7 +146,6 @@ class PortfolioDataInput(BaseModel):
                     "Returns above 200% per year are extremely aggressive. Verify this forecast."
                 )
 
-        # Check tickers match
         tickers_in_data = info.data.get("tickers", [])
         if tickers_in_data:
             for ticker in tickers_in_data:
@@ -165,16 +161,16 @@ class PortfolioDataInput(BaseModel):
             "examples": [
                 {
                     "tickers": ["TSLA", "SPY", "BND"],
-                    "dates": ["2024-10-13"] * 252,  # Simplified for example
+                    "dates": ["2024-10-13"] * TRADING_DAYS_PER_YEAR,
                     "prices": {
-                        "TSLA": [250.0] * 252,
-                        "SPY": [450.0] * 252,
-                        "BND": [72.0] * 252,
+                        "TSLA": [250.0] * TRADING_DAYS_PER_YEAR,
+                        "SPY": [450.0] * TRADING_DAYS_PER_YEAR,
+                        "BND": [72.0] * TRADING_DAYS_PER_YEAR,
                     },
                     "expected_returns": {
-                        "TSLA": 0.20,  # 20% expected annual return
-                        "SPY": 0.10,  # 10% expected annual return
-                        "BND": 0.04,  # 4% expected annual return
+                        "TSLA": 0.20,
+                        "SPY": 0.10,
+                        "BND": 0.04,
                     },
                 }
             ]
@@ -556,7 +552,6 @@ class EfficientFrontierOutput(BaseModel):
     }
 
 
-# Type exports for convenience
 __all__ = [
     "PortfolioDataInput",
     "OptimizationConfig",

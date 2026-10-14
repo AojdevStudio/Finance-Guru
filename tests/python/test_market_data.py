@@ -4,15 +4,12 @@ Tests the get_prices function with mocked yfinance and API calls.
 No real API calls -- all external calls are mocked.
 """
 
+from datetime import date
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.utils.market_data import PriceData, get_prices
-
-# ---------------------------------------------------------------------------
-# PriceData model
-# ---------------------------------------------------------------------------
+from src.utils.market_data import PriceData, append_live_quote, get_prices
 
 
 class TestPriceDataModel:
@@ -39,11 +36,6 @@ class TestPriceDataModel:
             timestamp="2025-01-02T10:00:00",
         )
         assert pd_obj.source == "yfinance"
-
-
-# ---------------------------------------------------------------------------
-# get_prices -- yfinance path
-# ---------------------------------------------------------------------------
 
 
 class TestGetPricesYfinance:
@@ -133,11 +125,6 @@ class TestGetPricesYfinance:
         assert result["ZERO"].change_percent == 0
 
 
-# ---------------------------------------------------------------------------
-# get_prices -- Finnhub/realtime path
-# ---------------------------------------------------------------------------
-
-
 class TestGetPricesRealtime:
     """Tests for get_prices with realtime=True (Finnhub)."""
 
@@ -204,11 +191,6 @@ class TestGetPricesRealtime:
         assert "TSLA" in result
 
 
-# ---------------------------------------------------------------------------
-# Input normalization
-# ---------------------------------------------------------------------------
-
-
 class TestInputNormalization:
     """Tests for input handling."""
 
@@ -232,3 +214,51 @@ class TestInputNormalization:
 
         result = get_prices("aapl")
         assert "AAPL" in result
+
+
+class TestAppendLiveQuote:
+    """A live quote extends end-of-day series as one flat bar."""
+
+    @patch("src.utils.market_data.get_prices")
+    def test_quote_extends_every_series(self, mock_get_prices: MagicMock):
+        mock_get_prices.return_value = {
+            "TSLA": PriceData(
+                symbol="TSLA",
+                price=250.0,
+                change=0.0,
+                change_percent=0.0,
+                timestamp="2026-10-14T15:00:00",
+                source="finnhub",
+            )
+        }
+        dates = [date(2026, 10, 13)]
+        high, low, close = [255.0], [245.0], [249.0]
+
+        append_live_quote("tsla", dates, high, low, close)
+
+        assert dates == [date(2026, 10, 13), date.today()]
+        assert high[-1] == low[-1] == close[-1] == 250.0
+
+    @patch("src.utils.market_data.get_prices")
+    def test_missing_quote_leaves_series_unchanged(
+        self, mock_get_prices: MagicMock, capsys
+    ):
+        mock_get_prices.return_value = {}
+        dates, close = [date(2026, 10, 13)], [249.0]
+
+        append_live_quote("TSLA", dates, close)
+
+        assert (dates, close) == ([date(2026, 10, 13)], [249.0])
+        assert "using EOD data only" in capsys.readouterr().err
+
+    @patch("src.utils.market_data.get_prices")
+    def test_provider_error_leaves_series_unchanged(
+        self, mock_get_prices: MagicMock, capsys
+    ):
+        mock_get_prices.side_effect = RuntimeError("rate limited")
+        dates, close = [date(2026, 10, 13)], [249.0]
+
+        append_live_quote("TSLA", dates, close)
+
+        assert (dates, close) == ([date(2026, 10, 13)], [249.0])
+        assert "rate limited" in capsys.readouterr().err

@@ -38,11 +38,6 @@ import argparse
 import json
 import sys
 from datetime import datetime, timedelta
-from pathlib import Path
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 import yfinance as yf
 
@@ -50,7 +45,8 @@ from src.models.volatility_inputs import (
     VolatilityConfig,
     VolatilityDataInput,
 )
-from src.utils.market_data import get_prices  # Finnhub integration
+from src.utils.market_data import append_live_quote
+from src.utils.trading_calendar import calendar_days_for
 from src.utils.volatility import calculate_volatility
 
 
@@ -77,9 +73,7 @@ def fetch_price_data(
     Raises:
         ValueError: If data cannot be fetched or is insufficient
     """
-    # Fetch extra days to account for weekends/holidays
-    # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
-    start_date = datetime.now() - timedelta(days=int(days * 1.5))
+    start_date = datetime.now() - timedelta(days=calendar_days_for(days))
     end_date = datetime.now()
 
     stock = yf.Ticker(ticker)
@@ -88,7 +82,6 @@ def fetch_price_data(
     if hist.empty:
         raise ValueError(f"No data found for ticker {ticker}")
 
-    # Take only the requested number of trading days
     hist = hist.tail(days)
 
     if len(hist) < 20:
@@ -96,39 +89,14 @@ def fetch_price_data(
             f"Insufficient data for {ticker}. Need at least 20 days, got {len(hist)}"
         )
 
-    # Extract OHLC data
     dates_list = [d.date() for d in hist.index]
     high_list = hist["High"].tolist()
     low_list = hist["Low"].tolist()
     close_list = hist["Close"].tolist()
 
-    # FINNHUB INTEGRATION: Append real-time intraday price if requested
     if realtime:
-        try:
-            # Get real-time price from Finnhub
-            rt_data = get_prices(ticker, realtime=True)
-            if ticker.upper() in rt_data:
-                price_data = rt_data[ticker.upper()]
-                current_price = price_data.price
-                # Append today's date and current price to the data
-                # For volatility, we use current price for all OHLC values (conservative)
-                from datetime import date
+        append_live_quote(ticker, dates_list, high_list, low_list, close_list)
 
-                dates_list.append(date.today())
-                high_list.append(current_price)
-                low_list.append(current_price)
-                close_list.append(current_price)
-                print(
-                    f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)",
-                    file=sys.stderr,
-                )
-        except Exception as e:
-            print(
-                f"⚠️  Real-time price unavailable, using EOD data only: {e}",
-                file=sys.stderr,
-            )
-
-    # Convert to VolatilityDataInput
     return VolatilityDataInput(
         ticker=ticker.upper(),
         dates=dates_list,
@@ -162,13 +130,11 @@ def format_human_output(result) -> str:
     lines.append(f"Current Price: ${result.current_price:.2f}")
     lines.append(f"{'=' * 60}\n")
 
-    # Volatility Regime (most important summary)
     regime_emoji = {"low": "🟢", "normal": "🔵", "high": "🟡", "extreme": "🔴"}
     emoji = regime_emoji.get(result.volatility_regime, "⚪")
     lines.append(f"VOLATILITY REGIME: {emoji} {result.volatility_regime.upper()}")
     lines.append("")
 
-    # Position sizing guidance based on regime
     position_guidance = {
         "low": "Can use larger positions (10-20% of portfolio)",
         "normal": "Standard position sizing (5-10% of portfolio)",
@@ -178,14 +144,12 @@ def format_human_output(result) -> str:
     lines.append(f"💡 Position Sizing: {position_guidance[result.volatility_regime]}")
     lines.append("")
 
-    # ATR (for stop-loss calculation)
     lines.append("AVERAGE TRUE RANGE (ATR)")
     lines.append(f"  ATR Value: ${result.atr.atr:.2f}")
     lines.append(f"  ATR %: {result.atr.atr_percent:.2f}%")
     lines.append(f"  💡 Suggested Stop Loss: 2× ATR = ${result.atr.atr * 2:.2f}")
     lines.append("")
 
-    # Historical Volatility
     lines.append("HISTORICAL VOLATILITY")
     lines.append(f"  Daily Vol: {result.historical_volatility.daily_volatility:.4f}")
     lines.append(
@@ -193,7 +157,6 @@ def format_human_output(result) -> str:
     )
     lines.append("")
 
-    # Bollinger Bands
     bb = result.bollinger_bands
     lines.append("BOLLINGER BANDS")
     lines.append(f"  Upper Band: ${bb.upper_band:.2f}")
@@ -202,7 +165,6 @@ def format_human_output(result) -> str:
     lines.append(f"  %B: {bb.percent_b:.3f}")
     lines.append(f"  Bandwidth: {bb.bandwidth:.2f}%")
 
-    # %B interpretation
     if bb.percent_b > 1.0:
         lines.append("  📊 Price above upper band (strong momentum or overbought)")
     elif bb.percent_b > 0.8:
@@ -214,7 +176,6 @@ def format_human_output(result) -> str:
     else:
         lines.append("  📊 Price within normal range")
 
-    # Bandwidth interpretation
     if bb.bandwidth < 10:
         lines.append("  🎯 Narrow bands - potential breakout setup ('the squeeze')")
     elif bb.bandwidth > 30:
@@ -222,14 +183,12 @@ def format_human_output(result) -> str:
 
     lines.append("")
 
-    # Keltner Channels
     kc = result.keltner_channels
     lines.append("KELTNER CHANNELS")
     lines.append(f"  Upper Channel: ${kc.upper_channel:.2f}")
     lines.append(f"  Middle Line: ${kc.middle_line:.2f}")
     lines.append(f"  Lower Channel: ${kc.lower_channel:.2f}")
 
-    # Comparison with Bollinger Bands
     if result.current_price > bb.upper_band and result.current_price > kc.upper_channel:
         lines.append("  🔥 Price outside BOTH indicators - EXTREME move")
     elif result.current_price > bb.upper_band:
@@ -250,7 +209,6 @@ def format_json_output(result) -> str:
     Returns:
         JSON string
     """
-    # Convert Pydantic model to dict, then to JSON
     return json.dumps(result.model_dump(), indent=2, default=str)
 
 
@@ -282,7 +240,6 @@ Agent Use Cases:
         """,
     )
 
-    # Required arguments
     parser.add_argument(
         "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL, SPY)"
     )
@@ -300,7 +257,6 @@ Agent Use Cases:
         help="Append current intraday price from Finnhub for real-time volatility analysis",
     )
 
-    # Bollinger Bands configuration
     parser.add_argument(
         "--bb-period", type=int, default=20, help="Bollinger Bands period (default: 20)"
     )
@@ -312,12 +268,10 @@ Agent Use Cases:
         help="Bollinger Bands standard deviation multiplier (default: 2.0)",
     )
 
-    # ATR configuration
     parser.add_argument(
         "--atr-period", type=int, default=14, help="ATR period (default: 14)"
     )
 
-    # Historical volatility configuration
     parser.add_argument(
         "--hvol-period",
         type=int,
@@ -325,7 +279,6 @@ Agent Use Cases:
         help="Historical volatility lookback period (default: 20)",
     )
 
-    # Keltner Channels configuration
     parser.add_argument(
         "--kc-period",
         type=int,
@@ -340,7 +293,6 @@ Agent Use Cases:
         help="Keltner Channels ATR multiplier (default: 2.0)",
     )
 
-    # Output format
     parser.add_argument(
         "--output",
         choices=["human", "json"],
@@ -351,7 +303,6 @@ Agent Use Cases:
     args = parser.parse_args()
 
     try:
-        # Fetch price data
         data_source = (
             "real-time (Finnhub + yfinance)"
             if args.realtime
@@ -363,7 +314,6 @@ Agent Use Cases:
         )
         data = fetch_price_data(args.ticker, args.days, realtime=args.realtime)
 
-        # Create configuration
         config = VolatilityConfig(
             bb_period=args.bb_period,
             bb_std_dev=args.bb_std,
@@ -373,11 +323,9 @@ Agent Use Cases:
             kc_atr_multiplier=args.kc_atr_mult,
         )
 
-        # Calculate volatility metrics
         print("Calculating volatility metrics...", file=sys.stderr)
         result = calculate_volatility(data, config)
 
-        # Output results
         if args.output == "json":
             print(format_json_output(result))
         else:

@@ -33,10 +33,9 @@ from src.models.yaml_generation_inputs import (
     UserPreferencesInput,
     YAMLGenerationOutput,
 )
-from src.utils.yaml_generator import YAMLGenerator, write_config_files
+from src.utils.yaml_generator import YAMLGenerator, possessive, write_config_files
 
 
-# Test fixtures
 @pytest.fixture
 def valid_user_data() -> UserDataInput:
     """Create valid user data for testing."""
@@ -90,7 +89,6 @@ def valid_user_data() -> UserDataInput:
 @pytest.fixture
 def yaml_generator(tmp_path: Path) -> YAMLGenerator:
     """Create YAML generator with test template directory."""
-    # For testing, we'll use the actual template directory
     template_dir = Path("scripts/onboarding/modules/templates")
     if not template_dir.exists():
         pytest.skip("Template directory not found - skipping integration tests")
@@ -143,7 +141,7 @@ class TestPydanticModelValidation:
                 fixed_expenses=2000.0,
                 variable_expenses=1000.0,
                 current_savings=500.0,
-                investment_capacity=6000.0,  # Exceeds income
+                investment_capacity=6000.0,
             )
 
     def test_debt_rates_within_valid_range(self):
@@ -152,7 +150,7 @@ class TestPydanticModelValidation:
             DebtProfileInput(
                 has_student_loans=True,
                 student_loan_balance=50000.0,
-                student_loan_rate=1.5,  # Invalid: > 1.0
+                student_loan_rate=1.5,
             )
 
     def test_emergency_fund_within_valid_range(self):
@@ -161,7 +159,7 @@ class TestPydanticModelValidation:
             UserPreferencesInput(
                 investment_philosophy=InvestmentPhilosophy.BALANCED,
                 focus_areas=["diversification"],
-                emergency_fund_months=30,  # Exceeds max of 24
+                emergency_fund_months=30,
             )
 
 
@@ -202,7 +200,6 @@ class TestTemplateProcessing:
         prepared_data = yaml_generator._prepare_user_data(valid_user_data)
         assert prepared_data["possessive_name"] == "TestUser's"
 
-        # Test name ending in 's'
         valid_user_data.identity.user_name = "James"
         prepared_data = yaml_generator._prepare_user_data(valid_user_data)
         assert prepared_data["possessive_name"] == "James'"
@@ -225,10 +222,9 @@ class TestConfigGeneration:
         """User profile YAML should be generated with correct data."""
         result = yaml_generator.generate_user_profile(valid_user_data)
 
-        # Check key fields are present
         assert "user_name: TestUser" in result or "TestUser" in result
-        assert "10000" in result  # liquid assets
-        assert "100000" in result  # portfolio value
+        assert "10000" in result
+        assert "100000" in result
         assert "aggressive" in result.lower()
 
     def test_generate_config(
@@ -237,7 +233,6 @@ class TestConfigGeneration:
         """Config YAML should be generated with user customization."""
         result = yaml_generator.generate_config(valid_user_data)
 
-        # Check key fields
         assert "TestUser" in result
         assert "English" in result
 
@@ -248,7 +243,7 @@ class TestConfigGeneration:
         result = yaml_generator.generate_system_context(valid_user_data)
 
         assert "TestUser" in result
-        assert "markdown" in result.lower() or "#" in result  # Markdown formatting
+        assert "markdown" in result.lower() or "#" in result
 
     def test_generate_claude_md(
         self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
@@ -264,7 +259,7 @@ class TestConfigGeneration:
         """Environment file should contain API keys."""
         result = yaml_generator.generate_env(valid_user_data)
 
-        assert "test-key-123" in result  # Alpha Vantage key
+        assert "test-key-123" in result
 
     def test_generate_mcp_json(
         self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
@@ -273,7 +268,6 @@ class TestConfigGeneration:
         result = yaml_generator.generate_mcp_json(valid_user_data)
 
         assert len(result) > 0
-        # Should be valid JSON structure
         assert "{" in result or "mcpServers" in result
 
 
@@ -286,12 +280,10 @@ class TestFullGeneration:
         """Generate all configs should produce complete output."""
         output = yaml_generator.generate_all_configs(valid_user_data)
 
-        # Verify output structure
         assert isinstance(output, YAMLGenerationOutput)
         assert output.user_name == "TestUser"
         assert output.generation_date == date.today()
 
-        # Verify all content is generated
         assert len(output.user_profile_yaml) > 0
         assert len(output.config_yaml) > 0
         assert len(output.system_context_md) > 0
@@ -299,7 +291,6 @@ class TestFullGeneration:
         assert len(output.env_file) > 0
         assert len(output.mcp_json) > 0
 
-        # Verify user name appears in at least one output
         assert (
             "TestUser" in output.user_profile_yaml or "TestUser" in output.config_yaml
         )
@@ -314,7 +305,6 @@ class TestFullGeneration:
         output = yaml_generator.generate_all_configs(valid_user_data)
         write_config_files(output, str(tmp_path))
 
-        # Verify files were created
         expected_files = [
             tmp_path / "user-profile.yaml",
             tmp_path / "config.yaml",
@@ -363,7 +353,6 @@ class TestEdgeCases:
             ),
         )
 
-        # Should not raise exception
         template_dir = Path("scripts/onboarding/modules/templates")
         if template_dir.exists():
             generator = YAMLGenerator(str(template_dir))
@@ -396,7 +385,6 @@ class TestEdgeCases:
             ),
         )
 
-        # Should handle special characters
         template_dir = Path("scripts/onboarding/modules/templates")
         if template_dir.exists():
             generator = YAMLGenerator(str(template_dir))
@@ -416,7 +404,6 @@ class TestDataConsistency:
         """User name should appear consistently in all generated files."""
         output = yaml_generator.generate_all_configs(valid_user_data)
 
-        # Check user name appears in multiple outputs
         user_name = valid_user_data.identity.user_name
         assert user_name in output.user_profile_yaml or user_name in output.config_yaml
 
@@ -426,7 +413,6 @@ class TestDataConsistency:
         """Portfolio value should be consistent across files."""
         output = yaml_generator.generate_all_configs(valid_user_data)
 
-        # Portfolio value should appear in some form
         assert (
             "100000" in output.user_profile_yaml
             or "$100,000" in output.user_profile_yaml
@@ -438,3 +424,15 @@ class TestDataConsistency:
         """Generation date should be today's date."""
         output = yaml_generator.generate_all_configs(valid_user_data)
         assert output.generation_date == date.today()
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        pytest.param("Alex", "Alex's", id="plain"),
+        pytest.param("James", "James'", id="ends-in-s"),
+        pytest.param("JAMES", "JAMES'", id="ends-in-capital-s"),
+    ],
+)
+def test_possessive(name: str, expected: str) -> None:
+    assert possessive(name) == expected

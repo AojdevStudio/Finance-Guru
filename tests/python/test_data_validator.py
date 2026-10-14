@@ -26,16 +26,19 @@ from src.models.validation_inputs import (
 )
 from src.utils.data_validator import DataValidator, validate_price_data
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
+_SERIES_START = date(2025, 1, 1)
+_TWO_FOR_ONE = 2
+
+
+def _daily_dates(count: int, start: date = _SERIES_START) -> list[date]:
+    """Return ``count`` consecutive calendar dates from ``start``."""
+    return [start + timedelta(days=i) for i in range(count)]
 
 
 def _make_clean_series(n=100, start_price=100.0, seed=42):
     """Create clean price series with no anomalies."""
     rng = np.random.RandomState(seed)
-    start = date(2025, 1, 1)
-    dates = [start + timedelta(days=i) for i in range(n)]
+    dates = _daily_dates(n)
 
     prices = [start_price]
     for _ in range(n - 1):
@@ -55,18 +58,13 @@ def default_config():
     return ValidationConfig()
 
 
-# ---------------------------------------------------------------------------
-# Basic validation
-# ---------------------------------------------------------------------------
-
-
 class TestBasicValidation:
     def test_clean_data_is_valid(self, clean_series, default_config):
         validator = DataValidator(default_config)
         result = validator.validate(clean_series)
 
         assert result.is_valid is True
-        assert result.total_points == 100
+        assert result.total_points == len(clean_series.prices)
         assert result.ticker == "TSLA"
 
     def test_quality_scores_high_for_clean_data(self, clean_series, default_config):
@@ -78,11 +76,6 @@ class TestBasicValidation:
         assert result.reliability_score > 0
 
 
-# ---------------------------------------------------------------------------
-# Missing data
-# ---------------------------------------------------------------------------
-
-
 class TestMissingData:
     def test_detects_no_missing_data(self, clean_series, default_config):
         validator = DataValidator(default_config)
@@ -91,22 +84,17 @@ class TestMissingData:
         assert result.missing_count == 0
 
     def test_detects_nan_prices(self, default_config):
-        start = date(2025, 1, 1)
-        dates = [start + timedelta(days=i) for i in range(20)]
+        dates = _daily_dates(20)
         prices = [100.0 + i * 0.5 for i in range(20)]
-        prices[5] = float("nan")
-        prices[10] = float("nan")
+        missing_indices = (5, 10)
+        for index in missing_indices:
+            prices[index] = float("nan")
 
         series = PriceSeriesInput(ticker="TSLA", prices=prices, dates=dates)
         validator = DataValidator(default_config)
         result = validator.validate(series)
 
-        assert result.missing_count >= 2
-
-
-# ---------------------------------------------------------------------------
-# Outlier detection
-# ---------------------------------------------------------------------------
+        assert result.missing_count >= len(missing_indices)
 
 
 class TestOutlierDetection:
@@ -115,11 +103,9 @@ class TestOutlierDetection:
             outlier_method=OutlierMethod.Z_SCORE,
             outlier_threshold=2.0,
         )
-        start = date(2025, 1, 1)
-        dates = [start + timedelta(days=i) for i in range(50)]
-        # Normal prices with one extreme jump
+        dates = _daily_dates(50)
         prices = [100.0 + i * 0.1 for i in range(50)]
-        prices[25] = 200.0  # Extreme outlier
+        prices[len(prices) // 2] = 200.0
 
         series = PriceSeriesInput(ticker="TSLA", prices=prices, dates=dates)
         validator = DataValidator(config)
@@ -132,10 +118,9 @@ class TestOutlierDetection:
             outlier_method=OutlierMethod.IQR,
             outlier_threshold=1.5,
         )
-        start = date(2025, 1, 1)
-        dates = [start + timedelta(days=i) for i in range(50)]
+        dates = _daily_dates(50)
         prices = [100.0 + i * 0.1 for i in range(50)]
-        prices[25] = 200.0  # Extreme outlier
+        prices[len(prices) // 2] = 200.0
 
         series = PriceSeriesInput(ticker="TSLA", prices=prices, dates=dates)
         validator = DataValidator(config)
@@ -148,10 +133,9 @@ class TestOutlierDetection:
             outlier_method=OutlierMethod.MODIFIED_Z,
             outlier_threshold=2.0,
         )
-        start = date(2025, 1, 1)
-        dates = [start + timedelta(days=i) for i in range(50)]
+        dates = _daily_dates(50)
         prices = [100.0 + i * 0.1 for i in range(50)]
-        prices[25] = 200.0  # Extreme outlier
+        prices[len(prices) // 2] = 200.0
 
         series = PriceSeriesInput(ticker="TSLA", prices=prices, dates=dates)
         validator = DataValidator(config)
@@ -160,19 +144,16 @@ class TestOutlierDetection:
         assert result.outlier_count > 0
 
 
-# ---------------------------------------------------------------------------
-# Date gaps
-# ---------------------------------------------------------------------------
-
-
 class TestDateGaps:
     def test_detects_large_gaps(self):
-        config = ValidationConfig(max_gap_days=5)
-        start = date(2025, 1, 1)
-        # Normal daily dates but with a 15-day gap
-        dates = [start + timedelta(days=i) for i in range(10)]
-        dates += [start + timedelta(days=25 + i) for i in range(10)]
-        prices = [100.0 + i * 0.5 for i in range(20)]
+        max_gap_days = 5
+        config = ValidationConfig(max_gap_days=max_gap_days)
+        before_gap = _daily_dates(10)
+        after_gap = _daily_dates(
+            10, start=before_gap[-1] + timedelta(days=max_gap_days + 1)
+        )
+        dates = before_gap + after_gap
+        prices = [100.0 + i * 0.5 for i in range(len(dates))]
 
         series = PriceSeriesInput(ticker="TSLA", prices=prices, dates=dates)
         validator = DataValidator(config)
@@ -184,24 +165,15 @@ class TestDateGaps:
         validator = DataValidator(default_config)
         result = validator.validate(clean_series)
 
-        # Daily data has 1-day gaps which are normal
-        # The default max_gap_days=10 so daily data has no suspicious gaps
         assert result.gap_count == 0
-
-
-# ---------------------------------------------------------------------------
-# Stock splits
-# ---------------------------------------------------------------------------
 
 
 class TestStockSplits:
     def test_detects_potential_split(self):
         config = ValidationConfig(check_splits=True, split_threshold=0.25)
-        start = date(2025, 1, 1)
-        dates = [start + timedelta(days=i) for i in range(20)]
-        prices = [100.0 + i * 0.5 for i in range(10)]
-        # Simulate 2:1 split at day 10 (price drops ~50%)
-        prices += [50.0 + i * 0.25 for i in range(10)]
+        dates = _daily_dates(20)
+        pre_split = [100.0 + i * 0.5 for i in range(10)]
+        prices = pre_split + [p / _TWO_FOR_ONE for p in pre_split]
 
         series = PriceSeriesInput(ticker="TSLA", prices=prices, dates=dates)
         validator = DataValidator(config)
@@ -211,21 +183,15 @@ class TestStockSplits:
 
     def test_no_split_check_when_disabled(self):
         config = ValidationConfig(check_splits=False)
-        start = date(2025, 1, 1)
-        dates = [start + timedelta(days=i) for i in range(20)]
-        prices = [100.0 + i * 0.5 for i in range(10)]
-        prices += [50.0 + i * 0.25 for i in range(10)]
+        dates = _daily_dates(20)
+        pre_split = [100.0 + i * 0.5 for i in range(10)]
+        prices = pre_split + [p / _TWO_FOR_ONE for p in pre_split]
 
         series = PriceSeriesInput(ticker="TSLA", prices=prices, dates=dates)
         validator = DataValidator(config)
         result = validator.validate(series)
 
         assert result.potential_splits == 0
-
-
-# ---------------------------------------------------------------------------
-# Quality scores
-# ---------------------------------------------------------------------------
 
 
 class TestQualityScores:
@@ -243,28 +209,16 @@ class TestQualityScores:
         assert result.reliability_score == pytest.approx(expected, abs=0.01)
 
 
-# ---------------------------------------------------------------------------
-# Validity determination
-# ---------------------------------------------------------------------------
-
-
 class TestValidity:
     def test_invalid_when_too_many_missing(self, default_config):
-        start = date(2025, 1, 1)
-        dates = [start + timedelta(days=i) for i in range(20)]
+        dates = _daily_dates(20)
         prices = [float("nan")] * 5 + [100.0 + i * 0.5 for i in range(15)]
 
         series = PriceSeriesInput(ticker="TSLA", prices=prices, dates=dates)
         validator = DataValidator(default_config)
         result = validator.validate(series)
 
-        # 25% missing data should make it invalid
         assert result.completeness_score < 0.95
-
-
-# ---------------------------------------------------------------------------
-# Recommendations
-# ---------------------------------------------------------------------------
 
 
 class TestRecommendations:
@@ -281,15 +235,9 @@ class TestRecommendations:
         )
 
 
-# ---------------------------------------------------------------------------
-# Convenience function
-# ---------------------------------------------------------------------------
-
-
 class TestConvenienceFunction:
     def test_validate_price_data_works(self):
-        start = date(2025, 1, 1)
-        dates = [(start + timedelta(days=i)).isoformat() for i in range(20)]
+        dates = [d.isoformat() for d in _daily_dates(20)]
         prices = [100.0 + i * 0.5 for i in range(20)]
 
         result = validate_price_data(
@@ -299,11 +247,10 @@ class TestConvenienceFunction:
         )
 
         assert result.ticker == "TSLA"
-        assert result.total_points == 20
+        assert result.total_points == len(prices)
 
     def test_validate_price_data_with_volumes(self):
-        start = date(2025, 1, 1)
-        dates = [(start + timedelta(days=i)).isoformat() for i in range(20)]
+        dates = [d.isoformat() for d in _daily_dates(20)]
         prices = [100.0 + i * 0.5 for i in range(20)]
         volumes = [1_000_000.0 + i * 10_000 for i in range(20)]
 
@@ -314,4 +261,4 @@ class TestConvenienceFunction:
             volumes=volumes,
         )
 
-        assert result.total_points == 20
+        assert result.total_points == len(prices)

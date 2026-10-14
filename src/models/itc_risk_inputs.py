@@ -111,7 +111,7 @@ class RiskBand(BaseModel):
     price: float = Field(
         ...,
         description="Price level for this risk band",
-        gt=0.0,  # Prices must be positive
+        gt=0.0,
     )
 
     risk_score: float = Field(
@@ -259,7 +259,6 @@ class ITCRiskResponse(BaseModel):
         if not self.current_price or not self.risk_bands:
             return self.risk_bands[:n]
 
-        # Sort by distance from current price
         sorted_bands = sorted(
             self.risk_bands, key=lambda b: abs(b.price - self.current_price)
         )
@@ -293,7 +292,6 @@ class ITCRiskResponse(BaseModel):
         if not high_risk_bands:
             return None
 
-        # Return the lowest price that's high risk
         return min(high_risk_bands, key=lambda b: b.price)
 
     def get_risk_interpretation(self) -> str:
@@ -337,7 +335,6 @@ class ITCRiskResponse(BaseModel):
     }
 
 
-# Type exports for convenience
 __all__ = [
     "ITCRiskRequest",
     "RiskBand",

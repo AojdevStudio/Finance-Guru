@@ -16,7 +16,6 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-# Add project root for imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 

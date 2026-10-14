@@ -28,18 +28,19 @@ from src.utils.onboarding_validators import (
     validate_positive_integer,
 )
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+_SEPARATOR = "━" * 54
 
-_SEPARATOR = "\u2501" * 54  # heavy horizontal box line
+
+def _percent_to_fraction(percent: float) -> float:
+    """Convert a percent the owner typed (5.5) to a fraction (0.055)."""
+    return percent / 100.0
 
 
 def _print_section_header(number: int, name: str, description: str) -> None:
     """Print a consistent section header with number, name, and blurb."""
     print()
     print(_SEPARATOR)
-    print(f"  Section {number} of 8: {name}")
+    print(f"  Section {number} of {len(SectionName)}: {name}")
     print(_SEPARATOR)
     print()
     print(f"  {description}")
@@ -54,11 +55,6 @@ def _format_currency(value: float) -> str:
 def _format_percentage_display(decimal: float) -> str:
     """Format a decimal (e.g. 0.045) as a percentage string."""
     return f"{decimal * 100:.2f}%"
-
-
-# ---------------------------------------------------------------------------
-# Section 1: Liquid Assets
-# ---------------------------------------------------------------------------
 
 
 def run_liquid_assets_section(state: OnboardingState) -> OnboardingState:
@@ -104,8 +100,7 @@ def run_liquid_assets_section(state: OnboardingState) -> OnboardingState:
     if average_yield_pct is None:
         return state
 
-    # Convert percentage to decimal for storage (4.5 -> 0.045)
-    average_yield = average_yield_pct / 100.0
+    average_yield = _percent_to_fraction(average_yield_pct)
 
     structure: str | None = questionary.text(
         "Describe your account structure (optional, press Enter to skip):"
@@ -126,11 +121,6 @@ def run_liquid_assets_section(state: OnboardingState) -> OnboardingState:
     print(f"  Liquid Assets: Complete ({_format_currency(total)})")
     print()
     return state
-
-
-# ---------------------------------------------------------------------------
-# Section 2: Investments
-# ---------------------------------------------------------------------------
 
 
 def run_investments_section(state: OnboardingState) -> OnboardingState:
@@ -180,7 +170,6 @@ def run_investments_section(state: OnboardingState) -> OnboardingState:
         if retirement_value is None:
             return state
 
-    # Allocation strategy -- select from enum values
     allocation_choices = [e.value for e in AllocationStrategy]
     allocation_strategy = questionary.select(
         "What is your portfolio allocation strategy?",
@@ -189,7 +178,6 @@ def run_investments_section(state: OnboardingState) -> OnboardingState:
     if allocation_strategy is None:
         return state
 
-    # Risk tolerance -- select from enum values
     risk_choices = [e.value for e in RiskTolerance]
     risk_tolerance = questionary.select(
         "What is your risk tolerance?",
@@ -226,11 +214,6 @@ def run_investments_section(state: OnboardingState) -> OnboardingState:
     print(f"  Investment Portfolio: Complete ({_format_currency(total_value)})")
     print()
     return state
-
-
-# ---------------------------------------------------------------------------
-# Section 3: Cash Flow
-# ---------------------------------------------------------------------------
 
 
 def run_cash_flow_section(state: OnboardingState) -> OnboardingState:
@@ -317,11 +300,6 @@ def run_cash_flow_section(state: OnboardingState) -> OnboardingState:
     return state
 
 
-# ---------------------------------------------------------------------------
-# Section 4: Debt
-# ---------------------------------------------------------------------------
-
-
 def run_debt_section(state: OnboardingState) -> OnboardingState:
     """Collect debt obligation details.
 
@@ -334,7 +312,6 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
         "Let's understand your debt obligations and liabilities.",
     )
 
-    # --- Mortgage ---
     has_mortgage = questionary.confirm("Do you have a mortgage?", default=False).ask()
     if has_mortgage is None:
         return state
@@ -357,7 +334,6 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
             default=0.0,
         )
 
-    # --- Student Loans ---
     has_student_loans = questionary.confirm(
         "Do you have student loans?", default=False
     ).ask()
@@ -382,10 +358,11 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
             default=0.0,
         )
         student_loan_rate = (
-            student_loan_rate_pct / 100.0 if student_loan_rate_pct else 0.0
+            _percent_to_fraction(student_loan_rate_pct)
+            if student_loan_rate_pct
+            else 0.0
         )
 
-    # --- Auto Loans ---
     has_auto_loans = questionary.confirm(
         "Do you have any auto loans?", default=False
     ).ask()
@@ -409,9 +386,10 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
             validator=validate_percentage,
             default=0.0,
         )
-        auto_loan_rate = auto_loan_rate_pct / 100.0 if auto_loan_rate_pct else 0.0
+        auto_loan_rate = (
+            _percent_to_fraction(auto_loan_rate_pct) if auto_loan_rate_pct else 0.0
+        )
 
-    # --- Credit Cards ---
     has_credit_cards = questionary.confirm(
         "Do you carry credit card balances?", default=False
     ).ask()
@@ -428,14 +406,15 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
             default=0.0,
         )
 
-    # --- Weighted average & other ---
     weighted_rate_pct_raw: str | None = questionary.text(
         "Weighted average debt interest rate (optional, e.g., 4.5 for 4.5%, Enter to skip):"
     ).ask()
     weighted_rate: float | None = None
     if weighted_rate_pct_raw is not None and weighted_rate_pct_raw.strip():
         try:
-            weighted_rate = validate_percentage(weighted_rate_pct_raw) / 100.0
+            weighted_rate = _percent_to_fraction(
+                validate_percentage(weighted_rate_pct_raw)
+            )
         except ValueError:
             weighted_rate = None
 
@@ -468,11 +447,6 @@ def run_debt_section(state: OnboardingState) -> OnboardingState:
     return state
 
 
-# ---------------------------------------------------------------------------
-# Section 5: Preferences
-# ---------------------------------------------------------------------------
-
-
 def run_preferences_section(state: OnboardingState) -> OnboardingState:
     """Collect investment preferences and goals.
 
@@ -485,7 +459,6 @@ def run_preferences_section(state: OnboardingState) -> OnboardingState:
         "Let's understand your investment approach and goals.",
     )
 
-    # Investment philosophy -- select from enum values
     philosophy_choices = [e.value for e in InvestmentPhilosophy]
     investment_philosophy = questionary.select(
         "What is your investment philosophy?",
@@ -494,7 +467,6 @@ def run_preferences_section(state: OnboardingState) -> OnboardingState:
     if investment_philosophy is None:
         return state
 
-    # Focus areas -- checkbox
     focus_area_choices = [
         "Dividend income",
         "Growth investing",
@@ -511,7 +483,6 @@ def run_preferences_section(state: OnboardingState) -> OnboardingState:
     if focus_areas is None:
         return state
 
-    # Emergency fund target
     def _validate_emergency_months(value: str) -> int:
         result = validate_positive_integer(value)
         if result > 24:
@@ -543,11 +514,6 @@ def run_preferences_section(state: OnboardingState) -> OnboardingState:
     return state
 
 
-# ---------------------------------------------------------------------------
-# Section 6: Broker
-# ---------------------------------------------------------------------------
-
-
 def run_broker_section(state: OnboardingState) -> OnboardingState:
     """Collect broker-specific information.
 
@@ -560,7 +526,6 @@ def run_broker_section(state: OnboardingState) -> OnboardingState:
         "Finance Guru needs to know which broker you use to import your portfolio data.",
     )
 
-    # Pre-fill from investments if available
     investments_data = state.data.get(SectionName.INVESTMENTS.value, {})
     existing_brokerage = investments_data.get("brokerage")
 
@@ -587,7 +552,6 @@ def run_broker_section(state: OnboardingState) -> OnboardingState:
             return state
         brokerage = brokerage_raw.strip() or "Unknown"
 
-    # CSV export guidance (informational, no prompt needed)
     print()
     print("  CSV Export Guidance:")
     print("  -------------------")
@@ -611,11 +575,6 @@ def run_broker_section(state: OnboardingState) -> OnboardingState:
     return state
 
 
-# ---------------------------------------------------------------------------
-# Section 7: Environment Setup
-# ---------------------------------------------------------------------------
-
-
 def run_env_setup_section(state: OnboardingState) -> OnboardingState:
     """Collect user identity, language, and optional API keys.
 
@@ -627,7 +586,6 @@ def run_env_setup_section(state: OnboardingState) -> OnboardingState:
         "Configure your identity and optional API integrations.",
     )
 
-    # User name (required)
     def _validate_name(v: str) -> str:
         stripped = v.strip() if v else ""
         if not stripped:
@@ -647,7 +605,6 @@ def run_env_setup_section(state: OnboardingState) -> OnboardingState:
         user_name_raw.strip() if isinstance(user_name_raw, str) else str(user_name_raw)
     )
 
-    # Preferred language
     language_raw = questionary.text(
         "Preferred language for communication (default: English):"
     ).ask()
@@ -655,7 +612,6 @@ def run_env_setup_section(state: OnboardingState) -> OnboardingState:
         return state
     language = language_raw.strip() or "English"
 
-    # API Keys -- all optional
     print()
     print("  API Keys (all optional -- yfinance works without any keys)")
     print()
@@ -686,7 +642,6 @@ def run_env_setup_section(state: OnboardingState) -> OnboardingState:
         if bd_key_raw is not None:
             bd_key = bd_key_raw.strip() or None
 
-    # Google Sheets credentials
     gs_creds_raw: str | None = questionary.text(
         "Path to Google Sheets credentials JSON (optional, press Enter to skip):"
     ).ask()
@@ -711,11 +666,6 @@ def run_env_setup_section(state: OnboardingState) -> OnboardingState:
     return state
 
 
-# ---------------------------------------------------------------------------
-# Section 8: Summary
-# ---------------------------------------------------------------------------
-
-
 def run_summary_section(state: OnboardingState) -> OnboardingState:
     """Display a formatted summary of all collected data and confirm.
 
@@ -728,10 +678,8 @@ def run_summary_section(state: OnboardingState) -> OnboardingState:
         "Please review your information below.",
     )
 
-    # --- Display collected data ---
     _display_full_summary(state)
 
-    # --- Confirmation ---
     confirmed = questionary.confirm(
         "Save this profile and generate configuration files?",
         default=True,
@@ -752,7 +700,6 @@ def run_summary_section(state: OnboardingState) -> OnboardingState:
             default=False,
         ).ask()
         if restart:
-            # Clear state for a fresh start
             state.completed_sections.clear()
             state.data.clear()
             state.current_section = SectionName.LIQUID_ASSETS
@@ -768,11 +715,6 @@ def run_summary_section(state: OnboardingState) -> OnboardingState:
     return state
 
 
-# ---------------------------------------------------------------------------
-# Summary display helpers
-# ---------------------------------------------------------------------------
-
-
 def _display_full_summary(state: OnboardingState) -> None:  # noqa: C901
     """Print a nicely formatted summary of all collected section data."""
     border = "\u2550" * 56
@@ -781,7 +723,6 @@ def _display_full_summary(state: OnboardingState) -> None:  # noqa: C901
     print(f"  {border}")
     print()
 
-    # Liquid Assets
     la = state.data.get(SectionName.LIQUID_ASSETS.value)
     if la:
         print("  Liquid Assets")
@@ -794,7 +735,6 @@ def _display_full_summary(state: OnboardingState) -> None:  # noqa: C901
             print(f"    Structure:     {la['structure']}")
         print()
 
-    # Investments
     inv = state.data.get(SectionName.INVESTMENTS.value)
     if inv:
         print("  Investment Portfolio")
@@ -809,7 +749,6 @@ def _display_full_summary(state: OnboardingState) -> None:  # noqa: C901
         print(f"    Risk:          {inv.get('risk_tolerance', 'N/A')}")
         print()
 
-    # Cash Flow
     cf = state.data.get(SectionName.CASH_FLOW.value)
     if cf:
         print("  Cash Flow")
@@ -830,7 +769,6 @@ def _display_full_summary(state: OnboardingState) -> None:  # noqa: C901
         )
         print()
 
-    # Debt
     debt = state.data.get(SectionName.DEBT.value)
     if debt:
         print("  Debt Profile")
@@ -869,7 +807,6 @@ def _display_full_summary(state: OnboardingState) -> None:  # noqa: C901
             print(f"    Other:             {debt['other_debt']}")
         print()
 
-    # Preferences
     prefs = state.data.get(SectionName.PREFERENCES.value)
     if prefs:
         print("  Investment Preferences")
@@ -884,14 +821,12 @@ def _display_full_summary(state: OnboardingState) -> None:  # noqa: C901
         )
         print()
 
-    # Broker
     broker = state.data.get(SectionName.BROKER.value)
     if broker:
         print("  Broker")
         print(f"    Brokerage:       {broker.get('brokerage', 'N/A')}")
         print()
 
-    # Env Setup
     env = state.data.get(SectionName.ENV_SETUP.value)
     if env:
         print("  Environment")

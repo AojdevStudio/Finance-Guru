@@ -69,7 +69,6 @@ class VolatilityCalculator:
         Returns:
             VolatilityMetricsOutput with all indicators and volatility regime
         """
-        # Convert to DataFrame for calculations
         df = pd.DataFrame(
             {
                 "date": data.dates,
@@ -80,13 +79,11 @@ class VolatilityCalculator:
         )
         df = df.set_index("date")
 
-        # Calculate all indicators
         bb = self._calculate_bollinger_bands(df["close"])
         atr = self._calculate_atr(df)
         hvol = self._calculate_historical_volatility(df["close"])
         kc = self._calculate_keltner_channels(df)
 
-        # Determine volatility regime
         regime = self._assess_volatility_regime(hvol, atr)
 
         return VolatilityMetricsOutput(
@@ -125,30 +122,21 @@ class VolatilityCalculator:
         period = self.config.bb_period
         std_multiplier = self.config.bb_std_dev
 
-        # Calculate middle band (SMA)
         middle = closes.rolling(window=period).mean()
 
-        # Calculate standard deviation
         std = closes.rolling(window=period).std()
 
-        # Calculate upper and lower bands
         upper = middle + (std * std_multiplier)
         lower = middle - (std * std_multiplier)
 
-        # Get latest values
         current_close = float(closes.iloc[-1])
         middle_val = float(middle.iloc[-1])
         upper_val = float(upper.iloc[-1])
         lower_val = float(lower.iloc[-1])
 
-        # Calculate %B (position within bands)
-        # %B = 1.0 means price is at upper band
-        # %B = 0.0 means price is at lower band
-        # %B = 0.5 means price is at middle band
         band_width = upper_val - lower_val
         percent_b = (current_close - lower_val) / band_width if band_width > 0 else 0.5
 
-        # Calculate bandwidth (band width as % of middle band)
         bandwidth = (band_width / middle_val * 100) if middle_val > 0 else 0.0
 
         return BollingerBandsOutput(
@@ -192,22 +180,17 @@ class VolatilityCalculator:
         """
         period = self.config.atr_period
 
-        # Calculate True Range components
         high_low = df["high"] - df["low"]
         high_close = abs(df["high"] - df["close"].shift(1))
         low_close = abs(df["low"] - df["close"].shift(1))
 
-        # True Range is the maximum of the three
         true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
 
-        # Calculate ATR as EMA of True Range
         atr = true_range.ewm(span=period, adjust=False).mean()
 
-        # Get latest values
         atr_val = float(atr.iloc[-1])
         current_price = float(df["close"].iloc[-1])
 
-        # Calculate ATR as percentage of current price
         atr_percent = (atr_val / current_price * 100) if current_price > 0 else 0.0
 
         return ATROutput(
@@ -249,18 +232,12 @@ class VolatilityCalculator:
         period = self.config.hvol_period
         annualization_factor = self.config.hvol_annualization_factor
 
-        # Calculate log returns (more accurate for compounding)
         returns = np.log(closes / closes.shift(1))
 
-        # Calculate rolling standard deviation
         rolling_vol = returns.rolling(window=period).std()
 
-        # Get latest daily volatility
         daily_vol = float(rolling_vol.iloc[-1])
 
-        # Annualize the volatility
-        # We multiply by sqrt(252) because variance scales linearly with time
-        # and std dev is sqrt(variance)
         annual_vol = daily_vol * np.sqrt(annualization_factor)
 
         return HistoricalVolatilityOutput(
@@ -297,14 +274,11 @@ class VolatilityCalculator:
         period = self.config.kc_period
         atr_multiplier = self.config.kc_atr_multiplier
 
-        # Calculate middle line (EMA of close)
         middle = df["close"].ewm(span=period, adjust=False).mean()
 
-        # Calculate ATR for channel width
         atr_result = self._calculate_atr(df)
         atr_value = atr_result.atr
 
-        # Calculate upper and lower channels
         middle_val = float(middle.iloc[-1])
         upper_val = middle_val + (atr_value * atr_multiplier)
         lower_val = middle_val - (atr_value * atr_multiplier)
@@ -351,23 +325,18 @@ class VolatilityCalculator:
         annual_vol = hvol.annual_volatility
         atr_pct = atr.atr_percent
 
-        # Check for extreme conditions first
         if annual_vol > 0.75 or atr_pct > 7.5:
             return "extreme"
 
-        # Check for high volatility
         if annual_vol > 0.50 or atr_pct > 5.0:
             return "high"
 
-        # Check for low volatility
         if annual_vol < 0.25 and atr_pct < 2.5:
             return "low"
 
-        # Default to normal
         return "normal"
 
 
-# Convenience function for quick calculations
 def calculate_volatility(
     data: VolatilityDataInput,
     config: VolatilityConfig | None = None,

@@ -23,7 +23,7 @@ AGENT USAGE:
 
     # Multiple MA types comparison
     uv run python -m src.utils.moving_averages_cli TSLA --days 200 \\
-        --ma-type SMA --period 50 \\
+        --ma-type SMA --period 20 \\
         --secondary-ma-type EMA --secondary-period 50
 
     # EMA crossover with real-time data
@@ -54,18 +54,17 @@ import argparse
 import sys
 from datetime import date, timedelta
 from pathlib import Path
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+from typing import assert_never
 
 from src.models.moving_avg_inputs import (
+    DEFAULT_MA_PERIOD,
     MovingAverageAnalysis,
     MovingAverageConfig,
     MovingAverageDataInput,
 )
-from src.utils.market_data import get_prices  # Finnhub integration
+from src.utils.market_data import append_live_quote
 from src.utils.moving_averages import MovingAverageCalculator
+from src.utils.trading_calendar import calendar_days_for
 
 
 def fetch_ma_data(
@@ -88,51 +87,27 @@ def fetch_ma_data(
     try:
         import yfinance as yf
 
-        # Calculate date range (fetch extra days to ensure enough data)
         end_date = date.today()
-        # Need ~1.5x calendar days to get requested trading days (accounts for weekends/holidays)
-        start_date = end_date - timedelta(days=int(days * 1.5))
+        start_date = end_date - timedelta(days=calendar_days_for(days))
 
-        # Fetch data
         ticker_obj = yf.Ticker(ticker)
         hist = ticker_obj.history(start=start_date, end=end_date)
 
         if hist.empty:
             raise ValueError(f"No data found for ticker {ticker}")
 
-        # Extract price data
         dates_list = [d.date() for d in hist.index]
         prices_list = hist["Close"].tolist()
 
-        # FINNHUB INTEGRATION: Append real-time intraday price if requested
         if realtime:
-            try:
-                # Get real-time price from Finnhub
-                rt_data = get_prices(ticker, realtime=True)
-                if ticker.upper() in rt_data:
-                    price_data = rt_data[ticker.upper()]
-                    current_price = price_data.price
-                    # Append today's date and current price to the data
-                    dates_list.append(date.today())
-                    prices_list.append(current_price)
-                    print(
-                        f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)",
-                        file=sys.stderr,
-                    )
-            except Exception as e:
-                print(
-                    f"⚠️  Real-time price unavailable, using EOD data only: {e}",
-                    file=sys.stderr,
-                )
+            append_live_quote(ticker, dates_list, prices_list)
 
-        # Ensure minimum data points
-        if len(dates_list) < 50:
+        if len(dates_list) < DEFAULT_MA_PERIOD:
             raise ValueError(
-                f"Insufficient data: got {len(dates_list)} days, need at least 50. "
+                f"Insufficient data: got {len(dates_list)} days, need at least {DEFAULT_MA_PERIOD}. "
                 "Try increasing --days parameter."
             )
 
-        # Create validated model
         return MovingAverageDataInput(
             ticker=ticker.upper(),
             dates=dates_list,
@@ -142,7 +117,6 @@ def fetch_ma_data(
     except ImportError as e:
         raise ImportError("yfinance not installed. Run: uv add yfinance") from e
     except ValueError:
-        # Re-raise ValueError as-is (from empty data or insufficient data checks)
         raise
     except Exception as e:
         raise ValueError(f"Failed to fetch data for {ticker}: {e}") from e
@@ -166,10 +140,8 @@ def format_single_ma_output(analysis: MovingAverageAnalysis) -> str:
     output.append(f"  Price vs MA:              {ma.price_vs_ma:>12}")
     output.append("")
 
-    # Calculate percentage difference
     pct_diff = ((ma.current_price - ma.current_value) / ma.current_value) * 100
 
-    # Trend interpretation
     if ma.price_vs_ma == "ABOVE":
         output.append(
             f"  🟢 BULLISH: Price is {pct_diff:.2f}% above {ma.ma_type}({ma.period})"
@@ -192,33 +164,35 @@ def format_single_ma_output(analysis: MovingAverageAnalysis) -> str:
 
     output.append("")
 
-    # MA characteristics explanation
     output.append("💡 MA CHARACTERISTICS")
     output.append("-" * 70)
-    if ma.ma_type == "SMA":
-        output.append("  Type: Simple Moving Average")
-        output.append("  → Equal weight to all prices in period")
-        output.append("  → Most widely used and understood")
-        output.append("  → Good for identifying clear trends")
-        output.append("  → Can lag in fast-moving markets")
-    elif ma.ma_type == "EMA":
-        output.append("  Type: Exponential Moving Average")
-        output.append("  → More weight to recent prices")
-        output.append("  → Responds faster to price changes")
-        output.append("  → Popular among day traders")
-        output.append("  → Can generate more false signals")
-    elif ma.ma_type == "WMA":
-        output.append("  Type: Weighted Moving Average")
-        output.append("  → Linear increasing weights")
-        output.append("  → Balances responsiveness and smoothness")
-        output.append("  → Good for swing trading")
-        output.append("  → Less common than SMA/EMA")
-    else:  # HMA
-        output.append("  Type: Hull Moving Average")
-        output.append("  → Minimal lag with maximum smoothness")
-        output.append("  → Best trend indicator for fast markets")
-        output.append("  → Excellent for dynamic support/resistance")
-        output.append("  → Most advanced MA calculation")
+    match ma.ma_type:
+        case "SMA":
+            output.append("  Type: Simple Moving Average")
+            output.append("  → Equal weight to all prices in period")
+            output.append("  → Most widely used and understood")
+            output.append("  → Good for identifying clear trends")
+            output.append("  → Can lag in fast-moving markets")
+        case "EMA":
+            output.append("  Type: Exponential Moving Average")
+            output.append("  → More weight to recent prices")
+            output.append("  → Responds faster to price changes")
+            output.append("  → Popular among day traders")
+            output.append("  → Can generate more false signals")
+        case "WMA":
+            output.append("  Type: Weighted Moving Average")
+            output.append("  → Linear increasing weights")
+            output.append("  → Balances responsiveness and smoothness")
+            output.append("  → Good for swing trading")
+            output.append("  → Less common than SMA/EMA")
+        case "HMA":
+            output.append("  Type: Hull Moving Average")
+            output.append("  → Minimal lag with maximum smoothness")
+            output.append("  → Best trend indicator for fast markets")
+            output.append("  → Excellent for dynamic support/resistance")
+            output.append("  → Most advanced MA calculation")
+        case _:
+            assert_never(ma.ma_type)
 
     output.append("")
     output.append("=" * 70)
@@ -246,7 +220,6 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:  # noqa: C9
     output.append("=" * 70)
     output.append("")
 
-    # Current values
     output.append("📈 CURRENT MOVING AVERAGES")
     output.append("-" * 70)
     output.append(
@@ -260,7 +233,6 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:  # noqa: C9
     )
     output.append("")
 
-    # Crossover signal
     output.append("🎯 CROSSOVER SIGNAL")
     output.append("-" * 70)
 
@@ -280,7 +252,6 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:  # noqa: C9
 
     output.append("")
 
-    # Last crossover details
     if cross.last_crossover_date:
         output.append("📅 LAST CROSSOVER")
         output.append("-" * 70)
@@ -316,7 +287,6 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:  # noqa: C9
                 output.append("     → Consider short positions or exit longs")
                 output.append("     → Watch for trend confirmation")
 
-        # Signal freshness
         output.append("")
         if cross.days_since_crossover <= 5:
             output.append(
@@ -349,7 +319,6 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:  # noqa: C9
 
     output.append("")
 
-    # Trading implications
     output.append("💼 TRADING IMPLICATIONS")
     output.append("-" * 70)
     if cross.current_signal == "BULLISH":
@@ -387,7 +356,6 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:  # noqa: C9
 
     output.append("")
 
-    # Risk warnings
     output.append("⚠️  RISK CONSIDERATIONS")
     output.append("-" * 70)
     output.append(
@@ -442,12 +410,10 @@ Examples:
         """,
     )
 
-    # Required arguments
     parser.add_argument(
         "ticker", type=str, help="Stock ticker symbol (e.g., TSLA, AAPL)"
     )
 
-    # Data parameters
     parser.add_argument(
         "--days",
         type=int,
@@ -461,7 +427,6 @@ Examples:
         help="Append current intraday price from Finnhub for real-time MA analysis",
     )
 
-    # MA configuration
     parser.add_argument(
         "--ma-type",
         type=str,
@@ -477,7 +442,6 @@ Examples:
         help="MA period in days (default: 50 for single MA, or use --fast/--slow)",
     )
 
-    # Crossover configuration (convenience parameters)
     parser.add_argument(
         "--fast",
         type=int,
@@ -492,7 +456,6 @@ Examples:
         help="Slow MA period for crossover (e.g., 200 for Golden Cross)",
     )
 
-    # Advanced crossover configuration
     parser.add_argument(
         "--secondary-ma-type",
         type=str,
@@ -508,7 +471,6 @@ Examples:
         help="Secondary MA period (alternative to --slow)",
     )
 
-    # Output parameters
     parser.add_argument(
         "--output",
         type=str,
@@ -521,43 +483,33 @@ Examples:
         "--save-to", type=str, default=None, help="Save output to file (optional)"
     )
 
-    # Parse arguments
     args = parser.parse_args()
 
-    # Validate and process arguments
-    if args.days < 50:
-        print("ERROR: --days must be at least 50", file=sys.stderr)
+    if args.days < DEFAULT_MA_PERIOD:
+        print(f"ERROR: --days must be at least {DEFAULT_MA_PERIOD}", file=sys.stderr)
         sys.exit(1)
 
-    # Determine configuration
-    # Priority: --fast/--slow > --period/--secondary-period > defaults
     if args.fast and args.slow:
-        # Crossover mode with --fast/--slow
         primary_period = args.fast
         secondary_period = args.slow
         secondary_ma_type = args.secondary_ma_type or args.ma_type
     elif args.period and args.secondary_period:
-        # Crossover mode with explicit periods
         primary_period = args.period
         secondary_period = args.secondary_period
         secondary_ma_type = args.secondary_ma_type or args.ma_type
     elif args.period:
-        # Single MA mode
         primary_period = args.period
         secondary_period = None
         secondary_ma_type = None
     elif args.secondary_period:
-        # Error: secondary without primary
         print("ERROR: --secondary-period requires --period", file=sys.stderr)
         sys.exit(1)
     else:
-        # Default: single MA with period 50
         primary_period = 50
         secondary_period = None
         secondary_ma_type = None
 
     try:
-        # Step 1: Fetch data
         data_source = (
             "real-time (Finnhub + yfinance)"
             if args.realtime
@@ -571,7 +523,6 @@ Examples:
         print(f"✅ Fetched {len(ma_data.dates)} data points", file=sys.stderr)
         print(f"📅 Latest data: {ma_data.dates[-1]}", file=sys.stderr)
 
-        # Step 2: Create configuration
         config = MovingAverageConfig(
             ma_type=args.ma_type,
             period=primary_period,
@@ -579,7 +530,6 @@ Examples:
             secondary_period=secondary_period,
         )
 
-        # Step 3: Calculate MAs
         if secondary_period:
             print(
                 f"🧮 Calculating {args.ma_type}({primary_period}) and {secondary_ma_type}({secondary_period})...",
@@ -608,7 +558,6 @@ Examples:
 
         print("", file=sys.stderr)
 
-        # Step 4: Format output
         if args.output == "json":
             output = format_json_output(analysis)
         else:
@@ -617,7 +566,6 @@ Examples:
             else:
                 output = format_single_ma_output(analysis)
 
-        # Step 5: Display or save
         if args.save_to:
             save_path = Path(args.save_to)
             save_path.parent.mkdir(parents=True, exist_ok=True)

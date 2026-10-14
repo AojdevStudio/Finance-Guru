@@ -27,6 +27,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from src.models.ticker import Ticker
+
+DEFAULT_RSI_PERIOD = 14
+
 
 class MomentumDataInput(BaseModel):
     """Price data for momentum indicator calculations.
@@ -51,24 +55,21 @@ class MomentumDataInput(BaseModel):
     We include all OHLC data for flexibility.
     """
 
-    ticker: str = Field(
+    ticker: Ticker = Field(
         ...,
         description="Stock ticker symbol (e.g., 'TSLA', 'AAPL', 'BRK-B')",
-        min_length=1,
-        max_length=10,
-        pattern=r"^[A-Z\-\.]+$",  # Uppercase letters, hyphens, and dots (e.g., BRK-B, BRK.B)
     )
 
     dates: list[date] = Field(
         ...,
         description="Trading dates in chronological order",
-        min_length=14,  # Minimum for RSI with 14-day period
+        min_length=DEFAULT_RSI_PERIOD,
     )
 
     close: list[float] = Field(
         ...,
         description="Closing prices (required for all indicators)",
-        min_length=14,
+        min_length=DEFAULT_RSI_PERIOD,
     )
 
     high: list[float] | None = Field(
@@ -128,13 +129,11 @@ class MomentumDataInput(BaseModel):
         """
         n_dates = len(self.dates)
 
-        # Close is required, must match dates length
         if len(self.close) != n_dates:
             raise ValueError(
                 f"Close prices length ({len(self.close)}) must match dates length ({n_dates})"
             )
 
-        # High and Low are optional but must match if provided
         if self.high is not None and len(self.high) != n_dates:
             raise ValueError(
                 f"High prices length ({len(self.high)}) must match dates length ({n_dates})"
@@ -202,7 +201,7 @@ class MomentumConfig(BaseModel):
     """
 
     rsi_period: int = Field(
-        default=14,
+        default=DEFAULT_RSI_PERIOD,
         ge=2,
         le=100,
         description="RSI period (default: 14 days, industry standard)",
@@ -612,7 +611,6 @@ class AllMomentumOutput(BaseModel):
     }
 
 
-# Type exports
 __all__ = [
     "MomentumDataInput",
     "MomentumConfig",

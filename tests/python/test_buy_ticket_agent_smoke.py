@@ -240,7 +240,8 @@ def test_run_smoke_writes_draft_log_and_state(tmp_path: Path, monkeypatch) -> No
 
     command = run.call_args.args[0]
     assert command[1:] == [
-        "src/analysis/itc_risk_cli.py",
+        "-m",
+        "src.analysis.itc_risk_cli",
         "SP500",
         "--universe",
         "tradfi",
@@ -352,7 +353,8 @@ def test_layer3_smoke_cli_without_api_key_uses_capability_probe(
 
     assert result.status == "succeeded"
     assert run.call_args.args[0][1:] == [
-        "src/analysis/itc_risk_cli.py",
+        "-m",
+        "src.analysis.itc_risk_cli",
         "--list-supported",
         "tradfi",
     ]
