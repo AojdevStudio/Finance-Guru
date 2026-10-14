@@ -532,7 +532,7 @@ Your financial data stays private on your local machine.
 After running the setup script, activate the Onboarding Specialist:
 
 ```
-/fin-guru:agents:onboarding-specialist
+claude --agent fg-onboarding-specialist
 ```
 
 The specialist will guide you through:
@@ -543,7 +543,7 @@ The specialist will guide you through:
 Once onboarding is complete, you can use the Finance Orchestrator:
 
 ```
-/finance-orchestrator
+claude --agent fg-finance-orchestrator
 ```
 README_EOF
     printf "  ${GREEN}Created:${NC} %s\n" "$private_readme"
@@ -637,7 +637,7 @@ print_summary() {
   printf "  2. Run the onboarding wizard:\n"
   printf "     uv run python scripts/onboarding/main.py\n"
   printf "\n"
-  printf "  3. After onboarding: /finance-orchestrator\n"
+  printf "  3. After onboarding: claude --agent fg-finance-orchestrator\n"
   printf "\n"
 }
 

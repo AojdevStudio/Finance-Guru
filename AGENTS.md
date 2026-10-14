@@ -26,7 +26,7 @@ Private data lives in an instance directory outside the repository, resolved fro
 
 ## Skills and specialists
 
-Skills live in `.claude/skills/<name>/SKILL.md`. Route on the `description` in each file's frontmatter and read the full file before using it. Specialist personas live in `.claude/commands/fin-guru/agents/`, and the finance orchestrator there routes between them. `just --list` shows the launcher for each persona.
+Skills live in `.claude/skills/<name>/SKILL.md`. Route on the `description` in each file's frontmatter and read the full file before using it. Specialist agents live in `.claude/agents/fg-*.md`. In Claude Code a plugin-mode instance starts the finance orchestrator as the main session, and a checkout-mode instance starts it with `claude --agent fg-finance-orchestrator` run from the instance directory, so private paths resolve there. It delegates to the specialists as subagents. In Codex, read the specialist's file and follow its Method and Return sections. `just --list` shows the launcher for each one.
 
 ### Codex instance skill discovery
 

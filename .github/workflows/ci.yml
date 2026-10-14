@@ -48,6 +48,16 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --dev
 
+      - name: Validate the Claude Code plugin and marketplace
+        # Pinned so a validator change upstream cannot turn a green head red.
+        run: |
+          bunx @anthropic-ai/claude-code@2.1.289 plugin validate .claude-plugin/plugin.json
+          bunx @anthropic-ai/claude-code@2.1.289 plugin validate .
+
+      - name: Hook tests
+        working-directory: .claude/hooks
+        run: bun test
+
       - name: Ruff lint
         run: uv run ruff check .
 

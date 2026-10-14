@@ -4,6 +4,11 @@ set dotenv-load := false
 # Claude Code with skip permissions (mirrors `cc` shell alias)
 cc := "claude --dangerously-skip-permissions"
 
+# Persona sessions start inside the instance named by FIN_GURU_DATA_ROOT, resolved from
+# the directory you run just in and exported as an absolute path, so reads,
+# syncs, and every relative write (tickets/, analysis/) land there, never in this checkout.
+persona := 'root="$(cd "' + invocation_directory() + '" && cd "${FIN_GURU_DATA_ROOT:-/nonexistent}" 2>/dev/null && pwd)"; test -f "$root/user-profile.yaml" || { echo "Export FIN_GURU_DATA_ROOT=<your instance directory> first. It must hold user-profile.yaml." >&2; exit 1; }; cd "$root" && export FIN_GURU_DATA_ROOT="$root" && ' + cc
+
 # Diagram paths
 diagrams := ".dev/specs/backlog/diagrams"
 
@@ -37,46 +42,61 @@ load keyword:
 
 # Launch Claude Code as Finance Orchestrator (Cassandra Holt)
 orchestrator:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-finance-orchestrator.md)"
+  {{persona}} --agent fg-finance-orchestrator
 
 # Launch Claude Code as Quant Analyst
 quant:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-quant-analyst.md)"
+  {{persona}} --agent fg-quant-analyst
 
 # Launch Claude Code as Strategy Advisor
 strategy:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-strategy-advisor.md)"
+  {{persona}} --agent fg-strategy-advisor
 
 # Launch Claude Code as Market Researcher
 market:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-market-researcher.md)"
+  {{persona}} --agent fg-market-researcher
 
 # Launch Claude Code as Compliance Officer
 compliance:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-compliance-officer.md)"
+  {{persona}} --agent fg-compliance-officer
 
 # Launch Claude Code as Margin Specialist
 margin:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-margin-specialist.md)"
+  {{persona}} --agent fg-margin-specialist
 
 # Launch Claude Code as Dividend Specialist
 dividend:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-dividend-specialist.md)"
+  {{persona}} --agent fg-dividend-specialist
 
 # Launch Claude Code as Teaching Specialist
 teaching:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-teaching-specialist.md)"
+  {{persona}} --agent fg-teaching-specialist
 
 # Launch Claude Code as Builder
 builder:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-builder.md)"
+  {{persona}} --agent fg-builder
 
 # Launch Claude Code as QA Advisor
 qa:
-  {{cc}} --append-system-prompt "$(cat .claude/agents/fg-qa-advisor.md)"
+  {{persona}} --agent fg-qa-advisor
 
 # --- Quality gates ---
 
 # Verify fin-guru/data/definitions.md stays in sync with src/ constants and skill files
 check-definitions:
   uv run pytest tests/python/test_definitions_sync.py -v --no-cov
+
+# Score the plugin against its eval suite, with and without the plugin (spends model usage).
+# The eval runner refuses a plugin directory over 20000 entries, so it scores a copy of the tracked files.
+eval runs="1":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  scratch="$(mktemp -d)"
+  trap 'rm -rf "$scratch"' EXIT
+  export_dir="$scratch/finance-guru"
+  results="$PWD/evals/results/$(date +%Y%m%dT%H%M%S)"
+  mkdir -p "$export_dir" "$results"
+  git ls-files -z --cached \
+    | while IFS= read -r -d '' path; do [ -e "$path" ] && printf '%s\0' "$path"; done \
+    | rsync -a --from0 --files-from=- ./ "$export_dir/"
+  claude plugin eval "$export_dir" --trust-plugin --runs {{runs}} --judge-model sonnet --max-cost-usd 10 --no-publish --output-dir "$results" --report "$results/report.html"

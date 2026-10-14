@@ -21,7 +21,7 @@ What this means for contributors today:
 | -------------------------------------------------------- | ----------------------------------- | -------------------------- |
 | Python analysis engine (`src/`)                          | **Stable**                          | _Yes_                      |
 | Claude Code skills (`.claude/skills/`)                   | **Active, maintainer-owned**        | No — file an issue instead |
-| Specialist agents (`.claude/commands/fin-guru/agents/`)  | **Active, maintainer-owned**        | No — file an issue instead |
+| Specialist agents (`.claude/agents/`)                    | **Active, maintainer-owned**        | No — file an issue instead |
 | Documentation (`docs/`)                                  | **Always safe**                     | _Yes_                      |
 
 
@@ -51,7 +51,7 @@ Only these surfaces are in scope for PRs:
 Everything else is issues-only. We will evaluate bug reports and feature requests for these areas but will close PRs against them without review:
 
 - Skills under `.claude/skills/`
-- Agents under `.claude/commands/fin-guru/agents/` or `.claude/agents/`
+- Agents under `.claude/agents/`
 - Hooks under `.claude/hooks/`
 - `finance-guru-desktop/` (Electron POC, gitignored)
 

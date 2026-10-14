@@ -115,7 +115,7 @@ checkFile('docs/reference/tools.md', 'Tools documentation exists', false);
 
 // 7. Agent System
 console.log('🤖 Checking agent system...');
-checkFile('.claude/commands/fin-guru/agents/finance-orchestrator.md', 'Finance Orchestrator exists', true);
+checkFile('.claude/agents/fg-finance-orchestrator.md', 'Finance Orchestrator exists', true);
 
 const requiredAgents = [
   'market-researcher',
@@ -128,7 +128,7 @@ const requiredAgents = [
 
 requiredAgents.forEach(agent => {
   checkFile(
-    `.claude/commands/fin-guru/agents/${agent}.md`,
+    `.claude/agents/fg-${agent}.md`,
     `Agent: ${agent}`,
     false
   );
@@ -146,9 +146,8 @@ checkDirectory('tests', 'tests/ directory exists', false);
 checkFile('docs/reports/MANUAL_TEST_CHECKLIST.md', 'Manual test checklist exists', true);
 
 // 10. Skills and Commands
-console.log('💡 Checking skills/commands...');
+console.log('💡 Checking skills...');
 checkDirectory('.claude/skills', 'Skills directory exists', false);
-checkDirectory('.claude/commands', 'Commands directory exists', true);
 
 // 12. Recent completions validation
 console.log('✅ Validating recent task completions...');

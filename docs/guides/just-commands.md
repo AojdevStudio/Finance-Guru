@@ -27,7 +27,13 @@ Launch [Claude Code](https://code.claude.com/) pre-loaded with a specialist pers
 
 Each recipe runs:
 ```bash
-claude --dangerously-skip-permissions --append-system-prompt "$(cat .claude/agents/fg-{agent}.md)"
+claude --dangerously-skip-permissions --agent fg-{agent}
+```
+
+The persona recipes refuse to start until `FIN_GURU_DATA_ROOT` names a directory that holds `user-profile.yaml`. They then start Claude Code inside that instance, so reads, syncs, tickets, and analysis all land there, not in the engine checkout:
+
+```bash
+export FIN_GURU_DATA_ROOT=~/finance-guru-instance
 ```
 
 ## Context Loading
@@ -50,3 +56,7 @@ Load mermaid architecture diagrams into Claude Code context:
 ## Version
 
 - **Last Updated**: 2026-02-18
+
+## Plugin evals
+
+`just eval` scores the plugin against the cases in `evals/` with `claude plugin eval`, once with the plugin and once without it, and writes the results and an HTML report to `evals/results/<timestamp>/`. Pass a run count, as in `just eval 3`, for a steadier score. Each run spends model usage, and the recipe stops at a $10 list-price estimate.

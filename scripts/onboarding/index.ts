@@ -95,7 +95,7 @@ function displayComplete(): void {
   console.log('Next steps:');
   console.log('  1. Start Claude Code in this directory');
   console.log('  2. Finance Guru will auto-load your configuration');
-  console.log('  3. Run /finance-orchestrator to activate your AI team');
+  console.log('  3. Run claude --agent fg-finance-orchestrator to start your AI team');
   console.log('');
   console.log('To update your configuration later:');
   console.log('  → Run: bun run scripts/onboarding/index.ts --resume');

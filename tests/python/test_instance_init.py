@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import os
 import subprocess
 import tomllib
@@ -226,12 +227,106 @@ def test_plugin_flag_omits_harness_symlinks(tmp_path: Path) -> None:
     result = _run_init(root, repo, plugin=True)
 
     assert result.returncode == 0, result.stderr
-    assert not (root / ".claude").exists()
+    assert not (root / ".claude").is_symlink()
     assert not (root / ".agents").exists()
+    settings = json.loads((root / ".claude" / "settings.json").read_text("utf-8"))
+    assert settings == {"agent": "finance-guru:fg-finance-orchestrator"}
     agent_instructions = (root / "AGENTS.md").read_text(encoding="utf-8")
     assert "plugin is the source of truth for agents, skills, and hooks" in (
         agent_instructions
     )
+
+
+def test_plugin_flag_refuses_a_checkout_mode_claude_symlink(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    assert _run_init(root, repo).returncode == 0
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode != 0
+    assert "symlink from a checkout-mode scaffold" in result.stderr
+    assert (root / ".claude").is_symlink()
+
+
+def test_plugin_flag_refuses_a_leftover_agents_symlink(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    assert _run_init(root, repo).returncode == 0
+    (root / ".claude").unlink()
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode != 0
+    assert ".agents" in result.stderr
+    assert not (root / ".claude").exists()
+
+
+def test_plugin_flag_adds_the_agent_to_existing_settings(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    (root / ".claude").mkdir(parents=True)
+    (root / ".claude" / "settings.json").write_text(
+        '{"permissions": {"allow": ["Read"]}}\n', encoding="utf-8"
+    )
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode == 0, result.stderr
+    settings = json.loads((root / ".claude" / "settings.json").read_text("utf-8"))
+    assert settings == {
+        "permissions": {"allow": ["Read"]},
+        "agent": "finance-guru:fg-finance-orchestrator",
+    }
+
+
+def test_plugin_flag_converts_a_checkout_scaffold_end_to_end(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    assert _run_init(root, repo).returncode == 0
+    (root / ".claude").unlink()
+    (root / ".agents").unlink()
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode == 0, result.stderr
+    agents_text = (root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "plugin is the source of truth for agents, skills, and hooks" in agents_text
+    assert ".agents/skills/" not in agents_text
+    settings = json.loads((root / ".claude" / "settings.json").read_text("utf-8"))
+    assert settings["agent"] == "finance-guru:fg-finance-orchestrator"
+
+
+def test_plugin_flag_keeps_an_owner_edited_agents_file(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    assert _run_init(root, repo).returncode == 0
+    (root / ".claude").unlink()
+    (root / ".agents").unlink()
+    agents = root / "AGENTS.md"
+    edited = agents.read_text(encoding="utf-8") + "\n## My household notes\n"
+    agents.write_text(edited, encoding="utf-8")
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode != 0
+    assert "AGENTS.md" in result.stderr
+    assert agents.read_text(encoding="utf-8") == edited
+
+
+def test_plugin_flag_refuses_a_symlinked_settings_file(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    shared = tmp_path / "shared-settings.json"
+    shared.write_text("{}\n", encoding="utf-8")
+    (root / ".claude").mkdir(parents=True)
+    (root / ".claude" / "settings.json").symlink_to(shared)
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode != 0
+    assert "settings.json is a symlink" in result.stderr
+    assert shared.read_text(encoding="utf-8") == "{}\n"
 
 
 def test_matching_plugin_root_omits_harness_symlinks(tmp_path: Path) -> None:
@@ -241,7 +336,7 @@ def test_matching_plugin_root_omits_harness_symlinks(tmp_path: Path) -> None:
     result = _run_init(root, repo, plugin_root=repo)
 
     assert result.returncode == 0, result.stderr
-    assert not (root / ".claude").exists()
+    assert not (root / ".claude").is_symlink()
     assert not (root / ".agents").exists()
 
 

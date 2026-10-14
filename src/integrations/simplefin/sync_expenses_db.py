@@ -352,7 +352,7 @@ def main(argv: list[str] | None = None) -> int:
         Process exit status.
     """
     paths = InstancePaths.resolve()
-    load_instance_env(paths, override=True)
+    load_instance_env(paths)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--months", type=int, default=12)
     parser.add_argument("--show", action="store_true")

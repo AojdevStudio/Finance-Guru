@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tomllib
 from pathlib import Path
 
@@ -49,15 +50,13 @@ def test_plugin_manifest_exposes_the_canonical_component_trees() -> None:
 
     assert manifest["name"] == "finance-guru"
     assert manifest["license"] == "AGPL-3.0-only"
-    expected_commands = {
-        f"./{path.relative_to(REPO_ROOT)}"
-        for path in (REPO_ROOT / ".claude" / "commands").rglob("*.md")
-    }
+    # Specialists ship once, as agents. Duplicate command personas drifted.
+    assert "commands" not in manifest
+    assert not list((REPO_ROOT / ".claude" / "commands").rglob("*.md"))
     expected_agents = {
         f"./{path.relative_to(REPO_ROOT)}"
         for path in (REPO_ROOT / ".claude" / "agents").glob("*.md")
     }
-    assert set(manifest["commands"]) == expected_commands
     assert set(manifest["agents"]) == expected_agents
 
     skill_paths = set(manifest["skills"])
@@ -135,7 +134,9 @@ def test_six_skills_and_six_agents_run_the_shared_capability_probe() -> None:
     for agent in MCP_AGENTS:
         content = (REPO_ROOT / ".claude" / "agents" / agent).read_text(encoding="utf-8")
         assert "capability probe" in content.lower()
-        assert "../skills/_shared/PaidMcpCapabilityProbe.md" in content
+        assert (
+            "{project-root}/.claude/skills/_shared/PaidMcpCapabilityProbe.md" in content
+        )
 
 
 def test_onboarding_skill_covers_the_first_instance_run() -> None:
@@ -161,3 +162,282 @@ def test_root_agents_instructions_explain_instance_skill_discovery() -> None:
     assert "### Codex instance skill discovery" in content
     assert "./.agents/skills" in content
     assert "single `.claude` tree" in content
+
+
+READ_ONLY_REVIEWERS = {"fg-compliance-officer", "fg-qa-advisor"}
+SPECIALIST_AGENTS = sorted(
+    path
+    for path in (REPO_ROOT / ".claude" / "agents").glob("fg-*.md")
+    if path.stem != "fg-finance-orchestrator"
+)
+
+
+def _agent(path: Path) -> tuple[dict[str, object], str]:
+    _, frontmatter, body = path.read_text(encoding="utf-8").split("---\n", 2)
+    return yaml.safe_load(frontmatter), body
+
+
+def test_specialists_are_delegated_subagents_not_chat_personas() -> None:
+    assert SPECIALIST_AGENTS
+    for path in SPECIALIST_AGENTS:
+        fields, body = _agent(path)
+
+        # A subagent cannot ask the user, so a wait-for-input step stalls it.
+        for marker in ("BLOCKING", "AWAIT", "*help"):
+            assert marker not in body, f"{path.name}: {marker}"
+        assert "## Return" in body, path.name
+        assert {"model", "effort", "maxTurns"} <= fields.keys(), path.name
+        # An allowlist hides the instance's MCP servers from the capability probe.
+        assert "tools" not in fields, path.name
+        disallowed = {
+            tool.strip() for tool in str(fields["disallowedTools"]).split(",")
+        }
+        assert "Agent" in disallowed, path.name
+        if path.stem in READ_ONLY_REVIEWERS:
+            assert {"Write", "Edit", "NotebookEdit"} <= disallowed, path.name
+        # The same file also runs as the main session through `claude --agent`.
+        assert "When you run as the main session" in body, path.name
+        assert "](../" not in body, (
+            f"{path.name}: relative links resolve from the instance"
+        )
+
+
+def test_shared_checkout_settings_omit_personal_plugins() -> None:
+    """Checkout instances inherit .claude/settings.json, so it wires hooks only."""
+    settings_path = REPO_ROOT / ".claude" / "settings.json"
+    settings = _json(settings_path)
+    shared_text = settings_path.read_text(encoding="utf-8")
+
+    assert set(settings) == {"hooks"}
+    assert "imessage" not in shared_text
+    assert "codegraph" not in shared_text
+    assert ".claude/settings.local.json" in (REPO_ROOT / ".gitignore").read_text(
+        encoding="utf-8"
+    )
+
+    opt_in = (REPO_ROOT / "docs" / "reference" / "hooks.md").read_text(encoding="utf-8")
+    assert "~/.claude/settings.json" in opt_in
+    assert ".claude/settings.local.json" in opt_in
+    assert (
+        "claude plugin enable imessage@claude-plugins-official --scope user" in opt_in
+    )
+    assert (
+        "claude plugin enable imessage@claude-plugins-official --scope local" in opt_in
+    )
+
+
+OUTPUT_CONTRACT = "fin-guru-output-contract"
+# Sentences the main-session --agent prompt must carry. Claude Code 2.1.289
+# does not inject skills: into that launch, so the Return section is the copy.
+MAIN_SESSION_CONTRACT = (
+    "1. _Bottom line._",
+    "A number you cannot trace to a command does not go in the table.",
+    "3. _Assumptions and gaps._",
+    "4. _Confidence._",
+    "5. _Evidence._",
+    "consult a licensed professional, the risk disclosure",
+    "Blocked: <input> is missing.",
+    "analysis/{topic}-{YYYY-MM-DD}.md",
+)
+HAND_COPIED_ITC_LISTS = (
+    "TSLA, AAPL, MSTR, NFLX, SP500",
+    "BTC, ETH, BNB, SOL, XRP",
+)
+ITC_LIST_SOURCES = (
+    ".claude/agents/fg-dividend-specialist.md",
+    ".claude/agents/fg-market-researcher.md",
+    ".claude/agents/fg-quant-analyst.md",
+    ".claude/agents/fg-strategy-advisor.md",
+    ".claude/skills/fin-guru-compliance-review/itc-divergence.md",
+)
+
+
+def test_output_contract_skill_is_packaged_and_preloaded() -> None:
+    """The contract ships in the plugin and every agent loads it at startup."""
+    manifest = _json(PLUGIN_MANIFEST)
+    skill_dir = REPO_ROOT / ".claude" / "skills" / OUTPUT_CONTRACT
+    skill = skill_dir / "SKILL.md"
+
+    assert f"./.claude/skills/{OUTPUT_CONTRACT}" in manifest["skills"]
+    assert skill.is_file()
+    assert not (
+        REPO_ROOT / ".claude" / "skills" / "_shared" / "AnalysisOutput.md"
+    ).exists()
+
+    _, frontmatter, body = skill.read_text(encoding="utf-8").split("---\n", 2)
+    fields = yaml.safe_load(frontmatter)
+    # Preload draws from the skills Claude can invoke. This flag blocks both.
+    assert fields.get("disable-model-invocation") is not True
+    assert fields["name"] == OUTPUT_CONTRACT == skill_dir.name
+    for part in (
+        "Bottom line",
+        "Numbers",
+        "Assumptions and gaps",
+        "Confidence",
+        "Evidence",
+        "Disclaimer",
+    ):
+        assert part in body
+    for sentence in MAIN_SESSION_CONTRACT:
+        assert sentence in body, sentence
+
+    agents = sorted((REPO_ROOT / ".claude" / "agents").glob("fg-*.md"))
+    assert len(agents) == 11
+    for path in agents:
+        agent_fields, agent_body = _agent(path)
+        assert OUTPUT_CONTRACT in agent_fields["skills"], path.name
+        assert "## Return" in agent_body, path.name
+        return_section = agent_body.split("## Return", 1)[1]
+        assert OUTPUT_CONTRACT in return_section, path.name
+        for sentence in MAIN_SESSION_CONTRACT:
+            assert sentence in return_section, f"{path.name}: {sentence}"
+
+
+def test_itc_ticker_lists_are_read_from_the_cli() -> None:
+    claude = REPO_ROOT / ".claude"
+    offenders = [
+        str(path.relative_to(REPO_ROOT))
+        for path in claude.rglob("*.md")
+        if any(
+            copy in path.read_text(encoding="utf-8") for copy in HAND_COPIED_ITC_LISTS
+        )
+    ]
+    assert not offenders, offenders
+
+    for relative in ITC_LIST_SOURCES:
+        text = (REPO_ROOT / relative).read_text(encoding="utf-8")
+        assert "itc_risk_cli --list-supported tradfi" in text, relative
+        assert "itc_risk_cli --list-supported crypto" in text, relative
+
+
+# Agents, skills, and prompts name a file under fin-guru/data either as a full
+# path (`fin-guru/data/risk-framework.md`) or as a directory plus a backtick
+# list (`fin-guru/data/`: `risk-framework.md`). Both must exist on disk.
+_EXPLICIT_DATA_FILE = re.compile(r"fin-guru/data/([A-Za-z0-9_.-]+\.md)")
+_LISTED_DATA_FILES = re.compile(
+    r"fin-guru/data/[`}\s]*[:,]\s*"
+    r"((?:`[A-Za-z0-9_.-]+\.md`\s*(?:\([^)]*\))?\s*[,.]?\s*(?:and\s+)?)*)"
+)
+_BACKTICK_MD = re.compile(r"`([A-Za-z0-9_.-]+\.md)`")
+_INSTRUCTION_ROOTS = (
+    REPO_ROOT / ".claude" / "agents",
+    REPO_ROOT / ".claude" / "skills",
+    REPO_ROOT / ".claude" / "commands",
+    REPO_ROOT / "evals",
+    REPO_ROOT / "fin-guru" / "tasks",
+)
+
+
+def cited_fin_guru_data_files(text: str) -> set[str]:
+    """Collect fin-guru/data markdown filenames an instruction text tells an agent to open."""
+    names = set(_EXPLICIT_DATA_FILE.findall(text))
+    for listed in _LISTED_DATA_FILES.findall(text):
+        names.update(_BACKTICK_MD.findall(listed))
+    return names
+
+
+def _instruction_markdown() -> list[Path]:
+    files: list[Path] = []
+    for root in _INSTRUCTION_ROOTS:
+        if root.is_dir():
+            files.extend(path for path in root.rglob("*.md") if path.is_file())
+    return files
+
+
+def test_listed_data_directory_references_are_detected() -> None:
+    sample = (
+        "Read the policy files in `{project-root}/fin-guru/data/`: "
+        "`margin-strategy.md` (leverage limits), `cashflow-policy.md`."
+    )
+
+    assert cited_fin_guru_data_files(sample) == {
+        "margin-strategy.md",
+        "cashflow-policy.md",
+    }
+    assert cited_fin_guru_data_files(
+        "Read `{project-root}/fin-guru/data/risk-framework.md`."
+    ) == {"risk-framework.md"}
+    assert cited_fin_guru_data_files(
+        "from `{project-root}/fin-guru/data/`, `compliance-policy.md`, "
+        "`risk-framework.md`, and `modern-income-vehicles.md`"
+    ) == {
+        "compliance-policy.md",
+        "risk-framework.md",
+        "modern-income-vehicles.md",
+    }
+    assert (
+        cited_fin_guru_data_files(
+            "touches `fin-guru/data/` and `{project-root}/fin-guru/checklists/margin-strategy.md`"
+        )
+        == set()
+    )
+
+
+def test_fin_guru_data_references_from_agents_skills_and_prompts_exist() -> None:
+    missing: list[str] = []
+    for path in _instruction_markdown():
+        text = path.read_text(encoding="utf-8")
+        for name in sorted(cited_fin_guru_data_files(text)):
+            target = REPO_ROOT / "fin-guru" / "data" / name
+            if not target.is_file():
+                missing.append(f"{path.relative_to(REPO_ROOT)} -> fin-guru/data/{name}")
+
+    assert missing == []
+
+
+def test_public_policies_match_the_compliance_verdicts() -> None:
+    risk = (REPO_ROOT / "fin-guru" / "data" / "risk-framework.md").read_text(
+        encoding="utf-8"
+    )
+    policy = (REPO_ROOT / "fin-guru" / "data" / "compliance-policy.md").read_text(
+        encoding="utf-8"
+    )
+    example = (
+        REPO_ROOT
+        / ".claude"
+        / "skills"
+        / "fin-guru-compliance-review"
+        / "itc-divergence.md"
+    ).read_text(encoding="utf-8")
+    definitions = (REPO_ROOT / "fin-guru" / "data" / "definitions.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Single-position clearance limit" in risk
+    assert "including exactly 20%" in risk
+    assert "Exactly 20% is the clearance ceiling." in risk
+    assert (
+        "A post-increase weight above 20% fails clearance and is a level 3 breach."
+        in risk
+    )
+    assert "10% monitoring target" in risk
+    assert "30% deployment cap" in risk
+    assert "15.5%" in risk
+    assert "APPROVE WITH NOTE" in risk
+
+    assert "Single position (monitoring)" in definitions
+    assert "Single position (clearance)" in definitions
+    assert "Exactly 20% is approved on concentration grounds" in definitions
+    assert "≤ 10% of total portfolio" not in definitions
+    assert "fin-guru/data/risk-framework.md" in definitions
+
+    assert "DR-4 is a mandatory BLOCK" in policy
+    assert "above 0.85" in policy
+    assert "divergence is above 30%" in policy
+    assert (
+        "While a specialist drafts a buy ticket, ITC is an advisory overlay." in policy
+    )
+
+    assert "15.5% (inside the 20% clearance limit" in example
+    assert "Action: BLOCK" in example
+
+
+def test_plugin_instances_start_the_shipped_orchestrator() -> None:
+    from src.cli.instance_init import PLUGIN_AGENT
+
+    manifest = _json(PLUGIN_MANIFEST)
+    orchestrator = REPO_ROOT / ".claude" / "agents" / "fg-finance-orchestrator.md"
+    fields, _ = _agent(orchestrator)
+
+    assert f"./{orchestrator.relative_to(REPO_ROOT)}" in manifest["agents"]
+    assert f"{manifest['name']}:{fields['name']}" == PLUGIN_AGENT
