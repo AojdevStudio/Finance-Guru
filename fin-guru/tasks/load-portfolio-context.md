@@ -95,14 +95,14 @@ Also compare the generation date with today's UTC date from `date -u +"%Y-%m-%d"
 - The refresh printed `positions: ok` for this run.
 - The `--show` generation equals the refresh `generation` line.
 - `--show` printed at least one balances row and at least one position.
-- `portfolio_value` from the margin JSON is greater than 0 when that command succeeded.
-- `source_file` starts with `db:`.
+- When the margin command succeeded, `portfolio_value` is greater than 0 and `source_file` starts with `db:`.
+- When it failed, its typed error is under data gaps. The positions snapshot is still valid context.
 
 A snapshot with fewer than five positions is still valid. Do not reject it, and do not go looking for a CSV that has more rows.
 
 ### 6. Store context
 
-Keep the CLI text. Fill this summary only with values those commands printed. Leave every unknown under data gaps. If the margin command failed, omit the overview lines it did not print.
+Keep the CLI text. Fill this summary only with values those commands printed. Leave every unknown under data gaps. If the margin command failed, omit the `Margin source_file` line and the overview lines it did not print.
 
 ```
 PORTFOLIO CONTEXT LOADED: [synced_at]
@@ -135,7 +135,7 @@ DATA GAPS:
 - [any refresh warning, missing .env value, or transactions/expenses error]
 
 DISCLAIMER:
-[disclaimer field from the margin JSON, copied verbatim]
+[disclaimer field from the margin JSON, copied verbatim. If the margin command failed, part 6 of the fin-guru-output-contract skill, citing family_office.db and this synced_at]
 
 ✅ Portfolio context ready for analysis
 ```
@@ -192,7 +192,7 @@ A broker CSV is an explicit opt-in on the `portfolio-syncing` skill, used only w
 
 ## Output
 
-1. The refresh lines, the `--show` snapshot, and the margin JSON.
+1. The refresh lines, the `--show` snapshot, and the margin JSON when that command succeeded.
 2. The structured summary above, stored in working memory.
 3. A ready state, or a stop with a typed reason when the refresh did not land.
 
