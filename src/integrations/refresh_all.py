@@ -10,6 +10,7 @@ from typing import Any
 from src.config.instance_paths import InstancePaths, load_instance_env
 from src.integrations.simplefin.sync_expenses_db import sync as sync_expenses
 from src.integrations.snaptrade.sync_db import sync as sync_positions
+from src.integrations.snaptrade.sync_db import unpriced_lot_warning
 from src.integrations.snaptrade.sync_transactions_db import sync as sync_transactions
 
 
@@ -79,10 +80,21 @@ def main(argv: list[str] | None = None) -> int:
 
     result = refresh(database_url, months=args.months)
     for source in result["sources"]:
-        if source["status"] == "ok":
-            print(f"{source['source']}: ok")
-        else:
+        if source["status"] != "ok":
             print(f"{source['source']}: error: {source['error']}")
+            continue
+        print(f"{source['source']}: ok")
+        if source["source"] == "positions":
+            # The generation `sync_db --show` must match, and every basis gap.
+            # A sync that wrote no account has no generation to match.
+            summary = source["summary"]
+            if not summary["accounts"]:
+                print("  no enabled, routed account synced")
+                continue
+            print(f"  generation {summary['synced_at']}")
+            for account in summary["accounts"]:
+                for lot in account["unpriced_lots"]:
+                    print(f"  warning: {unpriced_lot_warning(lot)}")
     return 0 if all(source["status"] == "ok" for source in result["sources"]) else 1
 
 

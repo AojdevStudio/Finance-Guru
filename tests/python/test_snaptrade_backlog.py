@@ -8,11 +8,14 @@ from typing import Any
 
 import pytest
 
+from src.integrations import refresh_all
 from src.integrations.snaptrade import client as snaptrade_client
 from src.integrations.snaptrade.cli import _account_balances
 from src.integrations.snaptrade.client import SnapTradeAPIError, _summarize_activity
+from src.integrations.snaptrade.sync_db import _SCHEMA as POSITION_SCHEMA
 from src.integrations.snaptrade.sync_db import _net_positions
 from src.integrations.snaptrade.sync_db import main as sync_positions_main
+from src.integrations.snaptrade.sync_db import show as show_positions
 from src.integrations.snaptrade.sync_db import sync as sync_positions
 from src.integrations.snaptrade.sync_transactions_db import (
     _SCHEMA as TRANSACTION_SCHEMA,
@@ -413,3 +416,111 @@ def test_transaction_show_renders_nullable_type(
     show_transactions(str(database_path))
 
     assert "unknown" in capsys.readouterr().out
+
+
+def test_position_show_prints_only_the_latest_generation(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Rows kept from an account disabled earlier the same day stay out of --show."""
+    database_path = tmp_path / "family_office.db"
+    earlier = "2026-10-06T09:00:00+00:00"
+    latest = "2026-10-06T15:00:00+00:00"
+    with sqlite3.connect(database_path) as connection:
+        connection.executescript(POSITION_SCHEMA)
+        for account_id, symbol, synced_at in (
+            ("acct-disabled", "STALE", earlier),
+            ("acct-live", "AAPL", latest),
+        ):
+            connection.execute(
+                "INSERT INTO balances (account_id, account_equity, synced_at) "
+                "VALUES (?,?,?)",
+                (account_id, 1000.0, synced_at),
+            )
+            connection.execute(
+                "INSERT INTO positions "
+                "(account_id, symbol, instrument, quantity, synced_at) "
+                "VALUES (?,?,?,?,?)",
+                (account_id, symbol, "equity", 10.0, synced_at),
+            )
+
+    show_positions(str(database_path))
+
+    output = capsys.readouterr().out
+    assert f"generation {latest}" in output
+    assert "acct-live" in output and "AAPL" in output
+    assert "acct-disabled" not in output and "STALE" not in output
+
+
+def test_refresh_cli_prints_positions_generation_and_unpriced_lots(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The refresh output carries what the portfolio-context task must quote."""
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.setattr(
+        refresh_all,
+        "refresh",
+        lambda database_url, months=12: {
+            "synced_at": "2026-10-06T15:00:05+00:00",
+            "sources": [
+                {
+                    "source": "positions",
+                    "status": "ok",
+                    "summary": {
+                        "synced_at": "2026-10-06T15:00:00+00:00",
+                        "accounts": [
+                            {
+                                "unpriced_lots": [
+                                    {
+                                        "symbol": "AAPL",
+                                        "instrument": "equity",
+                                        "quantity": 10.0,
+                                    }
+                                ]
+                            }
+                        ],
+                    },
+                }
+            ],
+        },
+    )
+
+    assert refresh_all.main([]) == 0
+
+    output = capsys.readouterr().out
+    assert "positions: ok" in output
+    assert "generation 2026-10-06T15:00:00+00:00" in output
+    assert "cost basis unavailable for 10.0 AAPL equity units" in output
+
+
+def test_refresh_cli_prints_no_generation_when_no_account_synced(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An empty sync prints no generation an older snapshot could match."""
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.setattr(
+        refresh_all,
+        "refresh",
+        lambda database_url, months=12: {
+            "synced_at": "2026-10-06T15:00:05+00:00",
+            "sources": [
+                {
+                    "source": "positions",
+                    "status": "ok",
+                    "summary": {
+                        "synced_at": "2026-10-06T15:00:00+00:00",
+                        "accounts": [],
+                    },
+                }
+            ],
+        },
+    )
+
+    assert refresh_all.main([]) == 0
+
+    output = capsys.readouterr().out
+    assert "no enabled, routed account synced" in output
+    assert "generation" not in output
