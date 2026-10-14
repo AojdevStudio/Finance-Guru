@@ -72,7 +72,6 @@ class TestInvestmentPortfolioSection:
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Check for required imports
         assert "validateCurrency" in content
         assert "validateRiskTolerance" in content
         assert "validateNonEmpty" in content
@@ -85,7 +84,6 @@ class TestInvestmentPortfolioSection:
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Check for interface definition
         assert "interface InvestmentPortfolioData" in content
         assert "total_value:" in content
         assert "retirement_accounts:" in content
@@ -108,7 +106,6 @@ class TestInvestmentPortfolioSection:
             text=True,
             timeout=5,
         )
-        # Should not have TypeScript compilation errors
         assert "error TS" not in result.stderr
 
     def test_section_structure_matches_spec(self):
@@ -116,10 +113,8 @@ class TestInvestmentPortfolioSection:
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Verify section displays correct header
         assert "Section 2 of 7: Investment Portfolio" in content
 
-        # Verify prompts for required fields
         assert "brokerage" in content.lower() or "investment" in content.lower()
         assert "retirement" in content.lower()
         assert "bitcoin" in content.lower() or "crypto" in content.lower()
@@ -132,12 +127,10 @@ class TestInvestmentPortfolioSection:
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Verify state management calls
         assert "saveSectionData" in content
         assert "markSectionComplete" in content
         assert "saveState" in content
 
-        # Verify correct section name used
         assert (
             "'investment_portfolio'" in content or '"investment_portfolio"' in content
         )
@@ -147,12 +140,10 @@ class TestInvestmentPortfolioSection:
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Should mark next section as 'cash_flow'
         assert "'cash_flow'" in content or '"cash_flow"' in content
 
     def test_validation_integration(self):
         """Test that validation functions are properly integrated"""
-        # Test currency validation integration
         result = subprocess.run(
             [
                 "bun",
@@ -193,7 +184,6 @@ class TestInvestmentPortfolioSection:
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Should have option to exclude bitcoin
         assert "excluded" in content.lower() or "exclude" in content.lower()
         assert "EXCLUDED_FROM_PLANNING" in content
 
@@ -202,9 +192,7 @@ class TestInvestmentPortfolioSection:
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Should calculate total_net_worth from all values
         assert "total_net_worth" in content.lower()
-        # Should handle bitcoin exclusion in calculation
         assert "bitcoinValue" in content or "bitcoin_value" in content.lower()
 
     def test_accounts_array_parsing(self):
@@ -212,7 +200,6 @@ class TestInvestmentPortfolioSection:
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Should parse comma-separated accounts
         assert "split" in content
         assert "," in content
         assert "trim" in content
@@ -222,36 +209,31 @@ class TestInvestmentPortfolioSection:
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Should show examples
         assert "Example" in content or "example" in content.lower()
         assert "401k" in content or "IRA" in content or "Roth" in content
 
     def test_readline_usage(self):
-        """Test that section uses readline for input"""
+        """Test that section reads input through the shared readline prompt"""
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Should import readline
-        assert "readline" in content
-        assert "createInterface" in content or "question" in content
+        assert "from '../modules/prompt'" in content
+        assert "createPrompt()" in content
 
     def test_error_handling(self):
         """Test that section has proper error handling"""
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Should have try/catch or error handling
         assert "try" in content or "catch" in content or "error" in content.lower()
-        assert "finally" in content or "close" in content  # Should close readline
+        assert "finally" in content or "close" in content
 
     def test_allocation_strategy_prompt(self):
         """Test that allocation strategy is prompted"""
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Should prompt for allocation
         assert "allocation" in content.lower()
-        # Should provide allocation examples
         assert "aggressive" in content.lower() or "balanced" in content.lower()
 
     def test_section_number_correct(self):
@@ -266,7 +248,6 @@ class TestInvestmentPortfolioSection:
         section_file = Path("scripts/onboarding/sections/investment-portfolio.ts")
         content = section_file.read_text()
 
-        # Should reference 'investments' as current section key
         assert "'investments'" in content or '"investments"' in content
 
 

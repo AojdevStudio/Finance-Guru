@@ -1,9 +1,4 @@
-/**
- * Broker Selection Section
- * Allows users to select their broker and provides export guidance
- */
-
-import { createInterface } from 'readline';
+import { createPrompt, type Prompt } from '../modules/prompt';
 import type { OnboardingState } from '../modules/progress';
 import { saveSectionData, markSectionComplete, saveState } from '../modules/progress';
 import {
@@ -21,19 +16,6 @@ export interface BrokerSelectionData {
   is_supported: boolean;
 }
 
-/**
- * Creates a readline interface for prompting user
- */
-function createPrompt() {
-  return createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-}
-
-/**
- * Display broker selection menu
- */
 function displayBrokerMenu() {
   console.log('');
   console.log('Available Brokers:');
@@ -50,10 +32,7 @@ function displayBrokerMenu() {
   });
 }
 
-/**
- * Prompt user to select broker
- */
-async function promptBrokerSelection(rl: ReturnType<typeof createInterface>): Promise<BrokerType> {
+async function promptBrokerSelection(rl: Prompt): Promise<BrokerType> {
   const brokers = getAllBrokers();
 
   return new Promise((resolve) => {
@@ -75,9 +54,6 @@ async function promptBrokerSelection(rl: ReturnType<typeof createInterface>): Pr
   });
 }
 
-/**
- * Display CSV export instructions for selected broker
- */
 function displayExportInstructions(brokerType: BrokerType) {
   const broker = getBrokerInfo(brokerType);
   const supported = isBrokerSupported(brokerType);
@@ -115,11 +91,8 @@ function displayExportInstructions(brokerType: BrokerType) {
   console.log('');
 }
 
-/**
- * Confirm broker selection
- */
 async function confirmSelection(
-  rl: ReturnType<typeof createInterface>,
+  rl: Prompt,
   brokerType: BrokerType
 ): Promise<boolean> {
   const broker = getBrokerInfo(brokerType);
@@ -135,11 +108,6 @@ async function confirmSelection(
   });
 }
 
-/**
- * Runs the Broker Selection section
- * @param state - Current onboarding state
- * @returns Updated state with broker selection data
- */
 export async function runBrokerSelectionSection(state: OnboardingState): Promise<OnboardingState> {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🏦 Broker Selection');
@@ -155,7 +123,6 @@ export async function runBrokerSelectionSection(state: OnboardingState): Promise
     let selectedBroker: BrokerType | null = null;
     let confirmed = false;
 
-    // Selection loop (allow user to change selection)
     while (!confirmed) {
       displayBrokerMenu();
       selectedBroker = await promptBrokerSelection(rl);
@@ -175,7 +142,6 @@ export async function runBrokerSelectionSection(state: OnboardingState): Promise
     const broker = getBrokerInfo(selectedBroker);
     const supported = isBrokerSupported(selectedBroker);
 
-    // Create broker selection data
     const brokerData: BrokerSelectionData = {
       broker: selectedBroker,
       broker_name: broker.name,
@@ -183,13 +149,10 @@ export async function runBrokerSelectionSection(state: OnboardingState): Promise
       is_supported: supported
     };
 
-    // Save section data
     saveSectionData(state, 'broker_selection', brokerData);
 
-    // Mark section as complete and set next section
     markSectionComplete(state, 'broker_selection', 'investment_portfolio');
 
-    // Save state to disk
     saveState(state);
 
     console.log('');

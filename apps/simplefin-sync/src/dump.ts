@@ -1,10 +1,4 @@
 #!/usr/bin/env bun
-/**
- * Dump raw SimpleFIN /accounts JSON (incl. transactions) to stdout for the
- * Python spending sync to consume. Reuses the proven client/auth path.
- *
- *   bun run src/dump.ts [months=12] > out.json
- */
 import { createClient, toSfinTimestamp } from "./client";
 
 const MAX_MONTHS = 120;
@@ -26,8 +20,7 @@ const startDate = toSfinTimestamp(
   new Date(Date.now() - months * 31 * 24 * 60 * 60 * 1000),
 );
 
-// Defense-in-depth: never let a credential-bearing string reach stderr/logs.
-function scrub(message: string): string {
+function redactCredentials(message: string): string {
   let s = message.replace(
     /https?:\/\/[^@\s/]+:[^@\s/]+@/g,
     "https://[redacted]@",
@@ -42,6 +35,6 @@ try {
   process.stdout.write(JSON.stringify(data));
 } catch (err) {
   const message = err instanceof Error ? err.message : "unknown error";
-  console.error(`✗ SimpleFIN dump failed: ${scrub(message)}`);
+  console.error(`✗ SimpleFIN dump failed: ${redactCredentials(message)}`);
   process.exit(1);
 }

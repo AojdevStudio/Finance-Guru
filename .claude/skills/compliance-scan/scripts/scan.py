@@ -24,11 +24,9 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from enum import IntEnum
+from fnmatch import fnmatch
 from pathlib import Path
-
-# --------------------------------------------------------------------------- #
-# Severity                                                                    #
-# --------------------------------------------------------------------------- #
+from typing import NamedTuple
 
 
 class Severity(IntEnum):
@@ -40,11 +38,6 @@ class Severity(IntEnum):
     @classmethod
     def parse(cls, name: str) -> Severity:
         return cls[name.strip().upper()]
-
-
-# --------------------------------------------------------------------------- #
-# Finding                                                                     #
-# --------------------------------------------------------------------------- #
 
 
 @dataclass
@@ -69,103 +62,108 @@ class Finding:
         }
 
 
-# --------------------------------------------------------------------------- #
-# Built-in pattern catalogs                                                   #
-# --------------------------------------------------------------------------- #
-# Each entry: (rule_name, regex, severity, remediation_hint)
+class PatternRule(NamedTuple):
+    name: str
+    pattern: re.Pattern[str]
+    remediation: str
 
-CRITICAL_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
-    (
+
+@dataclass(frozen=True)
+class AllowlistEntry:
+    path: str
+    reason: str
+
+
+CRITICAL_PATTERNS: list[PatternRule] = [
+    PatternRule(
         "aws-access-key",
         re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
         "Rotate the AWS key in IAM, scrub from history with git-filter-repo, "
         "store the new key in .env (gitignored).",
     ),
-    (
+    PatternRule(
         "github-pat-classic",
         re.compile(r"\bghp_[A-Za-z0-9]{36}\b"),
         "Revoke at github.com/settings/tokens, rotate, store in .env.",
     ),
-    (
+    PatternRule(
         "github-pat-fine-grained",
         re.compile(r"\bgithub_pat_[A-Za-z0-9_]{82}\b"),
         "Revoke at github.com/settings/personal-access-tokens, rotate.",
     ),
-    (
+    PatternRule(
         "github-server-token",
         re.compile(r"\bghs_[A-Za-z0-9]{36}\b"),
         "Revoke the server-to-server token; rotate.",
     ),
-    (
+    PatternRule(
         "anthropic-key",
         re.compile(r"\bsk-ant-[A-Za-z0-9_-]{40,}\b"),
         "Rotate at console.anthropic.com; new key into .env.",
     ),
-    (
+    PatternRule(
         "openai-key",
         re.compile(r"\bsk-proj-[A-Za-z0-9_-]{40,}\b|\bsk-[A-Za-z0-9]{48}\b"),
         "Rotate at platform.openai.com; new key into .env.",
     ),
-    (
+    PatternRule(
         "slack-bot-token",
         re.compile(r"\bxoxb-\d+-\d+-[A-Za-z0-9]+\b"),
         "Rotate the Slack bot token; reinstall the app if needed.",
     ),
-    (
+    PatternRule(
         "slack-user-token",
         re.compile(r"\bxoxp-\d+-\d+-\d+-[a-f0-9]+\b"),
         "Rotate the Slack user token immediately.",
     ),
-    (
+    PatternRule(
         "google-api-key",
         re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"),
         "Rotate in Google Cloud Console > Credentials; restrict by IP/referrer.",
     ),
-    (
+    PatternRule(
         "private-key-pem",
         re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----"),
         "Move the key out of the repo; regenerate if it was ever committed.",
     ),
-    (
+    PatternRule(
         "jwt-token",
         re.compile(
             r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"
         ),
         "Treat as compromised — invalidate the session and rotate the signing key.",
     ),
-    (
+    PatternRule(
         "bright-data-token",
         re.compile(r"\b[a-f0-9]{64}\b"),
         "Bright Data API token style. Verify it's real, then rotate at brightdata.com.",
     ),
 ]
 
-HIGH_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
-    (
+HIGH_PATTERNS: list[PatternRule] = [
+    PatternRule(
         "fidelity-account",
         re.compile(r"\bZ0\d{7,}\b"),
         "Replace with `{account_id}` template variable; load real value from "
         "env/onboarding state.",
     ),
-    (
+    PatternRule(
         "ssn",
         re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
         "Never commit. Move to env or local-only file.",
     ),
-    (
+    PatternRule(
         "apps-script-dispatcher",
         re.compile(r"https://script\.google\.com/macros/s/[A-Za-z0-9_-]{40,}/exec"),
         "Move the URL to .env or a gitignored config; reference via env var only.",
     ),
-    (
+    PatternRule(
         "google-script-deployment-id",
         re.compile(r"\bAKfyc[A-Za-z0-9_-]{50,}\b"),
         "Apps Script deployment ID. Treat like a credential — env var only.",
     ),
 ]
 
-# Sensitive path prefixes — untracked files in these locations are INFO findings
-# unless the file content also matches HIGH/CRITICAL (then severity is upgraded).
 SENSITIVE_PATH_PREFIXES: tuple[str, ...] = (
     ".claude/skills/apps-script-run",
     "notebooks/",
@@ -184,7 +182,6 @@ SENSITIVE_PATH_GLOBS: tuple[str, ...] = (
     "*.pem",
 )
 
-# Skill name fragments that should not be tracked even under .claude/skills/
 SENSITIVE_SKILL_FRAGMENTS: tuple[str, ...] = (
     "apps-script",
     "dispatcher",
@@ -193,7 +190,6 @@ SENSITIVE_SKILL_FRAGMENTS: tuple[str, ...] = (
     "secret",
 )
 
-# File extensions that are never scanned (binary or known-safe)
 SKIP_EXTENSIONS: frozenset[str] = frozenset(
     {
         ".png",
@@ -225,7 +221,6 @@ SKIP_EXTENSIONS: frozenset[str] = frozenset(
     }
 )
 
-# Paths the scanner ignores (its own data should not flag itself)
 SCANNER_SELF_PATHS: tuple[str, ...] = (
     ".claude/skills/compliance-scan/",
     "scripts/qa/pii-replacements.txt",
@@ -235,22 +230,10 @@ SCANNER_SELF_PATHS: tuple[str, ...] = (
     "tests/python/test_no_hardcoded_references.py",
 )
 
-# Allowlist file: a list of path globs that are KNOWN-ACCEPTED exceptions.
-# Loaded from .claude/skills/compliance-scan/allowlist.json. Each entry has:
-#   {"path": "<glob>", "reason": "<why this is OK>", "approved_by": "<name>", "date": "YYYY-MM-DD"}
-# Matching paths skip ALL pattern scans. Reserve for cases where the value
-# is legitimately committed (e.g., a golden test fixture).
 ALLOWLIST_FILE = ".claude/skills/compliance-scan/allowlist.json"
 
 
-# --------------------------------------------------------------------------- #
-# Pattern loading from scripts/qa/pii-replacements.txt                        #
-# --------------------------------------------------------------------------- #
-
-
-def load_pii_replacement_patterns(
-    repo_root: Path,
-) -> list[tuple[str, re.Pattern[str], str]]:
+def load_pii_replacement_patterns(repo_root: Path) -> list[PatternRule]:
     """Parse scripts/qa/pii-replacements.txt; convert to HIGH-severity rules.
 
     File format (per file header):
@@ -260,12 +243,6 @@ def load_pii_replacement_patterns(
     """
     path = repo_root / "scripts" / "qa" / "pii-replacements.txt"
     if not path.exists():
-        # Loud, not silent. This file is gitignored, so any fresh clone or
-        # worktree lacks it — and returning [] here made the scanner report
-        # "PASS — no findings" with zero patterns loaded. A security gate that
-        # reports clean because it is blind is worse than no gate: it is the
-        # exact failure that let PII sit on the public remote for six months.
-        # Template fallback keeps a fresh clone scanning on the shipped rules.
         template = path.with_name("pii-replacements.template.txt")
         if template.exists():
             print(
@@ -283,7 +260,7 @@ def load_pii_replacement_patterns(
             )
             raise SystemExit(2)
 
-    rules: list[tuple[str, re.Pattern[str], str]] = []
+    rules: list[PatternRule] = []
     for raw in path.read_text().splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
@@ -295,7 +272,7 @@ def load_pii_replacement_patterns(
             literal = lhs[len("literal:") :]
             try:
                 rules.append(
-                    (
+                    PatternRule(
                         f"pii-replacements:{literal[:32]}",
                         re.compile(re.escape(literal)),
                         f"Replace literal with `{replacement}`; source value belongs in "
@@ -308,7 +285,7 @@ def load_pii_replacement_patterns(
             pattern = lhs[len("regex:") :]
             try:
                 rules.append(
-                    (
+                    PatternRule(
                         f"pii-replacements:regex:{pattern[:32]}",
                         re.compile(pattern),
                         f"Replace match with `{replacement}`; source value belongs in "
@@ -318,11 +295,6 @@ def load_pii_replacement_patterns(
             except re.error:
                 continue
     return rules
-
-
-# --------------------------------------------------------------------------- #
-# Git helpers                                                                 #
-# --------------------------------------------------------------------------- #
 
 
 def run_git(args: list[str], repo_root: Path) -> str:
@@ -385,10 +357,19 @@ def push_files(repo_root: Path) -> list[str]:
     return [line for line in out.splitlines() if line]
 
 
+def _added_lines(diff: str) -> list[str]:
+    """Return the text of each line a unified diff adds."""
+    return [
+        line[1:]
+        for line in diff.splitlines()
+        if line.startswith("+") and not line.startswith("+++")
+    ]
+
+
 def scan_history(
     repo_root: Path,
     allowed_amounts: frozenset[str],
-    pii_rules: list,
+    pii_rules: list[PatternRule],
 ) -> list[Finding]:
     """Scan every commit being pushed, not just the resulting file content.
 
@@ -409,30 +390,18 @@ def scan_history(
             ["show", "--format=", "--name-only", "--diff-filter=ACMRD", sha], repo_root
         ).splitlines()
         for path in (n for n in names if n):
-            if should_skip(path, allowlist) and not path.endswith(
-                _FINANCIAL_DOC_SUFFIXES
-            ):
+            scan_literals = not skips_literal_scan(path, allowlist)
+            if not scan_literals and not covers_financial_figures(path):
                 continue
             diff = run_git(
                 ["show", "--format=", "--unified=0", sha, "--", path], repo_root
             )
-            # Added lines only. A removed line's content reached the file from
-            # somewhere: either a commit inside this range, whose added line is
-            # scanned here, or the baseline, where it is already public and
-            # deleting it discloses nothing new. Scanning removals as well only
-            # flags the scrub commit that fixes a leak.
-            changed = [
-                line[1:]
-                for line in diff.splitlines()
-                if line.startswith("+") and not line.startswith("+++")
-            ]
+            changed = _added_lines(diff)
             if not changed:
                 continue
             text = "\n".join(changed)
             literals = (
-                []
-                if should_skip(path, allowlist)
-                else scan_content_layer3_4(path, text, pii_rules)
+                scan_content_layer3_4(path, text, pii_rules) if scan_literals else []
             )
             for finding in (
                 scan_layer7_financial_figures(path, text, allowed_amounts) + literals
@@ -485,11 +454,6 @@ def file_content_for_scope(path: str, scope: str, repo_root: Path) -> str | None
         return None
 
 
-# --------------------------------------------------------------------------- #
-# Scanners                                                                    #
-# --------------------------------------------------------------------------- #
-
-
 LOCKFILE_NAME_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r".*[-_]lock\.json$"),
     re.compile(r".*[-_]lock\.yaml$"),
@@ -505,8 +469,8 @@ LOCKFILE_NAME_PATTERNS: tuple[re.Pattern[str], ...] = (
 )
 
 
-def load_allowlist(repo_root: Path) -> list[str]:
-    """Return a list of path globs from the allowlist file, or []."""
+def load_allowlist(repo_root: Path) -> list[AllowlistEntry]:
+    """Return the allowlisted path globs and their reasons, or []."""
     path = repo_root / ALLOWLIST_FILE
     if not path.exists():
         return []
@@ -514,8 +478,11 @@ def load_allowlist(repo_root: Path) -> list[str]:
         data = json.loads(path.read_text())
     except (json.JSONDecodeError, OSError):
         return []
-    entries = data.get("allow", [])
-    return [e["path"] for e in entries if isinstance(e, dict) and "path" in e]
+    return [
+        AllowlistEntry(path=e["path"], reason=e.get("reason", ""))
+        for e in data.get("allow", [])
+        if isinstance(e, dict) and "path" in e
+    ]
 
 
 def load_allowed_amounts(repo_root: Path) -> frozenset[str]:
@@ -530,35 +497,41 @@ def load_allowed_amounts(repo_root: Path) -> frozenset[str]:
     return frozenset(str(a) for a in data.get("allowed_amounts", []))
 
 
-_ALLOWLIST_CACHE: list[str] | None = None
+def _is_scanner_self(path: str) -> bool:
+    return any(path.startswith(p) for p in SCANNER_SELF_PATHS)
 
 
-def should_skip(path: str, allowlist: list[str] | None = None) -> bool:
-    if any(path.startswith(p) for p in SCANNER_SELF_PATHS):
-        return True
-    suffix = Path(path).suffix.lower()
-    if suffix in SKIP_EXTENSIONS:
+def _is_binary_or_lockfile(path: str) -> bool:
+    if Path(path).suffix.lower() in SKIP_EXTENSIONS:
         return True
     name = Path(path).name
-    if any(p.match(name) for p in LOCKFILE_NAME_PATTERNS):
-        return True
-    if allowlist:
-        from fnmatch import fnmatch
+    return any(p.match(name) for p in LOCKFILE_NAME_PATTERNS)
 
-        if any(fnmatch(path, glob) for glob in allowlist):
-            return True
-    return False
+
+def _is_allowlisted(path: str, allowlist: list[AllowlistEntry]) -> bool:
+    return any(fnmatch(path, entry.path) for entry in allowlist)
+
+
+def skips_literal_scan(
+    path: str, allowlist: list[AllowlistEntry] | None = None
+) -> bool:
+    """Layers 3 and 4 (secrets and PII literals) skip this path."""
+    return (
+        _is_scanner_self(path)
+        or _is_binary_or_lockfile(path)
+        or _is_allowlisted(path, allowlist or [])
+    )
 
 
 def scan_content_layer3_4(
     path: str,
     text: str,
-    pii_rules: list[tuple[str, re.Pattern[str], str]],
+    pii_rules: list[PatternRule],
 ) -> list[Finding]:
     findings: list[Finding] = []
     lines = text.splitlines()
 
-    def search(rules, severity: Severity, layer: str) -> None:
+    def search(rules: list[PatternRule], severity: Severity, layer: str) -> None:
         for rule_name, pattern, hint in rules:
             for lineno, line in enumerate(lines, 1):
                 m = pattern.search(line)
@@ -590,28 +563,13 @@ def _redact_snippet(line: str, match: re.Match[str]) -> str:
     return f"{head}[{masked}]{tail}".strip()
 
 
-# --------------------------------------------------------------------------- #
-# Layer 7: household financial figures in tracked documentation                #
-# --------------------------------------------------------------------------- #
-# Layers 3-4 match known literals, so they can only catch a value someone already
-# wrote down. A balance, income, or spend total is private because of what it
-# MEANS, not because it matches a string, which is why a real account-equity
-# figure passed a clean scan on 2026-08-31 and reached a public PR.
-#
-# The separating signal is precision. Documentation writes round scenario values
-# ($50,000 portfolio, $500 contribution); real money lands on arbitrary amounts
-# or carries cents. Flag the precise ones and let the allowlist carry genuine
-# public reference data such as IRS bracket edges.
-
 _CURRENCY_RE = re.compile(
     r"\$\s?([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,}|[0-9]{1,3}(?=\.[0-9]{2}))(\.[0-9]{2})?"
 )
 
-# Code comments leak as readily as prose. A "why" comment citing the balance
-# that motivated a check publishes that balance.
-_FINANCIAL_DOC_SUFFIXES = (".md", ".py")
+_FINANCIAL_FIGURE_SUFFIXES = (".md", ".py")
 
-_FINANCIAL_DOC_PREFIXES = (
+_FINANCIAL_FIGURE_PREFIXES = (
     ".claude/skills/",
     ".claude/commands/",
     ".dev/",
@@ -619,16 +577,37 @@ _FINANCIAL_DOC_PREFIXES = (
     "docs/",
 )
 
-_CURRENCY_MIN = 1000.0
+_WHOLE_AMOUNT_MIN = 1000.0
+_CENTS_AMOUNT_MIN = 100.0
+_ROUND_AMOUNT_STEP = 1000
+
+
+def covers_financial_figures(path: str) -> bool:
+    """Layer 7 scans this path for household currency amounts."""
+    return path.endswith(_FINANCIAL_FIGURE_SUFFIXES) and path.startswith(
+        _FINANCIAL_FIGURE_PREFIXES
+    )
+
+
+def _has_real_cents(cents: str | None) -> bool:
+    return cents is not None and cents != ".00"
+
+
+def _is_round_amount(whole: float) -> bool:
+    return whole % _ROUND_AMOUNT_STEP == 0
+
+
+def _is_reportable_amount(whole: float, cents: str | None) -> bool:
+    if _has_real_cents(cents):
+        return whole + float(cents or 0) >= _CENTS_AMOUNT_MIN
+    return whole >= _WHOLE_AMOUNT_MIN and not _is_round_amount(whole)
 
 
 def scan_layer7_financial_figures(
     path: str, text: str, allowed_amounts: frozenset[str]
 ) -> list[Finding]:
     """Flag precise currency amounts in tracked narrative documentation."""
-    if not path.endswith(_FINANCIAL_DOC_SUFFIXES):
-        return []
-    if not path.startswith(_FINANCIAL_DOC_PREFIXES):
+    if not covers_financial_figures(path):
         return []
 
     findings: list[Finding] = []
@@ -643,17 +622,8 @@ def scan_layer7_financial_figures(
                 whole = float(raw.replace(",", ""))
             except ValueError:
                 continue
-            has_real_cents = cents is not None and cents != ".00"
-            if has_real_cents:
-                # Cents are never invented, so a smaller floor applies: real
-                # margin interest and card charges land well under $1,000.
-                if whole + float(cents) < 100:
-                    continue
-            else:
-                if whole < _CURRENCY_MIN:
-                    continue
-                if whole % 1000 == 0:
-                    continue
+            if not _is_reportable_amount(whole, cents):
+                continue
             findings.append(
                 Finding(
                     severity=Severity.HIGH,
@@ -709,16 +679,20 @@ def scan_layer5_untracked(repo_root: Path) -> list[Finding]:
 def _smallest_ignore_unit(path: str) -> str:
     """Pick a sensible .gitignore line for an untracked sensitive path."""
     parts = path.split("/")
-    # .env-style files: ignore the file itself
     if parts[-1].startswith(".env") or path.endswith(".key") or path.endswith(".pem"):
         return path
-    # .claude/skills/<name>/...  →  .claude/skills/<name>/
     if path.startswith(".claude/skills/") and len(parts) >= 3:
         return f".claude/skills/{parts[2]}/"
-    # everything else: ignore the immediate directory
     if len(parts) > 1:
         return f"{parts[0]}/" if len(parts) == 2 else f"{'/'.join(parts[:-1])}/"
     return path
+
+
+def _looks_like_path(code: str) -> bool:
+    """A backticked PRIVACY.md token that names a file or directory."""
+    if "/" not in code and not code.startswith("."):
+        return False
+    return ":" not in code and " " not in code
 
 
 def scan_layer6_privacy_alignment(repo_root: Path) -> list[Finding]:
@@ -729,7 +703,6 @@ def scan_layer6_privacy_alignment(repo_root: Path) -> list[Finding]:
         return []
 
     text = privacy_md.read_text()
-    # find the section heading then read bullets until next heading
     section_re = re.compile(
         r"##\s+What never leaves your machine\s*\n(.+?)(?=\n##\s)", re.S
     )
@@ -740,13 +713,10 @@ def scan_layer6_privacy_alignment(repo_root: Path) -> list[Finding]:
     gitignore_text = gitignore.read_text()
 
     findings: list[Finding] = []
-    # look for inline-code-tagged paths in bullets, e.g. `.env`, `notebooks/`
     for bullet in bullets:
         for code in re.findall(r"`([^`]+)`", bullet):
-            if "/" not in code and not code.startswith("."):
+            if not _looks_like_path(code):
                 continue
-            if ":" in code or " " in code:
-                continue  # not a path — likely a code identifier or sentence fragment
             normalized = code.rstrip("/")
             if normalized in gitignore_text or f"{normalized}/" in gitignore_text:
                 continue
@@ -764,11 +734,6 @@ def scan_layer6_privacy_alignment(repo_root: Path) -> list[Finding]:
                 )
             )
     return findings
-
-
-# --------------------------------------------------------------------------- #
-# Layers 1 + 2: orchestrate existing tests                                    #
-# --------------------------------------------------------------------------- #
 
 
 def run_existing_tests(repo_root: Path) -> list[Finding]:
@@ -829,11 +794,6 @@ def _tail(text: str, n: int) -> str:
     return "\n".join(text.splitlines()[-n:])
 
 
-# --------------------------------------------------------------------------- #
-# Auto-remediation: gitignore                                                 #
-# --------------------------------------------------------------------------- #
-
-
 REMEDIATION_HEADER = "# Compliance scan auto-remediation"
 
 
@@ -864,11 +824,6 @@ def remediate_gitignore(findings: list[Finding], repo_root: Path) -> list[str]:
         text += block
     gitignore.write_text(text)
     return new_targets
-
-
-# --------------------------------------------------------------------------- #
-# Reporting                                                                   #
-# --------------------------------------------------------------------------- #
 
 
 def render_text(findings: list[Finding], fail_on: Severity, scope: str) -> str:
@@ -931,11 +886,6 @@ def render_json(findings: list[Finding], fail_on: Severity, scope: str) -> str:
     return json.dumps(payload, indent=2)
 
 
-# --------------------------------------------------------------------------- #
-# Main                                                                        #
-# --------------------------------------------------------------------------- #
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -982,7 +932,6 @@ def main() -> int:
     allowed_amounts = load_allowed_amounts(repo_root)
     allowlist = load_allowlist(repo_root)
 
-    # Choose file list
     if args.scope == "staged":
         files = staged_files(repo_root)
     elif args.scope == "push":
@@ -994,35 +943,26 @@ def main() -> int:
 
     findings: list[Finding] = []
 
-    # Layer 3 + 4: content scan
     for path in files:
         text = file_content_for_scope(path, args.scope, repo_root)
         if text is None:
             continue
-        # Layer 7 ignores SCANNER_SELF_PATHS. That exemption keeps the literal
-        # layers from matching the scanner's own pattern catalogs, a problem
-        # layer 7 does not have, and its absence let real figures sit in this
-        # file's comments and in the policy document that forbids them.
         findings.extend(scan_layer7_financial_figures(path, text, allowed_amounts))
-        if should_skip(path, allowlist):
+        if skips_literal_scan(path, allowlist):
             continue
         findings.extend(scan_content_layer3_4(path, text, pii_rules))
 
     if args.scope == "history":
         findings.extend(scan_history(repo_root, allowed_amounts, pii_rules))
 
-    # Layer 5: untracked sensitive paths (only meaningful for tree scope)
     if args.scope == "tree":
         findings.extend(scan_layer5_untracked(repo_root))
 
-    # Layer 6: PRIVACY.md alignment
     findings.extend(scan_layer6_privacy_alignment(repo_root))
 
-    # Layers 1 + 2: existing tests (slow; gated)
     if not args.skip_existing_tests and args.scope in ("tree", "push"):
         findings.extend(run_existing_tests(repo_root))
 
-    # Auto-remediation
     remediated: list[str] = []
     if args.remediate == "gitignore":
         remediated = remediate_gitignore(findings, repo_root)
@@ -1032,7 +972,6 @@ def main() -> int:
                 + ", ".join(remediated)
                 + "\n"
             )
-            # Drop now-resolved INFO findings from the report
             findings = [
                 f
                 for f in findings
@@ -1042,10 +981,8 @@ def main() -> int:
                 )
             ]
 
-    # Filter by severity floor
     findings = [f for f in findings if f.severity >= args.severity_floor]
 
-    # Render
     renderer = {"text": render_text, "json": render_json, "md": render_md}[args.format]
     sys.stdout.write(renderer(findings, args.fail_on, args.scope))
 

@@ -1,24 +1,9 @@
 #!/bin/bash
 
-# Finance Guru Setup Script
-# Checks dependencies, creates directories, scaffolds config files.
-# Run this after cloning the repository to set up your environment.
-
 set -e
-
-# ============================================================
-# Path Setup
-# ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR"
-
-# ============================================================
-# Terminal Color Detection
-# ============================================================
-# Detect whether stdout is an interactive terminal that supports
-# color output. Fall back to plain text for pipes, CI, and cron.
-# Use ${TERM:-dumb} to handle unset TERM (not just empty).
 
 if [ -t 1 ] && [ "${TERM:-dumb}" != "dumb" ]; then
   GREEN='\033[0;32m'
@@ -33,10 +18,6 @@ else
   BOLD=''
   NC=''
 fi
-
-# ============================================================
-# Output Helper Functions
-# ============================================================
 
 info() {
   printf "  %s\n" "$1"
@@ -57,12 +38,6 @@ error() {
 header() {
   printf "\n${BOLD}%s${NC}\n" "$1"
 }
-
-# ============================================================
-# OS Detection
-# ============================================================
-# Sets two globals: DETECTED_OS (macos/linux/wsl)
-# and PKG_MANAGER (brew/apt/none)
 
 DETECTED_OS=""
 PKG_MANAGER=""
@@ -98,41 +73,16 @@ detect_os() {
   esac
 }
 
-# ============================================================
-# Version Comparison
-# ============================================================
-# Returns 0 if $1 >= $2, 1 otherwise.
-# Uses sort -V (verified on macOS Apple sort and GNU coreutils).
-
 version_gte() {
   [ "$(printf '%s\n' "$1" "$2" | sort -V | head -1)" = "$2" ]
 }
 
-# ============================================================
-# Install Command Lookup
-# ============================================================
-# Returns the OS-specific install command for a dependency.
-
 get_install_command() {
-  local dep_name="$1"
-
-  case "$dep_name" in
+  case "$1" in
     python3)
-      case "$DETECTED_OS" in
-        macos)
-          if [ "$PKG_MANAGER" = "brew" ]; then
-            printf "brew install python@3.12"
-          else
-            printf 'Install Homebrew first:\n  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"\nThen:\n  brew install python@3.12'
-          fi
-          ;;
-        linux|wsl)
-          if [ "$PKG_MANAGER" = "apt" ]; then
-            printf "sudo apt update && sudo apt install python3.12"
-          else
-            printf "Visit https://www.python.org/downloads/"
-          fi
-          ;;
+      case "$PKG_MANAGER" in
+        brew) printf "brew install python@3.12" ;;
+        apt)  printf "sudo apt update && sudo apt install python3.12" ;;
       esac
       ;;
     uv)
@@ -144,27 +94,44 @@ get_install_command() {
   esac
 }
 
-# ============================================================
-# Auto-Install Prompt
-# ============================================================
-# Prompts user to install a missing dependency. Only works in
-# interactive mode (stdin is a tty). Skips in CI/pipes.
+get_manual_install_steps() {
+  if [ "$1" != "python3" ]; then
+    return
+  fi
+  if [ "$DETECTED_OS" = "macos" ]; then
+    printf 'Install Homebrew first:\n  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"\nThen:\n  brew install python@3.12\n'
+  else
+    printf "Visit https://www.python.org/downloads/\n"
+  fi
+}
+
+print_install_hint() {
+  local install_cmd
+  install_cmd=$(get_install_command "$1")
+  if [ -n "$install_cmd" ]; then
+    info "Install with: $install_cmd"
+  else
+    info "Install manually:"
+    get_manual_install_steps "$1" | while IFS= read -r line; do
+      printf "    %s\n" "$line"
+    done
+  fi
+}
 
 prompt_install() {
   local dep_name="$1"
-  local install_cmd="$2"
+  local dep_cmd="$2"
+  local install_cmd
+  install_cmd=$(get_install_command "$dep_cmd")
 
-  # Check if stdin is a tty before prompting
   if [ ! -t 0 ]; then
     warn "Skipped: $dep_name (non-interactive)"
     return 1
   fi
 
-  # Skip auto-install for non-executable strings (multiline instructions,
-  # manual URLs, or instructional text that would fail under eval)
-  if [[ "$install_cmd" == *$'\n'* ]] || [[ "$install_cmd" =~ ^(Visit|Install|See|Go\ to) ]]; then
+  if [ -z "$install_cmd" ]; then
     info "$dep_name requires manual installation:"
-    printf "%s\n" "$install_cmd" | while IFS= read -r line; do
+    get_manual_install_steps "$dep_cmd" | while IFS= read -r line; do
       printf "    %s\n" "$line"
     done
     return 1
@@ -178,7 +145,6 @@ prompt_install() {
       error "Install command failed for $dep_name"
       return 1
     fi
-    # Re-check if install succeeded
     case "$dep_name" in
       Python)  command -v python3 &>/dev/null && success "Installed: $dep_name" && return 0 ;;
       uv)     command -v uv &>/dev/null && success "Installed: $dep_name" && return 0 ;;
@@ -192,48 +158,32 @@ prompt_install() {
   fi
 }
 
-# ============================================================
-# Single Dependency Check
-# ============================================================
-# Checks if a command exists and optionally verifies minimum version.
-# Returns 0 on success, 1 on failure.
-
 check_dependency() {
   local cmd="$1"
   local name="$2"
   local min_version="$3"
 
-  # Check if command exists
   if ! command -v "$cmd" &>/dev/null; then
-    local install_cmd
-    install_cmd=$(get_install_command "$cmd")
     printf "  ${RED}[MISSING]${NC} %s (not found)\n" "$name"
-    info "Install with: $install_cmd"
+    print_install_hint "$cmd"
     return 1
   fi
 
-  # Extract version (sentinel "0.0" ensures predictable behavior under set -e)
-  local found_version="0.0"
+  local found_version
   case "$cmd" in
-    python3) found_version=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1) || found_version="0.0" ;;
-    uv)      found_version=$(uv --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) || found_version="0.0" ;;
-    bun)     found_version=$(bun --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) || found_version="0.0" ;;
+    python3) found_version=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1) ;;
+    *)       found_version=$("$cmd" --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1) ;;
   esac
-  # Ensure fallback if extraction returned empty
-  [ -z "$found_version" ] && found_version="0.0"
-
-  # Check minimum version if specified
-  if [ -n "$min_version" ] && [ -n "$found_version" ]; then
-    if ! version_gte "$found_version" "$min_version"; then
-      local install_cmd
-      install_cmd=$(get_install_command "$cmd")
-      printf "  ${RED}[MISSING]${NC} %s %s (>= %s required)\n" "$name" "$found_version" "$min_version"
-      info "Install with: $install_cmd"
-      return 1
-    fi
+  if [ -z "$found_version" ]; then
+    found_version="0.0"
   fi
 
-  # Success
+  if [ -n "$min_version" ] && ! version_gte "$found_version" "$min_version"; then
+    printf "  ${RED}[MISSING]${NC} %s %s (>= %s required)\n" "$name" "$found_version" "$min_version"
+    print_install_hint "$cmd"
+    return 1
+  fi
+
   if [ -n "$min_version" ]; then
     printf "  ${GREEN}[OK]${NC} %s %s (>= %s required)\n" "$name" "$found_version" "$min_version"
   else
@@ -242,26 +192,17 @@ check_dependency() {
   return 0
 }
 
-# ============================================================
-# Check All Dependencies
-# ============================================================
-# Checks all dependencies in a single pass, accumulating failures
-# without triggering set -e. Reports all results before failing.
-
-# Arrays to track failed deps for auto-install
 FAILED_DEPS=()
 FAILED_NAMES=()
-FAILED_CMDS=()
 
 check_all_deps() {
   local missing=0
   FAILED_DEPS=()
   FAILED_NAMES=()
-  FAILED_CMDS=()
 
-  check_dependency "python3" "Python" "3.12" || { missing=$((missing + 1)); FAILED_DEPS+=("python3"); FAILED_NAMES+=("Python"); FAILED_CMDS+=("$(get_install_command python3)"); }
-  check_dependency "uv" "uv" "" || { missing=$((missing + 1)); FAILED_DEPS+=("uv"); FAILED_NAMES+=("uv"); FAILED_CMDS+=("$(get_install_command uv)"); }
-  check_dependency "bun" "Bun" "" || { missing=$((missing + 1)); FAILED_DEPS+=("bun"); FAILED_NAMES+=("Bun"); FAILED_CMDS+=("$(get_install_command bun)"); }
+  check_dependency "python3" "Python" "3.12" || { missing=$((missing + 1)); FAILED_DEPS+=("python3"); FAILED_NAMES+=("Python"); }
+  check_dependency "uv" "uv" "" || { missing=$((missing + 1)); FAILED_DEPS+=("uv"); FAILED_NAMES+=("uv"); }
+  check_dependency "bun" "Bun" "" || { missing=$((missing + 1)); FAILED_DEPS+=("bun"); FAILED_NAMES+=("Bun"); }
 
   if [ "$missing" -gt 0 ]; then
     printf "\n  ${RED}%d dependency(ies) missing${NC}\n" "$missing"
@@ -272,23 +213,19 @@ check_all_deps() {
   return 0
 }
 
-# ============================================================
-# Summary Tracking
-# ============================================================
-# Track items for the final summary report.
-
 CREATED_ITEMS=()
 SKIPPED_ITEMS=()
 
-# ============================================================
-# Progress Tracking
-# ============================================================
-# Tracks completed setup steps in .setup-progress for resumable re-runs.
-# Step names: deps_checked, dirs_created, dirs_verified, config_scaffolded,
-# python_deps_installed
-
 PROGRESS_FILE="$PROJECT_ROOT/.setup-progress"
-TOTAL_STEPS=6
+SETUP_STEPS=(
+  deps_checked
+  dirs_created
+  dirs_verified
+  config_scaffolded
+  python_deps_installed
+  precommit_installed
+)
+TOTAL_STEPS=${#SETUP_STEPS[@]}
 
 is_step_complete() {
   [ -f "$PROGRESS_FILE" ] && grep -q "^$1$" "$PROGRESS_FILE"
@@ -312,10 +249,6 @@ show_progress() {
   fi
 }
 
-# ============================================================
-# Directory Functions
-# ============================================================
-
 create_dir() {
   if [ ! -d "$1" ]; then
     mkdir -p "$1"
@@ -327,68 +260,44 @@ create_dir() {
   fi
 }
 
+SETUP_DIRS=(
+  fin-guru-private
+  fin-guru-private/fin-guru
+  fin-guru-private/fin-guru/strategies
+  fin-guru-private/fin-guru/strategies/active
+  fin-guru-private/fin-guru/strategies/archive
+  fin-guru-private/fin-guru/strategies/risk-management
+  fin-guru-private/fin-guru/tickets
+  fin-guru-private/fin-guru/analysis
+  fin-guru-private/fin-guru/analysis/reports
+  fin-guru-private/fin-guru/reports
+  fin-guru-private/fin-guru/archive
+  fin-guru-private/guides
+  fin-guru-private/hedging
+  notebooks
+  notebooks/updates
+  notebooks/retirement-accounts
+  notebooks/transactions
+  notebooks/tools-needed
+  notebooks/tools-needed/done
+  fin-guru/data
+  imports
+  imports/transactions
+  imports/retirement
+)
+
 create_directory_structure() {
-  # fin-guru-private tree
-  create_dir "$PROJECT_ROOT/fin-guru-private"
-  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru"
-  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies"
-  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/active"
-  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/archive"
-  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/risk-management"
-  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/tickets"
-  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/analysis"
-  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/analysis/reports"
-  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/reports"
-  create_dir "$PROJECT_ROOT/fin-guru-private/fin-guru/archive"
-  create_dir "$PROJECT_ROOT/fin-guru-private/guides"
-  create_dir "$PROJECT_ROOT/fin-guru-private/hedging"
-
-  # Portfolio data directories
-  create_dir "$PROJECT_ROOT/notebooks"
-  create_dir "$PROJECT_ROOT/notebooks/updates"
-  create_dir "$PROJECT_ROOT/notebooks/retirement-accounts"
-  create_dir "$PROJECT_ROOT/notebooks/transactions"
-  create_dir "$PROJECT_ROOT/notebooks/tools-needed"
-  create_dir "$PROJECT_ROOT/notebooks/tools-needed/done"
-
-  # Finance Guru data directory
-  create_dir "$PROJECT_ROOT/fin-guru/data"
-
-  # Instance import directories
-  create_dir "$PROJECT_ROOT/imports"
-  create_dir "$PROJECT_ROOT/imports/transactions"
-  create_dir "$PROJECT_ROOT/imports/retirement"
+  local dir
+  for dir in "${SETUP_DIRS[@]}"; do
+    create_dir "$PROJECT_ROOT/$dir"
+  done
 }
 
 verify_directory_structure() {
   local missing=0
-  local dirs=(
-    "$PROJECT_ROOT/fin-guru-private"
-    "$PROJECT_ROOT/fin-guru-private/fin-guru"
-    "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies"
-    "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/active"
-    "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/archive"
-    "$PROJECT_ROOT/fin-guru-private/fin-guru/strategies/risk-management"
-    "$PROJECT_ROOT/fin-guru-private/fin-guru/tickets"
-    "$PROJECT_ROOT/fin-guru-private/fin-guru/analysis"
-    "$PROJECT_ROOT/fin-guru-private/fin-guru/analysis/reports"
-    "$PROJECT_ROOT/fin-guru-private/fin-guru/reports"
-    "$PROJECT_ROOT/fin-guru-private/fin-guru/archive"
-    "$PROJECT_ROOT/fin-guru-private/guides"
-    "$PROJECT_ROOT/fin-guru-private/hedging"
-    "$PROJECT_ROOT/notebooks"
-    "$PROJECT_ROOT/notebooks/updates"
-    "$PROJECT_ROOT/notebooks/retirement-accounts"
-    "$PROJECT_ROOT/notebooks/transactions"
-    "$PROJECT_ROOT/notebooks/tools-needed"
-    "$PROJECT_ROOT/notebooks/tools-needed/done"
-    "$PROJECT_ROOT/fin-guru/data"
-    "$PROJECT_ROOT/imports"
-    "$PROJECT_ROOT/imports/transactions"
-    "$PROJECT_ROOT/imports/retirement"
-  )
-
-  for dir in "${dirs[@]}"; do
+  local dir
+  for dir in "${SETUP_DIRS[@]}"; do
+    dir="$PROJECT_ROOT/$dir"
     if [ ! -d "$dir" ]; then
       mkdir -p "$dir"
       printf "  ${GREEN}Recreated:${NC} %s\n" "$dir"
@@ -404,11 +313,7 @@ verify_directory_structure() {
   fi
 }
 
-# ============================================================
-# Config Scaffolding
-# ============================================================
-
-scaffold_file() {
+should_write_file() {
   local target="$1"
   local description="$2"
   local basename_target
@@ -419,7 +324,7 @@ scaffold_file() {
       printf "  %s (%s) already exists. Overwrite? [y/N] " "$basename_target" "$description"
       read -r response
       if [[ "$response" =~ ^[Yy]$ ]]; then
-        return 0  # Caller writes content
+        return 0
       else
         printf "  ${YELLOW}Kept existing:${NC} %s\n" "$target"
         SKIPPED_ITEMS+=("file: $target")
@@ -432,14 +337,12 @@ scaffold_file() {
     fi
   fi
 
-  # File doesn't exist -- caller will write it
   return 0
 }
 
-scaffold_config_files() {
-  # 1. user-profile.yaml
+scaffold_user_profile() {
   local user_profile="$PROJECT_ROOT/user-profile.yaml"
-  if scaffold_file "$user_profile" "user profile template"; then
+  if should_write_file "$user_profile" "user profile template"; then
     cat > "$user_profile" << 'PROFILE_EOF'
 # Finance Guru User Profile Configuration
 # Complete this profile during onboarding with the Onboarding Specialist
@@ -495,11 +398,12 @@ PROFILE_EOF
     printf "  ${GREEN}Created:${NC} %s\n" "$user_profile"
     CREATED_ITEMS+=("file: $user_profile")
   fi
+}
 
-  # 2. .env from .env.example
+scaffold_env_file() {
   local env_file="$PROJECT_ROOT/.env"
   if [ -f "$PROJECT_ROOT/.env.example" ]; then
-    if scaffold_file "$env_file" "environment config"; then
+    if should_write_file "$env_file" "environment config"; then
       cp "$PROJECT_ROOT/.env.example" "$env_file"
       printf "  ${GREEN}Created:${NC} %s (from .env.example)\n" "$env_file"
       CREATED_ITEMS+=("file: $env_file")
@@ -507,10 +411,11 @@ PROFILE_EOF
   else
     warn ".env.example not found -- skipping .env creation"
   fi
+}
 
-  # 3. fin-guru-private/README.md
+scaffold_private_readme() {
   local private_readme="$PROJECT_ROOT/fin-guru-private/README.md"
-  if scaffold_file "$private_readme" "private directory README"; then
+  if should_write_file "$private_readme" "private directory README"; then
     cat > "$private_readme" << 'README_EOF'
 # Finance Guru Private Documentation
 
@@ -551,9 +456,11 @@ README_EOF
   fi
 }
 
-# ============================================================
-# Python Dependencies
-# ============================================================
+scaffold_config_files() {
+  scaffold_user_profile
+  scaffold_env_file
+  scaffold_private_readme
+}
 
 install_python_deps() {
   if [ ! -f "$PROJECT_ROOT/pyproject.toml" ]; then
@@ -570,18 +477,12 @@ install_python_deps() {
   fi
 }
 
-# ============================================================
-# Pre-commit Hooks
-# ============================================================
-
 install_pre_commit_hooks() {
-  # Skip if no pre-commit config exists
   if [ ! -f "$PROJECT_ROOT/.pre-commit-config.yaml" ]; then
     info "No .pre-commit-config.yaml found -- skipping pre-commit setup"
     return 0
   fi
 
-  # Check if pre-commit is available; install via uv tool if not
   if ! command -v pre-commit &>/dev/null; then
     info "Installing pre-commit via uv tool..."
     if ! uv tool install pre-commit; then
@@ -599,10 +500,6 @@ install_pre_commit_hooks() {
   fi
 }
 
-# ============================================================
-# Summary
-# ============================================================
-
 print_summary() {
   printf "\n"
   printf "==========================================\n"
@@ -610,7 +507,6 @@ print_summary() {
   printf "==========================================\n"
   printf "\n"
 
-  # Created section
   if [ ${#CREATED_ITEMS[@]} -gt 0 ]; then
     printf "  ${BOLD}Created:${NC}\n"
     for item in "${CREATED_ITEMS[@]}"; do
@@ -619,7 +515,6 @@ print_summary() {
     printf "\n"
   fi
 
-  # Skipped section
   if [ ${#SKIPPED_ITEMS[@]} -gt 0 ]; then
     printf "  ${BOLD}Skipped (already existed):${NC}\n"
     for item in "${SKIPPED_ITEMS[@]}"; do
@@ -628,7 +523,6 @@ print_summary() {
     printf "\n"
   fi
 
-  # Next steps
   printf "  ${BOLD}Next steps:${NC}\n"
   printf "\n"
   printf "  1. Edit .env to add your API keys (optional)\n"
@@ -640,10 +534,6 @@ print_summary() {
   printf "  3. After onboarding: claude --agent fg-finance-orchestrator\n"
   printf "\n"
 }
-
-# ============================================================
-# CLI Argument Parsing
-# ============================================================
 
 CHECK_DEPS_ONLY=false
 
@@ -676,29 +566,20 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# ============================================================
-# Main Flow
-# ============================================================
-
-# Banner
 printf "\n"
 printf "==========================================\n"
 printf "  ${BOLD}Finance Guru Setup${NC}\n"
 printf "==========================================\n"
 printf "\n"
 
-# Show resume status if re-running
 show_progress
 
-# Detect OS
 detect_os
 info "Detected OS: $DETECTED_OS (package manager: $PKG_MANAGER)"
 
-# Check dependencies
 header "Checking dependencies..."
 
 if check_all_deps; then
-  # All deps present
   if [ "$CHECK_DEPS_ONLY" = true ]; then
     printf "\n"
     header "Dependency check complete"
@@ -706,7 +587,6 @@ if check_all_deps; then
     exit 0
   fi
 else
-  # Some deps missing
   if [ "$CHECK_DEPS_ONLY" = true ]; then
     printf "\n"
     header "Dependency check complete"
@@ -714,15 +594,13 @@ else
     exit 1
   fi
 
-  # Offer auto-install for each missing dep
   printf "\n"
   header "Auto-install missing dependencies"
 
   for i in "${!FAILED_NAMES[@]}"; do
-    prompt_install "${FAILED_NAMES[$i]}" "${FAILED_CMDS[$i]}" || true
+    prompt_install "${FAILED_NAMES[$i]}" "${FAILED_DEPS[$i]}" || true
   done
 
-  # Re-check all deps after install attempts
   printf "\n"
   header "Re-checking dependencies..."
 
@@ -735,12 +613,6 @@ fi
 
 mark_step_complete "deps_checked"
 
-# Step 2: Create directory structure + ALWAYS validate
-# NOTE: verify_directory_structure runs on EVERY path (first run AND re-run).
-# On first run with pre-existing dirs, mkdir -p is idempotent but we must still
-# validate expected structure. On re-run, we skip creation but still validate.
-# This satisfies CONTEXT.md decision: "Verify state of skipped items -- not just
-# existence but expected structure."
 if is_step_complete "dirs_created"; then
   header "Verifying directory structure..."
   verify_directory_structure
@@ -748,17 +620,14 @@ if is_step_complete "dirs_created"; then
 else
   header "Creating directory structure..."
   create_directory_structure
-  # Always validate after creation -- catches pre-existing dirs with missing subdirs
   header "Validating directory structure..."
   verify_directory_structure
   mark_step_complete "dirs_created"
   mark_step_complete "dirs_verified"
 fi
 
-# Step 3: Scaffold config files
 if is_step_complete "config_scaffolded"; then
   header "Verifying config files..."
-  # Still run scaffold_config_files -- it handles overwrite prompts internally
   scaffold_config_files
 else
   header "Scaffolding config files..."
@@ -766,7 +635,6 @@ else
   mark_step_complete "config_scaffolded"
 fi
 
-# Step 4: Install Python dependencies
 if is_step_complete "python_deps_installed"; then
   header "Python dependencies..."
   printf "  ${GREEN}[done]${NC} Python dependencies already installed\n"
@@ -776,7 +644,6 @@ else
   mark_step_complete "python_deps_installed"
 fi
 
-# Step 5: Install pre-commit hooks
 if is_step_complete "precommit_installed"; then
   header "Pre-commit hooks..."
   printf "  ${GREEN}[done]${NC} Pre-commit hooks already installed\n"
@@ -786,5 +653,4 @@ else
   mark_step_complete "precommit_installed"
 fi
 
-# Step 6: Summary
 print_summary

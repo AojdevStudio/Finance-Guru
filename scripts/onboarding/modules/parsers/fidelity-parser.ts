@@ -1,19 +1,42 @@
-/**
- * Fidelity CSV Parser
- * Reference implementation for parsing Fidelity CSV exports
- */
-
 import { readFile } from 'fs/promises';
 import type { BrokerCSVParser, Position, AccountBalances } from '../broker-types';
 
-/**
- * Fidelity CSV parser implementation
- */
+const FIDELITY_CORE_CASH_SYMBOLS: ReadonlySet<string> = new Set(['SPAXX', 'FDRXX', 'FCASH']);
+
+/** Parses a Fidelity amount such as `$1,234.56` or `($12.34)`. Parentheses mean negative. */
+export function parseAccountingNumber(raw: string): number {
+  const trimmed = raw.trim();
+  const negative = /^\(.*\)$/.test(trimmed);
+  const value = parseFloat(trimmed.replace(/[$,()\s]/g, ''));
+  return negative ? -Math.abs(value) : value;
+}
+
+export function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"' && inQuotes && line[i + 1] === '"') {
+      current += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current);
+  return result;
+}
+
 export class FidelityParser implements BrokerCSVParser {
-  /**
-   * Parse Fidelity positions CSV
-   * Expected format: Symbol,Quantity,Last Price,Current Value,Total Gain/Loss Dollar,...,Average Cost Basis
-   */
   async parsePositionsCSV(csvPath: string): Promise<Position[]> {
     const content = await readFile(csvPath, 'utf-8');
     const lines = content.split('\n').filter(line => line.trim());
@@ -22,7 +45,6 @@ export class FidelityParser implements BrokerCSVParser {
       throw new Error('CSV file is empty or has no data rows');
     }
 
-    // Parse header to find column indices
     const header = lines[0].split(',').map(h => h.trim().toLowerCase());
     const symbolIdx = header.indexOf('symbol');
     const quantityIdx = header.indexOf('quantity');
@@ -36,27 +58,24 @@ export class FidelityParser implements BrokerCSVParser {
 
     const positions: Position[] = [];
 
-    // Parse data rows (skip header)
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
       if (!line.trim()) continue;
 
-      const columns = this.parseCSVLine(line);
+      const columns = parseCSVLine(line);
 
       const symbol = columns[symbolIdx]?.trim();
-      const quantityStr = columns[quantityIdx]?.replace(/,/g, '');
-      const lastPriceStr = columns[lastPriceIdx]?.replace(/[\$,]/g, '');
-      const currentValueStr = columns[currentValueIdx]?.replace(/[\$,]/g, '');
-      const costBasisStr = columns[costBasisIdx]?.replace(/[\$,]/g, '');
+      const quantityStr = columns[quantityIdx];
+      const lastPriceStr = columns[lastPriceIdx];
+      const currentValueStr = columns[currentValueIdx];
+      const costBasisStr = columns[costBasisIdx];
 
-      // Skip invalid rows
       if (!symbol || !quantityStr || !costBasisStr) continue;
 
-      // Skip core positions (SPAXX is cash, handled separately)
-      if (symbol === 'SPAXX' || symbol === 'FDRXX' || symbol === 'FCASH') continue;
+      if (FIDELITY_CORE_CASH_SYMBOLS.has(symbol)) continue;
 
-      const quantity = parseFloat(quantityStr);
-      const costBasis = parseFloat(costBasisStr);
+      const quantity = parseAccountingNumber(quantityStr);
+      const costBasis = parseAccountingNumber(costBasisStr);
 
       if (isNaN(quantity) || isNaN(costBasis)) {
         console.warn(`Skipping invalid row: ${symbol} (quantity: ${quantityStr}, cost basis: ${costBasisStr})`);
@@ -69,16 +88,15 @@ export class FidelityParser implements BrokerCSVParser {
         averageCostBasis: costBasis
       };
 
-      // Add optional fields if present
       if (lastPriceIdx !== -1 && lastPriceStr) {
-        const lastPrice = parseFloat(lastPriceStr);
+        const lastPrice = parseAccountingNumber(lastPriceStr);
         if (!isNaN(lastPrice)) {
           position.lastPrice = lastPrice;
         }
       }
 
       if (currentValueIdx !== -1 && currentValueStr) {
-        const currentValue = parseFloat(currentValueStr);
+        const currentValue = parseAccountingNumber(currentValueStr);
         if (!isNaN(currentValue)) {
           position.currentValue = currentValue;
         }
@@ -90,10 +108,6 @@ export class FidelityParser implements BrokerCSVParser {
     return positions;
   }
 
-  /**
-   * Parse Fidelity balances CSV
-   * Expected format: Account summary with "Settled cash", "Net debit", "Account equity percentage", etc.
-   */
   async parseBalancesCSV(csvPath: string): Promise<AccountBalances> {
     const content = await readFile(csvPath, 'utf-8');
     const lines = content.split('\n').filter(line => line.trim());
@@ -106,19 +120,17 @@ export class FidelityParser implements BrokerCSVParser {
       totalAccountValue: 0
     };
 
-    // Parse key-value pairs
     for (const line of lines) {
-      const [key, value] = line.split(',').map(s => s.trim());
+      const [key, value] = parseCSVLine(line).map(s => s.trim());
       if (!key || !value) continue;
 
       const keyLower = key.toLowerCase();
-      const numericValue = parseFloat(value.replace(/[\$,\(\)]/g, ''));
+      const numericValue = parseAccountingNumber(value);
 
       if (keyLower.includes('settled cash')) {
         balances.settledCash = numericValue || 0;
       } else if (keyLower.includes('net debit')) {
-        // Net debit is negative if you owe margin
-        balances.netDebit = value.includes('(') ? -Math.abs(numericValue) : numericValue;
+        balances.netDebit = numericValue;
       } else if (keyLower.includes('account equity percentage') || keyLower.includes('equity percentage')) {
         balances.accountEquityPercentage = numericValue || 100;
       } else if (keyLower.includes('margin interest accrued')) {
@@ -131,9 +143,6 @@ export class FidelityParser implements BrokerCSVParser {
     return balances as AccountBalances;
   }
 
-  /**
-   * Validate Fidelity CSV format
-   */
   async validateCSVFormat(csvPath: string): Promise<boolean> {
     try {
       const content = await readFile(csvPath, 'utf-8');
@@ -143,7 +152,6 @@ export class FidelityParser implements BrokerCSVParser {
 
       const header = lines[0].toLowerCase();
 
-      // Check for Fidelity-specific columns
       const hasFidelityColumns =
         header.includes('symbol') &&
         (header.includes('quantity') || header.includes('qty')) &&
@@ -155,9 +163,6 @@ export class FidelityParser implements BrokerCSVParser {
     }
   }
 
-  /**
-   * Get expected file patterns for Fidelity
-   */
   getExpectedFilePatterns() {
     return {
       positions: [
@@ -175,34 +180,6 @@ export class FidelityParser implements BrokerCSVParser {
     };
   }
 
-  /**
-   * Parse CSV line handling quoted fields with commas
-   */
-  private parseCSVLine(line: string): string[] {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        result.push(current);
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-
-    result.push(current);
-    return result;
-  }
-
-  /**
-   * Find cost basis column (various naming conventions)
-   */
   private findCostBasisColumn(header: string[]): number {
     const costBasisVariants = [
       'average cost basis',
@@ -222,9 +199,6 @@ export class FidelityParser implements BrokerCSVParser {
   }
 }
 
-/**
- * Create a new Fidelity parser instance
- */
 export function createFidelityParser(): BrokerCSVParser {
   return new FidelityParser();
 }

@@ -62,44 +62,6 @@ chmod +x your-project/.claude/hooks/post-tool-use-tracker.sh
 
 ---
 
-## Optional Hooks (Require Customization)
-
-### tsc-check (Stop)
-
-**Purpose:** TypeScript compilation check when user stops
-
-**⚠️ WARNING:** Configured for multi-service monorepo structure
-
-**Integration:**
-
-**First, determine if this is right for you:**
-- ✅ Use if: Multi-service TypeScript monorepo
-- ❌ Skip if: Single-service project or different build setup
-
-**If using:**
-1. Copy tsc-check.sh
-2. **EDIT the service detection (line ~28):**
-   ```bash
-   # Replace example services with YOUR services:
-   case "$repo" in
-       api|web|auth|payments|...)  # ← Your actual services
-   ```
-3. Test manually before adding to settings.json
-
-**Customization:** ⚠️⚠️⚠️ Heavy
-
----
-
-### trigger-build-resolver (Stop)
-
-**Purpose:** Auto-launches build-error-resolver agent when compilation fails
-
-**Depends on:** tsc-check hook working correctly
-
-**Customization:** ✅ None (but tsc-check must work first)
-
----
-
 ## For Claude Code
 
 **When setting up hooks for a user:**

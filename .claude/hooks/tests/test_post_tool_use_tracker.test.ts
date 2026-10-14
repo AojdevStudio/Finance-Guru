@@ -1,16 +1,4 @@
 #!/usr/bin/env bun
-/**
- * Tests for Post-tool-use Tracker Hook
- *
- * This test suite validates that the post-tool-use-tracker hook:
- * - Runs successfully with Bun runtime
- * - Correctly tracks Edit, MultiEdit, and Write tools
- * - Skips non-edit tools
- * - Skips markdown files
- * - Detects repos correctly from file paths
- * - Creates cache files in the correct location
- * - Stores build and TSC commands appropriately
- */
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { join } from "path";
@@ -20,14 +8,9 @@ import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
 const HOOK_PATH = join(import.meta.dir, "../post-tool-use-tracker.ts");
 const TEST_PROJECT_ROOT = join(import.meta.dir, "../../..");
 
-// Helper to run hook with input
-async function runHook(input: {
-  tool_name: string;
-  tool_input: {
-    file_path?: string;
-  };
-  session_id?: string;
-}): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+type HookResult = { stdout: string; stderr: string; exitCode: number };
+
+async function runHookWithStdin(stdin: string): Promise<HookResult> {
   return new Promise((resolve, reject) => {
     const proc = spawn("bun", [HOOK_PATH], {
       env: {
@@ -47,8 +30,7 @@ async function runHook(input: {
       stderr += data.toString();
     });
 
-    // Send input via stdin
-    proc.stdin.write(JSON.stringify(input));
+    proc.stdin.write(stdin);
     proc.stdin.end();
 
     proc.on("close", (code) => {
@@ -61,7 +43,16 @@ async function runHook(input: {
   });
 }
 
-// Helper to create test input
+async function runHook(input: {
+  tool_name: string;
+  tool_input: {
+    file_path?: string;
+  };
+  session_id?: string;
+}): Promise<HookResult> {
+  return runHookWithStdin(JSON.stringify(input));
+}
+
 function createTestInput(
   toolName: string,
   filePath?: string,
@@ -76,12 +67,10 @@ function createTestInput(
   };
 }
 
-// Helper to get cache dir path
 function getCacheDir(sessionId: string = "test-session"): string {
   return join(TEST_PROJECT_ROOT, ".claude", "tsc-cache", sessionId);
 }
 
-// Helper to clean up cache dir
 function cleanupCacheDir(sessionId: string = "test-session") {
   const cacheDir = getCacheDir(sessionId);
   if (existsSync(cacheDir)) {
@@ -91,12 +80,10 @@ function cleanupCacheDir(sessionId: string = "test-session") {
 
 describe("post-tool-use-tracker hook with Bun", () => {
   beforeEach(() => {
-    // Clean up before each test
     cleanupCacheDir();
   });
 
   afterEach(() => {
-    // Clean up after each test
     cleanupCacheDir();
   });
 
@@ -119,7 +106,6 @@ describe("post-tool-use-tracker hook with Bun", () => {
 
     expect(result.exitCode).toBe(0);
 
-    // Check that edited-files.log was created
     const logPath = join(getCacheDir(), "edited-files.log");
     expect(existsSync(logPath)).toBe(true);
 
@@ -162,7 +148,6 @@ describe("post-tool-use-tracker hook with Bun", () => {
 
     expect(result.exitCode).toBe(0);
 
-    // Log should not be created
     const logPath = join(getCacheDir(), "edited-files.log");
     expect(existsSync(logPath)).toBe(false);
   });
@@ -173,7 +158,6 @@ describe("post-tool-use-tracker hook with Bun", () => {
 
     expect(result.exitCode).toBe(0);
 
-    // Log should not be created
     const logPath = join(getCacheDir(), "edited-files.log");
     expect(existsSync(logPath)).toBe(false);
   });
@@ -183,7 +167,6 @@ describe("post-tool-use-tracker hook with Bun", () => {
 
     expect(result.exitCode).toBe(0);
 
-    // Log should not be created
     const logPath = join(getCacheDir(), "edited-files.log");
     expect(existsSync(logPath)).toBe(false);
   });
@@ -265,7 +248,6 @@ describe("post-tool-use-tracker hook with Bun", () => {
       .split("\n")
       .filter(r => r.length > 0);
 
-    // Should only have "src" once
     const srcCount = repos.filter(r => r === "src").length;
     expect(srcCount).toBe(1);
   });
@@ -281,7 +263,6 @@ describe("post-tool-use-tracker hook with Bun", () => {
     const cacheDir = getCacheDir(sessionId);
     expect(existsSync(cacheDir)).toBe(true);
 
-    // Cleanup custom session
     cleanupCacheDir(sessionId);
   });
 
@@ -299,7 +280,6 @@ describe("post-tool-use-tracker hook with Bun", () => {
     const defaultCacheDir = getCacheDir("default");
     expect(existsSync(defaultCacheDir)).toBe(true);
 
-    // Cleanup default session
     cleanupCacheDir("default");
   });
 
@@ -317,12 +297,10 @@ describe("post-tool-use-tracker hook with Bun", () => {
     const logPath = join(getCacheDir(), "edited-files.log");
     const logContent = readFileSync(logPath, "utf-8");
 
-    // Should contain all three files
     expect(logContent).toContain("file1.ts");
     expect(logContent).toContain("file2.ts");
     expect(logContent).toContain("file3.tsx");
 
-    // Should track all three repos
     const affectedReposPath = join(getCacheDir(), "affected-repos.txt");
     const repos = readFileSync(affectedReposPath, "utf-8");
     expect(repos).toContain("src");
@@ -330,23 +308,11 @@ describe("post-tool-use-tracker hook with Bun", () => {
     expect(repos).toContain("frontend");
   });
 
-  it("should exit cleanly on invalid JSON input", async () => {
-    return new Promise((resolve) => {
-      const proc = spawn("bun", [HOOK_PATH], {
-        env: {
-          ...process.env,
-          CLAUDE_PROJECT_DIR: TEST_PROJECT_ROOT
-        }
-      });
+  it("reports invalid JSON on stderr without blocking the session", async () => {
+    const result = await runHookWithStdin("invalid json");
 
-      proc.stdin.write("invalid json");
-      proc.stdin.end();
-
-      proc.on("close", (code) => {
-        expect(code).toBe(0); // Should exit cleanly
-        resolve(undefined);
-      });
-    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain("post-tool-use-tracker: ");
   });
 
   it("should exit cleanly when tool_name is missing", async () => {
@@ -359,7 +325,6 @@ describe("post-tool-use-tracker hook with Bun", () => {
     const result = await runHook(input as any);
     expect(result.exitCode).toBe(0);
 
-    // Log should not be created
     const logPath = join(getCacheDir(), "edited-files.log");
     expect(existsSync(logPath)).toBe(false);
   });

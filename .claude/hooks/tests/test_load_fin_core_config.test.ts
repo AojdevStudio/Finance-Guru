@@ -1,22 +1,26 @@
 #!/usr/bin/env bun
-/**
- * Tests for Finance Guru Core Config Loader Hook
- *
- * This test suite validates that the load-fin-core-config hook:
- * - Runs successfully with Bun runtime
- * - Correctly parses session input
- * - Loads all required configuration files
- * - Outputs correctly formatted system-reminder content
- */
 
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { basename, dirname, join } from "path";
-import { spawn } from "child_process";
+import { spawn, spawnSync } from "child_process";
 import { Database } from "bun:sqlite";
 
 const HOOK_PATH = join(import.meta.dir, "../load-fin-core-config.ts");
+const REPO_ROOT = join(import.meta.dir, "../../..");
+
+// Runs Python from the engine checkout so the contract tests compare the hook with src/.
+function runEnginePython(args: string[]): string {
+  const result = spawnSync("uv", ["run", "--quiet", "python", ...args], {
+    cwd: REPO_ROOT,
+    encoding: "utf-8",
+  });
+  if (result.status !== 0) {
+    throw new Error(`uv run python ${args.join(" ")} failed: ${result.stderr}`);
+  }
+  return result.stdout;
+}
 const TEST_INSTANCE_ROOT = mkdtempSync(join(tmpdir(), "finance-guru-hook-test-"));
 
 beforeAll(() => {
@@ -37,7 +41,6 @@ afterAll(() => {
   rmSync(TEST_INSTANCE_ROOT, { recursive: true, force: true });
 });
 
-// Helper to run hook with input
 async function runHook(
   input: { session_id: string; event: string },
   useWorkingDirectory = false,
@@ -71,7 +74,6 @@ async function runHook(
       stderr += data.toString();
     });
 
-    // Send input via stdin
     proc.stdin.write(JSON.stringify(input));
     proc.stdin.end();
 
@@ -112,7 +114,6 @@ describe("load-fin-core-config hook with Bun", () => {
       event: "session_start"
     });
 
-    // Verify all main sections are present
     expect(result.stdout).toContain("FINANCE GURU CORE CONTEXT LOADED");
     expect(result.stdout).toContain("FIN-CORE SKILL");
     expect(result.stdout).toContain("SYSTEM CONFIGURATION");
@@ -127,14 +128,11 @@ describe("load-fin-core-config hook with Bun", () => {
       event: "session_start"
     });
 
-    // Should have header with box drawing
     expect(result.stdout).toContain("━");
     expect(result.stdout).toContain("🏦 FINANCE GURU CORE CONTEXT LOADED");
 
-    // Should have section separators
     expect(result.stdout).toContain("═");
 
-    // Should end with completion message
     expect(result.stdout).toContain("✅ Finance Guru context fully loaded and ready");
   });
 
@@ -406,5 +404,57 @@ describe("load-fin-core-config hook with Bun", () => {
     });
 
     expect(result.stdout).toContain("Finance Guru context fully loaded and ready");
+  });
+});
+
+describe("load-fin-core-config contract with src/", () => {
+  it("recognizes the instance that instance_init scaffolds", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "finance-guru-init-"));
+    const instance = join(parent, "instance");
+    try {
+      runEnginePython(["-m", "src.cli.instance_init", instance, "--repo", REPO_ROOT]);
+
+      const result = await runHook(
+        { session_id: "test-scaffolded", event: "session_start" },
+        true,
+        {},
+        instance,
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("FINANCE GURU CORE CONTEXT LOADED");
+    } finally {
+      rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves DATABASE_URL to the same ledger as InstancePaths.database_url", async () => {
+    const root = realpathSync(TEST_INSTANCE_ROOT);
+    const configured = ["sqlite:///ledger/contract.db", "data/contract.db", "~/contract-ledger.db"];
+    const expected: string[] = JSON.parse(
+      runEnginePython([
+        "-c",
+        [
+          "import json, sys",
+          "from pathlib import Path",
+          "from src.config.instance_paths import InstancePaths",
+          "paths = InstancePaths(root=Path(sys.argv[1]))",
+          "urls = [paths.database_url({'DATABASE_URL': v}) for v in sys.argv[2:]]",
+          "print(json.dumps([u.removeprefix('sqlite:///') for u in urls]))",
+        ].join("\n"),
+        root,
+        ...configured,
+      ]),
+    );
+
+    for (const [index, value] of configured.entries()) {
+      const result = await runHook(
+        { session_id: "test-contract-ledger", event: "session_start" },
+        false,
+        { FIN_GURU_DATA_ROOT: root, DATABASE_URL: value },
+      );
+
+      expect(result.stdout).toContain(`Ledger not found at ${expected[index]}.`);
+    }
   });
 });

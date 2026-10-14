@@ -1,12 +1,7 @@
 #!/bin/bash
 
-# Integration Test: setup.sh
-# Verifies directory creation, config scaffolding, idempotent re-runs,
-# --check-deps-only flag, and --help flag.
-
 set -e
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -26,10 +21,6 @@ printf "\n"
 printf "Test directory: %s\n" "$TEST_DIR"
 printf "Project root:   %s\n" "$PROJECT_ROOT"
 printf "\n"
-
-# ============================================================
-# Test Helpers
-# ============================================================
 
 log_step() {
   printf "${BLUE}>> %s${NC}\n" "$1"
@@ -99,10 +90,6 @@ assert_no_grep() {
   fi
 }
 
-# ============================================================
-# Cleanup
-# ============================================================
-
 cleanup() {
   printf "\nCleaning up...\n"
   rm -rf "$TEST_DIR" "$TEST_DIR_DEPS" 2>/dev/null
@@ -110,12 +97,6 @@ cleanup() {
 }
 
 trap cleanup EXIT
-
-# ============================================================
-# PATH Setup
-# ============================================================
-# If python3 does not meet 3.12+, check for python3.12 and create
-# a PATH override so setup.sh's dependency check passes.
 
 TMPBIN=""
 PYTHON3_VERSION="0.0"
@@ -137,10 +118,6 @@ if [ "$PYTHON3_MAJOR" -lt 3 ] || { [ "$PYTHON3_MAJOR" -eq 3 ] && [ "$PYTHON3_MIN
   fi
 fi
 
-# ============================================================
-# Test Setup: Create temp directory with required files
-# ============================================================
-
 log_step "Setting up test environment"
 
 mkdir -p "$TEST_DIR"
@@ -150,10 +127,8 @@ cp "$PROJECT_ROOT/uv.lock" "$TEST_DIR/" 2>/dev/null || true
 cp "$PROJECT_ROOT/README.md" "$TEST_DIR/" 2>/dev/null || true
 cp "$PROJECT_ROOT/.env.example" "$TEST_DIR/" 2>/dev/null || true
 
-# Create minimal src/ structure so uv sync can find the project
 if [ -d "$PROJECT_ROOT/src" ]; then
   mkdir -p "$TEST_DIR/src"
-  # Copy only __init__.py files to satisfy package discovery
   find "$PROJECT_ROOT/src" -name "__init__.py" | while read -r f; do
     local_path="${f#$PROJECT_ROOT/}"
     mkdir -p "$TEST_DIR/$(dirname "$local_path")"
@@ -163,10 +138,6 @@ fi
 
 log_pass "Test environment created at $TEST_DIR"
 
-# ============================================================
-# Test 1: First run creates everything
-# ============================================================
-
 log_step "Test 1: First run creates everything"
 
 (cd "$TEST_DIR" && bash setup.sh < /dev/null > /tmp/setup-test-first.log 2>&1) || {
@@ -174,7 +145,6 @@ log_step "Test 1: First run creates everything"
   printf "  Log: /tmp/setup-test-first.log\n"
 }
 
-# Verify directories
 assert_dir_exists "$TEST_DIR/fin-guru-private"
 assert_dir_exists "$TEST_DIR/fin-guru-private/fin-guru/strategies/active"
 assert_dir_exists "$TEST_DIR/fin-guru-private/fin-guru/strategies/archive"
@@ -197,17 +167,14 @@ assert_dir_exists "$TEST_DIR/imports"
 assert_dir_exists "$TEST_DIR/imports/transactions"
 assert_dir_exists "$TEST_DIR/imports/retirement"
 
-# Verify config files
 assert_file_exists "$TEST_DIR/user-profile.yaml"
 assert_file_not_exists "$TEST_DIR/fin-guru/data/user-profile.yaml"
 assert_file_exists "$TEST_DIR/fin-guru-private/README.md"
 
-# Verify .env created (if .env.example was present)
 if [ -f "$TEST_DIR/.env.example" ]; then
   assert_file_exists "$TEST_DIR/.env"
 fi
 
-# Verify .setup-progress
 assert_file_exists "$TEST_DIR/.setup-progress"
 assert_grep "$TEST_DIR/.setup-progress" "^deps_checked$" ".setup-progress contains deps_checked"
 assert_grep "$TEST_DIR/.setup-progress" "^dirs_created$" ".setup-progress contains dirs_created"
@@ -215,14 +182,9 @@ assert_grep "$TEST_DIR/.setup-progress" "^dirs_verified$" ".setup-progress conta
 assert_grep "$TEST_DIR/.setup-progress" "^config_scaffolded$" ".setup-progress contains config_scaffolded"
 assert_grep "$TEST_DIR/.setup-progress" "^python_deps_installed$" ".setup-progress contains python_deps_installed"
 
-# Verify summary printed
 assert_grep "/tmp/setup-test-first.log" "Setup Complete" "Summary printed on first run"
 
 printf "\n"
-
-# ============================================================
-# Test 2: --check-deps-only does not modify filesystem
-# ============================================================
 
 log_step "Test 2: --check-deps-only does not modify filesystem"
 
@@ -244,10 +206,6 @@ assert_file_not_exists "$TEST_DIR_DEPS/.env"
 
 printf "\n"
 
-# ============================================================
-# Test 3: Idempotent re-run
-# ============================================================
-
 log_step "Test 3: Idempotent re-run"
 
 (cd "$TEST_DIR" && bash setup.sh < /dev/null > /tmp/setup-test-second.log 2>&1) || {
@@ -257,7 +215,6 @@ log_step "Test 3: Idempotent re-run"
 assert_grep "/tmp/setup-test-second.log" "Resuming" "Output contains 'Resuming' on second run"
 assert_no_grep "/tmp/setup-test-second.log" "FAIL" "No FAIL messages in second run"
 
-# Verify directory structure still intact
 assert_dir_exists "$TEST_DIR/fin-guru-private/fin-guru/strategies/active"
 assert_dir_exists "$TEST_DIR/fin-guru-private/hedging"
 assert_dir_exists "$TEST_DIR/fin-guru/data"
@@ -265,7 +222,6 @@ assert_dir_exists "$TEST_DIR/imports"
 assert_dir_exists "$TEST_DIR/imports/transactions"
 assert_dir_exists "$TEST_DIR/imports/retirement"
 
-# Verify no duplicate entries in .setup-progress
 DUP_COUNT=$(sort "$TEST_DIR/.setup-progress" | uniq -d | wc -l | tr -d ' ')
 if [ "$DUP_COUNT" -eq 0 ]; then
   log_pass "No duplicate entries in .setup-progress"
@@ -274,10 +230,6 @@ else
 fi
 
 printf "\n"
-
-# ============================================================
-# Test 4: Missing directory detected on re-run
-# ============================================================
 
 log_step "Test 4: Missing directory detected on re-run"
 
@@ -290,15 +242,10 @@ rm -rf "$TEST_DIR/fin-guru-private/hedging"
 assert_dir_exists "$TEST_DIR/fin-guru-private/hedging"
 assert_grep "/tmp/setup-test-missing.log" "Recreated.*hedging" "Output shows hedging was recreated"
 
-# Verify other directories still exist
 assert_dir_exists "$TEST_DIR/fin-guru-private/fin-guru/strategies/active"
 assert_dir_exists "$TEST_DIR/fin-guru-private/guides"
 
 printf "\n"
-
-# ============================================================
-# Test 5: --help flag
-# ============================================================
 
 log_step "Test 5: --help flag"
 
@@ -325,10 +272,6 @@ fi
 
 printf "\n"
 
-# ============================================================
-# Results
-# ============================================================
-
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 
 printf "====================================================\n"
@@ -350,7 +293,6 @@ printf "  Second run:  /tmp/setup-test-second.log\n"
 printf "  Missing dir: /tmp/setup-test-missing.log\n"
 printf "\n"
 
-# Clean up tmpbin if created
 [ -n "$TMPBIN" ] && rm -rf "$TMPBIN"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then

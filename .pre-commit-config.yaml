@@ -1,5 +1,4 @@
 repos:
-  # Baseline hygiene hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -10,7 +9,6 @@ repos:
       - id: check-added-large-files
         args: ['--maxkb=2048']
 
-  # Ruff linter + formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.1
     hooks:
@@ -20,7 +18,6 @@ repos:
       - id: ruff-format
         exclude: '^fin-guru-private/'
 
-  # Type checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.19.1
     hooks:
@@ -34,7 +31,6 @@ repos:
         args: [--config-file=pyproject.toml]
         exclude: '^(fin-guru-private/|tests/|\.claude/|\.agents/)'
 
-  # Test coverage enforcement
   - repo: local
     hooks:
       - id: pytest-coverage
@@ -45,7 +41,6 @@ repos:
         pass_filenames: false
         always_run: true
 
-  # Secret scanning
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.24.2
     hooks:

@@ -11,10 +11,27 @@ This validates:
 """
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
 import pytest
+
+
+def _interface_fields(source: str, interface: str) -> dict[str, str]:
+    """Map each field of a TypeScript interface to its declared type, with ? kept on optional names."""
+    body = re.search(rf"export interface {interface} \{{(.*?)\n\}}", source, re.S)
+    assert body, f"interface {interface} not found"
+    return dict(re.findall(r"^\s*(\w+\??):\s*([^;]+);", body.group(1), re.M))
+
+
+def _call_sites(source: str, function: str) -> int:
+    """Count uses of a function outside import lines."""
+    return sum(
+        line.count(function)
+        for line in source.splitlines()
+        if not line.lstrip().startswith("import")
+    )
 
 
 class TestDebtProfileSection:
@@ -86,7 +103,6 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Check for required imports
         assert "validateCurrency" in content
         assert "validatePercentage" in content
         assert "OnboardingState" in content
@@ -98,7 +114,6 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Check for interface definition
         assert "interface DebtProfileData" in content
         assert "mortgage_balance:" in content
         assert "mortgage_payment:" in content
@@ -110,7 +125,6 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Check for debt item structure
         assert "type:" in content
         assert "rate:" in content
 
@@ -122,7 +136,6 @@ class TestDebtProfileSection:
             text=True,
             timeout=5,
         )
-        # Should not have TypeScript compilation errors
         assert "error TS" not in result.stderr
 
     def test_section_structure_matches_spec(self):
@@ -130,10 +143,8 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Verify section displays correct header
         assert "Section 4 of 7: Debt Profile" in content
 
-        # Verify prompts for required fields
         assert "mortgage" in content.lower()
         assert "student" in content.lower() or "loans" in content.lower()
         assert "car" in content.lower()
@@ -144,12 +155,10 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Verify state management calls
         assert "saveSectionData" in content
         assert "markSectionComplete" in content
         assert "saveState" in content
 
-        # Verify correct section name used
         assert "'debt'" in content or '"debt"' in content
 
     def test_section_marks_next_section_correctly(self):
@@ -157,15 +166,12 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should reference next section (preferences or opportunities)
-        # Check for any reasonable next section
         assert (
             "preferences" in content or "opportunities" in content or "goals" in content
         )
 
     def test_validation_integration(self):
         """Test that validation functions are properly integrated"""
-        # Test currency validation integration
         result = subprocess.run(
             [
                 "bun",
@@ -184,7 +190,6 @@ class TestDebtProfileSection:
 
     def test_percentage_validation_integration(self):
         """Test that percentage validation is properly integrated"""
-        # Test percentage validation
         result = subprocess.run(
             [
                 "bun",
@@ -206,7 +211,6 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should prompt for mortgage balance
         assert "mortgage" in content.lower()
         assert "balance" in content.lower()
 
@@ -215,7 +219,6 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should prompt for monthly mortgage payment
         assert "mortgage" in content.lower()
         assert "payment" in content.lower()
 
@@ -224,7 +227,6 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should handle multiple debt types
         assert "student" in content.lower() or "loan" in content.lower()
         assert "car" in content.lower()
         assert "credit" in content.lower() and "card" in content.lower()
@@ -234,7 +236,6 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should prompt for interest rates
         assert "rate" in content.lower() or "interest" in content.lower()
         assert "validatePercentage" in content
 
@@ -250,51 +251,47 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should reference 'debt' as current section key
         assert "'debt'" in content or '"debt"' in content
 
     def test_readline_usage(self):
-        """Test that section uses readline for input"""
+        """Test that section reads input through the shared readline prompt"""
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should import readline
-        assert "readline" in content
-        assert "createInterface" in content or "question" in content
+        assert "from '../modules/prompt'" in content
+        assert "createPrompt()" in content
 
     def test_error_handling(self):
         """Test that section has proper error handling"""
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should have try/catch or error handling
         assert "try" in content or "catch" in content or "error" in content.lower()
-        assert "finally" in content or "close" in content  # Should close readline
+        assert "finally" in content or "close" in content
 
     def test_optional_fields_handling(self):
         """Test that section handles optional fields (no debt scenario)"""
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should handle cases where user has no mortgage or no other debt
-        # This could be through allowEmpty or conditional logic
-        assert (
-            "allowEmpty" in content
-            or "optional" in content.lower()
-            or "skip" in content.lower()
-            or "none" in content.lower()
-        )
+        assert "promptYesNo(" in content
+        assert "hasMortgage" in content
 
     def test_all_currency_fields_validated(self):
         """Test that all currency fields use validateCurrency"""
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should use validateCurrency for mortgage balance and payment
-        # At least 2 calls expected (balance, payment)
-        validate_count = content.count("validateCurrency")
-        assert validate_count >= 2, (
-            f"Expected at least 2 validateCurrency calls, found {validate_count}"
+        fields = _interface_fields(content, "DebtProfileData")
+        currency_fields = [
+            name
+            for name, kind in fields.items()
+            if kind == "number" and "rate" not in name
+        ]
+        validate_count = _call_sites(content, "validateCurrency")
+        assert validate_count >= len(currency_fields), (
+            f"Expected a validateCurrency call for each of {currency_fields}, "
+            f"found {validate_count}"
         )
 
     def test_weighted_interest_calculation(self):
@@ -302,7 +299,6 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should reference weighted interest rate
         assert "weighted_interest_rate" in content or "weighted" in content.lower()
 
     def test_debt_types_array_structure(self):
@@ -310,9 +306,7 @@ class TestDebtProfileSection:
         section_file = Path("scripts/onboarding/sections/debt-profile.ts")
         content = section_file.read_text()
 
-        # Should use array structure for other_debt
         assert "other_debt:" in content
-        # Should push or add items to array
         assert "push" in content or "[]" in content
 
 

@@ -58,14 +58,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Announce deploy + observability (datadog-style notify)
+      - name: Announce the release in the job summary
         run: |
           echo "::notice::Release ${{ needs.release-please.outputs.tag_name }} created and ready to deploy."
           echo "Tag: ${{ needs.release-please.outputs.tag_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "This is an announce-only step — no binaries are published." >> "$GITHUB_STEP_SUMMARY"
-          # Deployment observability hook — wire up to Grafana/Datadog here when available.
-          # For now we emit a local-voice notify for the solo maintainer.
-          curl -s -X POST http://localhost:8888/notify \
-            -H "Content-Type: application/json" \
-            -d "{\"message\":\"Release ${{ needs.release-please.outputs.tag_name }} created.\",\"voice_enabled\":false}" \
-            || true
