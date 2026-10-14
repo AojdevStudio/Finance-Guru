@@ -22,10 +22,10 @@ Before adding current external assumptions, follow the shared **[paid MCP capabi
 
 ## Integration Points
 
-- Load `margin-strategy.md` for margin tactics
-- Load `dividend-framework.md` for income strategies
-- Load `cashflow-policy.md` for cash flow optimization
-- Load `modern-income-vehicles.md` for Layer 2 evaluation criteria
+- Load `{project-root}/fin-guru/checklists/margin-strategy.md` for margin tactics
+- Load `{project-root}/fin-guru/checklists/dividend-framework.md` for income strategies
+- Load `{project-root}/fin-guru/checklists/cashflow-policy.md` for cash flow optimization
+- Load `{project-root}/fin-guru/data/modern-income-vehicles.md` for Layer 2 evaluation criteria
 
 ## Risk Validation Tools
 
@@ -45,7 +45,7 @@ uv run python -m src.strategies.optimizer_cli TICKERS --method max_sharpe --outp
 
 ## Output
 
-Return the [shared analysis output contract](../_shared/AnalysisOutput.md). The Numbers table carries Sharpe, Sortino, and max drawdown for every position the strategy adds or changes. A recommendation without those three numbers is incomplete. Add an implementation plan after the Numbers table, with the amount, the entry trigger, and the exit trigger for each change.
+Return the [`fin-guru-output-contract`](../fin-guru-output-contract/SKILL.md) skill. The Numbers table carries Sharpe, Sortino, and max drawdown for every position the strategy adds or changes. A recommendation without those three numbers is incomplete. Add an implementation plan after the Numbers table, with the amount, the entry trigger, and the exit trigger for each change.
 
 ## Requirements
 

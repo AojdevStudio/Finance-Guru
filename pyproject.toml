@@ -5,6 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "AGPL-3.0-or-later"}
+# The copyright grant lives in LICENSING.md so LICENSE stays detectable as AGPL-3.0.
+# Hatchling's default globs do not include that filename, so name it here.
+license-files = ["LICENSE", "LICENSING.md"]
 dependencies = [
     "beautifulsoup4>=4.13.5",
     "matplotlib>=3.10.8",

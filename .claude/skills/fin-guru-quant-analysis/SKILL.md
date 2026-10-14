@@ -50,7 +50,7 @@ uv run python -m src.strategies.optimizer_cli TICKERS --days 252 --method max_sh
 
 ## Output
 
-Return the [shared analysis output contract](../_shared/AnalysisOutput.md). In the Numbers table, give each metric its lookback window, such as `Sharpe (252d)`. When fewer than 90 days of data exist, return the Blocked block from that contract instead of a statistic.
+Return the [`fin-guru-output-contract`](../fin-guru-output-contract/SKILL.md) skill. In the Numbers table, give each metric its lookback window, such as `Sharpe (252d)`. When fewer than 90 days of data exist, return the Blocked block from that skill instead of a statistic.
 
 ## Requirements
 

@@ -460,7 +460,7 @@ describe("Full Setup Flow Integration", () => {
 
     // 8. Complete mcp_config section (mock)
     const mcpConfigData = {
-      configured_servers: ["exa", "gdrive", "perplexity"],
+      configured_servers: ["exa", "perplexity", "context7"],
       config_path: "~/.claude/mcp.json"
     };
 

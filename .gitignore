@@ -41,6 +41,9 @@ data/processed/*
 *.xls
 .claude/hooks/node_modules
 .claude/scheduled_tasks.lock
+# Per-checkout Claude Code opt-in. Checkout instances inherit .claude/ through a
+# symlink, so a personal plugin belongs here or in ~/.claude/settings.json.
+.claude/settings.local.json
 
 # Reports
 reports/*.html
@@ -123,9 +126,12 @@ scripts/qa/author-mailmap.txt
 fin-guru/data/*
 
 # Methodology files that ARE tracked (not personal data):
+!fin-guru/data/compliance-policy.md
 !fin-guru/data/definitions.md
 !fin-guru/data/hedging-strategies.md
+!fin-guru/data/modern-income-vehicles.md
 !fin-guru/data/options-insurance-framework.md
+!fin-guru/data/risk-framework.md
 
 # Private docs (buy tickets, analysis, strategies)
 # Note: fin-guru-private/ is already ignored above

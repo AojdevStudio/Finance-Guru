@@ -59,7 +59,7 @@ def get_env(name: str, default: str | None = None) -> str | None:
 def resolve_annual_margin_rate(paths: InstancePaths | None = None) -> float | None:
     """Load the authoritative annual margin rate from the instance environment."""
     instance_paths = paths or InstancePaths.resolve()
-    load_instance_env(instance_paths, override=False)
+    load_instance_env(instance_paths)
     configured_rate = get_env("FG_MARGIN_INTEREST_RATE_DECIMAL") or get_env(
         "FG_MARGIN_INTEREST_RATE"
     )

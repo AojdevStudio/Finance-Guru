@@ -13,6 +13,7 @@ Apply structured quality checklists to Finance Guru deliverables and workflows.
 |-----------|------|---------|
 | Margin Strategy | `{project-root}/fin-guru/checklists/margin-strategy.md` | Margin Specialist |
 | Dividend Framework | `{project-root}/fin-guru/checklists/dividend-framework.md` | Dividend Specialist |
+| Cash-Flow Policy | `{project-root}/fin-guru/checklists/cashflow-policy.md` | Strategy Advisor |
 | General Quality | `{project-root}/fin-guru/checklists/` | QA Advisor, Compliance Officer |
 
 ## Workflow

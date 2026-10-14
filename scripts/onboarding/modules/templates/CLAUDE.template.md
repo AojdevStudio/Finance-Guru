@@ -13,7 +13,7 @@ Finance Guru™ - {{possessive_name}} private family office: a Claude Code and C
 
 **Path Variables**: `{project-root}`, `{module-path}`, `{current_datetime}`, `{current_date}`, `{user_name}`
 
-**MCP Servers Required**: exa, bright-data, sequential-thinking, financial-datasets, gdrive, web-search
+**MCP Servers Required**: exa, bright-data, sequential-thinking, financial-datasets, web-search
 
 **Temporal Awareness**: All agents MUST run `date` and `date +"%Y-%m-%d"` at startup to establish temporal context
 

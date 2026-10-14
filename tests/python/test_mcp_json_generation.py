@@ -12,7 +12,7 @@ Test Categories:
 1. Template Loading Tests - Verify template file loads correctly
 2. Variable Substitution Tests - Test all template variables
 3. JSON Validity Tests - Ensure generated content is valid JSON
-4. Required Servers Tests - Verify exa, perplexity, gdrive, context7 are always present
+4. Required Servers Tests - Verify exa, perplexity, and context7 are always present
 5. Optional Servers Tests - Test conditional inclusion based on API keys
 6. Integration Tests - Full generation workflow
 """
@@ -261,8 +261,8 @@ def test_required_mcp_servers_always_present(
 
     mcp_servers = parsed["mcpServers"]
 
-    # Required servers (always present)
-    required_servers = ["exa", "perplexity", "gdrive", "context7"]
+    # Required servers. The retired gdrive server must stay absent.
+    required_servers = ["exa", "perplexity", "context7"]
 
     for server in required_servers:
         assert server in mcp_servers, (
@@ -285,6 +285,48 @@ def test_required_servers_have_command_and_args(
     assert "args" in exa, "exa missing 'args' field"
     assert exa["command"] == "npx", "exa command should be 'npx'"
     assert isinstance(exa["args"], list), "exa args should be a list"
+
+
+def test_retired_gdrive_server_is_absent(
+    generator: YAMLGenerator,
+    valid_user_data_with_all_mcp: UserDataInput,
+    valid_user_data_no_optional_mcp: UserDataInput,
+):
+    """Onboarding must not configure or document the retired gdrive MCP server.
+
+    The Google Sheets DataHub is retired. Generated mcp.json stays valid JSON
+    with the remaining required servers, and generated CLAUDE.md does not list
+    gdrive as a required server.
+    """
+    template_path = (
+        Path(__file__).parent.parent.parent
+        / "scripts/onboarding/modules/templates/mcp.template.json"
+    )
+    template = template_path.read_text()
+    assert "gdrive" not in template
+    assert "@google/gdrive-mcp" not in template
+
+    claude_template = (
+        Path(__file__).parent.parent.parent
+        / "scripts/onboarding/modules/templates/CLAUDE.template.md"
+    ).read_text()
+    assert "gdrive" not in claude_template
+
+    for user_data in (valid_user_data_with_all_mcp, valid_user_data_no_optional_mcp):
+        result = generator.generate_mcp_json(user_data)
+        parsed = json.loads(result)
+        servers = parsed["mcpServers"]
+
+        assert "gdrive" not in servers
+        assert "@google/gdrive-mcp" not in result
+        for server in ("exa", "perplexity", "context7"):
+            assert server in servers
+            assert servers[server]["command"] == "npx"
+            assert isinstance(servers[server]["args"], list)
+
+        claude_md = generator.generate_claude_md(user_data)
+        assert "gdrive" not in claude_md
+        assert "MCP Servers Required" in claude_md
 
 
 # ============================================================================
@@ -465,7 +507,7 @@ def test_full_mcp_generation_workflow(
     assert "_meta" in parsed, "Missing _meta"
 
     # Validate required servers
-    required = ["exa", "perplexity", "gdrive", "context7"]
+    required = ["exa", "perplexity", "context7"]
     for server in required:
         assert server in parsed["mcpServers"], f"Missing required server: {server}"
 

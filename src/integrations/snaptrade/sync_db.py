@@ -217,7 +217,7 @@ def _format_money(value: float | int | None) -> str:
 def main(argv: list[str] | None = None) -> int:
     """CLI entrypoint."""
     paths = InstancePaths.resolve()
-    load_instance_env(paths, override=True)
+    load_instance_env(paths)
     parser = argparse.ArgumentParser(description="Sync SnapTrade -> local SQLite DB")
     parser.add_argument(
         "--config",

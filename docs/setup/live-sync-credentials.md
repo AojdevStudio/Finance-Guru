@@ -61,8 +61,9 @@ SimpleFIN supplies bank and card transactions. Get a setup token from
 [SimpleFIN Bridge](https://bridge.simplefin.org/), the paid SimpleFIN service
 that connects to your bank and issues tokens. The recommended single location
 for its long-lived credential is the instance `.env`. `refresh_all` loads that
-file with override enabled before it starts [Bun](https://bun.sh/) in `apps/simplefin-sync/`, so an
-uncommented `SIMPLEFIN_ACCESS_URL` in the instance `.env` wins. Bun reads the
+file before it starts [Bun](https://bun.sh/) in `apps/simplefin-sync/`, and a
+value in the instance `.env` replaces the process environment, so an
+uncommented `SIMPLEFIN_ACCESS_URL` wins. Bun reads the
 workspace's `apps/simplefin-sync/.env` value only when the instance leaves
 `SIMPLEFIN_ACCESS_URL` commented out.
 

@@ -79,8 +79,8 @@ function dotenvValue(envFile: string, key: string): string | undefined {
   return value;
 }
 
-// Finds the ledger refresh_all writes: it loads the instance .env with
-// override=True, so DATABASE_URL there wins over the process environment.
+// Finds the ledger refresh_all writes. load_instance_env lets a value in the
+// instance .env replace the process environment, so DATABASE_URL there wins.
 // A relative SQLite path resolves under the instance root, as in InstancePaths.database_url.
 function ledgerPath(root: string): string | null {
   const fromEnvFile = dotenvValue(join(root, '.env'), 'DATABASE_URL');

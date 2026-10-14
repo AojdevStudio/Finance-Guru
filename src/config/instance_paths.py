@@ -158,6 +158,12 @@ def _db_path(
     raise ValueError(f"Invalid SQLite database URL: {resolved_url}")
 
 
-def load_instance_env(paths: InstancePaths, override: bool = False) -> None:
-    """Load the instance's environment file into the process environment."""
-    load_dotenv(paths.env_file, override=override)
+def load_instance_env(paths: InstancePaths) -> None:
+    """Load the instance ``.env`` so its values replace the process environment.
+
+    One rule for every caller. A key present in the instance file wins, including
+    an empty value. A key the file does not mention keeps whatever the process
+    already has. A missing file leaves the process environment unchanged. The
+    session-start hook names the ledger with this same order.
+    """
+    load_dotenv(paths.env_file, override=True)
