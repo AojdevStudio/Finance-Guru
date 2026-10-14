@@ -22,10 +22,6 @@ from src.models.options_inputs import (
     PutCallParityInput,
 )
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
 
 @pytest.fixture
 def calculator():
@@ -88,11 +84,6 @@ def otm_call_input():
     )
 
 
-# ---------------------------------------------------------------------------
-# Option pricing
-# ---------------------------------------------------------------------------
-
-
 class TestOptionPricing:
     def test_call_price_positive(self, calculator, atm_call_input):
         result = calculator.price_option(atm_call_input)
@@ -104,7 +95,6 @@ class TestOptionPricing:
 
     def test_itm_call_has_intrinsic_value(self, calculator, itm_call_input):
         result = calculator.price_option(itm_call_input)
-        # Intrinsic value = spot - strike = 120 - 100 = 20
         assert result.intrinsic_value == pytest.approx(20.0, abs=0.01)
         assert result.option_price >= result.intrinsic_value
 
@@ -129,7 +119,6 @@ class TestOptionPricing:
             option_type="call",
         )
         result = calculator.price_option(bs)
-        # Standard BS call ~= $10.45 for these parameters
         assert result.option_price == pytest.approx(10.45, abs=0.5)
 
     def test_put_price_with_dividend(self, calculator):
@@ -144,11 +133,6 @@ class TestOptionPricing:
         )
         result = calculator.price_option(bs)
         assert result.option_price > 0
-
-
-# ---------------------------------------------------------------------------
-# Greeks
-# ---------------------------------------------------------------------------
 
 
 class TestGreeks:
@@ -174,7 +158,7 @@ class TestGreeks:
 
     def test_theta_negative(self, calculator, atm_call_input):
         result = calculator.price_option(atm_call_input)
-        assert result.theta < 0  # Time decay
+        assert result.theta < 0
 
     def test_vega_positive(self, calculator, atm_call_input):
         result = calculator.price_option(atm_call_input)
@@ -191,11 +175,6 @@ class TestGreeks:
     def test_put_theta_negative(self, calculator, atm_put_input):
         result = calculator.price_option(atm_put_input)
         assert result.theta < 0
-
-
-# ---------------------------------------------------------------------------
-# Moneyness
-# ---------------------------------------------------------------------------
 
 
 class TestMoneyness:
@@ -241,18 +220,11 @@ class TestMoneyness:
         assert result.moneyness == "ATM"
 
 
-# ---------------------------------------------------------------------------
-# Implied volatility
-# ---------------------------------------------------------------------------
-
-
 class TestImpliedVolatility:
     def test_implied_vol_converges(self, calculator, atm_call_input):
-        # First price the option to get a "market price"
         greeks = calculator.price_option(atm_call_input)
         market_price = greeks.option_price
 
-        # Then solve for implied vol
         iv_input = ImpliedVolInput(
             spot_price=100.0,
             strike=100.0,
@@ -299,11 +271,6 @@ class TestImpliedVolatility:
 
         assert result.iterations > 0
         assert result.iterations < 100
-
-
-# ---------------------------------------------------------------------------
-# Put-call parity
-# ---------------------------------------------------------------------------
 
 
 class TestPutCallParity:
@@ -371,11 +338,6 @@ class TestPutCallParity:
         assert "lhs" in result
         assert "rhs" in result
         assert "difference" in result
-
-
-# ---------------------------------------------------------------------------
-# Convenience function
-# ---------------------------------------------------------------------------
 
 
 class TestConvenienceFunction:

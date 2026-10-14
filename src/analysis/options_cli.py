@@ -56,7 +56,6 @@ Examples:
         """,
     )
 
-    # Required parameters
     parser.add_argument("--ticker", type=str, required=True, help="Underlying ticker")
     parser.add_argument("--spot", type=float, required=True, help="Current stock price")
     parser.add_argument(
@@ -67,7 +66,6 @@ Examples:
         "--type", type=str, required=True, choices=["call", "put"], help="Option type"
     )
 
-    # Pricing vs Implied Vol
     parser.add_argument(
         "--volatility",
         type=float,
@@ -84,7 +82,6 @@ Examples:
         "--implied-vol", action="store_true", help="Calculate implied volatility"
     )
 
-    # Optional parameters
     parser.add_argument(
         "--risk-free-rate",
         type=float,
@@ -98,7 +95,6 @@ Examples:
         help="Annual dividend yield (default: 0%%)",
     )
 
-    # Output
     parser.add_argument(
         "--output", choices=["human", "json"], default="human", help="Output format"
     )
@@ -106,7 +102,6 @@ Examples:
 
     args = parser.parse_args()
 
-    # Validate inputs
     if args.implied_vol:
         if args.market_price is None:
             print(
@@ -123,7 +118,6 @@ Examples:
         calculator = OptionsCalculator()
 
         if args.implied_vol:
-            # Calculate implied volatility
             print("🔍 Calculating implied volatility...", file=sys.stderr)
 
             iv_input = ImpliedVolInput(
@@ -149,7 +143,6 @@ Examples:
                 output_text = format_implied_vol(iv_result, args)
 
         else:
-            # Price option and calculate Greeks
             print("🧮 Calculating option price and Greeks...", file=sys.stderr)
 
             bs_input = BlackScholesInput(
@@ -172,7 +165,6 @@ Examples:
             else:
                 output_text = format_greeks(greeks, args)
 
-        # Output results
         if args.save_to:
             Path(args.save_to).parent.mkdir(parents=True, exist_ok=True)
             Path(args.save_to).write_text(output_text)
@@ -203,7 +195,6 @@ def format_greeks(greeks, args) -> str:
     output.append("=" * 70)
     output.append("")
 
-    # Contract Details
     output.append("📋 CONTRACT DETAILS")
     output.append("-" * 70)
     output.append(f"  Type:                     {greeks.option_type.upper()}")
@@ -217,7 +208,6 @@ def format_greeks(greeks, args) -> str:
     output.append(f"  Moneyness:                {greeks.moneyness:>10}")
     output.append("")
 
-    # Pricing
     output.append("💰 THEORETICAL PRICING")
     output.append("-" * 70)
     output.append(f"  Option Price:             ${greeks.option_price:>10.2f}")
@@ -225,7 +215,6 @@ def format_greeks(greeks, args) -> str:
     output.append(f"  Time Value:               ${greeks.time_value:>10.2f}")
     output.append("")
 
-    # Greeks
     output.append("📈 THE GREEKS (Risk Sensitivities)")
     output.append("-" * 70)
     output.append(f"  Delta (Δ):                {greeks.delta:>10.4f}")
@@ -244,7 +233,6 @@ def format_greeks(greeks, args) -> str:
     output.append(f"    → 1% interest rate up = ${abs(greeks.rho):.2f} option move")
     output.append("")
 
-    # Interpretation
     output.append("💡 INTERPRETATION")
     output.append("-" * 70)
 
@@ -271,7 +259,7 @@ def format_greeks(greeks, args) -> str:
 
     output.append(f"  • {_theta_reading(greeks.theta)}")
 
-    if greeks.time_to_expiry < 0.1:  # Less than ~36 days
+    if greeks.time_to_expiry < 0.1:
         output.append("  ⚠️  WARNING: Option near expiry - theta decay accelerating")
 
     output.append("")
@@ -314,7 +302,6 @@ def format_implied_vol(iv_result, args) -> str:
 
     output.append("")
 
-    # Interpretation
     output.append("💡 INTERPRETATION")
     output.append("-" * 70)
     if iv_result.implied_volatility > 0.60:
