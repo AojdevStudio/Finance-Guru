@@ -1,32 +1,17 @@
 #!/usr/bin/env bun
 
-/**
- * Finance Guru Core Config Loader
- * Session Start Hook
- *
- * Automatically loads Finance Guru system context at session start:
- * - System configuration (config.yaml)
- * - User profile (user-profile.yaml)
- * - Where the portfolio ledger lives (family_office.db)
- * - fin-core skill content
- *
- * Refactored to use Bun runtime for improved performance.
- */
-
 import { Database } from 'bun:sqlite';
 import { existsSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-// Bun provides import.meta.dir directly
 const __dirname = import.meta.dir;
 const PROJECT_ROOT = resolve(__dirname, '../..');
-// Path.expanduser for a leading "~", which InstancePaths applies to the root and bare paths.
+
 function expandHome(path: string): string {
   if (path !== '~' && !path.startsWith('~/')) return path;
   return join(process.env.HOME ?? '~', path.slice(1));
 }
 
-// The same rule as InstancePaths.resolve: FIN_GURU_DATA_ROOT, else the session directory.
 const CONFIGURED_ROOT = expandHome(process.env.FIN_GURU_DATA_ROOT?.trim() ?? '');
 const DATA_ROOT = resolve(CONFIGURED_ROOT || process.cwd());
 const STALE_AFTER_DAYS = 7;
@@ -45,18 +30,15 @@ function isInstance(root: string): boolean {
   return scaffoldedProject(join(root, 'pyproject.toml')) || existsSync(join(root, 'family_office.db'));
 }
 
-// instance_init writes a pyproject.toml whose project is named finance-guru-instance.
 function scaffoldedProject(pyproject: string): boolean {
   try {
     return /^\s*name\s*=\s*["']finance-guru-instance["']/m.test(readFileSync(pyproject, 'utf-8'));
   } catch {
-    // A missing or unreadable file means this is not a scaffolded instance.
     return false;
   }
 }
 
-// A checkout instance or the engine repo runs its own copy through .claude/settings.json.
-function checkoutCopyRuns(): boolean {
+function pluginCopyYieldsToCheckout(): boolean {
   const projectDir = process.env.CLAUDE_PROJECT_DIR;
   if (!process.env.CLAUDE_PLUGIN_ROOT || !projectDir) return false;
   return existsSync(join(projectDir, '.claude/hooks/load-fin-core-config.ts'));
@@ -79,9 +61,6 @@ function dotenvValue(envFile: string, key: string): string | undefined {
   return value;
 }
 
-// Finds the ledger refresh_all writes. load_instance_env lets a value in the
-// instance .env replace the process environment, so DATABASE_URL there wins.
-// A relative SQLite path resolves under the instance root, as in InstancePaths.database_url.
 function ledgerPath(root: string): string | null {
   const fromEnvFile = dotenvValue(join(root, '.env'), 'DATABASE_URL');
   const configured = (fromEnvFile ?? process.env.DATABASE_URL ?? '').trim();
@@ -94,7 +73,6 @@ function ledgerPath(root: string): string | null {
   return resolve(root, expandHome(configured));
 }
 
-// The ledger replaced broker CSVs as the source of positions and balances.
 function describeLedger(ledgerFile: string): string {
   if (!existsSync(ledgerFile)) {
     return `Ledger not found at ${ledgerFile}.\nRun the instance-onboarding skill to scaffold the instance and its ledger.`;
@@ -134,47 +112,33 @@ function loadFile(path: string): string {
 }
 
 function main() {
-  // Read stdin (session info)
   let inputData = '';
   process.stdin.setEncoding('utf-8');
-
-  // Handle both piped and direct execution
-  if (process.stdin.isTTY) {
-    // Direct execution (testing) - use dummy input
-    inputData = JSON.stringify({ session_id: 'test', event: 'session_start' });
+  process.stdin.on('data', chunk => {
+    inputData += chunk;
+  });
+  process.stdin.on('end', () => {
     processHook(inputData);
-  } else {
-    // Piped input from Claude Code
-    process.stdin.on('data', chunk => {
-      inputData += chunk;
-    });
-
-    process.stdin.on('end', () => {
-      processHook(inputData);
-    });
-  }
+  });
 }
 
 function processHook(inputData: string) {
   try {
     const input: HookInput = JSON.parse(inputData);
-    if (checkoutCopyRuns() || !isInstance(DATA_ROOT)) {
+    if (pluginCopyYieldsToCheckout() || !isInstance(DATA_ROOT)) {
       process.exit(0);
     }
-    // The skill ships with the project; private inputs belong to the instance.
     const skillPath = join(PROJECT_ROOT, '.claude/skills/fin-core/SKILL.md');
     const configPath = join(DATA_ROOT, 'config.yaml');
     const profilePath = join(DATA_ROOT, 'user-profile.yaml');
     const systemContextPath = join(DATA_ROOT, 'system-context.md');
     const ledger = ledgerPath(DATA_ROOT);
 
-    // Load core files
     const skillContent = loadFile(skillPath);
     const configContent = loadFile(configPath);
     const profileContent = loadFile(profilePath);
     const systemContext = loadFile(systemContextPath);
 
-    // Build system reminder output
     const output = `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🏦 FINANCE GURU CORE CONTEXT LOADED
@@ -220,7 +184,6 @@ ${ledger ? describeLedger(ledger) : 'The ledger is not a local SQLite file, so i
     // Output to stdout (Claude Code will inject this as system-reminder)
     console.log(output);
 
-    // Exit successfully
     process.exit(0);
 
   } catch (err) {

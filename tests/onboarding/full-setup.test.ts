@@ -13,14 +13,12 @@ const TEST_STATE_FILE = join(PROJECT_ROOT, ".onboarding-state.test.json");
 
 describe("Full Setup Flow Integration Test", () => {
   beforeEach(() => {
-    // Clean up any existing test state
     if (existsSync(TEST_STATE_FILE)) {
       rmSync(TEST_STATE_FILE, { force: true });
     }
   });
 
   afterEach(() => {
-    // Clean up test state
     if (existsSync(TEST_STATE_FILE)) {
       rmSync(TEST_STATE_FILE, { force: true });
     }
@@ -35,7 +33,6 @@ describe("Full Setup Flow Integration Test", () => {
     const modulesPath = join(PROJECT_ROOT, "scripts/onboarding/modules");
     expect(existsSync(modulesPath)).toBe(true);
 
-    // Check core modules
     expect(existsSync(join(modulesPath, "progress.ts"))).toBe(true);
     expect(existsSync(join(modulesPath, "input-validator.ts"))).toBe(true);
     expect(existsSync(join(modulesPath, "yaml-generator.ts"))).toBe(true);
@@ -118,7 +115,6 @@ describe("Full Setup Flow Integration Test", () => {
     const originalState = createNewState();
     originalState.data.test_field = "test_value";
 
-    // Save state (uses default .onboarding-state.json in cwd)
     saveState(originalState);
 
     const defaultStatePath = join(PROJECT_ROOT, ".onboarding-state.json");
@@ -131,7 +127,6 @@ describe("Full Setup Flow Integration Test", () => {
     expect(loadedState?.version).toBe("1.0");
     expect(loadedState?.data.test_field).toBe("test_value");
 
-    // Clean up
     if (existsSync(defaultStatePath)) {
       rmSync(defaultStatePath, { force: true });
     }
@@ -217,7 +212,6 @@ describe("Full Setup Flow Integration Test", () => {
 
     expect(isComplete(state)).toBe(false);
 
-    // Complete all sections - must match the order defined in progress.ts
     const sections: Array<[string, string | null]> = [
       ["liquid_assets", "investments"],
       ["investments", "cash_flow"],
@@ -240,18 +234,15 @@ describe("Full Setup Flow Integration Test", () => {
   test("template files exist in correct location", () => {
     const templatesPath = join(PROJECT_ROOT, "scripts/onboarding/modules/templates");
 
-    // Templates directory should exist
     expect(existsSync(templatesPath)).toBe(true);
   });
 
   test("CLI can be executed without errors", async () => {
-    // This is a smoke test - just verify the CLI can be loaded
     try {
       const cliPath = join(PROJECT_ROOT, "scripts/onboarding/index.ts");
       const module = await import(cliPath);
       expect(module).toBeDefined();
     } catch (error) {
-      // If there's a module loading error, the test should fail
       expect(error).toBeNull();
     }
   });
@@ -295,7 +286,6 @@ describe("State Persistence", () => {
     expect(parsed.version).toBe("1.0");
     expect(parsed.started_at).toBeDefined();
 
-    // Clean up
     if (existsSync(defaultStatePath)) {
       rmSync(defaultStatePath, { force: true });
     }
@@ -312,7 +302,6 @@ describe("State Persistence", () => {
     const state2 = loadState();
     expect(state2?.data.custom_field.nested.value).toBe(123);
 
-    // Clean up
     const defaultStatePath = join(PROJECT_ROOT, ".onboarding-state.json");
     if (existsSync(defaultStatePath)) {
       rmSync(defaultStatePath, { force: true });
@@ -324,14 +313,12 @@ describe("Full Setup Flow Integration", () => {
   const defaultStatePath = join(PROJECT_ROOT, ".onboarding-state.json");
 
   beforeEach(() => {
-    // Clean up any existing state
     if (existsSync(defaultStatePath)) {
       rmSync(defaultStatePath, { force: true });
     }
   });
 
   afterEach(() => {
-    // Clean up test state
     if (existsSync(defaultStatePath)) {
       rmSync(defaultStatePath, { force: true });
     }
@@ -348,7 +335,6 @@ describe("Full Setup Flow Integration", () => {
       getNextSection
     } = await import("../../scripts/onboarding/modules/progress");
 
-    // 1. Start fresh onboarding
     let state = createNewState();
     expect(state.completed_sections).toEqual([]);
     expect(state.current_section).toBeNull();
@@ -357,7 +343,6 @@ describe("Full Setup Flow Integration", () => {
     saveState(state);
     expect(existsSync(defaultStatePath)).toBe(true);
 
-    // 2. Complete liquid_assets section
     const liquidAssetsData = {
       total: 50000,
       accounts_count: 3,
@@ -369,13 +354,11 @@ describe("Full Setup Flow Integration", () => {
     markSectionComplete(state, "liquid_assets", "investments");
     saveState(state);
 
-    // Verify state was updated
     state = loadState()!;
     expect(state.completed_sections).toContain("liquid_assets");
     expect(state.current_section).toBe("investments");
     expect(state.data.liquid_assets).toEqual(liquidAssetsData);
 
-    // 3. Complete investments section
     const investmentsData = {
       portfolio_value: 250000,
       brokerage: "Fidelity",
@@ -396,7 +379,6 @@ describe("Full Setup Flow Integration", () => {
     expect(state.completed_sections).toContain("investments");
     expect(state.current_section).toBe("cash_flow");
 
-    // 4. Complete cash_flow section
     const cashFlowData = {
       monthly_income: 15000,
       monthly_expenses: 8000,
@@ -412,7 +394,6 @@ describe("Full Setup Flow Integration", () => {
     expect(state.completed_sections).toContain("cash_flow");
     expect(state.current_section).toBe("debt");
 
-    // 5. Complete debt section
     const debtData = {
       total_debt: 50000,
       margin_balance: 50000,
@@ -428,7 +409,6 @@ describe("Full Setup Flow Integration", () => {
     expect(state.completed_sections).toContain("debt");
     expect(state.current_section).toBe("preferences");
 
-    // 6. Complete preferences section
     const preferencesData = {
       risk_tolerance: "moderate",
       investment_style: "value",
@@ -444,7 +424,6 @@ describe("Full Setup Flow Integration", () => {
     expect(state.completed_sections).toContain("preferences");
     expect(state.current_section).toBe("summary");
 
-    // 7. Complete summary section
     const summaryData = {
       confirmed: true,
       timestamp: new Date().toISOString()
@@ -458,7 +437,6 @@ describe("Full Setup Flow Integration", () => {
     expect(state.completed_sections).toContain("summary");
     expect(state.current_section).toBe("mcp_config");
 
-    // 8. Complete mcp_config section (mock)
     const mcpConfigData = {
       configured_servers: ["exa", "perplexity", "context7"],
       config_path: "~/.claude/mcp.json"
@@ -472,7 +450,6 @@ describe("Full Setup Flow Integration", () => {
     expect(state.completed_sections).toContain("mcp_config");
     expect(state.current_section).toBe("env_setup");
 
-    // 9. Complete env_setup section (final)
     const envSetupData = {
       env_file_created: true,
       api_keys_configured: ["ANTHROPIC_API_KEY", "PERPLEXITY_API_KEY"]
@@ -482,7 +459,6 @@ describe("Full Setup Flow Integration", () => {
     markSectionComplete(state, "env_setup", null);
     saveState(state);
 
-    // 10. Verify completion
     state = loadState()!;
     expect(state.completed_sections).toHaveLength(8);
     expect(state.completed_sections).toEqual([
@@ -499,7 +475,6 @@ describe("Full Setup Flow Integration", () => {
     expect(isComplete(state)).toBe(true);
     expect(getNextSection(state)).toBeNull();
 
-    // Verify all data was preserved
     expect(state.data.liquid_assets).toEqual(liquidAssetsData);
     expect(state.data.investments).toEqual(investmentsData);
     expect(state.data.cash_flow).toEqual(cashFlowData);
@@ -519,17 +494,14 @@ describe("Full Setup Flow Integration", () => {
       saveSectionData
     } = await import("../../scripts/onboarding/modules/progress");
 
-    // Simulate a multi-session onboarding (save/load between each section)
     let state = createNewState();
     saveState(state);
 
-    // Session 1: Liquid assets
     state = loadState()!;
     saveSectionData(state, "liquid_assets", { total: 10000 });
     markSectionComplete(state, "liquid_assets", "investments");
     saveState(state);
 
-    // Session 2: Investments
     state = loadState()!;
     expect(state.completed_sections).toContain("liquid_assets");
     expect(state.data.liquid_assets.total).toBe(10000);
@@ -537,7 +509,6 @@ describe("Full Setup Flow Integration", () => {
     markSectionComplete(state, "investments", "cash_flow");
     saveState(state);
 
-    // Session 3: Verify both previous sections are preserved
     state = loadState()!;
     expect(state.completed_sections).toContain("liquid_assets");
     expect(state.completed_sections).toContain("investments");
@@ -555,18 +526,14 @@ describe("Full Setup Flow Integration", () => {
 
     const state = createNewState();
 
-    // At start, should return liquid_assets
     expect(getNextSection(state)).toBe("liquid_assets");
 
-    // After completing liquid_assets, should return investments
     markSectionComplete(state, "liquid_assets", "investments");
     expect(getNextSection(state)).toBe("investments");
 
-    // After completing investments, should return cash_flow
     markSectionComplete(state, "investments", "cash_flow");
     expect(getNextSection(state)).toBe("cash_flow");
 
-    // Complete remaining sections
     markSectionComplete(state, "cash_flow", "debt");
     markSectionComplete(state, "debt", "preferences");
     markSectionComplete(state, "preferences", "summary");
@@ -574,7 +541,6 @@ describe("Full Setup Flow Integration", () => {
     markSectionComplete(state, "mcp_config", "env_setup");
     markSectionComplete(state, "env_setup", null);
 
-    // After all sections complete, should return null
     expect(getNextSection(state)).toBeNull();
   });
 });

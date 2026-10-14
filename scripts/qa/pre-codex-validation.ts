@@ -1,22 +1,5 @@
 #!/usr/bin/env bun
 
-/**
- * Pre-Codex Validation Script
- *
- * Validates that the Finance Guru system is ready for Codex full review.
- * This script checks:
- * - System architecture integrity
- * - Documentation completeness
- * - Configuration files
- * - Directory structure
- * - Multi-broker support implementation
- * - CSV mapping templates
- *
- * Exit codes:
- * - 0: All checks passed
- * - 1: One or more checks failed
- */
-
 import { existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 
@@ -30,27 +13,43 @@ interface CheckResult {
 const results: CheckResult[] = [];
 const projectRoot = process.cwd();
 
-// Helper functions
-function checkFile(path: string, description: string, critical = true): void {
-  const fullPath = join(projectRoot, path);
-  const exists = existsSync(fullPath);
+type Severity = CheckResult['severity'];
+
+function checkFile(path: string, description: string, severity: Severity): void {
+  const exists = existsSync(join(projectRoot, path));
   results.push({
     name: description,
     passed: exists,
     message: exists ? `✓ ${path}` : `✗ Missing: ${path}`,
-    severity: critical ? 'critical' : 'warning'
+    severity
   });
 }
 
-function checkDirectory(path: string, description: string, critical = true): void {
+function requireFile(path: string, description: string): void {
+  checkFile(path, description, 'critical');
+}
+
+function optionalFile(path: string, description: string): void {
+  checkFile(path, description, 'warning');
+}
+
+function checkDirectory(path: string, description: string, severity: Severity): void {
   const fullPath = join(projectRoot, path);
   const exists = existsSync(fullPath) && statSync(fullPath).isDirectory();
   results.push({
     name: description,
     passed: exists,
     message: exists ? `✓ ${path}/` : `✗ Missing directory: ${path}/`,
-    severity: critical ? 'critical' : 'warning'
+    severity
   });
+}
+
+function requireDirectory(path: string, description: string): void {
+  checkDirectory(path, description, 'critical');
+}
+
+function optionalDirectory(path: string, description: string): void {
+  checkDirectory(path, description, 'warning');
 }
 
 function checkFileContent(path: string, searchString: string, description: string): void {
@@ -77,45 +76,37 @@ function checkFileContent(path: string, searchString: string, description: strin
   });
 }
 
-// Validation checks
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 console.log('🔍 Pre-Codex Validation - Finance Guru™');
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 console.log();
 
-// 1. Core Documentation
 console.log('📄 Checking core documentation...');
-checkFile('CLAUDE.md', 'CLAUDE.md exists', true);
-checkFile('README.md', 'README.md exists', true);
-checkFile('src/CLAUDE.md', 'src/CLAUDE.md exists (developer guidance)', true);
-checkFile('docs/setup/SETUP.md', 'Setup documentation exists', true);
-checkFile('docs/setup/TROUBLESHOOTING.md', 'Troubleshooting guide exists', false);
+requireFile('CLAUDE.md', 'CLAUDE.md exists');
+requireFile('README.md', 'README.md exists');
+requireFile('src/CLAUDE.md', 'src/CLAUDE.md exists (developer guidance)');
+requireFile('docs/setup/SETUP.md', 'Setup documentation exists');
+optionalFile('docs/setup/TROUBLESHOOTING.md', 'Troubleshooting guide exists');
 
-// 2. System Architecture
 console.log('🏗️  Checking system architecture...');
-checkDirectory('src', 'src/ directory exists', true);
-checkDirectory('src/analysis', 'src/analysis/ exists', true);
-checkDirectory('src/strategies', 'src/strategies/ exists', true);
-checkDirectory('src/utils', 'src/utils/ exists', true);
-checkDirectory('src/models', 'src/models/ exists', true);
-checkDirectory('fin-guru', 'fin-guru/ directory exists', true);
+requireDirectory('src', 'src/ directory exists');
+requireDirectory('src/analysis', 'src/analysis/ exists');
+requireDirectory('src/strategies', 'src/strategies/ exists');
+requireDirectory('src/utils', 'src/utils/ exists');
+requireDirectory('src/models', 'src/models/ exists');
+requireDirectory('fin-guru', 'fin-guru/ directory exists');
 
-// 3. Live sync implementation and optional private configuration. A fresh
-// clone does not contain account-routing data; it is created only by the
-// owner after linking a SnapTrade account.
 console.log('🏦 Checking live sync implementation...');
-checkFile('config/snaptrade-accounts.yaml', 'Optional SnapTrade routing config exists', false);
-checkDirectory('src/integrations/snaptrade', 'SnapTrade integration exists', true);
-checkDirectory('src/integrations/simplefin', 'SimpleFIN integration exists', true);
-checkDirectory('apps/simplefin-sync', 'SimpleFIN Bun app exists', true);
+optionalFile('config/snaptrade-accounts.yaml', 'Optional SnapTrade routing config exists');
+requireDirectory('src/integrations/snaptrade', 'SnapTrade integration exists');
+requireDirectory('src/integrations/simplefin', 'SimpleFIN integration exists');
+requireDirectory('apps/simplefin-sync', 'SimpleFIN Bun app exists');
 
-// 5. Tools Documentation (Task 2.1)
 console.log('🔧 Checking tools documentation...');
-checkFile('docs/reference/tools.md', 'Tools documentation exists', false);
+optionalFile('docs/reference/tools.md', 'Tools documentation exists');
 
-// 7. Agent System
 console.log('🤖 Checking agent system...');
-checkFile('.claude/agents/fg-finance-orchestrator.md', 'Finance Orchestrator exists', true);
+requireFile('.claude/agents/fg-finance-orchestrator.md', 'Finance Orchestrator exists');
 
 const requiredAgents = [
   'market-researcher',
@@ -127,35 +118,25 @@ const requiredAgents = [
 ];
 
 requiredAgents.forEach(agent => {
-  checkFile(
-    `.claude/agents/fg-${agent}.md`,
-    `Agent: ${agent}`,
-    false
-  );
+  optionalFile(`.claude/agents/fg-${agent}.md`, `Agent: ${agent}`);
 });
 
-// 8. Configuration Files
 console.log('⚙️  Checking configuration files...');
-checkFile('pyproject.toml', 'Python project configuration', true);
-checkFile('package.json', 'Node.js package configuration', false);
-checkFile('.gitignore', '.gitignore exists', true);
+requireFile('pyproject.toml', 'Python project configuration');
+optionalFile('package.json', 'Node.js package configuration');
+requireFile('.gitignore', '.gitignore exists');
 
-// 9. Test Infrastructure
 console.log('🧪 Checking test infrastructure...');
-checkDirectory('tests', 'tests/ directory exists', false);
-checkFile('docs/reports/MANUAL_TEST_CHECKLIST.md', 'Manual test checklist exists', true);
+optionalDirectory('tests', 'tests/ directory exists');
+requireFile('docs/reports/MANUAL_TEST_CHECKLIST.md', 'Manual test checklist exists');
 
-// 10. Skills and Commands
 console.log('💡 Checking skills...');
-checkDirectory('.claude/skills', 'Skills directory exists', false);
+optionalDirectory('.claude/skills', 'Skills directory exists');
 
-// 12. Recent completions validation
 console.log('✅ Validating recent task completions...');
 
-// Task 1.3: README updates
 checkFileContent('README.md', 'skills', 'README mentions skills/commands installation');
 
-// Task 2.2: src/CLAUDE.md
 if (existsSync(join(projectRoot, 'src/CLAUDE.md'))) {
   const srcClaude = readFileSync(join(projectRoot, 'src/CLAUDE.md'), 'utf-8');
   results.push({
@@ -168,14 +149,12 @@ if (existsSync(join(projectRoot, 'src/CLAUDE.md'))) {
   });
 }
 
-// Print results
 console.log();
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 console.log('📊 Validation Results');
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 console.log();
 
-// Group by severity
 const critical = results.filter(r => !r.passed && r.severity === 'critical');
 const warnings = results.filter(r => !r.passed && r.severity === 'warning');
 const passed = results.filter(r => r.passed);
@@ -197,7 +176,6 @@ if (warnings.length > 0) {
   console.log();
 }
 
-// Summary
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 if (critical.length === 0 && warnings.length <= 5) {
   console.log('✅ SYSTEM READY FOR CODEX REVIEW');

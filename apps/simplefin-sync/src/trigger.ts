@@ -1,7 +1,4 @@
 #!/usr/bin/env bun
-/**
- * SimpleFIN deposit trigger for the buy-ticket smoke pipeline.
- */
 import { createHash } from "node:crypto";
 import { mkdir, rename } from "node:fs/promises";
 import path from "node:path";

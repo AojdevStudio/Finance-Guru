@@ -1,20 +1,18 @@
 # Bun Hook Test Suite
 
-A comprehensive, self-testing test suite for Claude Code hooks using Bun runtime.
+A test suite for the Finance Guru Claude Code hooks, run with Bun.
 
 ## Overview
 
 This test suite validates that:
 
-1. **The test infrastructure itself is functional** (self-testing)
-2. **All Claude Code hooks work correctly** with Bun runtime
-3. **Hook patterns and best practices** are followed
+1. **All Claude Code hooks work correctly** with Bun runtime
+2. **Hook patterns and best practices** are followed
 
 ## Test Files
 
 | Test File | Purpose |
 |-----------|---------|
-| `test_suite.test.ts` | **Self-testing suite** - validates test infrastructure |
 | `test_load_fin_core_config.test.ts` | Tests SessionStart hook (Finance Guru context loader) |
 | `test_post_tool_use_tracker.test.ts` | Tests PostToolUse hook (file tracking) |
 | `test_plugin_paths.test.ts` | Tests the plugin and checkout hook paths |
@@ -35,9 +33,6 @@ This test suite validates that:
 # Run all tests
 ./run-tests.sh
 
-# Run only the self-testing suite
-./run-tests.sh --suite-only
-
 # Run tests with coverage report
 ./run-tests.sh --coverage
 
@@ -45,62 +40,12 @@ This test suite validates that:
 bun test tests/
 
 # Run specific test file
-bun test tests/test_suite.test.ts
+bun test tests/test_load_fin_core_config.test.ts
 
 # Run with test name pattern
 bun test --test-name-pattern "should validate"
 ```
 
-## Self-Testing Features
-
-The `test_suite.test.ts` file is unique - it tests the test suite itself to ensure the testing infrastructure is reliable:
-
-### What It Tests
-
-1. **Test Runner Capabilities**
-   - Verifies `describe`, `it`, `expect`, `beforeEach`, `afterEach` are available
-   - Confirms Bun test runner is functional
-
-2. **Assertion Capabilities**
-   - Tests all assertion methods: `toBe`, `toEqual`, `toContain`, etc.
-   - Validates async assertions work: `resolves`, `rejects`
-
-3. **Test Lifecycle**
-   - Ensures `beforeEach` and `afterEach` run correctly
-   - Verifies test isolation (no state sharing)
-
-4. **File System Access**
-   - Tests file/directory creation, deletion
-   - Validates cleanup patterns work
-
-5. **Process Spawning**
-   - Confirms ability to spawn child processes
-   - Tests Bun runtime execution
-
-6. **Meta-Validation**
-   - **The test suite runs itself** to verify it works
-   - Confirms all test files can be discovered
-
-### Example: Self-Testing Test
-
-```typescript
-it("should validate that this test file itself can be executed", async () => {
-  // Run this test file with bun test
-  const result = await new Promise<{ exitCode: number }>((resolve) => {
-    const proc = spawn("bun", ["test", __filename], {
-      cwd: join(import.meta.dir, ".."),
-    });
-
-    proc.on("close", (code) => {
-      resolve({ exitCode: code || 0 });
-    });
-  });
-
-  expect(result.exitCode).toBe(0);
-});
-```
-
-This test literally runs itself and validates it passes!
 
 ## Hook Test Patterns
 
@@ -173,10 +118,8 @@ it("should parse session input correctly", async () => {
 
 Current test coverage:
 
-- **Test Infrastructure**: 100% (self-testing)
 - **load-fin-core-config.ts**: 8 tests
 - **post-tool-use-tracker.ts**: 33 tests
-- **Total Tests**: 97+ tests across 5 files
 
 ## Adding New Tests
 
@@ -208,10 +151,6 @@ describe("your-hook with Bun", () => {
   });
 });
 ```
-
-### For Test Infrastructure
-
-Add tests to `test_suite.test.ts` to validate new testing capabilities.
 
 ## CI/CD Integration
 
@@ -252,19 +191,12 @@ Or use directly:
 
 ### Tests Fail
 
-1. **Run self-testing suite first**:
+1. **Run individual test files**:
    ```bash
-   ./run-tests.sh --suite-only
-   ```
-   If this fails, your test infrastructure has issues.
-
-2. **Run individual test files**:
-   ```bash
-   bun test tests/test_suite.test.ts
    bun test tests/test_load_fin_core_config.test.ts
    ```
 
-3. **Check hook dependencies**:
+2. **Check hook dependencies**:
    - Hooks may depend on project files (config.yaml, user-profile.yaml, etc.)
    - Ensure test environment has access to these files
 
@@ -276,19 +208,6 @@ Clean up test cache:
 rm -rf .claude/tsc-cache/test-*
 rm -rf tests/.test-tmp
 ```
-
-## Philosophy
-
-This test suite follows the principle of **self-testing**:
-
-> "How do you know your tests work? Test them!"
-
-The `test_suite.test.ts` file is a meta-test that validates the testing infrastructure itself. This ensures:
-
-1. Tests are reliable (they test themselves)
-2. Test failures are real (not infrastructure issues)
-3. New developers can trust the test suite
-4. CI/CD failures indicate real problems
 
 ## Future Enhancements
 

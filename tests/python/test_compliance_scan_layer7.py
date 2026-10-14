@@ -61,5 +61,5 @@ def test_paths_outside_doc_prefixes_are_not_covered() -> None:
 
 def test_scanner_self_exemption_does_not_apply_to_layer7() -> None:
     path = ".claude/skills/compliance-scan/scripts/scan.py"
-    assert scan.should_skip(path) is True
+    assert scan.skips_literal_scan(path) is True
     assert _hits(path, "# example: $204,753") == 1

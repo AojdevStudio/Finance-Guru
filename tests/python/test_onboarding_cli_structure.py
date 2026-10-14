@@ -93,7 +93,6 @@ class TestOnboardingStructure:
 
     def test_module_content_validation(self, onboarding_dir):
         """Test that modules contain expected exports"""
-        # Test input-validator.ts has validation functions
         validator_file = onboarding_dir / "modules" / "input-validator.ts"
         content = validator_file.read_text()
 
@@ -103,7 +102,6 @@ class TestOnboardingStructure:
             "validatePositiveInteger",
             "validateNonEmpty",
             "validateEmail",
-            "validateSpreadsheetId",
             "validateRiskTolerance",
             "validateInvestmentPhilosophy",
             "validateBrokerage",
@@ -166,12 +164,10 @@ class TestOnboardingStructure:
         index_file = onboarding_dir / "index.ts"
         content = index_file.read_text()
 
-        # Check for shebang
         assert content.startswith("#!/usr/bin/env bun"), (
             "index.ts should have bun shebang"
         )
 
-        # Check for key functions
         expected_functions = [
             "displayWelcome",
             "displayResume",
@@ -182,7 +178,6 @@ class TestOnboardingStructure:
         for func_name in expected_functions:
             assert func_name in content, f"index.ts should have {func_name} function"
 
-        # Check for imports from modules
         assert "from './modules/progress'" in content, (
             "index.ts should import from progress module"
         )

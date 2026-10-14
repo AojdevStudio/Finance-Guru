@@ -65,7 +65,6 @@ class TestLiquidAssetsSection:
         section_file = Path("scripts/onboarding/sections/liquid-assets.ts")
         content = section_file.read_text()
 
-        # Check for required imports
         assert "validateCurrency" in content
         assert "validatePositiveInteger" in content
         assert "validatePercentage" in content
@@ -78,7 +77,6 @@ class TestLiquidAssetsSection:
         section_file = Path("scripts/onboarding/sections/liquid-assets.ts")
         content = section_file.read_text()
 
-        # Check for interface definition
         assert "interface LiquidAssetsData" in content
         assert "total:" in content
         assert "accounts_count:" in content
@@ -93,7 +91,6 @@ class TestLiquidAssetsSection:
             text=True,
             timeout=5,
         )
-        # Should not have TypeScript compilation errors
         assert "error TS" not in result.stderr
 
     def test_section_structure_matches_spec(self):
@@ -101,10 +98,8 @@ class TestLiquidAssetsSection:
         section_file = Path("scripts/onboarding/sections/liquid-assets.ts")
         content = section_file.read_text()
 
-        # Verify section displays correct header
         assert "Section 1 of 7: Liquid Assets" in content
 
-        # Verify prompts for required fields
         assert "total value of your liquid cash" in content or "liquid cash" in content
         assert "How many accounts" in content
         assert "average yield" in content
@@ -115,12 +110,10 @@ class TestLiquidAssetsSection:
         section_file = Path("scripts/onboarding/sections/liquid-assets.ts")
         content = section_file.read_text()
 
-        # Verify state management calls
         assert "saveSectionData" in content
         assert "markSectionComplete" in content
         assert "saveState" in content
 
-        # Verify correct section name used
         assert "'liquid_assets'" in content
 
     def test_section_marks_next_section_correctly(self):
@@ -128,12 +121,10 @@ class TestLiquidAssetsSection:
         section_file = Path("scripts/onboarding/sections/liquid-assets.ts")
         content = section_file.read_text()
 
-        # Should mark next section as 'investments'
         assert "'investments'" in content
 
     def test_validation_integration(self):
         """Test that validation functions are properly integrated"""
-        # Test currency validation integration
         result = subprocess.run(
             [
                 "bun",
@@ -155,15 +146,13 @@ class TestLiquidAssetsSection:
         section_file = Path("scripts/onboarding/sections/liquid-assets.ts")
         content = section_file.read_text()
 
-        # Should convert percentage to decimal (divide by 100)
-        assert "/ 100" in content or "/100" in content
+        assert "percentToRate(averageYield)" in content
 
     def test_optional_structure_field(self):
         """Test that account structure is optional"""
         section_file = Path("scripts/onboarding/sections/liquid-assets.ts")
         content = section_file.read_text()
 
-        # Should have logic for optional input
         assert "optional" in content.lower()
         assert "skip" in content.lower() or "enter" in content.lower()
 
@@ -172,27 +161,24 @@ class TestLiquidAssetsSection:
         section_file = Path("scripts/onboarding/sections/liquid-assets.ts")
         content = section_file.read_text()
 
-        # Should show example structure
         assert "Example:" in content or "example" in content.lower()
         assert "LLC" in content or "checking" in content or "savings" in content
 
     def test_readline_usage(self):
-        """Test that section uses readline for input"""
+        """Test that section reads input through the shared readline prompt"""
         section_file = Path("scripts/onboarding/sections/liquid-assets.ts")
         content = section_file.read_text()
 
-        # Should import readline
-        assert "readline" in content
-        assert "createInterface" in content or "question" in content
+        assert "from '../modules/prompt'" in content
+        assert "createPrompt()" in content
 
     def test_error_handling(self):
         """Test that section has proper error handling"""
         section_file = Path("scripts/onboarding/sections/liquid-assets.ts")
         content = section_file.read_text()
 
-        # Should have try/catch or error handling
         assert "try" in content or "catch" in content or "error" in content.lower()
-        assert "finally" in content or "close" in content  # Should close readline
+        assert "finally" in content or "close" in content
 
 
 if __name__ == "__main__":
