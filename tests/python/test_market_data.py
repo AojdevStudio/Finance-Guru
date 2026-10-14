@@ -240,13 +240,16 @@ class TestAppendLiveQuote:
         assert high[-1] == low[-1] == close[-1] == 250.0
 
     @patch("src.utils.market_data.get_prices")
-    def test_missing_quote_leaves_series_unchanged(self, mock_get_prices: MagicMock):
+    def test_missing_quote_leaves_series_unchanged(
+        self, mock_get_prices: MagicMock, capsys
+    ):
         mock_get_prices.return_value = {}
         dates, close = [date(2026, 10, 13)], [249.0]
 
         append_live_quote("TSLA", dates, close)
 
         assert (dates, close) == ([date(2026, 10, 13)], [249.0])
+        assert "using EOD data only" in capsys.readouterr().err
 
     @patch("src.utils.market_data.get_prices")
     def test_provider_error_leaves_series_unchanged(

@@ -178,6 +178,10 @@ def append_live_quote(
         )
         return
     if quote is None:
+        print(
+            f"⚠️  Real-time price unavailable for {ticker.upper()}, using EOD data only",
+            file=sys.stderr,
+        )
         return
 
     dates.append(date.today())
