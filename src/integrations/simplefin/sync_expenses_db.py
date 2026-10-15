@@ -204,9 +204,7 @@ def normalize_transaction(
     except (TypeError, ValueError):
         posted_ts = None
     raw_amount = _to_float(txn.get("amount"))
-    direction = resolve_direction(
-        txn.get("description") or txn.get("payee"), raw_amount
-    )
+    direction = resolve_direction(_category_text(txn), raw_amount)
     amount = _signed_amount(raw_amount, direction)
     return (
         account["id"],

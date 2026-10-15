@@ -139,6 +139,22 @@ def test_normalize_transaction_signs_amount_to_match_direction(
     assert amount == expected_amount
 
 
+def test_normalize_transaction_reads_direction_marker_from_payee() -> None:
+    """Generic description must not hide a Direct Deposit marker in payee."""
+    account = {"id": "ACT-cma", "name": "Cash Management", "org": {"name": "Fidelity"}}
+    txn = {
+        "id": "TXN-payee-deposit",
+        "posted": 1704067200,
+        "payee": "Direct Deposit ACME Payroll",
+        "description": "ACH CREDIT PAYROLL",
+        "amount": "-2500.00",
+    }
+    row = normalize_transaction(account, txn, "2026-10-15T00:00:00Z")
+    amount, direction = row[8], row[9]
+    assert direction == "credit"
+    assert amount == 2500.0
+
+
 def test_sync_inserts_updates_and_promotes_pending_transaction(tmp_path) -> None:
     database_url = f"sqlite:///{tmp_path}/t.db"
     fixture = deepcopy(SFIN_ACCOUNT_SET)
