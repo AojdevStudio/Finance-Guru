@@ -153,7 +153,7 @@ def resolve_direction(text: str | None, amount: float | None) -> Direction:
     so only the wording distinguishes them.
 
     Args:
-        text: Transaction description or payee text, may be None.
+        text: Joined payee and description text, may be None.
         amount: Parsed transaction amount, used only when no marker matches.
 
     Returns:
