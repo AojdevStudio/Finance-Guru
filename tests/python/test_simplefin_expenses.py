@@ -155,6 +155,64 @@ def test_normalize_transaction_reads_direction_marker_from_payee() -> None:
     assert amount == 2500.0
 
 
+def test_normalize_transaction_withdrawal_marker_wins_over_deposit_marker() -> None:
+    """Pins current precedence; no real feed row with conflicting markers is known."""
+    account = {"id": "ACT-cma", "name": "Cash Management", "org": {"name": "Fidelity"}}
+    txn = {
+        "id": "TXN-conflict",
+        "posted": 1704067200,
+        "payee": "CASH ADVANCE EXAMPLE LENDER",
+        "description": "DIRECT DEPOSIT EXAMPLE LENDER",
+        "amount": "300.00",
+    }
+    row = normalize_transaction(account, txn, "2026-10-16T00:00:00Z")
+    amount, direction = row[8], row[9]
+    assert direction == "debit"
+    assert amount == -300.0
+
+
+def test_sync_corrects_a_previously_stored_wrong_direction(tmp_path) -> None:
+    database_url = f"sqlite:///{tmp_path}/t.db"
+    payload = {
+        "accounts": [
+            {
+                "id": "ACT-cma",
+                "name": "Cash Management",
+                "org": {"name": "Fidelity"},
+                "transactions": [
+                    {
+                        "id": "TXN-payroll",
+                        "posted": 1704067200,
+                        "payee": "Direct Deposit ACME Payroll",
+                        "description": "ACH CREDIT PAYROLL",
+                        "amount": "-2500.00",
+                    }
+                ],
+            }
+        ]
+    }
+
+    def fake_dump(months, app_dir):
+        return payload
+
+    sync(database_url, dump_provider=fake_dump)
+    with sqlite3.connect(tmp_path / "t.db") as conn:
+        conn.execute(
+            "UPDATE bank_transactions SET direction = 'debit', amount = -2500.0 "
+            "WHERE txn_id = 'TXN-payroll'"
+        )
+
+    result = sync(database_url, dump_provider=fake_dump)
+
+    with sqlite3.connect(tmp_path / "t.db") as conn:
+        row = conn.execute(
+            "SELECT direction, amount FROM bank_transactions "
+            "WHERE txn_id = 'TXN-payroll'"
+        ).fetchone()
+    assert result["updated"] == 1
+    assert row == ("credit", 2500.0)
+
+
 def test_sync_inserts_updates_and_promotes_pending_transaction(tmp_path) -> None:
     database_url = f"sqlite:///{tmp_path}/t.db"
     fixture = deepcopy(SFIN_ACCOUNT_SET)
