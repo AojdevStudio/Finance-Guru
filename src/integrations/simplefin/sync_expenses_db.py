@@ -153,7 +153,7 @@ def resolve_direction(text: str | None, amount: float | None) -> Direction:
     so only the wording distinguishes them.
 
     Args:
-        text: Transaction description or payee text, may be None.
+        text: Joined payee and description text, may be None.
         amount: Parsed transaction amount, used only when no marker matches.
 
     Returns:
@@ -204,9 +204,7 @@ def normalize_transaction(
     except (TypeError, ValueError):
         posted_ts = None
     raw_amount = _to_float(txn.get("amount"))
-    direction = resolve_direction(
-        txn.get("description") or txn.get("payee"), raw_amount
-    )
+    direction = resolve_direction(_category_text(txn), raw_amount)
     amount = _signed_amount(raw_amount, direction)
     return (
         account["id"],
