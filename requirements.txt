@@ -2,7 +2,7 @@
 #    uv export --format requirements.txt --no-hashes --no-emit-project --frozen
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.14.3
+aiohttp==3.14.4
     # via
     #   growthbook
     #   snaptrade-python-sdk
