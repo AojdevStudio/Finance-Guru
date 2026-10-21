@@ -1,7 +1,55 @@
-import { createPrompt, type Prompt } from '../modules/prompt';
+import { createPrompt, promptWithValidation, type Prompt } from '../modules/prompt';
 import type { OnboardingState } from '../modules/progress';
 import { getSectionData, markSectionComplete, saveState, clearState, OPTIONAL_SECTIONS } from '../modules/progress';
-import { generateAllConfigs } from '../modules/yaml-generator';
+import { generateAllConfigs, type UserData } from '../modules/yaml-generator';
+import { validateNonEmpty } from '../modules/input-validator';
+import { saveSectionData } from '../modules/progress';
+import type { LiquidAssetsData } from './liquid-assets';
+import type { InvestmentPortfolioData } from './investment-portfolio';
+import type { CashFlowData } from './cash-flow';
+import type { DebtProfileData } from './debt-profile';
+import type { PreferencesData } from './preferences';
+import type { EnvSetupData } from './env-setup';
+import type { BrokerSelectionData } from './broker-selection';
+
+export function profileFromState(state: OnboardingState): UserData {
+  const env: Partial<EnvSetupData> = getSectionData(state, 'env_setup') ?? {};
+  if (!env.user_name?.trim()) throw new Error('Your name is required before saving your profile');
+  const assets: Partial<LiquidAssetsData> = getSectionData(state, 'liquid_assets') ?? {};
+  const investments: Partial<InvestmentPortfolioData> = getSectionData(state, 'investments') ?? {};
+  const cashFlow: Partial<CashFlowData> = getSectionData(state, 'cash_flow') ?? {};
+  const debt: Partial<DebtProfileData> = getSectionData(state, 'debt') ?? {};
+  const preferences: Partial<PreferencesData> = getSectionData(state, 'preferences') ?? {};
+  const broker: Partial<BrokerSelectionData> = getSectionData(state, 'broker_selection') ?? {};
+  return {
+    user_name: env.user_name,
+    language: env.communication_language,
+    liquid_assets_total: assets.total,
+    liquid_assets_count: assets.accounts_count,
+    liquid_assets_yield: assets.average_yield,
+    liquid_assets_structure: assets.structure?.join(', '),
+    portfolio_value: investments.total_value,
+    retirement_value: investments.retirement_accounts,
+    has_retirement: (investments.retirement_accounts ?? 0) > 0,
+    allocation_strategy: investments.allocation,
+    risk_tolerance: preferences.risk_tolerance ?? investments.risk_profile,
+    ...cashFlow,
+    mortgage_balance: debt.mortgage_balance,
+    mortgage_payment: debt.mortgage_payment,
+    has_mortgage: (debt.mortgage_balance ?? 0) > 0,
+    other_debt: debt.other_debt?.map(item => item.type).join(', '),
+    weighted_rate: debt.weighted_interest_rate,
+    investment_philosophy: preferences.investment_philosophy,
+    focus_areas: preferences.focus_areas,
+    brokerage: env.primary_brokerage ?? broker.broker_name,
+    account_number: env.brokerage_account_number,
+    has_alphavantage: env.has_alphavantage,
+    alphavantage_key: env.alphavantage_key,
+    has_brightdata: env.has_brightdata,
+    brightdata_key: env.brightdata_key,
+  };
+}
+
 
 function formatCurrency(value?: number): string {
   if (value === undefined || value === null) return 'Not provided';
@@ -157,7 +205,13 @@ export async function runSummarySection(state: OnboardingState): Promise<Onboard
       console.log('');
 
       try {
-        await generateAllConfigs(state);
+        const identity = getSectionData(state, 'env_setup');
+        if (!identity?.user_name) {
+          const userName = await promptWithValidation(rl, 'Your name: ', validateNonEmpty);
+          saveSectionData(state, 'env_setup', { ...identity, user_name: userName });
+          saveState(state);
+        }
+        generateAllConfigs(profileFromState(state));
         console.log('✅ Configuration files generated successfully');
         console.log('');
         console.log('Files created:');

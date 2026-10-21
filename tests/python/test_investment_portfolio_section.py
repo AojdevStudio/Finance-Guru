@@ -131,9 +131,7 @@ class TestInvestmentPortfolioSection:
         assert "markSectionComplete" in content
         assert "saveState" in content
 
-        assert (
-            "'investment_portfolio'" in content or '"investment_portfolio"' in content
-        )
+        assert "'investments'" in content or '"investments"' in content
 
     def test_section_marks_next_section_correctly(self):
         """Test that section marks 'cash_flow' as next section"""

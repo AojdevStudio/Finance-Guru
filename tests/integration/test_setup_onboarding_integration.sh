@@ -98,26 +98,6 @@ cleanup() {
 
 trap cleanup EXIT
 
-TMPBIN=""
-PYTHON3_VERSION="0.0"
-if command -v python3 &>/dev/null; then
-  PYTHON3_VERSION=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
-fi
-PYTHON3_MAJOR=$(echo "$PYTHON3_VERSION" | cut -d. -f1)
-PYTHON3_MINOR=$(echo "$PYTHON3_VERSION" | cut -d. -f2)
-
-if [ "$PYTHON3_MAJOR" -lt 3 ] || { [ "$PYTHON3_MAJOR" -eq 3 ] && [ "$PYTHON3_MINOR" -lt 12 ]; }; then
-  if command -v python3.12 &>/dev/null; then
-    TMPBIN=$(mktemp -d)
-    ln -s "$(command -v python3.12)" "$TMPBIN/python3"
-    export PATH="$TMPBIN:$PATH"
-    printf "  Note: python3 is %s, using python3.12 via PATH override\n\n" "$PYTHON3_VERSION"
-  else
-    printf "  ${RED}Error: python3 is %s and python3.12 not found. Cannot run tests.${NC}\n" "$PYTHON3_VERSION"
-    exit 1
-  fi
-fi
-
 log_step "Setting up test environment"
 
 mkdir -p "$TEST_DIR"
@@ -185,6 +165,8 @@ assert_grep "$TEST_DIR/.setup-progress" "^python_deps_installed$" ".setup-progre
 assert_grep "/tmp/setup-test-first.log" "Setup Complete" "Summary printed on first run"
 
 printf "\n"
+
+assert_grep "/tmp/setup-test-first.log" "uv run python -m src.cli.onboarding_wizard" "Summary names the real onboarding module"
 
 log_step "Test 2: --check-deps-only does not modify filesystem"
 
@@ -293,7 +275,6 @@ printf "  Second run:  /tmp/setup-test-second.log\n"
 printf "  Missing dir: /tmp/setup-test-missing.log\n"
 printf "\n"
 
-[ -n "$TMPBIN" ] && rm -rf "$TMPBIN"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
   exit 1

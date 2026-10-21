@@ -151,7 +151,7 @@ export async function runBrokerSelectionSection(state: OnboardingState): Promise
 
     saveSectionData(state, 'broker_selection', brokerData);
 
-    markSectionComplete(state, 'broker_selection', 'investment_portfolio');
+    markSectionComplete(state, 'broker_selection', 'investments');
 
     saveState(state);
 

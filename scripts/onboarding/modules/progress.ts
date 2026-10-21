@@ -14,7 +14,7 @@ export const OPTIONAL_SECTIONS = ['mcp_config', 'env_setup'] as const;
 
 export const SECTION_ORDER = [...REQUIRED_SECTIONS, ...OPTIONAL_SECTIONS] as const;
 
-export type SectionName = (typeof SECTION_ORDER)[number];
+export type SectionName = (typeof SECTION_ORDER)[number] | 'broker_selection';
 
 export interface OnboardingState {
   version: string;
