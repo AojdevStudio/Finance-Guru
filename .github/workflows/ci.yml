@@ -55,6 +55,9 @@ jobs:
         working-directory: .claude/hooks
         run: bun test
 
+      - name: Onboarding tests
+        run: bun test tests/onboarding
+
       - name: Ruff lint
         run: uv run ruff check .
 
