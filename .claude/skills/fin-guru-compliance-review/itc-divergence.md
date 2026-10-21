@@ -90,6 +90,13 @@ no trade. Missing supported-ticker inputs and an internal VaR limit breach retur
 a `GUARDRAIL` block. DR-4 takes precedence over band approvals. An exact 30 percent
 divergence does not trigger the above-30-percent block.
 
+Run the same decision from the CLI without credentials or a network call. Supply
+observed inputs. A missing required value returns a typed block.
+
+```bash
+uv run python -m src.analysis.itc_risk_cli --compliance-input '{"itc_supported":true,"itc_risk":0.8,"daily_var":-0.025}' --output json
+```
+
 ## Example: TSLA position review
 
 Context: the owner requests a $5,000 increase to the TSLA position.
