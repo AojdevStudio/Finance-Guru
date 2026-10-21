@@ -22,7 +22,7 @@ class PortfolioHeader(Widget):
     Shows total value, day change, and timestamp from latest CSV snapshot.
     """
 
-    portfolio = reactive(None)
+    portfolio: reactive[PortfolioSnapshotInput | None] = reactive(None)
 
     def render(self) -> Text:
         """Render portfolio header with formatted statistics.

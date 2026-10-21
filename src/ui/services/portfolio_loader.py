@@ -133,13 +133,15 @@ class PortfolioLoader:
 
             try:
                 holdings.append(
-                    HoldingInput(
-                        symbol=symbol,
-                        quantity=quantity,
-                        current_value=current_value,
-                        day_change=day_change,
-                        day_change_pct=day_change_pct,
-                        layer=symbol_to_layer.get(symbol, "unknown"),
+                    HoldingInput.model_validate(
+                        {
+                            "symbol": symbol,
+                            "quantity": quantity,
+                            "current_value": current_value,
+                            "day_change": day_change,
+                            "day_change_pct": day_change_pct,
+                            "layer": symbol_to_layer.get(symbol, "unknown"),
+                        }
                     )
                 )
             except ValidationError:

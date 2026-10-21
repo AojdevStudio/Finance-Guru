@@ -14,6 +14,8 @@ INDICATORS:
 Used by: Compliance Officer (position limits), Margin Specialist (leverage), Risk Assessment
 """
 
+from typing import Literal
+
 import numpy as np
 import pandas as pd
 
@@ -232,7 +234,7 @@ class VolatilityCalculator:
         period = self.config.hvol_period
         annualization_factor = self.config.hvol_annualization_factor
 
-        returns = np.log(closes / closes.shift(1))
+        returns = pd.Series(np.log(closes / closes.shift(1)), index=closes.index)
 
         rolling_vol = returns.rolling(window=period).std()
 
@@ -293,7 +295,7 @@ class VolatilityCalculator:
         self,
         hvol: HistoricalVolatilityOutput,
         atr: ATROutput,
-    ) -> str:
+    ) -> Literal["low", "normal", "high", "extreme"]:
         """Assess overall volatility regime based on multiple indicators.
 
         LOGIC:

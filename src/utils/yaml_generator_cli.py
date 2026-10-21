@@ -258,6 +258,7 @@ Examples:
                     system_context_md="",
                     claude_md="",
                     env_file="",
+                    mcp_json="",
                     generation_date=date.today(),
                     user_name=user_data.identity.user_name,
                 )

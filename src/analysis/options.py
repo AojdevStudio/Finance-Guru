@@ -34,6 +34,7 @@ Created: 2025-10-13
 
 from datetime import date
 from math import exp, log, sqrt
+from typing import Literal
 
 from scipy.stats import norm
 
@@ -138,7 +139,7 @@ class OptionsCalculator:
 
         if is_call:
             if S > K * 1.02:
-                moneyness = "ITM"
+                moneyness: Literal["ITM", "ATM", "OTM"] = "ITM"
             elif S < K * 0.98:
                 moneyness = "OTM"
             else:
@@ -297,7 +298,7 @@ class OptionsCalculator:
             C = S * e^(-qT) * N(d1) - K * e^(-rT) * N(d2)
         """
         call = S * exp(-q * T) * norm.cdf(d1) - K * exp(-r * T) * norm.cdf(d2)
-        return max(call, 0.0)
+        return float(max(call, 0.0))
 
     def _put_price(
         self, S: float, K: float, T: float, r: float, q: float, d1: float, d2: float
@@ -308,7 +309,7 @@ class OptionsCalculator:
             P = K * e^(-rT) * N(-d2) - S * e^(-qT) * N(-d1)
         """
         put = K * exp(-r * T) * norm.cdf(-d2) - S * exp(-q * T) * norm.cdf(-d1)
-        return max(put, 0.0)
+        return float(max(put, 0.0))
 
     def _calculate_delta(self, is_call: bool, d1: float, T: float, q: float) -> float:
         """Calculate delta.
@@ -321,9 +322,9 @@ class OptionsCalculator:
             Delta = 0.65 means: $1 stock up → $0.65 option up
         """
         if is_call:
-            return exp(-q * T) * norm.cdf(d1)
+            return float(exp(-q * T) * norm.cdf(d1))
         else:
-            return exp(-q * T) * (norm.cdf(d1) - 1)
+            return float(exp(-q * T) * (norm.cdf(d1) - 1))
 
     def _calculate_gamma(
         self, S: float, d1: float, T: float, sigma: float, q: float
@@ -342,7 +343,7 @@ class OptionsCalculator:
         This is when options are most sensitive to price changes.
         """
         gamma = exp(-q * T) * norm.pdf(d1) / (S * sigma * sqrt(T))
-        return max(gamma, 0.0)
+        return float(max(gamma, 0.0))
 
     def _calculate_theta(
         self,
@@ -377,7 +378,7 @@ class OptionsCalculator:
             term3 = -q * S * exp(-q * T) * norm.cdf(-d1)
             theta = term1 + term2 + term3
 
-        return theta / 365
+        return float(theta / 365)
 
     def _calculate_vega(self, S: float, T: float, d1: float, q: float) -> float:
         """Calculate vega.
@@ -393,7 +394,7 @@ class OptionsCalculator:
         Short-dated and far OTM/ITM options have low vega.
         """
         vega = S * exp(-q * T) * sqrt(T) * norm.pdf(d1)
-        return vega / PERCENT_POINTS_PER_UNIT
+        return float(vega / PERCENT_POINTS_PER_UNIT)
 
     def _calculate_rho(
         self, is_call: bool, K: float, T: float, r: float, d2: float
@@ -412,7 +413,7 @@ class OptionsCalculator:
         else:
             rho = -K * T * exp(-r * T) * norm.cdf(-d2)
 
-        return rho / PERCENT_POINTS_PER_UNIT
+        return float(rho / PERCENT_POINTS_PER_UNIT)
 
 
 def price_option(
@@ -420,7 +421,7 @@ def price_option(
     strike: float,
     days_to_expiry: int,
     volatility: float,
-    option_type: str = "call",
+    option_type: Literal["call", "put"] = "call",
     risk_free_rate: float = 0.045,
     dividend_yield: float = 0.0,
 ) -> GreeksOutput:

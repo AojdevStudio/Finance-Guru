@@ -33,7 +33,7 @@ Created: 2025-10-13
 import sys
 from collections import Counter
 from datetime import date
-from typing import assert_never
+from typing import Literal, assert_never
 
 import pandas as pd
 
@@ -306,7 +306,7 @@ class TechnicalScreener:
                 separation_pct = separation / avg_price
 
                 if separation_pct > 0.05:
-                    strength = "strong"
+                    strength: SignalStrength = "strong"
                 elif separation_pct > 0.02:
                     strength = "moderate"
                 else:
@@ -343,7 +343,7 @@ class TechnicalScreener:
                 separation = abs(recent_ma50.iloc[i] - recent_ma200.iloc[i])
                 separation_pct = separation / df["price"].mean()
 
-                strength = (
+                strength: SignalStrength = (
                     "strong"
                     if separation_pct > 0.05
                     else "moderate"
@@ -374,7 +374,7 @@ class TechnicalScreener:
 
             if current_rsi < self.criteria.rsi_oversold:
                 if current_rsi < 20:
-                    strength = "strong"
+                    strength: SignalStrength = "strong"
                 elif current_rsi < 25:
                     strength = "moderate"
                 else:
@@ -404,7 +404,7 @@ class TechnicalScreener:
 
             if current_rsi > self.criteria.rsi_overbought:
                 if current_rsi > 80:
-                    strength = "strong"
+                    strength: SignalStrength = "strong"
                 elif current_rsi > 75:
                     strength = "moderate"
                 else:
@@ -435,7 +435,7 @@ class TechnicalScreener:
                 macd_result.signal == "bullish"
                 or macd_result.signal == "strong_bullish"
             ):
-                strength = (
+                strength: SignalStrength = (
                     "strong" if macd_result.signal == "strong_bullish" else "moderate"
                 )
 
@@ -464,7 +464,7 @@ class TechnicalScreener:
                 macd_result.signal == "bearish"
                 or macd_result.signal == "strong_bearish"
             ):
-                strength = (
+                strength: SignalStrength = (
                     "strong" if macd_result.signal == "strong_bearish" else "moderate"
                 )
 
@@ -498,7 +498,7 @@ class TechnicalScreener:
 
             if volume_multiplier > self.criteria.volume_multiplier:
                 if volume_multiplier > 2.5:
-                    strength = "strong"
+                    strength: SignalStrength = "strong"
                 elif volume_multiplier > 2.0:
                     strength = "moderate"
                 else:
@@ -532,7 +532,7 @@ class TechnicalScreener:
 
             if volume_multiplier > self.criteria.volume_multiplier:
                 if volume_multiplier > 2.5:
-                    strength = "strong"
+                    strength: SignalStrength = "strong"
                 elif volume_multiplier > 2.0:
                     strength = "moderate"
                 else:
@@ -595,7 +595,7 @@ class TechnicalScreener:
 
     def _generate_recommendation(
         self, signals: list[TechnicalSignal]
-    ) -> tuple[str, float]:
+    ) -> tuple[Literal["strong_buy", "buy", "hold", "sell", "strong_sell"], float]:
         """Generate a recommendation from the direction of the signals.
 
         Bullish signals add their strength points and bearish signals subtract
