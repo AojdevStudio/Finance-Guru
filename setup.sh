@@ -532,7 +532,7 @@ print_summary() {
   printf "  1. Edit .env to add your API keys (optional)\n"
   printf "     yfinance works without API keys for basic market data.\n"
   printf "\n"
-  printf "  2. Run the onboarding wizard:\n"
+  printf "  2. Set FIN_GURU_DATA_ROOT to your instance, or run from that instance.\n"
   printf "     uv run python -m src.cli.onboarding_wizard\n"
   printf "\n"
   printf "  3. After onboarding: claude --agent fg-finance-orchestrator\n"

@@ -411,7 +411,8 @@ def test_full_generation_workflow(
     """Test complete CLAUDE.md generation workflow end-to-end."""
     result = generator.generate_claude_md(valid_user_data)
 
-    assert result.startswith("# CLAUDE.md"), "Generated file doesn't start with header"
+    engine_rules = Path(__file__).resolve().parents[2] / "CLAUDE.md"
+    assert result.startswith(f"@{engine_rules}\n\n# CLAUDE.md")
     assert len(result) > 1000, "Generated CLAUDE.md seems too short"
 
     assert "Alex's" in result, "Missing personalization"

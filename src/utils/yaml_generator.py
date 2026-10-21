@@ -250,7 +250,9 @@ class YAMLGenerator:
         """
         template = self._load_template("CLAUDE", "md")
         prepared_data = self._prepare_user_data(data)
-        return self._process_template(template, prepared_data)
+        engine_rules = Path(__file__).resolve().parents[2] / "CLAUDE.md"
+        content = self._process_template(template, prepared_data)
+        return f"@{engine_rules}\n\n{content}"
 
     def generate_env(self, data: UserDataInput) -> str:
         """Generate .env file from template.

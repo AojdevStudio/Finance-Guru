@@ -252,6 +252,8 @@ class TestConfigGeneration:
         result = yaml_generator.generate_claude_md(valid_user_data)
 
         assert "TestUser" in result or "CLAUDE" in result
+        engine_rules = Path(__file__).resolve().parents[2] / "CLAUDE.md"
+        assert result.startswith(f"@{engine_rules}\n")
 
     def test_generate_env(
         self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
