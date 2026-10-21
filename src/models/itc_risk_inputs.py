@@ -278,8 +278,9 @@ class ITCRiskResponse(BaseModel):
         if not self.current_price or not self.risk_bands:
             return self.risk_bands[:n]
 
+        current_price = self.current_price
         sorted_bands = sorted(
-            self.risk_bands, key=lambda b: abs(b.price - self.current_price)
+            self.risk_bands, key=lambda b: abs(b.price - current_price)
         )
         return sorted_bands[:n]
 

@@ -18,11 +18,16 @@ import pytest
 from src.models.backtest_inputs import BacktestConfig, TradeSignal
 from src.strategies.backtester import Backtester
 
+INITIAL_CAPITAL = 100_000.0
+COMMISSION_PER_TRADE = 10.0
+SLIPPAGE_RATE = 0.001
+COSTED_POSITION_FRACTION = 0.5
+
 
 @pytest.fixture
 def default_config():
     return BacktestConfig(
-        initial_capital=100_000.0,
+        initial_capital=INITIAL_CAPITAL,
         commission_per_trade=0.0,
         slippage_pct=0.0,
         position_size_pct=1.0,
@@ -33,10 +38,10 @@ def default_config():
 @pytest.fixture
 def config_with_costs():
     return BacktestConfig(
-        initial_capital=100_000.0,
-        commission_per_trade=10.0,
-        slippage_pct=0.001,
-        position_size_pct=0.5,
+        initial_capital=INITIAL_CAPITAL,
+        commission_per_trade=COMMISSION_PER_TRADE,
+        slippage_pct=SLIPPAGE_RATE,
+        position_size_pct=COSTED_POSITION_FRACTION,
         allow_fractional_shares=True,
     )
 
@@ -117,10 +122,10 @@ class TestBacktestExecution:
 
     def test_multiple_round_trips(self):
         config = BacktestConfig(
-            initial_capital=100_000.0,
+            initial_capital=INITIAL_CAPITAL,
             commission_per_trade=0.0,
             slippage_pct=0.0,
-            position_size_pct=0.5,
+            position_size_pct=COSTED_POSITION_FRACTION,
             allow_fractional_shares=True,
         )
         prices = [100.0, 120.0, 110.0, 130.0]
@@ -136,7 +141,7 @@ class TestBacktestExecution:
 class TestTransactionCosts:
     def test_slippage_increases_buy_price(self):
         config = BacktestConfig(
-            initial_capital=100_000.0,
+            initial_capital=INITIAL_CAPITAL,
             slippage_pct=0.01,
             commission_per_trade=0.0,
         )
@@ -150,10 +155,10 @@ class TestTransactionCosts:
 
     def test_commission_deducted(self):
         config = BacktestConfig(
-            initial_capital=100_000.0,
+            initial_capital=INITIAL_CAPITAL,
             commission_per_trade=50.0,
             slippage_pct=0.0,
-            position_size_pct=0.5,
+            position_size_pct=COSTED_POSITION_FRACTION,
         )
         signals = _make_signals([100.0, 100.0], ["BUY", "SELL"])
         bt = Backtester(config)
@@ -176,7 +181,7 @@ class TestTransactionCosts:
 
     def test_integer_shares_when_fractional_disabled(self):
         config = BacktestConfig(
-            initial_capital=100_000.0,
+            initial_capital=INITIAL_CAPITAL,
             allow_fractional_shares=False,
             slippage_pct=0.0,
             commission_per_trade=0.0,
@@ -190,8 +195,8 @@ class TestTransactionCosts:
 
     def test_position_sizing(self):
         config = BacktestConfig(
-            initial_capital=100_000.0,
-            position_size_pct=0.5,
+            initial_capital=INITIAL_CAPITAL,
+            position_size_pct=COSTED_POSITION_FRACTION,
             slippage_pct=0.0,
             commission_per_trade=0.0,
         )
@@ -258,10 +263,10 @@ class TestPerformanceMetrics:
 
     def test_cost_analysis_with_slippage(self):
         config = BacktestConfig(
-            initial_capital=100_000.0,
+            initial_capital=INITIAL_CAPITAL,
             slippage_pct=0.01,
-            commission_per_trade=10.0,
-            position_size_pct=0.5,
+            commission_per_trade=COMMISSION_PER_TRADE,
+            position_size_pct=COSTED_POSITION_FRACTION,
         )
         signals = _make_signals([100.0, 120.0], ["BUY", "SELL"])
         bt = Backtester(config)

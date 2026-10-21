@@ -357,7 +357,9 @@ Examples:
                 f"📥 Fetching data for {len(args.tickers)} tickers...", file=sys.stderr
             )
 
-            tickers_data = {}
+            tickers_data: dict[
+                str, tuple[list[float], list[date], list[float] | None]
+            ] = {}
             for ticker in args.tickers:
                 ticker = ticker.upper()
                 try:

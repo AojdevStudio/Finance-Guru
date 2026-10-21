@@ -47,7 +47,7 @@ def fetch_returns(ticker: str, days: int) -> list[float]:
             raise ValueError(f"No data found for {ticker}")
 
         returns = hist["Close"].pct_change().dropna().tolist()
-        return returns
+        return [float(value) for value in returns]
 
     except ImportError:
         print("ERROR: yfinance not installed", file=sys.stderr)

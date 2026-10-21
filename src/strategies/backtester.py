@@ -407,7 +407,7 @@ class Backtester:
     def _generate_recommendation(
         self,
         performance: BacktestPerformanceMetrics,
-    ) -> tuple[str, str]:
+    ) -> tuple[Literal["DEPLOY", "OPTIMIZE", "REJECT"], str]:
         """Generate deployment recommendation based on performance.
 
         DECISION CRITERIA:
@@ -464,7 +464,7 @@ class Backtester:
             reasons.append(f"Low win rate ({performance.win_rate * 100:.1f}%)")
 
         if good_return and good_sharpe and acceptable_dd and decent_win_rate:
-            recommendation = "DEPLOY"
+            recommendation: Literal["DEPLOY", "OPTIMIZE", "REJECT"] = "DEPLOY"
         elif (good_return or good_sharpe) and acceptable_dd:
             recommendation = "OPTIMIZE"
         else:

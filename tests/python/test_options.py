@@ -22,6 +22,11 @@ from src.models.options_inputs import (
     PutCallParityInput,
 )
 
+ATM_SPOT_AND_STRIKE = 100.0
+QUARTER_YEAR_TO_EXPIRY = 0.25
+ATM_VOLATILITY = 0.30
+RISK_FREE_RATE = 0.05
+
 
 @pytest.fixture
 def calculator():
@@ -32,11 +37,11 @@ def calculator():
 def atm_call_input():
     """ATM call: spot = strike = 100, 3 months, 30% vol."""
     return BlackScholesInput(
-        spot_price=100.0,
-        strike=100.0,
-        time_to_expiry=0.25,
-        volatility=0.30,
-        risk_free_rate=0.05,
+        spot_price=ATM_SPOT_AND_STRIKE,
+        strike=ATM_SPOT_AND_STRIKE,
+        time_to_expiry=QUARTER_YEAR_TO_EXPIRY,
+        volatility=ATM_VOLATILITY,
+        risk_free_rate=RISK_FREE_RATE,
         dividend_yield=0.0,
         option_type="call",
     )
@@ -46,11 +51,11 @@ def atm_call_input():
 def atm_put_input():
     """ATM put: spot = strike = 100, 3 months, 30% vol."""
     return BlackScholesInput(
-        spot_price=100.0,
-        strike=100.0,
-        time_to_expiry=0.25,
-        volatility=0.30,
-        risk_free_rate=0.05,
+        spot_price=ATM_SPOT_AND_STRIKE,
+        strike=ATM_SPOT_AND_STRIKE,
+        time_to_expiry=QUARTER_YEAR_TO_EXPIRY,
+        volatility=ATM_VOLATILITY,
+        risk_free_rate=RISK_FREE_RATE,
         dividend_yield=0.0,
         option_type="put",
     )
@@ -61,10 +66,10 @@ def itm_call_input():
     """ITM call: spot=120, strike=100."""
     return BlackScholesInput(
         spot_price=120.0,
-        strike=100.0,
-        time_to_expiry=0.25,
-        volatility=0.30,
-        risk_free_rate=0.05,
+        strike=ATM_SPOT_AND_STRIKE,
+        time_to_expiry=QUARTER_YEAR_TO_EXPIRY,
+        volatility=ATM_VOLATILITY,
+        risk_free_rate=RISK_FREE_RATE,
         dividend_yield=0.0,
         option_type="call",
     )
@@ -75,10 +80,10 @@ def otm_call_input():
     """OTM call: spot=80, strike=100."""
     return BlackScholesInput(
         spot_price=80.0,
-        strike=100.0,
-        time_to_expiry=0.25,
-        volatility=0.30,
-        risk_free_rate=0.05,
+        strike=ATM_SPOT_AND_STRIKE,
+        time_to_expiry=QUARTER_YEAR_TO_EXPIRY,
+        volatility=ATM_VOLATILITY,
+        risk_free_rate=RISK_FREE_RATE,
         dividend_yield=0.0,
         option_type="call",
     )

@@ -156,11 +156,13 @@ class CorrelationEngine:
         else:
             corr_df = returns.corr(method="spearman")
 
-        corr_dict = {}
-        for ticker1 in tickers:
-            corr_dict[ticker1] = {}
-            for ticker2 in tickers:
-                corr_dict[ticker1][ticker2] = float(corr_df.loc[ticker1, ticker2])
+        corr_values = corr_df.loc[tickers, tickers].to_numpy(dtype=float)
+        corr_dict: dict[str, dict[str, float]] = {
+            ticker1: {
+                ticker2: float(corr_values[i, j]) for j, ticker2 in enumerate(tickers)
+            }
+            for i, ticker1 in enumerate(tickers)
+        }
 
         off_diagonal_values = []
         for i, ticker1 in enumerate(tickers):
@@ -223,11 +225,13 @@ class CorrelationEngine:
         """
         cov_df = returns.cov()
 
-        cov_dict = {}
-        for ticker1 in tickers:
-            cov_dict[ticker1] = {}
-            for ticker2 in tickers:
-                cov_dict[ticker1][ticker2] = float(cov_df.loc[ticker1, ticker2])
+        cov_values = cov_df.loc[tickers, tickers].to_numpy(dtype=float)
+        cov_dict: dict[str, dict[str, float]] = {
+            ticker1: {
+                ticker2: float(cov_values[i, j]) for j, ticker2 in enumerate(tickers)
+            }
+            for i, ticker1 in enumerate(tickers)
+        }
 
         calc_date = _calendar_date(returns.index[-1])
 
@@ -314,6 +318,9 @@ class CorrelationEngine:
             List of RollingCorrelationOutput for all pairs
         """
         rolling_outputs = []
+        window = self.config.rolling_window
+        if window is None:
+            raise ValueError("Rolling correlation requires a window")
 
         for i, ticker1 in enumerate(tickers):
             for j, ticker2 in enumerate(tickers):
@@ -321,7 +328,7 @@ class CorrelationEngine:
                     rolling_corr = (
                         returns[ticker1]
                         .rolling(
-                            window=self.config.rolling_window,
+                            window=window,
                             min_periods=self.config.min_periods,
                         )
                         .corr(returns[ticker2])

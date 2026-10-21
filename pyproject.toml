@@ -179,36 +179,3 @@ module = [
     "prometheus_client.*",
 ]
 ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = [
-    "src.utils.screener",
-    "src.utils.screener_cli",
-    "src.utils.momentum_cli",
-    "src.utils.moving_averages",
-    "src.utils.moving_averages_cli",
-    "src.utils.input_validation",
-    "src.utils.input_validation_cli",
-    "src.utils.data_validator",
-    "src.utils.volatility",
-    "src.utils.yaml_generator_cli",
-    "src.analysis.factors_cli",
-    "src.analysis.correlation",
-    "src.analysis.options_chain_cli",
-    "src.strategies.backtester",
-    "src.strategies.backtester_cli",
-    "src.strategies.optimizer",
-    "src.ui.services.portfolio_loader",
-    "src.models.dashboard_inputs",
-    "src.analysis.options",
-    "src.analysis.itc_risk",
-    "src.cli.onboarding_wizard",
-    "src.models.yaml_generation_inputs",
-    "src.models.itc_risk_inputs",
-    "src.utils.market_data",
-    "src.ui.widgets.results_panel",
-    "src.ui.widgets.portfolio_header",
-    "src.ui.app",
-]
-warn_unused_ignores = false
-disable_error_code = ["arg-type", "assignment", "no-any-return", "operator", "var-annotated", "call-arg", "index", "return-value", "attr-defined", "union-attr", "type-var", "prop-decorator", "import-not-found"]

@@ -436,3 +436,33 @@ class TestDataConsistency:
 )
 def test_possessive(name: str, expected: str) -> None:
     assert possessive(name) == expected
+
+
+def test_cli_generates_one_config_without_missing_output_fields(
+    valid_user_data, tmp_path
+):
+    import subprocess
+    import sys
+
+    input_path = tmp_path / "synthetic-input.json"
+    input_path.write_text(valid_user_data.model_dump_json())
+    output_path = tmp_path / "generated"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.utils.yaml_generator_cli",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--type",
+            "config",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (output_path / "config.yaml").is_file()
+    assert not (output_path / "user-profile.yaml").exists()

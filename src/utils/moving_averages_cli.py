@@ -125,6 +125,8 @@ def fetch_ma_data(
 def format_single_ma_output(analysis: MovingAverageAnalysis) -> str:
     """Format single MA results for human reading."""
     ma = analysis.primary_ma
+    if ma.current_value is None:
+        raise ValueError("Moving average is unavailable for this lookback")
     output = []
 
     output.append("=" * 70)
@@ -288,6 +290,8 @@ def format_crossover_output(analysis: MovingAverageAnalysis) -> str:  # noqa: C9
                 output.append("     → Watch for trend confirmation")
 
         output.append("")
+        if cross.days_since_crossover is None:
+            raise ValueError("A crossover date requires its age in days")
         if cross.days_since_crossover <= 5:
             output.append(
                 f"  🔥 FRESH SIGNAL: Crossover just {cross.days_since_crossover} days ago - signal very recent!"

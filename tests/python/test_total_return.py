@@ -44,16 +44,22 @@ from src.models.total_return_inputs import (
     TotalReturnInput,
 )
 
+DEFAULT_START_DATE = date(2025, 1, 2)
+DEFAULT_END_DATE = date(2025, 7, 2)
+QUARTERLY_PAYMENTS_PER_YEAR = 4
+MONTHLY_PAYMENTS_PER_YEAR = 12
+WEEKLY_PAYMENTS_PER_YEAR = 52
+
 MOCK_DIVIDEND_SCHEDULES = {
-    "SCHD": {"frequency": 4, "label": "quarterly"},
-    "VYM": {"frequency": 4, "label": "quarterly"},
-    "VOO": {"frequency": 4, "label": "quarterly"},
-    "CLM": {"frequency": 12, "label": "monthly"},
-    "CRF": {"frequency": 12, "label": "monthly"},
-    "YMAX": {"frequency": 52, "label": "weekly"},
-    "QQQY": {"frequency": 52, "label": "weekly"},
-    "JEPI": {"frequency": 12, "label": "monthly"},
-    "JEPQ": {"frequency": 12, "label": "monthly"},
+    "SCHD": {"frequency": QUARTERLY_PAYMENTS_PER_YEAR, "label": "quarterly"},
+    "VYM": {"frequency": QUARTERLY_PAYMENTS_PER_YEAR, "label": "quarterly"},
+    "VOO": {"frequency": QUARTERLY_PAYMENTS_PER_YEAR, "label": "quarterly"},
+    "CLM": {"frequency": MONTHLY_PAYMENTS_PER_YEAR, "label": "monthly"},
+    "CRF": {"frequency": MONTHLY_PAYMENTS_PER_YEAR, "label": "monthly"},
+    "YMAX": {"frequency": WEEKLY_PAYMENTS_PER_YEAR, "label": "weekly"},
+    "QQQY": {"frequency": WEEKLY_PAYMENTS_PER_YEAR, "label": "weekly"},
+    "JEPI": {"frequency": MONTHLY_PAYMENTS_PER_YEAR, "label": "monthly"},
+    "JEPQ": {"frequency": MONTHLY_PAYMENTS_PER_YEAR, "label": "monthly"},
 }
 
 
@@ -68,8 +74,8 @@ def _make_input(
     """Build a TotalReturnInput with sensible defaults."""
     return TotalReturnInput(
         ticker=ticker,
-        start_date=start_date or date(2025, 1, 2),
-        end_date=end_date or date(2025, 7, 2),
+        start_date=start_date or DEFAULT_START_DATE,
+        end_date=end_date or DEFAULT_END_DATE,
         initial_shares=initial_shares,
     )
 
@@ -1089,5 +1095,5 @@ class TestInstancePaths:
         monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
 
         assert load_dividend_schedules() == {
-            "SYNTH": {"frequency": 4, "label": "quarterly"}
+            "SYNTH": {"frequency": QUARTERLY_PAYMENTS_PER_YEAR, "label": "quarterly"}
         }

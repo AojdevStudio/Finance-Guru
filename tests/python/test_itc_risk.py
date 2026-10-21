@@ -30,6 +30,10 @@ import pytest
 
 from src.models.itc_risk_inputs import ITCRiskResponse, RiskBand
 
+MEDIUM_RISK_SCORE = 0.52
+HIGH_RISK_SCORE = 0.82
+CRITICAL_RISK_SCORE = 0.92
+
 
 class TestITCRiskCalculatorInit:
     """Tests for ITCRiskCalculator initialization."""
