@@ -12,7 +12,6 @@ export interface EnvSetupData {
   alphavantage_key?: string;
   has_brightdata?: boolean;
   brightdata_key?: string;
-  google_sheets_credentials?: string;
   primary_brokerage?: string;
   brokerage_account_number?: string;
 }
@@ -53,13 +52,6 @@ ALPHA_VANTAGE_API_KEY="${envData.alphavantage_key}"
       envContent += `\n# MCP Server Configuration\n`;
     }
     envContent += `BRIGHT_DATA_API_KEY="${envData.brightdata_key}"
-`;
-  }
-
-  if (envData.google_sheets_credentials) {
-    envContent += `
-# Google Sheets Integration
-GOOGLE_SHEETS_CREDENTIALS_PATH="${envData.google_sheets_credentials}"
 `;
   }
 
@@ -152,31 +144,7 @@ export async function runEnvSetupSection(state: OnboardingState): Promise<Onboar
     }
 
     console.log('');
-    console.log('3. Google Sheets Integration (Optional)');
-    console.log('');
-
-    const hasGoogleSheets = await promptYesNo(
-      rl,
-      'Do you want to configure Google Sheets integration?'
-    );
-
-    let googleSheetsCredentials: string | null = null;
-    if (hasGoogleSheets) {
-      console.log('');
-      console.log('You will need a Google Cloud service account credentials JSON file.');
-      console.log('See: https://developers.google.com/sheets/api/quickstart');
-      console.log('');
-
-      googleSheetsCredentials = await promptWithValidation(
-        rl,
-        'Path to Google Sheets credentials JSON file (or press Enter to skip): ',
-        (input: string) => input.trim(),
-        true
-      );
-    }
-
-    console.log('');
-    console.log('4. Portfolio Tracking (Optional)');
+    console.log('3. Portfolio Tracking (Optional)');
     console.log('');
 
     const configurePortfolio = await promptYesNo(
@@ -226,10 +194,6 @@ export async function runEnvSetupSection(state: OnboardingState): Promise<Onboar
     if (hasBrightData && brightDataKey) {
       envData.has_brightdata = true;
       envData.brightdata_key = brightDataKey;
-    }
-
-    if (googleSheetsCredentials) {
-      envData.google_sheets_credentials = googleSheetsCredentials;
     }
 
     if (primaryBrokerage) {

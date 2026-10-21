@@ -100,7 +100,7 @@ export async function runInvestmentPortfolioSection(state: OnboardingState): Pro
       risk_profile: riskProfile
     };
 
-    saveSectionData(state, 'investment_portfolio', investmentPortfolioData);
+    saveSectionData(state, 'investments', investmentPortfolioData);
 
     markSectionComplete(state, 'investments', 'cash_flow');
 

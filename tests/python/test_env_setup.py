@@ -132,17 +132,12 @@ class TestEnvSetup:
         )
         assert "saveState(state)" in content, "Should save state to disk"
 
-    def test_env_setup_handles_google_sheets(self):
-        """Test that Google Sheets integration is optional"""
-        env_setup_path = (
+    def test_env_setup_has_no_retired_sheets_fields(self):
+        content = (
             Path(self.original_cwd) / "scripts/onboarding/sections/env-setup.ts"
-        )
-        content = env_setup_path.read_text()
-
-        assert "google_sheets_credentials?" in content, (
-            "Should have optional google_sheets_credentials field"
-        )
-        assert "Google Sheets" in content, "Should mention Google Sheets integration"
+        ).read_text()
+        assert "google_sheets_credentials" not in content
+        assert "GOOGLE_SHEETS_CREDENTIALS_PATH" not in content
 
     def test_env_setup_handles_brokerage_info(self):
         """Test that brokerage information is handled"""
@@ -201,14 +196,30 @@ class TestEnvSetup:
 
         try:
             result = subprocess.run(
-                ["bunx", "tsc", "--noEmit", str(env_setup_path)],
+                [
+                    "bunx",
+                    "--package",
+                    "typescript",
+                    "tsc",
+                    "--noEmit",
+                    "--target",
+                    "esnext",
+                    "--module",
+                    "preserve",
+                    "--moduleResolution",
+                    "bundler",
+                    "--types",
+                    "bun",
+                    "--skipLibCheck",
+                    str(env_setup_path),
+                ],
                 capture_output=True,
                 text=True,
                 timeout=10,
                 cwd=self.original_cwd,
             )
-            assert "error TS" not in result.stderr, (
-                f"TypeScript compilation errors: {result.stderr}"
+            assert result.returncode == 0, (
+                f"TypeScript compilation errors: {result.stdout}\n{result.stderr}"
             )
         except (subprocess.TimeoutExpired, FileNotFoundError) as error:
             pytest.skip(f"bunx tsc unavailable: {error}")
@@ -254,3 +265,16 @@ if __name__ == "__main__":
 
     print(f"\nResults: {passed} passed, {failed} failed")
     exit(0 if failed == 0 else 1)
+
+
+def test_typescript_gate_rejects_stdout_diagnostics(mocker):
+    checker = TestEnvSetup()
+    checker.original_cwd = str(Path.cwd())
+    mocker.patch(
+        "subprocess.run",
+        return_value=subprocess.CompletedProcess(
+            [], 2, "error TS2322: invalid type", ""
+        ),
+    )
+    with pytest.raises(AssertionError, match="TS2322"):
+        checker.test_typescript_syntax_valid()

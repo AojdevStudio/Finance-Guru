@@ -160,7 +160,7 @@ class TestOnboardingStructure:
         assert "join(outputDir, 'imports', 'retirement')" in content
 
     def test_index_entry_point_content(self, onboarding_dir):
-        """Test that index.ts has main function and displays"""
+        """The Bun entry point launches the implemented Python wizard."""
         index_file = onboarding_dir / "index.ts"
         content = index_file.read_text()
 
@@ -168,19 +168,9 @@ class TestOnboardingStructure:
             "index.ts should have bun shebang"
         )
 
-        expected_functions = [
-            "displayWelcome",
-            "displayResume",
-            "displayComplete",
-            "main",
-        ]
-
-        for func_name in expected_functions:
-            assert func_name in content, f"index.ts should have {func_name} function"
-
-        assert "from './modules/progress'" in content, (
-            "index.ts should import from progress module"
-        )
+        assert "src.cli.onboarding_wizard" in content
+        assert "import.meta.main" in content
+        assert "structure created" not in content
 
 
 if __name__ == "__main__":
