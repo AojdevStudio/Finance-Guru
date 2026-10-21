@@ -375,8 +375,42 @@ class TestConvenienceFunction:
         assert result.method == "min_variance"
 
 
-@pytest.mark.parametrize("status", [4, 9])
-def test_solver_status_distinguishes_infeasible_from_nonconverged(mocker, status):
+CAPPED_RETURNS = {"AAAA": 0.05, "BBBB": 0.10, "CCCC": 0.15, "DDDD": 0.20, "EEEE": 0.25}
+CAPPED_REACHABLE_MAX = 0.30 * (0.25 + 0.20 + 0.15) + 0.10 * 0.10
+
+
+def _make_capped_data() -> PortfolioDataInput:
+    history = _make_portfolio_data(tickers=list(CAPPED_RETURNS))
+    return PortfolioDataInput(
+        tickers=history.tickers,
+        dates=history.dates,
+        prices=history.prices,
+        expected_returns=CAPPED_RETURNS,
+    )
+
+
+def test_capped_frontier_stays_within_reachable_returns():
+    optimizer = PortfolioOptimizer(OptimizationConfig(position_limits=(0.0, 0.30)))
+
+    frontier = optimizer.generate_efficient_frontier(_make_capped_data(), n_points=20)
+
+    assert len(frontier.returns) == 20
+    assert max(frontier.returns) <= CAPPED_REACHABLE_MAX + 1e-9
+
+
+@pytest.mark.parametrize("excess", [0.001, 0.03])
+def test_target_above_capped_maximum_is_infeasible(excess):
+    optimizer = PortfolioOptimizer(OptimizationConfig(position_limits=(0.0, 0.30)))
+    returns = np.array(list(CAPPED_RETURNS.values()))
+
+    with pytest.raises(TargetReturnInfeasibleError):
+        optimizer._optimize_for_target_return(
+            returns, np.eye(5) * 0.04, CAPPED_REACHABLE_MAX + excess, 5
+        )
+
+
+@pytest.mark.parametrize("status", [4, 8, 9])
+def test_solver_failure_on_reachable_target_is_a_convergence_error(mocker, status):
     from scipy.optimize import OptimizeResult
 
     mocker.patch(
@@ -386,7 +420,22 @@ def test_solver_status_distinguishes_infeasible_from_nonconverged(mocker, status
         ),
     )
     optimizer = PortfolioOptimizer(OptimizationConfig())
-    error = TargetReturnInfeasibleError if status == 4 else ValueError
-    with pytest.raises(error) as failure:
+    with pytest.raises(ValueError, match="did not converge") as failure:
         optimizer._optimize_for_target_return(np.array([0.1, 0.2]), np.eye(2), 0.15, 2)
-    assert isinstance(failure.value, TargetReturnInfeasibleError) == (status == 4)
+    assert not isinstance(failure.value, TargetReturnInfeasibleError)
+
+
+def test_frontier_rejects_failed_minimum_variance_seed(mocker):
+    from scipy.optimize import OptimizeResult
+
+    mocker.patch(
+        "src.strategies.optimizer.minimize",
+        return_value=OptimizeResult(
+            success=False, status=9, message="synthetic iteration limit", x=[0.5, 0.5]
+        ),
+    )
+    optimizer = PortfolioOptimizer(OptimizationConfig())
+    with pytest.raises(
+        ValueError, match="Minimum variance optimization did not converge"
+    ):
+        optimizer._find_min_variance_weights(np.eye(2), 2)
