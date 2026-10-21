@@ -24,6 +24,7 @@ Author: Finance Guru™ Development Team
 Created: 2026-01-09
 """
 
+import math
 import os
 import time
 import warnings
@@ -48,11 +49,17 @@ QUOTED_PRICE_FIELDS = ("currentPrice", "regularMarketPrice", "previousClose")
 
 
 def first_quoted_price(info: Mapping[str, Any]) -> float | None:
-    """Return the first price yfinance reports in ``QUOTED_PRICE_FIELDS`` order."""
+    """Return the first finite positive price yfinance reports in ``QUOTED_PRICE_FIELDS`` order."""
     for field in QUOTED_PRICE_FIELDS:
         price = info.get(field)
-        if price is not None:
-            return float(price)
+        if price is None:
+            continue
+        try:
+            value = float(price)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(value) and value > 0:
+            return value
     return None
 
 

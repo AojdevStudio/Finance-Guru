@@ -791,8 +791,13 @@ class PortfolioOptimizer:
         )
 
         if not result.success:
-            raise TargetReturnInfeasibleError(
-                f"Cannot achieve target return {target_return}"
+            if result.status == 4:
+                raise TargetReturnInfeasibleError(
+                    f"Cannot achieve target return {target_return}: {result.message}"
+                )
+            raise ValueError(
+                f"Target return optimization did not converge for {target_return}: "
+                f"status {result.status}, {result.message}"
             )
 
         return result.x

@@ -13,10 +13,12 @@ USAGE:
 """
 
 import argparse
+import math
 import os
 import sys
 from datetime import date, datetime
 from typing import Any, Literal
+from zoneinfo import ZoneInfo
 
 import requests
 import yfinance as yf
@@ -36,6 +38,18 @@ class PriceData(BaseModel):
     change_percent: float
     timestamp: str
     source: Literal["yfinance", "finnhub"] = "yfinance"
+    session_date: date | None = None
+
+
+def _quote_session_date(timestamp: object, timezone: str) -> date | None:
+    """Read the provider's quote time in its exchange timezone."""
+    if (
+        not isinstance(timestamp, (int, float))
+        or not math.isfinite(timestamp)
+        or timestamp <= 0
+    ):
+        return None
+    return datetime.fromtimestamp(timestamp, ZoneInfo(timezone)).date()
 
 
 def get_prices(
@@ -93,6 +107,10 @@ def _get_prices_yfinance(symbols: list[str]) -> dict[str, PriceData]:
                 change_percent=round(change_percent, 2),
                 timestamp=datetime.now().isoformat(),
                 source="yfinance",
+                session_date=_quote_session_date(
+                    info.get("regularMarketTime"),
+                    info.get("exchangeTimezoneName") or "America/New_York",
+                ),
             )
         except Exception as e:
             print(f"⚠️  Error fetching {symbol} from yfinance: {e}")
@@ -138,6 +156,7 @@ def _get_prices_polygon(symbols: list[str]) -> dict[str, PriceData]:
                 change_percent=round(change_percent, 2),
                 timestamp=datetime.now().isoformat(),
                 source="finnhub",
+                session_date=_quote_session_date(data.get("t"), "America/New_York"),
             )
 
         except requests.exceptions.RequestException as e:
@@ -159,7 +178,7 @@ def _get_prices_polygon(symbols: list[str]) -> dict[str, PriceData]:
 def append_live_quote(
     ticker: str, dates: list[date], *price_series: list[float]
 ) -> None:
-    """Append today's live quote to end-of-day series as a flat OHLC bar.
+    """Append a new provider session quote as a flat OHLC bar.
 
     A live quote is one price, so the new bar uses it for every series passed
     in (open, high, low, and close alike). When no live quote is available the
@@ -167,7 +186,7 @@ def append_live_quote(
 
     Args:
         ticker: Ticker symbol to quote.
-        dates: Bar dates, extended in place with today's date.
+        dates: Bar dates, extended only for a newer, known quote session.
         *price_series: Price lists, each extended in place with the quote.
     """
     try:
@@ -184,7 +203,12 @@ def append_live_quote(
         )
         return
 
-    dates.append(date.today())
+    if quote.session_date is None:
+        print("Quote session date unavailable, using EOD data only", file=sys.stderr)
+        return
+    if dates and quote.session_date <= max(dates):
+        return
+    dates.append(quote.session_date)
     for series in price_series:
         series.append(quote.price)
     print(
