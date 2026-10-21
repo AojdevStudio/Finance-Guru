@@ -46,9 +46,31 @@ def test_parse_portfolio_skips_metadata_rows_and_cleans_symbols(
     assert [(h.symbol, h.layer) for h in snapshot.holdings] == [("SPAXX", "layer1")]
 
 
-def test_load_latest_returns_none_for_unreadable_csv(tmp_path: Path, mocker) -> None:
+def test_load_latest_raises_for_unreadable_csv(tmp_path: Path, mocker) -> None:
     bad_csv = tmp_path / "Portfolio_Positions_bad.csv"
     bad_csv.write_text("Symbol\nPLTR\n")
     mocker.patch.object(PortfolioLoader, "find_latest_csv", return_value=bad_csv)
 
+    with pytest.raises(ValueError, match="Missing required columns"):
+        PortfolioLoader.load_latest()
+
+
+@pytest.mark.parametrize("symbol", ["BRK-B", "BRK.B"])
+def test_share_class_symbol_keeps_its_layer(
+    tmp_path: Path, mocker, symbol: str
+) -> None:
+    mocker.patch(
+        "src.ui.services.portfolio_loader.FinGuruConfig.load_layers",
+        return_value={"layer1": [symbol]},
+    )
+    csv_path = tmp_path / "Portfolio_Positions_synthetic.csv"
+    csv_path.write_text(
+        f"Symbol,Quantity,Current Value,Today's Gain/Loss Dollar\n{symbol},1,100,0\n"
+    )
+    holding = PortfolioLoader.parse_portfolio(csv_path).holdings[0]
+    assert (holding.symbol, holding.layer) == (symbol, "layer1")
+
+
+def test_load_latest_returns_none_when_no_csv_exists(mocker) -> None:
+    mocker.patch.object(PortfolioLoader, "find_latest_csv", return_value=None)
     assert PortfolioLoader.load_latest() is None

@@ -89,9 +89,9 @@ class HoldingInput(BaseModel):
                 f"Ticker symbol '{v}' must be uppercase (e.g., 'PLTR' not 'pltr')"
             )
 
-        if not v.isalpha():
+        if not v.replace("-", "").replace(".", "").isalpha():
             raise ValueError(
-                f"Ticker symbol '{v}' must contain only letters (no numbers or symbols)"
+                f"Ticker symbol '{v}' must contain only letters and share-class separators"
             )
 
         return v
