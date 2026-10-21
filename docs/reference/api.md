@@ -41,6 +41,11 @@ uv run python -m src.integrations.refresh_all --help
 | `src/analysis/rolling_tracker_cli.py` | Track a rolling analysis series. |
 | `src/analysis/total_return_cli.py` | Calculate total return. |
 
+Risk metrics use `null` for unavailable Sharpe, Sortino, and Calmar ratios.
+`ratio_unavailable_reasons` gives a typed reason for each null ratio, such as
+`zero_volatility` or `no_drawdown`. Finite ratios keep their numeric format.
+Text output and the terminal dashboard show unavailable ratios with their reasons.
+
 ## Strategy commands
 
 | Command | Purpose |

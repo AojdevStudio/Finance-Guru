@@ -4,7 +4,6 @@ Tests the RiskCalculator class and convenience function with synthetic data.
 No real API calls -- all data is generated with numpy/pandas.
 """
 
-import math
 import warnings
 from datetime import date, timedelta
 
@@ -162,9 +161,8 @@ class TestVaRMethods:
 class TestKnownAnswers:
     """Tests with synthetic data where expected results can be computed."""
 
-    def test_zero_return_sharpe_is_negative(self):
-        """A flat series earns less than the risk-free rate with zero volatility,
-        so Sharpe reports the negative limit without dividing by zero."""
+    def test_zero_return_sharpe_is_explicitly_unavailable(self):
+        """A flat series has no defined finite Sharpe ratio."""
         n = 60
         data = PriceDataInput(
             ticker="FLAT",
@@ -176,7 +174,8 @@ class TestKnownAnswers:
             warnings.simplefilter("error", RuntimeWarning)
             with pytest.warns(UserWarning, match="zero risk"):
                 result = RiskCalculator(config).calculate_risk_metrics(data)
-        assert result.sharpe_ratio == -math.inf
+        assert result.sharpe_ratio is None
+        assert result.ratio_unavailable_reasons["sharpe_ratio"] == "zero_volatility"
 
     def test_monotonically_increasing_no_drawdown(self):
         """Monotonically increasing prices should have zero max drawdown."""
@@ -191,8 +190,8 @@ class TestKnownAnswers:
         result = RiskCalculator(config).calculate_risk_metrics(data)
         assert result.max_drawdown == pytest.approx(0.0)
 
-    def test_calmar_infinite_when_no_drawdown(self):
-        """Calmar ratio should be inf when there is no drawdown."""
+    def test_calmar_unavailable_when_no_drawdown(self):
+        """No drawdown makes Calmar unavailable with a reason."""
         n = 60
         prices = [100.0 + i * 0.5 for i in range(n)]
         data = PriceDataInput(
@@ -204,7 +203,8 @@ class TestKnownAnswers:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             result = RiskCalculator(config).calculate_risk_metrics(data)
-        assert result.calmar_ratio == float("inf")
+        assert result.calmar_ratio is None
+        assert result.ratio_unavailable_reasons["calmar_ratio"] == "no_drawdown"
 
     def test_volatility_scales_with_return_std(self):
         """Higher daily std should produce higher annual volatility."""
@@ -277,3 +277,39 @@ class TestConvenienceFunction:
             benchmark_dates=dates_list,
         )
         assert result.beta is not None
+
+
+@pytest.mark.parametrize("risk_free_rate", [0.0, 0.045])
+def test_flat_risk_json_round_trip_and_renderers(risk_free_rate):
+    import asyncio
+    import json
+
+    from textual.app import App
+
+    from src.analysis.risk_metrics_cli import format_output_human, format_output_json
+    from src.ui.widgets.results_panel import ResultsPanel
+
+    data = PriceDataInput(ticker="FLAT", dates=_make_dates(60), prices=[100.0] * 60)
+    result = RiskCalculator(
+        RiskCalculationConfig(risk_free_rate=risk_free_rate)
+    ).calculate_risk_metrics(data)
+    payload = format_output_json(result)
+    restored = RiskMetricsOutput.model_validate_json(payload)
+    assert restored.sharpe_ratio is None
+    assert restored.ratio_unavailable_reasons["sharpe_ratio"] == "zero_volatility"
+    assert "Unavailable" in format_output_human(restored)
+
+    class RiskApp(App):
+        def compose(self):
+            yield ResultsPanel()
+
+    async def render():
+        app = RiskApp()
+        async with app.run_test() as pilot:
+            panel = app.query_one(ResultsPanel)
+            panel.remove_children()
+            panel._render_risk(json.loads(payload))
+            await pilot.pause()
+            assert "Unavailable" in app.export_screenshot()
+
+    asyncio.run(render())

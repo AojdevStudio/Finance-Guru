@@ -22,7 +22,7 @@ Created: 2025-10-13
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, FiniteFloat, field_validator, model_validator
 
 from src.models.ticker import Ticker
 from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
@@ -300,6 +300,12 @@ class RiskCalculationConfig(BaseModel):
     }
 
 
+RiskRatioName = Literal["sharpe_ratio", "sortino_ratio", "calmar_ratio"]
+RiskRatioUnavailableReason = Literal[
+    "zero_volatility", "no_downside_volatility", "no_drawdown", "non_finite"
+]
+
+
 class RiskMetricsOutput(BaseModel):
     """Comprehensive risk metrics output.
 
@@ -342,7 +348,7 @@ class RiskMetricsOutput(BaseModel):
         ),
     )
 
-    sharpe_ratio: float = Field(
+    sharpe_ratio: FiniteFloat | None = Field(
         ...,
         description=(
             "Sharpe Ratio (excess return per unit of total risk). "
@@ -351,7 +357,7 @@ class RiskMetricsOutput(BaseModel):
         ),
     )
 
-    sortino_ratio: float = Field(
+    sortino_ratio: FiniteFloat | None = Field(
         ...,
         description=(
             "Sortino Ratio (excess return per unit of downside risk). "
@@ -369,7 +375,7 @@ class RiskMetricsOutput(BaseModel):
         ),
     )
 
-    calmar_ratio: float = Field(
+    calmar_ratio: FiniteFloat | None = Field(
         ...,
         description=(
             "Calmar Ratio (annual return / absolute max drawdown). "
@@ -377,6 +383,23 @@ class RiskMetricsOutput(BaseModel):
             "Higher is better. Example: 0.85 means 0.85% return per 1% max drawdown"
         ),
     )
+
+    ratio_unavailable_reasons: dict[RiskRatioName, RiskRatioUnavailableReason] = Field(
+        default_factory=dict,
+        description="A typed reason for each unavailable ratio. Null ratios require a reason.",
+    )
+
+    @model_validator(mode="after")
+    def require_unavailable_ratio_reasons(self) -> "RiskMetricsOutput":
+        """Keep unavailable values and their reasons consistent."""
+        for name in ("sharpe_ratio", "sortino_ratio", "calmar_ratio"):
+            if (getattr(self, name) is None) != (
+                name in self.ratio_unavailable_reasons
+            ):
+                raise ValueError(
+                    f"{name} must be null exactly when it has an unavailable reason"
+                )
+        return self
 
     annual_volatility: float = Field(
         ...,
