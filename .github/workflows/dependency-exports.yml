@@ -1,0 +1,105 @@
+name: Synchronize dependency exports
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-exports-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  synchronize:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+      actions: write
+    steps:
+      - name: Identify the current same-repository Dependabot PR
+        id: pr
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const { data } = await github.rest.pulls.list({
+              ...context.repo, state: 'open',
+              head: `${context.repo.owner}:${run.head_branch}`,
+            });
+            const matches = data.filter(pr =>
+              pr.user.login === 'dependabot[bot]' &&
+              pr.head.repo.full_name === `${context.repo.owner}/${context.repo.repo}` &&
+              pr.head.sha === run.head_sha
+            );
+            if (matches.length !== 1) return;
+            core.setOutput('number', matches[0].number);
+            core.setOutput('branch', matches[0].head.ref);
+            core.setOutput('sha', matches[0].head.sha);
+            core.setOutput('base', matches[0].base.sha);
+
+      - name: Checkout the trusted repair script
+        if: steps.pr.outputs.number
+        uses: actions/checkout@v6
+        with:
+          path: trusted
+          persist-credentials: false
+
+      - name: Checkout dependency files at the verified head
+        if: steps.pr.outputs.number
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+
+      - name: Set up uv
+        if: steps.pr.outputs.number
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up an isolated Python interpreter
+        if: steps.pr.outputs.number
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Reconcile all requested pins and export without running project code
+        if: steps.pr.outputs.number
+        working-directory: candidate
+        env:
+          BASE_SHA: ${{ steps.pr.outputs.base }}
+        run: |
+          python -I ../trusted/scripts/qa/sync_dependency_exports.py --base "$BASE_SHA"
+          uv lock --check --no-build
+          uv export --format requirements.txt --no-hashes --no-emit-project --frozen | diff -u requirements.txt -
+
+      - name: Push only generated dependency files and run CI on the new head
+        if: steps.pr.outputs.number
+        working-directory: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          HEAD_BRANCH: ${{ steps.pr.outputs.branch }}
+          EXPECTED_SHA: ${{ steps.pr.outputs.sha }}
+        run: |
+          if git diff --quiet -- uv.lock requirements.txt; then exit 0; fi
+          current_sha=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)
+          if [ "$current_sha" != "$EXPECTED_SHA" ]; then
+            echo "The PR head changed. The next CI run owns the repair."
+            exit 0
+          fi
+          git config user.name "$(git log -1 --format=%an)"
+          git config user.email "$(git log -1 --format=%ae)"
+          git add -- uv.lock requirements.txt
+          git commit -m "fix(deps): synchronize the canonical lock and export"
+          gh auth setup-git
+          git push origin "HEAD:$HEAD_BRANCH"
+          gh workflow run ci.yml --ref "$HEAD_BRANCH"
