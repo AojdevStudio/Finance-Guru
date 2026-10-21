@@ -42,6 +42,8 @@ from src.models.risk_inputs import (
     PriceDataInput,
     RiskCalculationConfig,
     RiskMetricsOutput,
+    RiskRatioName,
+    RiskRatioUnavailableReason,
 )
 from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR
 
@@ -170,15 +172,33 @@ class RiskCalculator:
                 self.config.risk_free_rate,
             )
 
+        ratio_values: dict[RiskRatioName, float] = {
+            "sharpe_ratio": sharpe,
+            "sortino_ratio": sortino,
+            "calmar_ratio": calmar,
+        }
+        reasons: dict[RiskRatioName, RiskRatioUnavailableReason] = {}
+        if vol == 0:
+            reasons["sharpe_ratio"] = "zero_volatility"
+            reasons["sortino_ratio"] = "zero_volatility"
+        if not math.isfinite(sortino):
+            reasons["sortino_ratio"] = "no_downside_volatility"
+        if max_dd == 0:
+            reasons["calmar_ratio"] = "no_drawdown"
+        for name, value in ratio_values.items():
+            if not math.isfinite(value) and name not in reasons:
+                reasons[name] = "non_finite"
+
         return RiskMetricsOutput(
             ticker=price_data.ticker,
             calculation_date=price_data.dates[-1],
             var_95=var_95,
             cvar_95=cvar_95,
-            sharpe_ratio=sharpe,
-            sortino_ratio=sortino,
+            sharpe_ratio=None if "sharpe_ratio" in reasons else sharpe,
+            sortino_ratio=None if "sortino_ratio" in reasons else sortino,
             max_drawdown=max_dd,
-            calmar_ratio=calmar,
+            calmar_ratio=None if "calmar_ratio" in reasons else calmar,
+            ratio_unavailable_reasons=reasons,
             annual_volatility=vol,
             beta=beta_val,
             alpha=alpha_val,
