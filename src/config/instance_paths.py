@@ -60,6 +60,11 @@ class InstancePaths(BaseModel):
         return self.root / "merchant-rules.yaml"
 
     @property
+    def category_overrides(self) -> Path:
+        """Return the private per-transaction category overrides file."""
+        return self.root / "category-overrides.yaml"
+
+    @property
     def system_context(self) -> Path:
         """Return the generated system context path."""
         return self.root / "system-context.md"

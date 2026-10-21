@@ -63,7 +63,10 @@ def refresh(database_url: str | None, *, months: int = 12) -> dict[str, Any]:
         (
             "expenses",
             lambda: sync_expenses(
-                database_url, months=months, merchant_rules=paths.merchant_rules
+                database_url,
+                months=months,
+                merchant_rules=paths.merchant_rules,
+                category_overrides=paths.category_overrides,
             ),
         ),
     )

@@ -7,7 +7,7 @@ import json
 import sqlite3
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -15,8 +15,10 @@ from typing import Any, Literal
 from src.config.instance_paths import InstancePaths, _db_path, load_instance_env
 from src.integrations.simplefin.categorize import (
     CATEGORY_PATTERNS,
+    CategoryOverridesError,
     PatternTable,
     categorize_expense,
+    load_category_overrides,
     load_merchant_rules,
     merge_patterns,
 )
@@ -185,6 +187,7 @@ def normalize_transaction(
     txn: dict[str, Any],
     now: str,
     patterns: PatternTable | None = None,
+    overrides: Mapping[str, str] | None = None,
 ) -> tuple[Any, ...]:
     """Normalize a SimpleFIN transaction into database column order.
 
@@ -194,6 +197,7 @@ def normalize_transaction(
         now: ISO timestamp for the current sync.
         patterns: Category table, the public table merged with the household
             rules. Defaults to the public table alone.
+        overrides: Per-transaction categories that take precedence over patterns.
 
     Returns:
         A tuple matching the ``bank_transactions`` column order.
@@ -206,6 +210,11 @@ def normalize_transaction(
     raw_amount = _to_float(txn.get("amount"))
     direction = resolve_direction(_category_text(txn), raw_amount)
     amount = _signed_amount(raw_amount, direction)
+    category = categorize_expense(
+        _category_text(txn), amount, account.get("name"), patterns
+    )
+    if overrides is not None:
+        category = overrides.get(str(txn["id"]), category)
     return (
         account["id"],
         account.get("name"),
@@ -217,7 +226,7 @@ def normalize_transaction(
         txn.get("description"),
         amount,
         direction,
-        categorize_expense(_category_text(txn), amount, account.get("name"), patterns),
+        category,
         now,
     )
 
@@ -229,6 +238,7 @@ def sync(
     app_dir: Path = DEFAULT_APP_DIR,
     dump_provider: Callable[[int, Path], dict[str, Any]] = run_dump,
     merchant_rules: Path | None = None,
+    category_overrides: Path | None = None,
 ) -> dict[str, Any]:
     """Sync SimpleFIN transactions into the shared SQLite database.
 
@@ -239,6 +249,7 @@ def sync(
         dump_provider: Callable that returns a SimpleFIN account-set payload.
         merchant_rules: Household ``merchant-rules.yaml``; ``None`` categorizes
             with the public table alone.
+        category_overrides: Private transaction IDs mapped to categories.
 
     Returns:
         Counts and metadata describing the completed sync.
@@ -246,12 +257,14 @@ def sync(
     Raises:
         SimpleFinSyncError: If the provider returns an invalid payload.
         MerchantRulesError: If ``merchant_rules`` is malformed.
+        CategoryOverridesError: If overrides are invalid or ambiguous.
     """
     db = _db_path(database_url)
     patterns = merge_patterns(
         CATEGORY_PATTERNS,
         load_merchant_rules(merchant_rules) if merchant_rules else {},
     )
+    overrides = load_category_overrides(category_overrides)
     now = datetime.now(UTC).replace(microsecond=0).isoformat()
     payload = dump_provider(months, app_dir)
     if not isinstance(payload, dict) or "accounts" not in payload:
@@ -280,7 +293,7 @@ def sync(
             if not txn.get("id"):
                 skipped_missing_id += 1
                 continue
-            row = normalize_transaction(account, txn, now, patterns)
+            row = normalize_transaction(account, txn, now, patterns, overrides)
             rows.append(row)
             category = str(row[10])
             by_category[category] = by_category.get(category, 0) + 1
@@ -295,6 +308,17 @@ def sync(
                     "SELECT account_id, txn_id FROM bank_transactions"
                 )
             }
+            override_accounts: dict[str, set[str]] = {}
+            for account_id, txn_id in [
+                *existing_keys,
+                *((row[0], row[3]) for row in rows),
+            ]:
+                if txn_id in overrides:
+                    override_accounts.setdefault(txn_id, set()).add(account_id)
+            if any(len(accounts) > 1 for accounts in override_accounts.values()):
+                raise CategoryOverridesError(
+                    "An overridden transaction ID belongs to multiple accounts"
+                )
             inserted = sum((row[0], row[3]) not in existing_keys for row in rows)
             updated = len(rows) - inserted
             conn.executemany(_UPSERT, rows)
@@ -369,7 +393,10 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         summary = sync(
-            database_url, months=args.months, merchant_rules=paths.merchant_rules
+            database_url,
+            months=args.months,
+            merchant_rules=paths.merchant_rules,
+            category_overrides=paths.category_overrides,
         )
     except (SimpleFinSyncError, ValueError, RuntimeError, OSError) as exc:
         print(f"Sync error: {exc}", file=sys.stderr)
