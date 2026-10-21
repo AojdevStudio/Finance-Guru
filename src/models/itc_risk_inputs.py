@@ -26,7 +26,26 @@ Created: 2026-01-09
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, FiniteFloat, field_validator
+
+
+class ITCComplianceInput(BaseModel):
+    """Inputs to the documented VaR-based ITC compliance rules."""
+
+    itc_supported: bool
+    itc_risk: FiniteFloat | None = Field(None, ge=0, le=1)
+    daily_var: FiniteFloat | None = Field(None, ge=-1, le=1)
+
+
+class ITCComplianceDecision(BaseModel):
+    """A proposed compliance decision, never an executed trade."""
+
+    action: Literal[
+        "APPROVE", "APPROVE WITH NOTE", "ENHANCED REVIEW", "BLOCK", "INTERNAL ONLY"
+    ]
+    rule: Literal["DR-1", "DR-2", "DR-3", "DR-4", "DR-5", "GUARDRAIL"]
+    reason: str
+    divergence_pct: float | None = None
 
 
 class ITCRiskRequest(BaseModel):
