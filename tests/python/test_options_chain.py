@@ -272,15 +272,9 @@ class TestExpirationFiltering:
             (today + timedelta(days=dte)).isoformat() for dte in EXPIRATION_DTES
         ]
 
-        days_min = MIN_DTE
-        days_max = MAX_DTE
-        filtered = []
+        from src.analysis.options_chain_cli import filter_expirations
 
-        for exp_str in expirations:
-            exp_date = date.fromisoformat(exp_str)
-            days_out = (exp_date - today).days
-            if days_min <= days_out <= days_max:
-                filtered.append(exp_str)
+        filtered = filter_expirations(expirations, MIN_DTE, MAX_DTE, today)
 
         assert "2026-04-03" in filtered
         assert "2026-04-17" in filtered
@@ -296,15 +290,9 @@ class TestExpirationFiltering:
             (today + timedelta(days=dte)).isoformat() for dte in OUTSIDE_WINDOW_DTES
         ]
 
-        days_min = MIN_DTE
-        days_max = MAX_DTE
-        filtered = []
+        from src.analysis.options_chain_cli import filter_expirations
 
-        for exp_str in expirations:
-            exp_date = date.fromisoformat(exp_str)
-            days_out = (exp_date - today).days
-            if days_min <= days_out <= days_max:
-                filtered.append(exp_str)
+        filtered = filter_expirations(expirations, MIN_DTE, MAX_DTE, today)
 
         assert len(filtered) == 0
 

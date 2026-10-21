@@ -359,6 +359,8 @@ class TestDecisionRulesCompliance:
             (0.7, -0.035, "DR-3", "ENHANCED REVIEW"),
             (0.85, -0.0425, "DR-3", "ENHANCED REVIEW"),
             (0.5, -0.01, "DR-2", "APPROVE WITH NOTE"),
+            (0.8, -0.025, "DR-3", "ENHANCED REVIEW"),
+            (0.8001, -0.025, "DR-4", "BLOCK"),
         ],
     )
     def test_documented_rules(self, score, daily_var, rule, action):
@@ -493,3 +495,37 @@ class TestEndToEndIntegration:
             timestamp=datetime.now(),
         )
         assert "HIGH" in high_start.get_risk_interpretation()
+
+
+@pytest.mark.parametrize(
+    ("inputs", "expected_rule"),
+    [
+        ({"itc_supported": True, "itc_risk": 0.8, "daily_var": -0.025}, "DR-3"),
+        ({"itc_supported": True, "itc_risk": 0.8}, "GUARDRAIL"),
+        ({"itc_supported": False}, "DR-5"),
+    ],
+)
+def test_offline_compliance_cli(inputs, expected_rule):
+    import json
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.analysis.itc_risk_cli",
+            "--compliance-input",
+            json.dumps(inputs),
+            "--output",
+            "json",
+        ],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    output = json.loads(result.stdout)
+    assert output["rule"] == expected_rule
+    assert output["date"]
+    assert "Supplied inputs" in output["source"]
+    assert "Not investment advice" in output["disclaimer"]
