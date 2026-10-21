@@ -299,24 +299,55 @@ class YAMLGenerator:
         )
 
 
+def config_file_targets(
+    output: YAMLGenerationOutput, paths: InstancePaths
+) -> dict[Path, str]:
+    """Map each generated file to its path inside the instance.
+
+    The MCP servers go to ``.mcp.json`` at the instance root, the file Claude
+    Code reads for project-scoped servers. A checkout-mode instance links
+    ``.claude`` to the engine, so a file under it would land in the engine.
+
+    Args:
+        output: YAMLGenerationOutput with generated content
+        paths: The instance that owns every generated file
+
+    Returns:
+        Each target path with the content to write there.
+
+    Raises:
+        ValueError: If any target resolves outside the instance root.
+    """
+    targets = {
+        paths.profile: output.user_profile_yaml,
+        paths.config: output.config_yaml,
+        paths.system_context: output.system_context_md,
+        paths.root / "CLAUDE.md": output.claude_md,
+        paths.env_file: output.env_file,
+        paths.root / ".mcp.json": output.mcp_json,
+    }
+    root = paths.root.resolve()
+    escaped = [str(path) for path in targets if not path.resolve().is_relative_to(root)]
+    if escaped:
+        raise ValueError(
+            f"Refusing to write outside the instance {root}: {', '.join(escaped)}"
+        )
+    return targets
+
+
 def write_config_files(output: YAMLGenerationOutput, base_dir: str = ".") -> None:
     """Write generated configuration files to disk.
 
     Args:
         output: YAMLGenerationOutput with generated content
         base_dir: Base directory for output files (default: current directory)
+
+    Raises:
+        ValueError: If any target resolves outside the instance root. Nothing
+            is written in that case.
     """
     paths = InstancePaths(root=Path(base_dir).expanduser().resolve())
 
-    files = {
-        paths.profile: output.user_profile_yaml,
-        paths.config: output.config_yaml,
-        paths.system_context: output.system_context_md,
-        paths.root / "CLAUDE.md": output.claude_md,
-        paths.env_file: output.env_file,
-        paths.root / ".claude" / "mcp.json": output.mcp_json,
-    }
-
-    for file_path, content in files.items():
+    for file_path, content in config_file_targets(output, paths).items():
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_text(content, encoding="utf-8")

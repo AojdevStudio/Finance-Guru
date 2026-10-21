@@ -148,6 +148,7 @@ assert_dir_exists "$TEST_DIR/imports/transactions"
 assert_dir_exists "$TEST_DIR/imports/retirement"
 
 assert_file_exists "$TEST_DIR/user-profile.yaml"
+assert_no_grep "$TEST_DIR/user-profile.yaml" "google_sheets" "Scaffolded profile has no retired Google Sheets block"
 assert_file_not_exists "$TEST_DIR/fin-guru/data/user-profile.yaml"
 assert_file_exists "$TEST_DIR/fin-guru-private/README.md"
 
@@ -254,6 +255,26 @@ fi
 
 printf "\n"
 
+log_step "Test 6: Missing uv is reported as uv, not as Python"
+
+NO_UV_PATH="/usr/bin:/bin"
+if PATH="$NO_UV_PATH" command -v uv &>/dev/null; then
+  log_fail "uv is on $NO_UV_PATH, so this host cannot simulate a missing uv"
+else
+  NO_UV_EXIT=0
+  (cd "$TEST_DIR_DEPS" && PATH="$NO_UV_PATH" /bin/bash setup.sh --check-deps-only < /dev/null > /tmp/setup-test-no-uv.log 2>&1) || NO_UV_EXIT=$?
+
+  if [ "$NO_UV_EXIT" -eq 1 ]; then
+    log_pass "--check-deps-only without uv exited with code 1"
+  else
+    log_fail "--check-deps-only without uv exited with code $NO_UV_EXIT (expected 1)"
+  fi
+  assert_grep "/tmp/setup-test-no-uv.log" "MISSING.* uv (not found)" "Missing uv is reported"
+  assert_no_grep "/tmp/setup-test-no-uv.log" "Python" "Python is not probed or reported while uv is missing"
+fi
+
+printf "\n"
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 
 printf "====================================================\n"
@@ -273,6 +294,7 @@ printf "  First run:   /tmp/setup-test-first.log\n"
 printf "  Deps only:   /tmp/setup-test-deps.log\n"
 printf "  Second run:  /tmp/setup-test-second.log\n"
 printf "  Missing dir: /tmp/setup-test-missing.log\n"
+printf "  No uv:       /tmp/setup-test-no-uv.log\n"
 printf "\n"
 
 

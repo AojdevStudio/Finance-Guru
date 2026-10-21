@@ -207,8 +207,12 @@ check_all_deps() {
   FAILED_DEPS=()
   FAILED_NAMES=()
 
-  check_dependency "python3" "Python" "3.12" || { missing=$((missing + 1)); FAILED_DEPS+=("python3"); FAILED_NAMES+=("Python"); }
-  check_dependency "uv" "uv" "" || { missing=$((missing + 1)); FAILED_DEPS+=("uv"); FAILED_NAMES+=("uv"); }
+  # Python is found through uv, so a missing uv says nothing about Python.
+  if check_dependency "uv" "uv" ""; then
+    check_dependency "python3" "Python" "3.12" || { missing=$((missing + 1)); FAILED_DEPS+=("python3"); FAILED_NAMES+=("Python"); }
+  else
+    missing=$((missing + 1)); FAILED_DEPS+=("uv"); FAILED_NAMES+=("uv")
+  fi
   check_dependency "bun" "Bun" "" || { missing=$((missing + 1)); FAILED_DEPS+=("bun"); FAILED_NAMES+=("Bun"); }
 
   if [ "$missing" -gt 0 ]; then
@@ -394,13 +398,6 @@ user_profile:
     risk_tolerance: ""
     investment_philosophy: ""
     time_horizon: ""
-
-# Google Sheets Integration (optional)
-google_sheets:
-  portfolio_tracker:
-    spreadsheet_id: ""
-    url: ""
-    purpose: "Finance Guru portfolio tracking"
 PROFILE_EOF
     printf "  ${GREEN}Created:${NC} %s\n" "$user_profile"
     CREATED_ITEMS+=("file: $user_profile")

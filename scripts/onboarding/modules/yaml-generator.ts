@@ -17,7 +17,6 @@ type PortfolioData = {
   retirement_value?: number;
   allocation_strategy?: string;
   risk_tolerance?: string;
-  google_sheets_id?: string;
 };
 
 type CashFlowData = {
@@ -55,7 +54,6 @@ type EnvironmentData = {
   alphavantage_key?: string;
   has_brightdata?: boolean;
   brightdata_key?: string;
-  google_sheets_credentials?: string;
   account_number?: string;
 };
 

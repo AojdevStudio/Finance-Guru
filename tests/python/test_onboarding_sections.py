@@ -27,6 +27,11 @@ def _answers(**answers: object) -> list[object]:
     return list(answers.values())
 
 
+def _asked_about_sheets(mock_text) -> bool:
+    """Return whether any text prompt mentioned the retired Google Sheets tracker."""
+    return any("Sheets" in str(call.args[0]) for call in mock_text.call_args_list)
+
+
 def _fresh_state() -> OnboardingState:
     """Create a fresh OnboardingState for testing."""
     return OnboardingState.create_new()
@@ -170,7 +175,6 @@ class TestInvestmentsSection:
             portfolio_total="100000",
             brokerage="Fidelity",
             retirement_total="50000",
-            google_sheets_id="",
             account_last_four="",
         )
         mock_confirm.return_value.ask.return_value = True
@@ -189,6 +193,8 @@ class TestInvestmentsSection:
         assert data["retirement_value"] == 50000.0
         assert data["allocation_strategy"] == "aggressive_growth"
         assert data["risk_tolerance"] == "aggressive"
+        assert "google_sheets_id" not in data
+        assert not _asked_about_sheets(mock_text)
         assert result.is_section_complete(SectionName.INVESTMENTS)
 
 
@@ -255,7 +261,7 @@ class TestEnvSetupSection:
         mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
 
         mock_text.return_value.ask.side_effect = _answers(
-            user_name="Alex", language="English", google_sheets_credentials=""
+            user_name="Alex", language="English"
         )
         mock_confirm.return_value.ask.return_value = False
 
@@ -281,7 +287,6 @@ class TestEnvSetupSection:
             language="English",
             alphavantage_key="my-av-key-123",
             brightdata_key="my-bd-key-456",
-            google_sheets_credentials="/path/to/creds",
         )
         mock_confirm.return_value.ask.return_value = True
 
@@ -293,7 +298,21 @@ class TestEnvSetupSection:
         assert data["alphavantage_key"] == "my-av-key-123"
         assert data["has_brightdata"] is True
         assert data["brightdata_key"] == "my-bd-key-456"
-        assert data["google_sheets_credentials"] == "/path/to/creds"
+        assert "google_sheets_credentials" not in data
+        assert not _asked_about_sheets(mock_text)
+
+    def test_skipped_owner_name_leaves_section_incomplete(self, mocker):
+        """Skipping the name never stores an invented owner name."""
+        mock_text = mocker.patch("src.utils.onboarding_sections.questionary.text")
+        mock_confirm = mocker.patch("src.utils.onboarding_sections.questionary.confirm")
+        mock_text.return_value.ask.side_effect = ["", "", "", "English"]
+        mock_confirm.return_value.ask.return_value = True
+
+        state = _fresh_state()
+        result = run_env_setup_section(state)
+
+        assert SectionName.ENV_SETUP.value not in result.data
+        assert not result.is_section_complete(SectionName.ENV_SETUP)
 
 
 class TestSummarySection:

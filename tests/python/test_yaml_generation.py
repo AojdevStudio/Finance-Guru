@@ -311,12 +311,54 @@ class TestFullGeneration:
             tmp_path / "system-context.md",
             tmp_path / "CLAUDE.md",
             tmp_path / ".env",
-            tmp_path / ".claude" / "mcp.json",
+            tmp_path / ".mcp.json",
         ]
 
         for file_path in expected_files:
             assert file_path.exists(), f"Expected file not created: {file_path}"
             assert file_path.stat().st_size > 0, f"File is empty: {file_path}"
+
+    def test_scaffolded_claude_symlink_keeps_mcp_in_instance(
+        self,
+        yaml_generator: YAMLGenerator,
+        valid_user_data: UserDataInput,
+        tmp_path: Path,
+    ):
+        """A checkout-mode .claude symlink never carries private MCP output to the engine."""
+        engine_claude = tmp_path / "engine" / ".claude"
+        engine_claude.mkdir(parents=True)
+        instance = tmp_path / "instance"
+        instance.mkdir()
+        (instance / ".claude").symlink_to(engine_claude, target_is_directory=True)
+
+        write_config_files(
+            yaml_generator.generate_all_configs(valid_user_data), str(instance)
+        )
+
+        assert list(engine_claude.iterdir()) == []
+        assert (instance / ".mcp.json").is_file()
+
+    def test_escaped_target_blocks_every_write(
+        self,
+        yaml_generator: YAMLGenerator,
+        valid_user_data: UserDataInput,
+        tmp_path: Path,
+    ):
+        """A target that resolves outside the instance stops the run before any file is written."""
+        engine_file = tmp_path / "engine" / "CLAUDE.md"
+        engine_file.parent.mkdir()
+        engine_file.write_text("tracked engine instructions\n")
+        instance = tmp_path / "instance"
+        instance.mkdir()
+        (instance / "CLAUDE.md").symlink_to(engine_file)
+
+        with pytest.raises(ValueError, match="outside the instance"):
+            write_config_files(
+                yaml_generator.generate_all_configs(valid_user_data), str(instance)
+            )
+
+        assert engine_file.read_text() == "tracked engine instructions\n"
+        assert sorted(path.name for path in instance.iterdir()) == ["CLAUDE.md"]
 
 
 class TestEdgeCases:

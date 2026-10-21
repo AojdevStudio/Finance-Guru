@@ -3,7 +3,7 @@
 Layer 3 CLI that orchestrates the 8-section interactive onboarding flow,
 converts collected data into Pydantic models, and generates all configuration
 files (user-profile.yaml, config.yaml, system-context.md, CLAUDE.md, .env,
-mcp.json) to their correct output locations.
+.mcp.json) in the instance. Templates come from the engine this module ships in.
 
 Callable via: uv run python -m src.cli.onboarding_wizard
 
@@ -56,7 +56,7 @@ from src.utils.onboarding_sections import (
     run_preferences_section,
     run_summary_section,
 )
-from src.utils.yaml_generator import YAMLGenerator
+from src.utils.yaml_generator import YAMLGenerator, config_file_targets
 
 SECTION_ORDER: list[tuple[SectionName, Callable[..., Any]]] = [
     (SectionName.LIQUID_ASSETS, run_liquid_assets_section),
@@ -70,26 +70,31 @@ SECTION_ORDER: list[tuple[SectionName, Callable[..., Any]]] = [
 ]
 
 
-PROGRESS_FILE = Path(".onboarding-progress.json")
+PROGRESS_FILE_NAME = ".onboarding-progress.json"
+
+
+def _progress_file() -> Path:
+    """Return the progress file in the instance, since it holds private answers."""
+    return InstancePaths.resolve().root / PROGRESS_FILE_NAME
 
 
 def save_progress(state: OnboardingState) -> None:
-    """Atomically save wizard progress to .onboarding-progress.json.
+    """Atomically save wizard progress to the instance's .onboarding-progress.json.
 
     Uses tempfile + rename pattern for crash safety:
     write to temp file in same directory, then atomic rename.
     """
     data = state.model_dump(mode="json")
-    parent = PROGRESS_FILE.parent if str(PROGRESS_FILE.parent) != "." else Path(".")
+    progress_file = _progress_file()
     tmp_fd, tmp_path = tempfile.mkstemp(
-        dir=str(parent),
+        dir=str(progress_file.parent),
         suffix=".tmp",
         prefix=".onboarding-progress-",
     )
     try:
         with open(tmp_fd, "w") as f:
             json.dump(data, f, indent=2)
-        Path(tmp_path).rename(PROGRESS_FILE)
+        Path(tmp_path).rename(progress_file)
     except Exception:
         Path(tmp_path).unlink(missing_ok=True)
         raise
@@ -103,10 +108,11 @@ def load_progress() -> "OnboardingState | None":
     where a prior save was interrupted mid-write (though atomic
     rename makes this unlikely).
     """
-    if not PROGRESS_FILE.exists():
+    progress_file = _progress_file()
+    if not progress_file.exists():
         return None
     try:
-        data = json.loads(PROGRESS_FILE.read_text())
+        data = json.loads(progress_file.read_text())
         return OnboardingState.model_validate(data)
     except (json.JSONDecodeError, Exception):
         return None
@@ -114,7 +120,7 @@ def load_progress() -> "OnboardingState | None":
 
 def delete_progress() -> None:
     """Delete progress file after successful completion."""
-    PROGRESS_FILE.unlink(missing_ok=True)
+    _progress_file().unlink(missing_ok=True)
 
 
 class WizardInterruptHandler:
@@ -236,7 +242,7 @@ def convert_state_to_user_data(
         Validated UserDataInput ready for YAML generation.
 
     Raises:
-        KeyError: If required section data is missing.
+        ValueError: If Environment Setup stored no owner name.
     """
     la = state.data.get(SectionName.LIQUID_ASSETS.value, {})
     inv = state.data.get(SectionName.INVESTMENTS.value, {})
@@ -245,8 +251,15 @@ def convert_state_to_user_data(
     prefs = state.data.get(SectionName.PREFERENCES.value, {})
     env = state.data.get(SectionName.ENV_SETUP.value, {})
 
+    user_name = env.get("user_name")
+    if not isinstance(user_name, str) or not user_name.strip():
+        raise ValueError(
+            "Environment Setup has no owner name. "
+            "Run the wizard again and enter your name."
+        )
+
     identity = UserIdentityInput(
-        user_name=env.get("user_name", "User"),
+        user_name=user_name,
         language=env.get("language", "English"),
     )
 
@@ -272,7 +285,7 @@ def convert_state_to_user_data(
             inv.get("risk_tolerance"),
             RiskTolerance.MODERATE,
         ),
-        google_sheets_id=inv.get("google_sheets_id"),
+        google_sheets_id=None,
         account_number=inv.get("account_number"),
     )
 
@@ -326,11 +339,13 @@ def convert_state_to_user_data(
         preferences=preferences,
         mcp=mcp,
         project_root=project_root,
-        google_sheets_credentials=env.get("google_sheets_credentials"),
+        google_sheets_credentials=None,
     )
 
 
-_TEMPLATE_DIR = "scripts/onboarding/modules/templates"
+_ENGINE_ROOT = Path(__file__).resolve().parents[2]
+_TEMPLATE_DIR = _ENGINE_ROOT / "scripts" / "onboarding" / "modules" / "templates"
+_BACKED_UP = {"CLAUDE.md", ".env", ".mcp.json"}
 
 
 def _backup_file(path: Path) -> None:
@@ -341,57 +356,36 @@ def _backup_file(path: Path) -> None:
         print(f"  Backed up: {path} -> {backup_path}")
 
 
-def generate_config_files(user_data: UserDataInput, project_root: Path) -> None:
-    """Generate all configuration files and write to correct locations.
+def generate_config_files(user_data: UserDataInput, paths: InstancePaths) -> None:
+    """Generate all configuration files and write them into the instance.
 
-    Private config files (user-profile.yaml, config.yaml, system-context.md)
-    and .env are written under the resolved instance root.
-
-    CLAUDE.md and .claude/mcp.json stay under the project root. The instance
-    .env follows the private config files under the resolved instance root.
+    Templates come from the engine this module ships in. Every file goes under
+    the instance root, and existing CLAUDE.md, .env, and .mcp.json files get a
+    .backup copy first.
 
     Args:
         user_data: Validated user data from the onboarding wizard.
-        project_root: Path to the project root directory.
-    """
-    template_dir = project_root / _TEMPLATE_DIR
-    generator = YAMLGenerator(str(template_dir))
-    output = generator.generate_all_configs(user_data)
-    paths = InstancePaths.resolve(cwd=project_root)
+        paths: The instance that owns every generated file.
 
-    instance_files = {
-        paths.profile: output.user_profile_yaml,
-        paths.config: output.config_yaml,
-        paths.system_context: output.system_context_md,
-    }
-    for file_path, content in instance_files.items():
+    Raises:
+        ValueError: If any target resolves outside the instance root. Nothing
+            is written in that case.
+    """
+    output = YAMLGenerator(str(_TEMPLATE_DIR)).generate_all_configs(user_data)
+    targets = config_file_targets(output, paths)
+
+    for file_path, content in targets.items():
+        if file_path.name in _BACKED_UP:
+            _backup_file(file_path)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_text(content, encoding="utf-8")
 
-    claude_path = project_root / "CLAUDE.md"
-    _backup_file(claude_path)
-    claude_path.write_text(output.claude_md, encoding="utf-8")
-
-    env_path = paths.env_file
-    _backup_file(env_path)
-    env_path.write_text(output.env_file, encoding="utf-8")
-
-    mcp_dir = project_root / ".claude"
-    mcp_dir.mkdir(parents=True, exist_ok=True)
-    mcp_path = mcp_dir / "mcp.json"
-    _backup_file(mcp_path)
-    mcp_path.write_text(output.mcp_json, encoding="utf-8")
-
     print()
     print("  Generated configuration files:")
-    print(f"    - {paths.profile}")
-    print(f"    - {paths.config}")
-    print(f"    - {paths.system_context}")
-    print(f"    - {claude_path}")
-    print(f"    - {env_path}")
-    print(f"    - {mcp_path}")
+    for file_path in targets:
+        print(f"    - {file_path}")
     print()
-    print("  NOTE: If you had a custom .claude/mcp.json, a backup was created.")
+    print("  NOTE: If you had a custom .mcp.json, a backup was created.")
     print("  You may need to manually merge your custom MCP server entries")
     print("  into the newly generated file.")
     print()
@@ -409,6 +403,14 @@ def run_wizard(dry_run: bool = False) -> None:
         dry_run: If True, skip file generation and print what would
             be generated instead.
     """
+    paths = InstancePaths.resolve()
+    if paths.root.is_relative_to(_ENGINE_ROOT):
+        print()
+        print("  The wizard writes your private files to an instance, not the engine.")
+        print("  Set FIN_GURU_DATA_ROOT to your instance, or run from the instance.")
+        print()
+        raise SystemExit(1)
+
     print()
     print(_BANNER)
     print()
@@ -458,9 +460,11 @@ def run_wizard(dry_run: bool = False) -> None:
         print("  Onboarding was not confirmed. No files generated.")
         return
 
-    project_root = Path.cwd()
-    paths = InstancePaths.resolve(cwd=project_root)
-    user_data = convert_state_to_user_data(state, str(project_root))
+    try:
+        user_data = convert_state_to_user_data(state, str(paths.root))
+    except ValueError as error:
+        print(f"  {error} No files generated.")
+        raise SystemExit(1) from error
 
     if dry_run:
         print()
@@ -472,18 +476,25 @@ def run_wizard(dry_run: bool = False) -> None:
         print(f"    Philosophy: {user_data.preferences.investment_philosophy.value}")
         print()
         print("  [DRY RUN] Files would be written to:")
-        print(f"    - {paths.profile}")
-        print(f"    - {paths.config}")
-        print(f"    - {paths.system_context}")
-        print(f"    - {project_root / 'CLAUDE.md'}")
-        print(f"    - {paths.env_file}")
-        print(f"    - {project_root / '.claude' / 'mcp.json'}")
+        for file_path in (
+            paths.profile,
+            paths.config,
+            paths.system_context,
+            paths.root / "CLAUDE.md",
+            paths.env_file,
+            paths.root / ".mcp.json",
+        ):
+            print(f"    - {file_path}")
         print()
         handler.deactivate()
         delete_progress()
         return
 
-    generate_config_files(user_data, project_root)
+    try:
+        generate_config_files(user_data, paths)
+    except ValueError as error:
+        print(f"  {error}")
+        raise SystemExit(1) from error
 
     handler.deactivate()
     delete_progress()
