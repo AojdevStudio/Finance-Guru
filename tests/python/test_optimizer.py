@@ -373,3 +373,20 @@ class TestConvenienceFunction:
         result = optimize_portfolio(data, config)
 
         assert result.method == "min_variance"
+
+
+@pytest.mark.parametrize("status", [4, 9])
+def test_solver_status_distinguishes_infeasible_from_nonconverged(mocker, status):
+    from scipy.optimize import OptimizeResult
+
+    mocker.patch(
+        "src.strategies.optimizer.minimize",
+        return_value=OptimizeResult(
+            success=False, status=status, message="solver failure"
+        ),
+    )
+    optimizer = PortfolioOptimizer(OptimizationConfig())
+    error = TargetReturnInfeasibleError if status == 4 else ValueError
+    with pytest.raises(error) as failure:
+        optimizer._optimize_for_target_return(np.array([0.1, 0.2]), np.eye(2), 0.15, 2)
+    assert isinstance(failure.value, TargetReturnInfeasibleError) == (status == 4)

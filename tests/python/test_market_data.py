@@ -4,7 +4,7 @@ Tests the get_prices function with mocked yfinance and API calls.
 No real API calls -- all external calls are mocked.
 """
 
-from datetime import date
+from datetime import UTC, date, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -228,6 +228,7 @@ class TestAppendLiveQuote:
                 change=0.0,
                 change_percent=0.0,
                 timestamp="2026-10-14T15:00:00",
+                session_date=date(2026, 10, 14),
                 source="finnhub",
             )
         }
@@ -236,7 +237,7 @@ class TestAppendLiveQuote:
 
         append_live_quote("tsla", dates, high, low, close)
 
-        assert dates == [date(2026, 10, 13), date.today()]
+        assert dates == [date(2026, 10, 13), date(2026, 10, 14)]
         assert high[-1] == low[-1] == close[-1] == 250.0
 
     @patch("src.utils.market_data.get_prices")
@@ -262,3 +263,31 @@ class TestAppendLiveQuote:
 
         assert (dates, close) == ([date(2026, 10, 13)], [249.0])
         assert "rate limited" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("session", [date(2026, 10, 16), None])
+def test_existing_or_unknown_quote_session_is_not_appended(mocker, session):
+    quote = PriceData(
+        symbol="ABC",
+        price=100,
+        change=0,
+        change_percent=0,
+        timestamp="2026-10-18T12:00:00Z",
+        session_date=session,
+    )
+    mocker.patch("src.utils.market_data.get_prices", return_value={"ABC": quote})
+    dates, close = [date(2026, 10, 16)], [99.0]
+    append_live_quote("ABC", dates, close)
+    assert (dates, close) == ([date(2026, 10, 16)], [99.0])
+
+
+def test_yfinance_quote_uses_exchange_session_date(mocker):
+    ticker = mocker.patch("src.utils.market_data.yf.Ticker").return_value
+    ticker.info = {
+        "currentPrice": 100,
+        "previousClose": 99,
+        "regularMarketTime": datetime(2026, 10, 17, 0, 30, tzinfo=UTC).timestamp(),
+        "exchangeTimezoneName": "America/New_York",
+    }
+    quote = get_prices("ABC")["ABC"]
+    assert quote.session_date == date(2026, 10, 16)

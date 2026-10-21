@@ -12,6 +12,7 @@ CALENDAR_MODULE = SRC / "utils" / "trading_calendar.py"
 def test_calendar_days_cover_requested_trading_days() -> None:
     assert calendar_days_for(TRADING_DAYS_PER_YEAR) == 378
     assert calendar_days_for(90) == 135
+    assert calendar_days_for(3) == 5
 
 
 def test_src_has_no_literal_trading_days_per_year() -> None:

@@ -729,3 +729,12 @@ class TestITCRiskCLI:
         output = format_output_human(response)
 
         assert "High Risk at:" in output or "600.00" in output
+
+
+@pytest.mark.parametrize("invalid", [0, -1, float("nan"), float("inf"), "invalid"])
+def test_invalid_live_price_does_not_mask_regular_quote(invalid):
+    from src.analysis.itc_risk import first_quoted_price
+
+    assert (
+        first_quoted_price({"currentPrice": invalid, "regularMarketPrice": 100}) == 100
+    )
