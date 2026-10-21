@@ -215,12 +215,8 @@ class TechnicalScreener:
         results: list[ScreeningResult] = []
 
         for ticker, (prices, dates, volumes) in tickers_data.items():
-            try:
-                result = self.screen_ticker(ticker, prices, dates, volumes)
-                results.append(result)
-            except Exception as e:
-                print(f"Warning: Skipping {ticker} - {e}")
-                continue
+            result = self.screen_ticker(ticker, prices, dates, volumes)
+            results.append(result)
 
         results.sort(key=lambda r: r.score, reverse=True)
 
