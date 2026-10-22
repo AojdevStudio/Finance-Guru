@@ -53,6 +53,14 @@ month and other account roles are excluded. `dividend_income` names the source,
 window start, and exclusive window end. Missing history stays unavailable with a
 reason. The fallback opens the ledger read-only.
 
+Total-return calculator models require finite price observations, dividend amounts,
+share counts, and return inputs. Missing prices, NaN, and infinities block calculation,
+including with `--force`. A zero terminal price remains valid and can produce a total loss.
+JSON output rejects nonfinite numbers, including portfolio CSV quantities, before
+printing or saving the report. The human report does not validate CSV quantities
+for finiteness.
+The CLI returns exit code 1 when all tickers fail or JSON formatting fails.
+
 ## Strategy commands
 
 | Command | Purpose |

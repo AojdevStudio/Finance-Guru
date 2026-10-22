@@ -42,6 +42,7 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import math
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -114,6 +115,8 @@ def fetch_ticker_data(
 
     dividends: list[DividendRecord] = []
     ex_date_prices: dict[date, float] = {}
+    if not all(math.isfinite(amount) for amount in hist["Dividends"]):
+        raise ValueError("All dividend observations must be finite")
     div_mask = hist["Dividends"] > 0
     for idx, row in hist[div_mask].iterrows():
         ex_dt = idx.date()
@@ -332,7 +335,7 @@ def format_json_output(
         portfolio_shares: Dict of ticker -> share count from portfolio CSV.
 
     Returns:
-        JSON string.
+        Strict JSON string. Nonfinite numbers raise ValueError before output.
     """
     output_list = []
     for r in results:
@@ -392,7 +395,7 @@ def format_json_output(
         "total_return_analysis": output_list,
         "disclaimer": DISCLAIMER,
     }
-    return json.dumps(wrapper, indent=2, default=str)
+    return json.dumps(wrapper, indent=2, default=str, allow_nan=False)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -459,7 +462,7 @@ Key Insight:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Calculate despite data quality warnings (missing dividends, gaps)",
+        help="Calculate despite dividend quality warnings. Nonfinite inputs still fail",
     )
 
     parser.add_argument(
