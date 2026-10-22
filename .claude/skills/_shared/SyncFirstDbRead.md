@@ -68,7 +68,7 @@ use a table's `MAX(synced_at)` alone as proof of a successful refresh.
 
 Positions and balances are snapshots. The combined refresh must print a
 `generation` for positions, not `no enabled, routed account synced`. To confirm
-specific accounts, use the targeted refresh commands above and check their
+specific accounts, use the targeted SnapTrade refresh commands above and check their
 per-account output. Both SnapTrade commands print `no syncable accounts` when
 the configuration routes no accounts. That is not fresh data for an analysis
 that requires an account.
@@ -78,6 +78,12 @@ Transaction history is append-only. A successful targeted refresh can report
 so row timestamps can stay unchanged. An empty history also has no row timestamp.
 Neither case proves a refresh failure. The combined `transactions: ok` line does
 not show which accounts synced, so use the targeted command to confirm coverage.
+
+The SimpleFIN expenses CLI prints aggregate transaction counts only. Aggregate
+counts do not establish required-account coverage. An empty account set and a
+required account with empty history both exit 0 and print the same counts.
+Require trusted account coverage evidence for this run. If none exists,
+report unverifiable coverage and stop. Do not declare the refresh fresh.
 
 This query shows the latest stored row timestamps for context. It is not a
 refresh success check:
