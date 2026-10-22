@@ -110,6 +110,10 @@ class Backtester:
             self._close_position(
                 last_signal.signal_date, last_signal.price, "Backtest end"
             )
+            self.equity_curve[-1] = (
+                pd.Timestamp(last_signal.signal_date),
+                self.capital,
+            )
 
         performance = self._calculate_performance_metrics()
 
@@ -329,12 +333,15 @@ class Backtester:
         )
 
         total_slippage = 0.0
+        slippage_pct = self.config.slippage_pct
         for t in self.trades:
-            entry_slippage = t.shares * t.entry_price * self.config.slippage_pct
+            entry_signal_price = t.entry_price / (1 + slippage_pct)
+            entry_slippage = t.shares * entry_signal_price * slippage_pct
             total_slippage += entry_slippage
 
             if t.exit_price is not None:
-                exit_slippage = t.shares * t.exit_price * self.config.slippage_pct
+                exit_signal_price = t.exit_price / (1 - slippage_pct)
+                exit_slippage = t.shares * exit_signal_price * slippage_pct
                 total_slippage += exit_slippage
 
         return BacktestPerformanceMetrics(
@@ -382,7 +389,7 @@ class Backtester:
             equity_values: List of portfolio values over time
 
         Returns:
-            Tuple of (max_drawdown_dollars, max_drawdown_percent)
+            Independent maximum drawdowns in dollars and percent.
         """
         if not equity_values:
             return 0.0, 0.0
@@ -398,9 +405,8 @@ class Backtester:
             drawdown = peak - value
             drawdown_pct = (drawdown / peak) * 100
 
-            if drawdown > max_dd:
-                max_dd = drawdown
-                max_dd_pct = drawdown_pct
+            max_dd = max(max_dd, drawdown)
+            max_dd_pct = max(max_dd_pct, drawdown_pct)
 
         return max_dd, max_dd_pct
 
