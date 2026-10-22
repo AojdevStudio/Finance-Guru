@@ -178,7 +178,8 @@ class Backtester:
 
         Returns:
             "opened", or "skipped_insufficient_capital" when the position plus
-            commission costs more than the cash on hand.
+            commission costs more than the cash on hand, or the allocation cannot
+            buy one whole share.
         """
         position_capital = self.capital * self.config.position_size_pct
 
@@ -188,6 +189,8 @@ class Backtester:
 
         if not self.config.allow_fractional_shares:
             shares = int(shares)
+            if shares == 0:
+                return "skipped_insufficient_capital"
 
         capital_needed = shares * entry_price
 
