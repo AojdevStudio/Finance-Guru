@@ -480,9 +480,13 @@ def metrics_from_runtime(
         balances = read_snaptrade_balances()
     else:
         balances = read_db_balances()
-    resolved_rate = annual_rate or parse_rate(
-        os.getenv("FG_MARGIN_INTEREST_RATE_DECIMAL")
-        or os.getenv("FG_MARGIN_INTEREST_RATE")
+    resolved_rate = (
+        annual_rate
+        if annual_rate is not None
+        else parse_rate(
+            os.getenv("FG_MARGIN_INTEREST_RATE_DECIMAL")
+            or os.getenv("FG_MARGIN_INTEREST_RATE")
+        )
     )
     threshold = parse_money(os.getenv("FG_MARGIN_JUMP_ALERT_THRESHOLD"))
     if threshold is None:
