@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
+from scipy.optimize import linprog, minimize
 
 from src.models.portfolio_inputs import (
     EfficientFrontierOutput,
@@ -37,9 +37,12 @@ BLACK_LITTERMAN_RISK_AVERSION = 2.5
 BLACK_LITTERMAN_TAU = 0.025
 """Scale on the covariance prior; the usual range is 0.025 to 0.05."""
 
+REACHABLE_RETURN_TOLERANCE = 1e-9
+"""Slack on the linear-program return bounds, which are exact only to solver precision."""
+
 
 class TargetReturnInfeasibleError(ValueError):
-    """The solver found no portfolio that reaches a frontier target return."""
+    """No fully invested portfolio inside the position limits reaches the target."""
 
 
 class PortfolioOptimizer:
@@ -555,9 +558,11 @@ class PortfolioOptimizer:
         min_var_weights = self._find_min_variance_weights(cov_matrix, n_assets)
         min_return = min_var_weights @ returns
 
-        max_return = np.max(returns)
+        _, max_return = self._reachable_return_range(returns, n_assets)
 
-        target_returns = np.linspace(min_return, max_return * 0.95, n_points)
+        target_returns = np.linspace(
+            min_return, min_return + 0.95 * (max_return - min_return), n_points
+        )
 
         frontier_returns = []
         frontier_vols = []
@@ -760,7 +765,35 @@ class PortfolioOptimizer:
         result = minimize(
             objective, x0, method="SLSQP", bounds=bounds, constraints=constraints
         )
-        return result.x
+        if not result.success:
+            raise ValueError(
+                "Minimum variance optimization did not converge: "
+                f"status {result.status}, {result.message}"
+            )
+        return np.asarray(result.x, dtype=float)
+
+    def _reachable_return_range(
+        self, returns: np.ndarray, n_assets: int
+    ) -> tuple[float, float]:
+        """Return the lowest and highest return reachable inside the position limits.
+
+        Both bounds are for fully invested portfolios, solved as linear programs.
+
+        Raises:
+            ValueError: If no fully invested portfolio fits the position limits.
+        """
+        bounds = [self.config.position_limits for _ in range(n_assets)]
+        full_investment = {"A_eq": np.ones((1, n_assets)), "b_eq": [1.0]}
+        extremes = []
+        for direction in (1.0, -1.0):
+            result = linprog(direction * returns, bounds=bounds, **full_investment)
+            if not result.success:
+                raise ValueError(
+                    f"No fully invested portfolio fits position limits "
+                    f"{self.config.position_limits}: {result.message}"
+                )
+            extremes.append(float(result.x @ returns))
+        return extremes[0], extremes[1]
 
     def _optimize_for_target_return(
         self,
@@ -769,7 +802,20 @@ class PortfolioOptimizer:
         target_return: float,
         n_assets: int,
     ) -> np.ndarray:
-        """Helper to optimize for specific target return."""
+        """Helper to optimize for specific target return.
+
+        Raises:
+            TargetReturnInfeasibleError: If no portfolio inside the position
+                limits reaches the target.
+            ValueError: If the solver fails on a reachable target.
+        """
+        lowest, highest = self._reachable_return_range(returns, n_assets)
+        tolerance = REACHABLE_RETURN_TOLERANCE
+        if not lowest - tolerance <= target_return <= highest + tolerance:
+            raise TargetReturnInfeasibleError(
+                f"Cannot achieve target return {target_return}: position limits "
+                f"allow {lowest} to {highest}"
+            )
 
         def objective(weights):
             return weights @ cov_matrix @ weights
@@ -791,8 +837,9 @@ class PortfolioOptimizer:
         )
 
         if not result.success:
-            raise TargetReturnInfeasibleError(
-                f"Cannot achieve target return {target_return}"
+            raise ValueError(
+                f"Target return optimization did not converge for {target_return}: "
+                f"status {result.status}, {result.message}"
             )
 
         return result.x
