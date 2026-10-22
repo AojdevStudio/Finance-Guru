@@ -148,6 +148,7 @@ assert_dir_exists "$TEST_DIR/imports/transactions"
 assert_dir_exists "$TEST_DIR/imports/retirement"
 
 assert_file_exists "$TEST_DIR/user-profile.yaml"
+assert_no_grep "$TEST_DIR/user-profile.yaml" "google_sheets" "Scaffolded profile has no retired Google Sheets block"
 assert_file_not_exists "$TEST_DIR/fin-guru/data/user-profile.yaml"
 assert_file_exists "$TEST_DIR/fin-guru-private/README.md"
 
