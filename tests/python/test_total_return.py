@@ -1091,3 +1091,123 @@ class TestInstancePaths:
         assert load_dividend_schedules() == {
             "SYNTH": {"frequency": 4, "label": "quarterly"}
         }
+
+
+@pytest.mark.parametrize("bad", [None, float("nan"), float("inf"), -float("inf")])
+@pytest.mark.parametrize("position", [0, 1, 2], ids=["first", "intermediate", "last"])
+def test_nonfinite_price_observations_refused(bad, position):
+    prices = [100.0, 105.0, 110.0]
+    prices[position] = bad
+    with pytest.raises(ValueError, match="finite"):
+        TotalReturnCalculator(_make_input(), prices=prices).calculate_total_return()
+
+
+@pytest.mark.parametrize("bad", [None, float("nan"), float("inf"), -float("inf")])
+def test_nonfinite_reinvestment_observations_refused(bad):
+    ex_date = date(2025, 3, 15)
+    with pytest.raises(ValueError, match="finite"):
+        TotalReturnCalculator(
+            _make_input(),
+            prices=[100.0, 110.0],
+            dividends=[_div(ex_date, 2.0)],
+            ex_date_prices={ex_date: bad},
+        ).calculate_drip_return()
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -float("inf")])
+def test_nonfinite_annualization_input_refused(bad):
+    calc = TotalReturnCalculator(_make_input(), prices=[100.0, 110.0])
+    with pytest.raises(ValueError, match="finite"):
+        calc.calculate_annualized_return(bad)
+
+
+def test_zero_terminal_price_preserves_total_loss(monkeypatch, tmp_path):
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    result = TotalReturnCalculator(
+        _make_input(), prices=[100.0, 50.0, 0.0]
+    ).calculate_all()
+    parsed = json.loads(format_json_output([result], {}))
+    entry = parsed["total_return_analysis"][0]
+    assert entry["price_return"] == -1.0
+    assert entry["total_return"] == -1.0
+    assert entry["annualized_return"] == -1.0
+    assert entry["drip_total_return"] == -1.0
+    assert entry["dividend_return"] == 0.0
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -float("inf")])
+@pytest.mark.parametrize("location", ["return", "breakdown", "portfolio"])
+def test_json_formatter_refuses_nonfinite_values(bad, location):
+    result = _make_result()
+    portfolio = {}
+    if location == "return":
+        result.total_return = bad
+    elif location == "breakdown":
+        result.period_breakdown = [{"shares_acquired": bad}]
+    else:
+        portfolio[result.ticker] = bad
+    with pytest.raises(ValueError):
+        format_json_output([result], portfolio)
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -float("inf")])
+@pytest.mark.parametrize("column", ["Close", "Dividends"])
+def test_cli_refuses_nonfinite_provider_data_without_output(
+    bad, column, monkeypatch, tmp_path, capsys
+):
+    from src.analysis.total_return_cli import main
+
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    destination = tmp_path / "returns.json"
+    destination.write_text("previous valid report")
+    mock_yf, ticker = _mock_yfinance_history([100.0, 110.0], [0.0, 0.0])
+    ticker.history.return_value.loc[ticker.history.return_value.index[-1], column] = bad
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "total_return_cli",
+            "SYNTH",
+            "--output",
+            "json",
+            "--force",
+            "--save-to",
+            str(destination),
+        ],
+    )
+    with patch.dict("sys.modules", {"yfinance": mock_yf}):
+        assert main() == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "finite" in captured.err
+    assert destination.read_text() == "previous valid report"
+
+
+def test_cli_strict_json_refusal_preserves_saved_report(monkeypatch, tmp_path, capsys):
+    from src.analysis.total_return_cli import main
+
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    imports = tmp_path / "imports"
+    imports.mkdir()
+    (imports / "Portfolio_Positions_synthetic.csv").write_text(
+        "Symbol,Quantity\nSYNTH,Infinity\n"
+    )
+    destination = tmp_path / "returns.json"
+    destination.write_text("previous valid report")
+    mock_yf, _ = _mock_yfinance_history([100.0, 110.0], [0.0, 0.0])
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "total_return_cli",
+            "SYNTH",
+            "--output",
+            "json",
+            "--save-to",
+            str(destination),
+        ],
+    )
+    with patch.dict("sys.modules", {"yfinance": mock_yf}):
+        assert main() == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "Out of range float values" in captured.err
+    assert destination.read_text() == "previous valid report"
