@@ -62,7 +62,7 @@ from src.models.risk_inputs import (
     RiskMetricsOutput,
     RiskRatioName,
 )
-from src.utils.market_data import get_prices
+from src.utils.market_data import append_live_quote
 from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR, calendar_days_for
 
 
@@ -102,22 +102,7 @@ def fetch_price_data(ticker: str, days: int, realtime: bool = False) -> PriceDat
         dates = [d.date() for d in hist.index]
 
         if realtime:
-            try:
-                rt_data = get_prices(ticker, realtime=True)
-                if ticker.upper() in rt_data:
-                    price_data = rt_data[ticker.upper()]
-                    current_price = price_data.price
-                    prices.append(current_price)
-                    dates.append(date.today())
-                    print(
-                        f"✅ Real-time price appended: ${current_price:.2f} (Finnhub)",
-                        file=sys.stderr,
-                    )
-            except Exception as e:
-                print(
-                    f"⚠️  Real-time price unavailable, using EOD data only: {e}",
-                    file=sys.stderr,
-                )
+            append_live_quote(ticker, dates, prices)
 
         if len(prices) < 30:
             raise ValueError(
