@@ -8,8 +8,9 @@ the only writes are to the local DB.
     uv run python -m src.integrations.snaptrade.sync_db          # sync
     uv run python -m src.integrations.snaptrade.sync_db --show   # print latest generation
 
-Snapshot semantics: each sync REPLACES the rows for every synced account (a
-current-state store, like the old DataHub). ponytail: if per-sync history is
+Snapshot semantics: each sync atomically REPLACES every synced account's rows.
+A failed account leaves the previous generation intact. This is a current-state
+store, like the old DataHub. ponytail: if per-sync history is
 ever wanted, add an append-only `position_history` table keyed on synced_at.
 """
 
@@ -110,7 +111,7 @@ def sync(config_path: Path, database_url: str | None) -> dict[str, Any]:
     config = SnapTradeAccountsConfig.from_path(config_path)
     syncable = config.syncable
     db = _db_path(database_url)
-    now = datetime.now(UTC).replace(microsecond=0).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     summary: dict[str, Any] = {"db": str(db), "accounts": [], "synced_at": now}
     conn = sqlite3.connect(db)
@@ -119,12 +120,20 @@ def sync(config_path: Path, database_url: str | None) -> dict[str, Any]:
         if not syncable:
             return summary
         client = SnapTradeClientWrapper.from_env()
-        for account in syncable:
-            aid = account.snaptrade_account_id
-            netted = _net_positions(_account_positions(client, aid))
-            positions = netted.positions
-            balances = _account_balances(client, aid)
-            with conn:
+        snapshots = [
+            (
+                account,
+                _net_positions(
+                    _account_positions(client, account.snaptrade_account_id)
+                ),
+                _account_balances(client, account.snaptrade_account_id),
+            )
+            for account in syncable
+        ]
+        with conn:
+            for account, netted, balances in snapshots:
+                aid = account.snaptrade_account_id
+                positions = netted.positions
                 conn.execute("DELETE FROM positions WHERE account_id = ?", (aid,))
                 conn.executemany(
                     "INSERT INTO positions "
@@ -158,23 +167,25 @@ def sync(config_path: Path, database_url: str | None) -> dict[str, Any]:
                         now,
                     ),
                 )
-            summary["accounts"].append(
-                {
-                    "account_id": aid,
-                    "name": account.name,
-                    "role": str(account.role),
-                    "equity_rows": sum(
-                        1 for p in positions if p["instrument"] == "equity"
-                    ),
-                    "option_rows": sum(
-                        1 for p in positions if p["instrument"] == "option"
-                    ),
-                    "settled_cash": balances.get("settled_cash"),
-                    "margin_debt": balances.get("margin_debt"),
-                    "account_equity": balances.get("account_equity"),
-                    "unpriced_lots": [lot.model_dump() for lot in netted.unpriced_lots],
-                }
-            )
+                summary["accounts"].append(
+                    {
+                        "account_id": aid,
+                        "name": account.name,
+                        "role": str(account.role),
+                        "equity_rows": sum(
+                            1 for p in positions if p["instrument"] == "equity"
+                        ),
+                        "option_rows": sum(
+                            1 for p in positions if p["instrument"] == "option"
+                        ),
+                        "settled_cash": balances.get("settled_cash"),
+                        "margin_debt": balances.get("margin_debt"),
+                        "account_equity": balances.get("account_equity"),
+                        "unpriced_lots": [
+                            lot.model_dump() for lot in netted.unpriced_lots
+                        ],
+                    }
+                )
     finally:
         conn.close()
     return summary
