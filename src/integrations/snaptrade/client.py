@@ -227,30 +227,19 @@ class SnapTradeClientWrapper:
         try:
             return fn()
         except Exception as exc:
-            raise _to_snaptrade_error(exc) from exc
+            raise _to_snaptrade_error(exc) from None
 
 
 def _to_snaptrade_error(exc: Exception) -> SnapTradeAPIError:
     """Convert SDK exceptions into a sanitized CLI-safe error."""
     status = getattr(exc, "status", None) or getattr(exc, "status_code", None)
-    response_body = getattr(exc, "response_body", None)
-    detail = _message_from_body(response_body)
-    if detail:
-        return SnapTradeAPIError(detail, status)
-    if status:
+    if (
+        isinstance(status, int)
+        and not isinstance(status, bool)
+        and 100 <= status <= 599
+    ):
         return SnapTradeAPIError(f"SnapTrade API error (status {status})", status)
-    return SnapTradeAPIError(str(exc) or "Unknown SnapTrade API error")
-
-
-def _message_from_body(body: Any) -> str | None:
-    plain = _to_plain(body)
-    if not isinstance(plain, Mapping):
-        return None
-    for key in ("detail", "default_detail", "message", "error"):
-        value = plain.get(key)
-        if isinstance(value, str) and value:
-            return value
-    return None
+    return SnapTradeAPIError("SnapTrade API request failed")
 
 
 def _response_body(response: Any) -> Any:
