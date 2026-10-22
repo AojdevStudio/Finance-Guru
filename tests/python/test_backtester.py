@@ -17,6 +17,7 @@ import pytest
 
 from src.models.backtest_inputs import BacktestConfig, TradeSignal
 from src.strategies.backtester import Backtester
+from src.strategies.backtester_cli import format_human_output
 
 
 @pytest.fixture
@@ -146,6 +147,8 @@ class TestTransactionCosts:
 
         result = Backtester(config).run_backtest(signals, "TSLA")
 
+        assert len(result.equity_values) == len(signals) + 1
+        assert len(result.equity_dates) == len(signals) + 1
         assert result.equity_values[-1] == pytest.approx(
             result.performance.final_capital
         )
@@ -310,6 +313,17 @@ class TestPerformanceMetrics:
 
 
 class TestMaxDrawdown:
+    def test_report_labels_independent_drawdown_maxima(self, default_config):
+        signals = _make_signals(
+            [100.0, 50.0, 1000.0, 900.0], ["BUY", "HOLD", "HOLD", "SELL"]
+        )
+        result = Backtester(default_config).run_backtest(signals, "TSLA")
+
+        report = format_human_output(result)
+
+        assert "Max Drawdown: 50.00%" in report
+        assert "Largest Dollar Drawdown: $100,000.00" in report
+
     @pytest.mark.parametrize(
         ("trough_price", "expected_drawdown", "recommendation"),
         [(50.0, 50.0, "REJECT"), (75.0, 25.0, "REJECT"), (90.0, 10.0, "DEPLOY")],
