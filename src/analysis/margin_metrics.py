@@ -62,7 +62,7 @@ class MarginMetricsInput(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     balances: FidelityBalances
-    annual_rate: float
+    annual_rate: float = Field(ge=0.0, allow_inf_nan=False)
     jump_alert_threshold: float
     monthly_dividend_income: float | None = None
     today: date | None = None
