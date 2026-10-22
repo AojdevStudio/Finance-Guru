@@ -60,7 +60,7 @@ def test_holdings_require_an_identity(method: str) -> None:
 @pytest.mark.parametrize(
     "method", ["get_positions", "get_options", "get_balances", "get_activities"]
 )
-@pytest.mark.parametrize("body", [[], {"data": []}])
+@pytest.mark.parametrize("body", [[], {"data": []}, {"data": [], "pagination": {}}])
 def test_collection_endpoints_allow_explicitly_empty_results(
     method: str, body: Any
 ) -> None:
@@ -138,7 +138,7 @@ def test_activity_pagination_requires_a_positive_page_size(page_size: int) -> No
 def test_activity_pagination_rejects_malformed_totals(total: Any) -> None:
     client = _client({"data": [_activity("first")], "pagination": {"total": total}})
 
-    with pytest.raises(SnapTradeDataError, match="total"):
+    with pytest.raises(SnapTradeDataError, match="nonnegative integer"):
         client.get_activities("synthetic-account")
 
 
@@ -148,8 +148,13 @@ def test_activity_pagination_rejects_non_object_metadata() -> None:
 
 
 @pytest.mark.parametrize("page_size", [1, 2])
-def test_activity_pagination_rejects_duplicate_identities(page_size: int) -> None:
+@pytest.mark.parametrize("provider_id", ["repeated", None])
+def test_activity_pagination_rejects_duplicate_identities(
+    page_size: int, provider_id: str | None
+) -> None:
     repeated = _activity("repeated")
+    if provider_id is None:
+        repeated.pop("id")
     pages = (
         [
             {"data": [repeated], "pagination": {"total": 2}},
