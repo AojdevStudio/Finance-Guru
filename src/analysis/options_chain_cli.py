@@ -47,6 +47,7 @@ import math
 import sys
 from datetime import date
 from pathlib import Path
+from typing import Literal
 
 project_root = Path(__file__).parent.parent.parent
 
@@ -119,7 +120,7 @@ def filter_expirations(
 def calculate_otm_pct(
     spot: float,
     strike: float,
-    option_type: str,
+    option_type: Literal["call", "put"],
 ) -> float:
     """
     Calculate out-of-the-money percentage.
@@ -177,7 +178,7 @@ def should_skip_greeks(iv: float) -> bool:
 
 def scan_chain(  # noqa: C901
     ticker: str,
-    option_type: str,
+    option_type: Literal["call", "put"],
     otm_min: float,
     otm_max: float,
     days_min: int,

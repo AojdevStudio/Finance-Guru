@@ -12,13 +12,20 @@ from __future__ import annotations
 import json
 import math
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
 
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
+
+
+EXPIRATION_REFERENCE_DATE = date(2026, 2, 2)
+EXPIRATION_DTES = (19, 46, 60, 74, 90, 102, 137)
+OUTSIDE_WINDOW_DTES = (19, 33)
+MIN_DTE = 60
+MAX_DTE = 90
 
 
 class TestOptionContractDataModel:
@@ -260,19 +267,13 @@ class TestExpirationFiltering:
 
     def test_filter_expirations_within_range(self):
         """Only expirations within days_min to days_max should pass."""
-        today = date(2026, 2, 2)
+        today = EXPIRATION_REFERENCE_DATE
         expirations = [
-            "2026-02-21",
-            "2026-03-20",
-            "2026-04-03",
-            "2026-04-17",
-            "2026-05-03",
-            "2026-05-15",
-            "2026-06-19",
+            (today + timedelta(days=dte)).isoformat() for dte in EXPIRATION_DTES
         ]
 
-        days_min = 60
-        days_max = 90
+        days_min = MIN_DTE
+        days_max = MAX_DTE
         filtered = []
 
         for exp_str in expirations:
@@ -290,11 +291,13 @@ class TestExpirationFiltering:
 
     def test_no_expirations_in_range(self):
         """If no expirations match, result should be empty."""
-        today = date(2026, 2, 2)
-        expirations = ["2026-02-21", "2026-03-07"]
+        today = EXPIRATION_REFERENCE_DATE
+        expirations = [
+            (today + timedelta(days=dte)).isoformat() for dte in OUTSIDE_WINDOW_DTES
+        ]
 
-        days_min = 60
-        days_max = 90
+        days_min = MIN_DTE
+        days_max = MAX_DTE
         filtered = []
 
         for exp_str in expirations:
