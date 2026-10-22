@@ -158,7 +158,7 @@ Words used below:
 **The margin-rate check.** [Fidelity](https://www.fidelity.com/) charges a margin rate that depends on the size of your debt. The `margin-rate-check` workflow catches a rate in your `.env` that no longer matches:
 
 1. `refresh` runs the engine's SnapTrade positions sync in your instance, so the margin debt in `family_office.db` is current.
-2. `check` reads [Fidelity](https://www.fidelity.com/)'s published rate table, picks the rate for your `taxable_margin` account's debt, and compares it with `FG_MARGIN_INTEREST_RATE_DECIMAL` in your instance `.env`. A mismatch fails the run. The check never edits your `.env`.
+2. `check` asks the engine's `margin_metrics_cli` for your margin debt and configured rate (`FG_MARGIN_INTEREST_RATE_DECIMAL`), reads [Fidelity](https://www.fidelity.com/)'s published rate table, and compares the rate for that debt with yours. A mismatch fails the run. The check never edits your `.env`.
 
 It runs Mondays at 9:15 in the machine's local time zone. On a machine set to US Central time, that is after SnapTrade's daily holdings sync, about 8:45 AM CT.
 
@@ -166,7 +166,7 @@ It runs Mondays at 9:15 in the machine's local time zone. On a machine set to US
 
 - A Finance Guru checkout and an instance with a Fidelity margin account routed as `taxable_margin` in `snaptrade-accounts.yaml`.
 - `FG_MARGIN_INTEREST_RATE_DECIMAL` set in the instance `.env`.
-- `uv` and `sqlite3` on the machine.
+- `uv` on the machine.
 - The swamp CLI, installed as its [README](https://github.com/swamp-club/swamp) describes, and signed in with `swamp auth login`. Every swamp process, the service included, needs that sign-in to start.
 
 #### Configure the check
@@ -191,7 +191,7 @@ swamp workflow run margin-rate-check --json
 swamp data query 'behavior("fidelity-margin-rate") && name == "rate"' --select content --json
 ```
 
-The last command prints the newest comparison: tier rate, configured rate, margin debt, and `drift`. To check one rate without syncing first, run `swamp behavior run fidelity-margin-rate check`. It refuses a balances row older than 36 hours.
+The last command prints the newest comparison: tier rate, configured rate, margin debt, and `drift`. To check the rate without syncing first, run `swamp behavior run fidelity-margin-rate check`. It refuses a ledger more than a day old.
 
 Run the tests with the Deno that ships with swamp (`swamp doctor extensions --json` prints its path as `denoPath`):
 
@@ -227,7 +227,7 @@ curl -s http://127.0.0.1:9093/health
 
 A failed run notifies no one. Check the history, or point a tool you already use at it.
 
-**How it relates to the stale-equity guard.** The engine computes margin debt as gross market value minus SnapTrade's account equity, and the equity is only as fresh as SnapTrade's last holdings sync ([#259](https://github.com/AojdevStudio/Finance-Guru/issues/259)). The engine refuses equity over 12 hours old with `StaleAccountEquityError`, and the ledger stores an empty margin debt instead of a wrong one ([#260](https://github.com/AojdevStudio/Finance-Guru/pull/260)). The rate check fails on an empty debt and on a balances row older than 36 hours, so stale data never picks a rate tier. The engine guard stops wrong numbers before they exist. The swamp check catches settings that have drifted from the broker.
+**How it relates to the stale-equity guard.** The engine computes margin debt as gross market value minus SnapTrade's account equity, and the equity is only as fresh as SnapTrade's last holdings sync ([#259](https://github.com/AojdevStudio/Finance-Guru/issues/259)). The engine refuses equity over 12 hours old with `StaleAccountEquityError`, and the ledger stores an empty margin debt instead of a wrong one ([#260](https://github.com/AojdevStudio/Finance-Guru/pull/260)). The rate check reads the debt through the engine, so it fails on an empty debt too, and it refuses a ledger more than a day old. Stale data never picks a rate tier. The engine guard stops wrong numbers before they exist. The swamp check catches settings that have drifted from the broker.
 
 ## If you are an agent
 
