@@ -61,15 +61,23 @@ expose the loan directly. It tracks Fidelity "Net debit" within ~0.1%.
 
 ## Freshness check
 
-After Step 0, require a successful result for each source the analysis needs.
-Keep that result with the analysis date and data source. Do not use a table's
-`MAX(synced_at)` alone as proof that the source refreshed successfully.
+After Step 0, require a successful result for each source the analysis needs,
+and confirm that it synced the required accounts. An `ok` alone does not prove
+account coverage. Keep the result with the analysis date and data source. Do not
+use a table's `MAX(synced_at)` alone as proof of a successful refresh.
 
-Positions and balances are snapshots. Inspect their generation timestamp and
-the refresh output for the accounts the analysis needs. Transaction history is
-append-only. A successful refresh that fetches only duplicate activities adds
-no rows, so its row timestamps can stay unchanged. An empty history also has no
-row timestamp. Neither case proves a refresh failure.
+Positions and balances are snapshots. The combined refresh must print a
+`generation` for positions, not `no enabled, routed account synced`. To confirm
+specific accounts, use the targeted refresh commands above and check their
+per-account output. Both SnapTrade commands print `no syncable accounts` when
+the configuration routes no accounts. That is not fresh data for an analysis
+that requires an account.
+
+Transaction history is append-only. A successful targeted refresh can report
+`N fetched, 0 new, N duplicates skipped` for a required account. It adds no rows,
+so row timestamps can stay unchanged. An empty history also has no row timestamp.
+Neither case proves a refresh failure. The combined `transactions: ok` line does
+not show which accounts synced, so use the targeted command to confirm coverage.
 
 This query shows the latest stored row timestamps for context. It is not a
 refresh success check:
