@@ -36,7 +36,8 @@ def main(argv: list[str] | None = None) -> int:
         type=parse_money,
         help=(
             "Current monthly dividend income; defaults to "
-            "FG_DIVIDEND_MONTHLY_INCOME if set"
+            "FG_DIVIDEND_MONTHLY_INCOME if set, otherwise the routed margin account ledger dividends "
+            "over the trailing three closed months"
         ),
     )
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
