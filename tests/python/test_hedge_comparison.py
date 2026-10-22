@@ -426,6 +426,27 @@ class TestComparisonOutput:
         with pytest.raises(ValueError, match="SQQQ allocation must be positive"):
             calc.compare_all([-0.20])
 
+    @pytest.mark.parametrize(
+        ("drop", "premium", "winner", "sqqq_profitable", "put_profitable"),
+        [
+            (-0.001, 5.0, "neither", False, False),
+            (-0.01, 5.0, "sqqq", True, False),
+            (-0.001, 1.0, "put", False, True),
+        ],
+    )
+    def test_winner_requires_a_positive_return(
+        self, drop, premium, winner, sqqq_profitable, put_profitable
+    ):
+        row = (
+            HedgeComparisonCalculator(put_premium=premium)
+            .compare_all([drop])
+            .scenarios[0]
+        )
+
+        assert (row.sqqq.sqqq_return_pct > 0) == sqqq_profitable
+        assert (row.put.pnl_pct > 0) == put_profitable
+        assert row.winner == winner
+
     @pytest.mark.parametrize("premium", [0.0, -1.0, float("nan"), float("inf")])
     def test_invalid_put_premium_cannot_define_investment_return(self, premium):
         calc = HedgeComparisonCalculator(put_premium=premium)
