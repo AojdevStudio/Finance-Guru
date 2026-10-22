@@ -395,6 +395,18 @@ def test_margin_debt_rejects_missing_equity_sync_time() -> None:
     assert error.value.synced_at is None
 
 
+def test_margin_debt_rejects_equity_sync_time_in_the_future() -> None:
+    stocks = [{"symbol": "AAPL", "price": 100.0, "quantity": 10.0}]
+    equity = snaptrade_client.AccountEquity(
+        amount=1000.0, synced_at=datetime(2027, 10, 22, 12, 47, tzinfo=UTC)
+    )
+
+    with pytest.raises(snaptrade_client.StaleAccountEquityError) as error:
+        snaptrade_client.derive_margin_debt(stocks, [], equity, now=_INCIDENT_READ_AT)
+
+    assert "in the future" in str(error.value)
+
+
 def test_margin_debt_from_fresh_equity_matches_broker_net_debit() -> None:
     stocks = [{"symbol": "SYN", "price": 250390.04, "quantity": 1.0}]
     equity = snaptrade_client.AccountEquity(

@@ -80,7 +80,7 @@ If this command fails, keep the position snapshot from step 2 and record the typ
 - `IncompleteBalanceGenerationError`: the latest balance generation is missing an enabled, routed account or the margin account
 - `StaleBalanceSnapshotError`: the complete balance generation is older than 24 hours, more than five minutes in the future, or has a malformed or timezone-less timestamp. Run the sync-first refresh before retrying.
 - `FileNotFoundError` or `ValueError`: the ledger or its balances rows are missing
-- `StaleEquitySnapshotError`: the refresh stored NULL margin debt because SnapTrade equity was older than 12 hours. The refresh printed `warning: account equity stale (last synced <ts>)`. Never treat the missing debt as zero
+- `StaleEquitySnapshotError`: the refresh stored NULL margin debt because SnapTrade equity had no valid sync time in the last 12 hours. The refresh printed `warning: account equity stale (last synced <ts>)`. Never treat the missing debt as zero
 
 ### 4. Check freshness
 

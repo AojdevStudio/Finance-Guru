@@ -21,6 +21,8 @@ T = TypeVar("T")
 OPTION_CONTRACT_MULTIPLIER = 100
 # SnapTrade syncs equity about once a day, so an older read can miss deposits.
 EQUITY_MAX_AGE = timedelta(hours=12)
+# A sync time further ahead than clock drift explains is not trustworthy.
+EQUITY_CLOCK_SKEW = timedelta(minutes=5)
 
 
 @dataclass(frozen=True)
@@ -63,7 +65,7 @@ class MissingAccountEquityError(SnapTradeDataError):
 
 
 class StaleAccountEquityError(SnapTradeDataError):
-    """Margin debt cannot be derived from equity older than EQUITY_MAX_AGE."""
+    """Margin debt cannot be derived from equity with an untrustworthy sync time."""
 
     def __init__(self, synced_at: datetime | None, now: datetime) -> None:
         self.synced_at = synced_at
@@ -77,6 +79,12 @@ class StaleAccountEquityError(SnapTradeDataError):
             )
             return
         age_hours = (now - synced_at).total_seconds() / 3600
+        if age_hours < 0:
+            super().__init__(
+                f"SnapTrade account equity sync time {synced_at.isoformat()} is "
+                f"{-age_hours:.1f}h in the future; {fix}"
+            )
+            return
         super().__init__(
             f"SnapTrade account equity was last synced {synced_at.isoformat()} "
             f"({age_hours:.1f}h ago, limit {EQUITY_MAX_AGE.total_seconds() / 3600:.0f}h); "
@@ -651,12 +659,15 @@ def derive_margin_debt(
     reported net debit). Options use the x100 contract multiplier. margin_debt is
     a loan, so it is clamped to >= 0 (a net-cash account owes nothing). Missing
     equity, quantities, or marks fail closed because they make the result partial.
-    Equity whose holdings sync is missing or older than EQUITY_MAX_AGE fails
-    closed too: the marks are current, so stale equity skews the difference.
+    Equity whose holdings sync is missing, older than EQUITY_MAX_AGE, or in the
+    future fails closed too: the marks are current, so stale equity skews the
+    difference.
     """
     if equity.amount is None:
         raise MissingAccountEquityError
-    if equity.synced_at is None or now - equity.synced_at > EQUITY_MAX_AGE:
+    if equity.synced_at is None or not (
+        -EQUITY_CLOCK_SKEW <= now - equity.synced_at <= EQUITY_MAX_AGE
+    ):
         raise StaleAccountEquityError(equity.synced_at, now)
     gross_mv = gross_market_value(stocks, options)
     return max(round(gross_mv - equity.amount, 2), 0.0), gross_mv

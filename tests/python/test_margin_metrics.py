@@ -643,3 +643,46 @@ def test_broker_balances_from_snaptrade_refuses_stale_equity():
 
     with pytest.raises(snaptrade_client.StaleAccountEquityError):
         _broker_balances_from_snaptrade(StaleClient(), "acct-1")
+
+
+def _run_snaptrade_margin_cli(client, tmp_path, monkeypatch):
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "$5,000")
+    monkeypatch.setattr(
+        mm,
+        "read_snaptrade_balances",
+        lambda: _broker_balances_from_snaptrade(client, "acct-1"),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["margin_metrics", "--source", "snaptrade", "--annual-rate", "0.12"],
+    )
+    return mm.main()
+
+
+def test_margin_cli_snaptrade_source_prints_equity_sync_time(
+    tmp_path, monkeypatch, capsys
+):
+    assert _run_snaptrade_margin_cli(_FakeSnapClient(), tmp_path, monkeypatch) == 0
+
+    output = json.loads(capsys.readouterr().out)
+    assert (
+        datetime.fromisoformat(output["equity_synced_at"])
+        == _FakeSnapClient.EQUITY_SYNCED_AT
+    )
+
+
+def test_margin_cli_snaptrade_source_refuses_stale_equity(
+    tmp_path, monkeypatch, capsys
+):
+    class StaleClient(_FakeSnapClient):
+        def get_account_equity(self, account_id):
+            return snaptrade_client.AccountEquity(
+                amount=self.EQUITY, synced_at=datetime.now(UTC) - timedelta(hours=23)
+            )
+
+    with pytest.raises(snaptrade_client.StaleAccountEquityError):
+        _run_snaptrade_margin_cli(StaleClient(), tmp_path, monkeypatch)
+
+    assert capsys.readouterr().out == ""
