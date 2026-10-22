@@ -143,6 +143,12 @@ See `src/CLAUDE.md` for conventions (Pydantic + [pandas](https://pandas.pydata.o
 
 Two gates run before anything reaches GitHub. The pre-commit hooks (`.pre-commit-config.yaml`) run hygiene checks, [ruff](https://docs.astral.sh/ruff/), [mypy](https://mypy-lang.org/), [pytest](https://docs.pytest.org/) with coverage, and [gitleaks](https://github.com/gitleaks/gitleaks). The privacy scanner (`.claude/skills/compliance-scan/scripts/scan.py`) runs in its `push` scope from the pre-push hook and also supports a `history` scope that scans every line a branch adds. A HIGH or CRITICAL finding blocks the push.
 
+Repository PR workflows live in `.dev/pr-kit`, outside the finance skill tree.
+Read `.dev/pr-kit/open-pr/SKILL.md` before opening a PR and
+`.dev/pr-kit/land-pr/SKILL.md` before preparing a merge. The canonical installer
+uses `--layout developer`. Bun is required for the repository Bash gate and CI
+body checker. Instance and plugin settings run only the product session hook.
+
 ---
 
 ## Review Process

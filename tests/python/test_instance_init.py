@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shutil
 import subprocess
 import tomllib
 import traceback
@@ -29,6 +30,34 @@ GIT_ENV = {
 def _fake_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "engine"
     (repo / ".claude").mkdir(parents=True)
+    for directory in ("skills/fin-core", "skills/_shared", "agents", "hooks"):
+        (repo / ".claude" / directory).mkdir(parents=True)
+    (repo / ".claude/skills/fin-core/SKILL.md").write_text("finance context\n")
+    (repo / ".claude/agents/fg-finance-orchestrator.md").write_text("finance agent\n")
+    (repo / ".claude/hooks/load-fin-core-config.ts").write_text("finance hook\n")
+    (repo / "hooks").mkdir()
+    (repo / "hooks/hooks.json").write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "SessionStart": [
+                        {
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": "bun",
+                                    "args": [
+                                        "run",
+                                        "${CLAUDE_PLUGIN_ROOT}/.claude/hooks/load-fin-core-config.ts",
+                                    ],
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        )
+    )
     (repo / ".env.example").write_text(
         "FIN_GURU_DATA_ROOT=/replace/me\nEXAMPLE_SETTING=\n",
         encoding="utf-8",
@@ -36,6 +65,167 @@ def _fake_repo(tmp_path: Path) -> Path:
     (repo / "CLAUDE.md").write_text("# Engine instructions\n", encoding="utf-8")
     (repo / "AGENTS.md").write_text("# Engine agent instructions\n", encoding="utf-8")
     return repo
+
+
+def test_checkout_runtime_keeps_developer_settings_and_tools_in_the_repo(
+    tmp_path: Path,
+) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    developer_settings = (
+        '{"hooks":{"PreToolUse":[{"hooks":[{"command":"developer gate"}]}]}}\n'
+    )
+    (repo / ".claude/settings.json").write_text(developer_settings)
+    (repo / ".dev/pr-kit/open-pr").mkdir(parents=True)
+    (repo / ".dev/pr-kit/open-pr/SKILL.md").write_text("developer tool\n")
+
+    result = _run_init(root, repo)
+
+    assert result.returncode == 0, result.stderr
+    assert not (root / ".claude").is_symlink()
+    assert (root / ".agents").resolve() == root / ".claude"
+    assert (
+        root / ".agents/skills/fin-core/SKILL.md"
+    ).read_text() == "finance context\n"
+    assert not (root / ".agents/skills/open-pr").exists()
+    settings = (root / ".claude/settings.json").read_text()
+    assert set(json.loads(settings)["hooks"]) == {"SessionStart"}
+    assert "developer" not in settings
+    assert (repo / ".claude/settings.json").read_text() == developer_settings
+    assert (root / "CLAUDE.md").read_text().startswith("@AGENTS.md\n")
+    assert str(repo / "AGENTS.md") not in (root / "AGENTS.md").read_text()
+    assert str(repo / "CLAUDE.md") not in (root / "CLAUDE.md").read_text()
+
+
+def test_checkout_migrates_known_legacy_links_without_changing_shared_settings(
+    tmp_path: Path,
+) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    root.mkdir()
+    for name in (".claude", ".agents"):
+        (root / name).symlink_to(repo / ".claude", target_is_directory=True)
+    shared = '{"hooks":{"PreToolUse":[]}}\n'
+    (repo / ".claude/settings.json").write_text(shared)
+    (root / "CLAUDE.md").write_text(f"""@{repo / "CLAUDE.md"}
+
+# Instance
+
+This directory is a Finance Guru instance, and the engine lives at `{repo}`.
+
+Command form: `uv run python -m src.<tool>`
+
+Example: `uv run python -m src.integrations.refresh_all --show`
+""")
+    (root / "AGENTS.md").write_text(f"""# Finance Guru instance
+
+Before doing Finance Guru work, read `{repo / "AGENTS.md"}` in full.
+
+The engine lives at `{repo}`.
+
+This instance's `.agents` symlink points to
+`{repo / ".claude"}`, so Codex discovers the canonical skills under
+`.agents/skills/`. Read a skill's complete `SKILL.md` before using it. Do not
+copy or fork skill content into this instance.
+
+
+Run engine commands from this instance as `uv run python -m src.<tool>` so all
+private paths resolve from the current directory.
+""")
+
+    result = _run_init(root, repo)
+
+    assert result.returncode == 0, result.stderr
+    assert not (root / ".claude").is_symlink()
+    assert (root / ".agents").resolve() == root / ".claude"
+    assert (repo / ".claude/settings.json").read_text() == shared
+    assert (root / "CLAUDE.md").read_text().startswith("@AGENTS.md\n")
+    assert str(repo / "AGENTS.md") not in (root / "AGENTS.md").read_text()
+    assert _run_init(root, repo).returncode == 0
+
+
+@pytest.mark.parametrize("name", ["AGENTS.md", "CLAUDE.md"])
+def test_legacy_instruction_edits_block_migration_before_any_write(
+    tmp_path: Path, name: str
+) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    root.mkdir()
+    for link in (".claude", ".agents"):
+        (root / link).symlink_to(repo / ".claude", target_is_directory=True)
+    text = f"@{repo / name}\nMy private notes\n"
+    (root / name).write_text(text)
+
+    result = _run_init(root, repo)
+
+    assert result.returncode != 0
+    assert name in result.stderr
+    assert (root / name).read_text() == text
+    assert (root / ".claude").is_symlink()
+    assert (root / ".agents").resolve() == repo / ".claude"
+    assert {path.name for path in root.iterdir()} == {".claude", ".agents", name}
+
+
+def test_plugin_refuses_checkout_runtime_before_changing_files(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    assert _run_init(root, repo).returncode == 0
+    before = _managed_file_mtimes(root)
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode != 0
+    assert ".claude" in result.stderr or ".agents" in result.stderr
+    assert _managed_file_mtimes(root) == before
+
+
+def test_plugin_refuses_a_real_discovery_tree_before_writing(tmp_path: Path) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    (root / ".agents/skills").mkdir(parents=True)
+    (root / ".agents/skills/local.md").write_text("local discovery\n")
+    before = _managed_file_mtimes(root)
+
+    result = _run_init(root, repo, plugin=True)
+
+    assert result.returncode != 0
+    assert ".agents" in result.stderr
+    assert _managed_file_mtimes(root) == before
+
+
+@pytest.mark.parametrize("name", ["AGENTS.md", "CLAUDE.md"])
+def test_checkout_rerun_keeps_owner_notes(tmp_path: Path, name: str) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    assert _run_init(root, repo).returncode == 0
+    path = root / name
+    notes = path.read_text() + "\n## Household notes\nKeep these notes.\n"
+    path.write_text(notes)
+    before = _managed_file_mtimes(root)
+
+    result = _run_init(root, repo)
+
+    assert result.returncode == 0, result.stderr
+    assert path.read_text() == notes
+    assert _managed_file_mtimes(root) == before
+
+
+def test_checkout_refuses_foreign_links_before_writing_instance_files(
+    tmp_path: Path,
+) -> None:
+    repo = _fake_repo(tmp_path)
+    root = tmp_path / "instance"
+    foreign = tmp_path / "foreign"
+    foreign.mkdir()
+    root.mkdir()
+    (root / ".agents").symlink_to(foreign, target_is_directory=True)
+
+    result = _run_init(root, repo)
+
+    assert result.returncode != 0
+    assert ".agents" in result.stderr
+    assert list(foreign.iterdir()) == []
+    assert {path.name for path in root.iterdir()} == {".agents"}
 
 
 def _run_init(
@@ -182,12 +372,12 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
         "__pycache__/\n"
     )
     assert (root / ".agents").is_symlink()
-    assert (root / ".agents").resolve() == (repo / ".claude").resolve()
+    assert (root / ".agents").resolve() == root / ".claude"
     assert (root / ".agents" / "skills").resolve() == (
         repo / ".claude" / "skills"
     ).resolve()
-    assert (root / ".claude").is_symlink()
-    assert (root / ".claude").resolve() == (repo / ".claude").resolve()
+    assert not (root / ".claude").is_symlink()
+    assert (root / ".claude/skills").resolve() == (repo / ".claude/skills").resolve()
     assert (root / ".git").is_dir()
 
     env_lines = paths.env_file.read_text(encoding="utf-8").splitlines()
@@ -206,12 +396,12 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
         "session_context",
     }
 
-    assert claude_text.splitlines()[0] == f"@{repo / 'CLAUDE.md'}"
+    assert claude_text.splitlines()[0] == "@AGENTS.md"
     assert claude_text.index("# Instance") < claude_text.index(
         "This directory is a Finance Guru instance"
     )
     agents_text = (root / "AGENTS.md").read_text(encoding="utf-8")
-    assert str(repo / "AGENTS.md") in agents_text
+    assert str(repo / ".claude/skills/fin-core/SKILL.md") in agents_text
     assert ".agents/skills/" in agents_text
     assert "Do not\ncopy or fork skill content" in agents_text
 
@@ -240,7 +430,8 @@ def test_plugin_flag_omits_harness_symlinks(tmp_path: Path) -> None:
 def test_plugin_flag_refuses_a_checkout_mode_claude_symlink(tmp_path: Path) -> None:
     repo = _fake_repo(tmp_path)
     root = tmp_path / "instance"
-    assert _run_init(root, repo).returncode == 0
+    root.mkdir()
+    (root / ".claude").symlink_to(repo / ".claude", target_is_directory=True)
 
     result = _run_init(root, repo, plugin=True)
 
@@ -253,7 +444,7 @@ def test_plugin_flag_refuses_a_leftover_agents_symlink(tmp_path: Path) -> None:
     repo = _fake_repo(tmp_path)
     root = tmp_path / "instance"
     assert _run_init(root, repo).returncode == 0
-    (root / ".claude").unlink()
+    shutil.rmtree(root / ".claude")
 
     result = _run_init(root, repo, plugin=True)
 
@@ -284,7 +475,7 @@ def test_plugin_flag_converts_a_checkout_scaffold_end_to_end(tmp_path: Path) -> 
     repo = _fake_repo(tmp_path)
     root = tmp_path / "instance"
     assert _run_init(root, repo).returncode == 0
-    (root / ".claude").unlink()
+    shutil.rmtree(root / ".claude")
     (root / ".agents").unlink()
 
     result = _run_init(root, repo, plugin=True)
@@ -301,7 +492,7 @@ def test_plugin_flag_keeps_an_owner_edited_agents_file(tmp_path: Path) -> None:
     repo = _fake_repo(tmp_path)
     root = tmp_path / "instance"
     assert _run_init(root, repo).returncode == 0
-    (root / ".claude").unlink()
+    shutil.rmtree(root / ".claude")
     (root / ".agents").unlink()
     agents = root / "AGENTS.md"
     edited = agents.read_text(encoding="utf-8") + "\n## My household notes\n"

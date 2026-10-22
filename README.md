@@ -61,7 +61,7 @@ Every number an agent quotes comes from a [Pydantic](https://docs.pydantic.dev/)
 
 ### Prerequisites
 
-[Python](https://www.python.org/) 3.12 or later, [uv](https://docs.astral.sh/uv/), and [Git](https://git-scm.com/). [Bun](https://bun.sh/) only if you work on the [SimpleFIN](https://www.simplefin.org/) sync app.
+[Python](https://www.python.org/) 3.12 or later, [uv](https://docs.astral.sh/uv/), and [Git](https://git-scm.com/). [Bun](https://bun.sh/) runs agent session hooks, repository PR gates, and the [SimpleFIN](https://www.simplefin.org/) sync app. The Python calculators run from a shell without Bun.
 
 ### Install
 
@@ -149,7 +149,7 @@ Local-first does not mean network-free. Market data, brokerage, and LLM integrat
 
 You are the intended operator of this engine, not an afterthought. A few things that make you effective here:
 
-- **Read `CLAUDE.md` first.** It is the single source of truth for the skills index, the agent roster, the path variables, and the output rules. `AGENTS.md` points [Codex](https://github.com/openai/codex) at the same tree through the instance's `.agents` symlink.
+- **Read your instance's `AGENTS.md` first.** It points to the canonical finance context and skill tree. [Codex](https://github.com/openai/codex) discovers those skills through the instance's `.agents` symlink. Repository developer instructions stay in the engine checkout.
 - **Run `date` before any market work.** Every specialist here is expected to know the current date before it searches or analyzes.
 - **Never do the arithmetic yourself.** Call the CLI with `--output json` and quote what it returned. That is the whole reason the calculators exist.
 - **Private data lives in the instance, not the repo.** Resolve `FIN_GURU_DATA_ROOT` or the working directory, read from `family_office.db`, and write artifacts into `analysis/` or `tickets/`. Tracked files never carry personal values, and the pre-push scan will stop you if you try.
