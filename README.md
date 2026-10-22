@@ -151,7 +151,7 @@ Local-first does not mean network-free. Market data, brokerage, and LLM integrat
 
 The checks live in a swamp workspace beside the instance, not in this repository: `~/.swamp/workspaces/family-office`. They read the instance files and change nothing.
 
-**Weekly margin-rate check.** The `margin-rate-check` workflow runs the `fidelity-margin-rate` behavior. It reads Fidelity's published margin rate table, picks the rate for the margin debt in `family_office.db`, and compares it with `FG_MARGIN_INTEREST_RATE_DECIMAL` in the instance `.env`. A mismatch fails the run. The rate depends on the size of the debt, so crossing a tier changes it even when Fidelity's base rate stays the same.
+**Weekly margin-rate check.** The `margin-rate-check` workflow runs the `fidelity-margin-rate` behavior. It reads [Fidelity](https://www.fidelity.com/)'s published margin rate table, picks the rate for the margin debt in `family_office.db`, and compares it with `FG_MARGIN_INTEREST_RATE_DECIMAL` in the instance `.env`. A mismatch fails the run. The rate depends on the size of the debt, so crossing a tier changes it even when Fidelity's base rate stays the same.
 
 It runs Mondays at 9:15 AM CT, after SnapTrade's daily holdings sync. A T3 scheduled task starts it for now, because `swamp serve`, which runs swamp's own schedules, does not run as a service yet. When it does, the schedule moves into the workflow's `trigger` and the T3 task goes away.
 
