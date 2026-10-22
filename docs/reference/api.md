@@ -61,6 +61,27 @@ printing or saving the report. The human report does not validate CSV quantities
 for finiteness.
 The CLI returns exit code 1 when all tickers fail or JSON formatting fails.
 
+### Implied volatility
+
+`options_cli.py --implied-vol --output json` solves within the pricing model's
+annual volatility range of 0.01 through 3.0, inclusive. Time to expiry must be
+positive and at most 10 years. Interest and dividend rates range from 0.0 through
+0.20. Inputs must be finite. Market premiums must be non-negative.
+
+The solver brackets the premium between prices at the two volatility endpoints.
+A premium outside that range returns `converged: false` at the nearest endpoint,
+with its calculated price and absolute pricing error. The CLI writes this report,
+prints a non-convergence error to stderr, and exits with code 1. Valid solves keep
+exit code 0. A premium just outside the
+range does not converge, even when its price error is below the price tolerance.
+
+Interior roots require a volatility bracket no wider than `1e-8` and a pricing
+error below $0.0001 per share, or an exact model-price match. `iterations` counts
+model price evaluations, including both endpoints, up to 100 evaluations.
+A zero premium converges only when the model also returns zero at its lower
+endpoint. Numerically flat prices can match more than one supported volatility.
+Zero volatility and zero time to expiry remain outside the pricing domain.
+
 ## Strategy commands
 
 | Command | Purpose |
