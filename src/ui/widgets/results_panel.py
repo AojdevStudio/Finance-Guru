@@ -262,17 +262,24 @@ class ResultsPanel(VerticalScroll):
         table.add_column("Metric", style="cyan bold", width=20)
         table.add_column("Value", style="yellow")
 
-        if "sharpe_ratio" in data:
-            sharpe = data.get("sharpe_ratio", 0)
-            sharpe_emoji = "🟢" if sharpe > 1.0 else "🟡" if sharpe > 0 else "🔴"
-            table.add_row("Sharpe Ratio", f"{sharpe_emoji} {sharpe:.2f}")
+        for key, label in (
+            ("sharpe_ratio", "Sharpe Ratio"),
+            ("sortino_ratio", "Sortino Ratio"),
+        ):
+            if key not in data:
+                continue
+            value = data[key]
+            if value is None:
+                reason = data.get("ratio_unavailable_reasons", {}).get(
+                    key, "non_finite"
+                )
+                table.add_row(label, f"Unavailable ({reason})")
+            else:
+                emoji = "🟢" if value > 1.0 else "🟡" if value > 0 else "🔴"
+                table.add_row(label, f"{emoji} {value:.2f}")
         if "var_95" in data:
             var = data.get("var_95", 0)
             table.add_row("VaR (95%)", f"{var:.2f}%")
-        if "sortino_ratio" in data:
-            sortino = data.get("sortino_ratio", 0)
-            sortino_emoji = "🟢" if sortino > 1.0 else "🟡" if sortino > 0 else "🔴"
-            table.add_row("Sortino Ratio", f"{sortino_emoji} {sortino:.2f}")
         if "max_drawdown" in data:
             dd = data.get("max_drawdown", 0)
             table.add_row("Max Drawdown", f"{dd:.2f}%")

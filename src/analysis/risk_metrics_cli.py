@@ -60,6 +60,7 @@ from src.models.risk_inputs import (
     PriceDataInput,
     RiskCalculationConfig,
     RiskMetricsOutput,
+    RiskRatioName,
 )
 from src.utils.market_data import get_prices
 from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR, calendar_days_for
@@ -136,6 +137,15 @@ def fetch_price_data(ticker: str, days: int, realtime: bool = False) -> PriceDat
         raise ValueError(f"Failed to fetch data for {ticker}: {e}") from e
 
 
+def _ratio_text(results: RiskMetricsOutput, name: RiskRatioName) -> str:
+    value = getattr(results, name)
+    if value is None:
+        return (
+            f"Unavailable ({results.ratio_unavailable_reasons.get(name, 'non_finite')})"
+        )
+    return f"{value:>10.2f}"
+
+
 def format_output_human(results: RiskMetricsOutput) -> str:
     """
     Format results in human-readable format.
@@ -183,11 +193,15 @@ def format_output_human(results: RiskMetricsOutput) -> str:
 
     output.append("📈 RISK-ADJUSTED RETURNS")
     output.append("-" * 70)
-    output.append(f"  Sharpe Ratio:             {results.sharpe_ratio:>10.2f}")
-    output.append(f"  Sortino Ratio:            {results.sortino_ratio:>10.2f}")
+    output.append(f"  Sharpe Ratio:             {_ratio_text(results, 'sharpe_ratio')}")
+    output.append(
+        f"  Sortino Ratio:            {_ratio_text(results, 'sortino_ratio')}"
+    )
     output.append("")
 
-    if results.sharpe_ratio < 1.0:
+    if results.sharpe_ratio is None:
+        sharpe_interpretation = "Unavailable"
+    elif results.sharpe_ratio < 1.0:
         sharpe_interpretation = "Poor (< 1.0)"
     elif results.sharpe_ratio < 2.0:
         sharpe_interpretation = "Good (1.0-2.0)"
@@ -199,7 +213,7 @@ def format_output_human(results: RiskMetricsOutput) -> str:
     output.append("📊 DRAWDOWN ANALYSIS")
     output.append("-" * 70)
     output.append(f"  Maximum Drawdown:         {results.max_drawdown:>10.2%}")
-    output.append(f"  Calmar Ratio:             {results.calmar_ratio:>10.2f}")
+    output.append(f"  Calmar Ratio:             {_ratio_text(results, 'calmar_ratio')}")
     output.append("")
     output.append(
         f"  💡 Worst peak-to-trough decline was {abs(results.max_drawdown):.2%}"
