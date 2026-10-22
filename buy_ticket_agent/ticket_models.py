@@ -13,7 +13,7 @@ DEPLOYMENT_AMOUNT_TOLERANCE = 0.01
 class TicketAllocation(BaseModel):
     """One proposed ticker allocation in a generated buy ticket."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     ticker: str
     category: str
@@ -35,7 +35,7 @@ class TicketAllocation(BaseModel):
 class TicketProposal(BaseModel):
     """Model-authored buy-ticket fields before trusted guardrail enrichment."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     document_type: Literal["buy-ticket"] = "buy-ticket"
     strategy_name: str
@@ -110,7 +110,7 @@ class BuyTicket(TicketProposal):
 class PortfolioState(BaseModel):
     """Portfolio context needed for hard guardrail checks."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     portfolio_value: float | None = Field(
         default=None,
