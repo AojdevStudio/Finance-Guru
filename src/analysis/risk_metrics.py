@@ -181,7 +181,7 @@ class RiskCalculator:
         if vol == 0:
             reasons["sharpe_ratio"] = "zero_volatility"
             reasons["sortino_ratio"] = "zero_volatility"
-        if not math.isfinite(sortino):
+        elif not math.isfinite(sortino):
             reasons["sortino_ratio"] = "no_downside_volatility"
         if max_dd == 0:
             reasons["calmar_ratio"] = "no_drawdown"

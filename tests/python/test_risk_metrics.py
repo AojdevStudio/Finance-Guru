@@ -297,6 +297,7 @@ def test_flat_risk_json_round_trip_and_renderers(risk_free_rate):
     restored = RiskMetricsOutput.model_validate_json(payload)
     assert restored.sharpe_ratio is None
     assert restored.ratio_unavailable_reasons["sharpe_ratio"] == "zero_volatility"
+    assert restored.ratio_unavailable_reasons["sortino_ratio"] == "zero_volatility"
     assert "Unavailable" in format_output_human(restored)
 
     class RiskApp(App):
