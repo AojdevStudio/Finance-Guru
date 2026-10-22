@@ -46,6 +46,12 @@ Risk metrics use `null` for unavailable Sharpe, Sortino, and Calmar ratios.
 `zero_volatility` or `no_drawdown`. Finite ratios keep their numeric format.
 Text output and the terminal dashboard show unavailable ratios with their reasons.
 
+Total return requires finite price observations, dividend amounts, share counts,
+and return inputs. Missing prices, NaN, and infinities block calculation, including
+with `--force`. A zero terminal price remains valid and can produce a total loss.
+JSON output rejects nonfinite numbers before printing or saving the report.
+The CLI returns exit code 1 when all tickers fail or JSON formatting fails.
+
 ## Strategy commands
 
 | Command | Purpose |
