@@ -38,8 +38,8 @@ def write_balances(path):
 def freeze_balance_clock(monkeypatch, current: datetime) -> None:
     class FixedDatetime(datetime):
         @classmethod
-        def now(cls, tz=None):
-            return current if tz is None else current.astimezone(tz)
+        def now(cls, tz):
+            return current.astimezone(tz)
 
     monkeypatch.setattr(mm, "datetime", FixedDatetime)
 

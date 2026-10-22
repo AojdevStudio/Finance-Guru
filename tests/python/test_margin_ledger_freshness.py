@@ -17,8 +17,8 @@ NOW = datetime(2026, 1, 2, 12, tzinfo=UTC)
 def margin_ledger(tmp_path, monkeypatch):
     class FixedDatetime(datetime):
         @classmethod
-        def now(cls, tz=None):
-            return NOW if tz is None else NOW.astimezone(tz)
+        def now(cls, tz):
+            return NOW.astimezone(tz)
 
     monkeypatch.setattr(mm, "datetime", FixedDatetime)
     monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
