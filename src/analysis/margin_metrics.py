@@ -118,6 +118,8 @@ def parse_rate(value: str | None) -> float:
     if parsed is None:
         msg = "FG_MARGIN_INTEREST_RATE_DECIMAL or --annual-rate is required"
         raise ValueError(msg)
+    if value is not None and "%" in value:
+        return parsed / 100
     return parsed / 100 if parsed > 1 else parsed
 
 
