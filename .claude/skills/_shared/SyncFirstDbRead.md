@@ -31,9 +31,11 @@ uv run python -m src.integrations.refresh_all --months 3 # narrow the expense wi
 uv run python -m src.integrations.refresh_all --show     # print DB snapshot, no sync
 ```
 
-It exits 0 when any source succeeds and prints a per-source `ok` / `error` line.
-Read the output: if a source a skill depends on shows `error`, surface that (do
-not report its facts as fresh).
+It exits 0 only when every source succeeds, and 1 if any source fails. It prints
+a per-source `ok` / `error` line. A partial refresh still attempts every source.
+Read the output: if a source a skill depends on shows `error`, surface that and
+do not report its saved facts as fresh. `--show` only displays saved data. Its
+zero exit does not prove that a refresh ran or succeeded.
 
 ### Targeted refresh (when a skill needs only one source)
 
@@ -59,7 +61,32 @@ expose the loan directly. It tracks Fidelity "Net debit" within ~0.1%.
 
 ## Freshness check
 
-After Step 0, confirm the tables carry this run's timestamp before reading:
+After Step 0, require a successful result for each source the analysis needs,
+and confirm that it synced the required accounts. An `ok` alone does not prove
+account coverage. Keep the result with the analysis date and data source. Do not
+use a table's `MAX(synced_at)` alone as proof of a successful refresh.
+
+Positions and balances are snapshots. The combined refresh must print a
+`generation` for positions, not `no enabled, routed account synced`. To confirm
+specific accounts, use the targeted SnapTrade refresh commands above and check their
+per-account output. Both SnapTrade commands print `no syncable accounts` when
+the configuration routes no accounts. That is not fresh data for an analysis
+that requires an account.
+
+Transaction history is append-only. A successful targeted refresh can report
+`N fetched, 0 new, N duplicates skipped` for a required account. It adds no rows,
+so row timestamps can stay unchanged. An empty history also has no row timestamp.
+Neither case proves a refresh failure. The combined `transactions: ok` line does
+not show which accounts synced, so use the targeted command to confirm coverage.
+
+The SimpleFIN expenses CLI prints aggregate transaction counts only. Aggregate
+counts do not establish required-account coverage. An empty account set and a
+required account with empty history both exit 0 and print the same counts.
+Require trusted account coverage evidence for this run. If none exists,
+report unverifiable coverage and stop. Do not declare the refresh fresh.
+
+This query shows the latest stored row timestamps for context. It is not a
+refresh success check:
 
 ```bash
 sqlite3 family_office.db "SELECT 'balances', MAX(synced_at) FROM balances
