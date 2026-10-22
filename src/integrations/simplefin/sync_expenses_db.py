@@ -219,7 +219,7 @@ def normalize_transaction(
         account["id"],
         account.get("name"),
         (account.get("org") or {}).get("name"),
-        txn["id"],
+        str(txn["id"]),
         _iso_date(posted_ts),
         posted_ts,
         txn.get("payee"),

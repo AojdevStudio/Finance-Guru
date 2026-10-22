@@ -497,14 +497,15 @@ def test_bad_override_blocks_before_provider_or_database_write(tmp_path, content
 
 
 @pytest.mark.parametrize("historical", [False, True])
-def test_ambiguous_override_id_blocks_sync(tmp_path, historical):
+@pytest.mark.parametrize("transaction_id", ["synthetic", 7])
+def test_ambiguous_override_id_blocks_sync(tmp_path, historical, transaction_id):
     from src.integrations.simplefin.categorize import CategoryOverridesError
 
     overrides = tmp_path / "category-overrides.yaml"
-    overrides.write_text("synthetic: Groceries\n")
+    overrides.write_text(f'"{transaction_id}": Groceries\n')
     payload = {
         "accounts": [
-            {"id": account, "transactions": [{"id": "synthetic", "amount": "-10"}]}
+            {"id": account, "transactions": [{"id": transaction_id, "amount": "-10"}]}
             for account in ["synthetic-a", "synthetic-b"]
         ]
     }
