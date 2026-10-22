@@ -146,20 +146,47 @@ class SnapTradeClientWrapper:
     ) -> list[dict[str, Any]]:
         """Return all normalized transaction/dividend activities for an account.
 
-        Pages through SnapTrade's offset/limit activities endpoint until the
-        reported total is consumed, so the result is the full history rather
-        than the first page. This client is stateless; deduplication happens in
-        the DB layer via ``dedupe_key`` on upsert.
+        Follow offset/limit pages until the reported total is consumed. Raise
+        SnapTradeDataError on malformed, incomplete, changing, or excess totals
+        and repeated activity identities, including field-based fallback IDs.
+        The DB layer deduplicates against rows from earlier syncs on upsert.
         """
+        if page_size <= 0:
+            raise ValueError("page_size must be positive")
         activities: list[dict[str, Any]] = []
+        activity_ids: set[str] = set()
         offset = 0
+        expected_total: int | None = None
         while True:
             page, total = self._activities_page(account_id, offset, page_size)
-            activities.extend(_summarize_activity(item) for item in page)
+            if total is not None:
+                if expected_total is not None and total != expected_total:
+                    raise SnapTradeDataError(
+                        "SnapTrade activity total changed during pagination"
+                    )
+                expected_total = total
+            for item in page:
+                activity = _summarize_activity(item)
+                if activity["id"] in activity_ids:
+                    raise SnapTradeDataError(
+                        "SnapTrade returned duplicate activity identities "
+                        "(provider ID or field fallback)"
+                    )
+                activity_ids.add(activity["id"])
+                activities.append(activity)
             offset += len(page)
-            if not page or len(page) < page_size:
-                break
-            if total is not None and offset >= total:
+            if expected_total is not None:
+                if offset > expected_total:
+                    raise SnapTradeDataError(
+                        "SnapTrade activity count exceeds reported total"
+                    )
+                if offset == expected_total:
+                    break
+                if not page:
+                    raise SnapTradeDataError(
+                        "SnapTrade activity response is incomplete"
+                    )
+            elif len(page) < page_size:
                 break
         return activities
 
@@ -227,30 +254,19 @@ class SnapTradeClientWrapper:
         try:
             return fn()
         except Exception as exc:
-            raise _to_snaptrade_error(exc) from exc
+            raise _to_snaptrade_error(exc) from None
 
 
 def _to_snaptrade_error(exc: Exception) -> SnapTradeAPIError:
     """Convert SDK exceptions into a sanitized CLI-safe error."""
     status = getattr(exc, "status", None) or getattr(exc, "status_code", None)
-    response_body = getattr(exc, "response_body", None)
-    detail = _message_from_body(response_body)
-    if detail:
-        return SnapTradeAPIError(detail, status)
-    if status:
+    if (
+        isinstance(status, int)
+        and not isinstance(status, bool)
+        and 100 <= status <= 599
+    ):
         return SnapTradeAPIError(f"SnapTrade API error (status {status})", status)
-    return SnapTradeAPIError(str(exc) or "Unknown SnapTrade API error")
-
-
-def _message_from_body(body: Any) -> str | None:
-    plain = _to_plain(body)
-    if not isinstance(plain, Mapping):
-        return None
-    for key in ("detail", "default_detail", "message", "error"):
-        value = plain.get(key)
-        if isinstance(value, str) and value:
-            return value
-    return None
+    return SnapTradeAPIError("SnapTrade API request failed")
 
 
 def _response_body(response: Any) -> Any:
@@ -325,13 +341,13 @@ def _ensure_list(value: Any) -> list[Any]:
         return plain
     if isinstance(plain, Mapping) and isinstance(plain.get("data"), list):
         return cast(list[Any], plain["data"])
-    return []
+    raise SnapTradeDataError("SnapTrade collection payload must contain a list")
 
 
 def _summarize_balance(raw_balance: Any) -> dict[str, Any]:
     raw = _to_plain(raw_balance)
     if not isinstance(raw, Mapping):
-        return {}
+        raise SnapTradeDataError("SnapTrade balance payload was not an object")
     return {
         "currency": _currency_code(_first_present(raw, "currency")),
         "cash": _to_float(_first_present(raw, "cash")),
@@ -342,9 +358,12 @@ def _summarize_balance(raw_balance: Any) -> dict[str, Any]:
 def _summarize_position(raw_position: Any) -> dict[str, Any]:
     raw = _to_plain(raw_position)
     if not isinstance(raw, Mapping):
-        return {}
+        raise SnapTradeDataError("SnapTrade position payload was not an object")
+    symbol = _position_symbol(raw)
+    if not symbol or not symbol.strip():
+        raise SnapTradeDataError("SnapTrade position payload is missing symbol")
     return {
-        "symbol": _position_symbol(raw),
+        "symbol": symbol,
         "quantity": _to_float(
             _first_present(raw, "units", "quantity", "fractional_units")
         ),
@@ -360,8 +379,10 @@ def _summarize_position(raw_position: Any) -> dict[str, Any]:
 def _summarize_option(raw_option: Any) -> dict[str, Any]:
     raw = _to_plain(raw_option)
     if not isinstance(raw, Mapping):
-        return {}
+        raise SnapTradeDataError("SnapTrade option payload was not an object")
     occ = _option_occ_ticker(raw)
+    if not occ or not occ.strip():
+        raise SnapTradeDataError("SnapTrade option payload is missing symbol")
     avg_contract = _to_float(
         _first_present(raw, "average_purchase_price", "averagePurchasePrice")
     )
@@ -413,14 +434,23 @@ _BARE_TICKER = re.compile(r"\b([A-Z]{1,5})\b")
 def _activity_page(body: Any) -> tuple[list[Any], int | None]:
     """Split a paginated activities body into (records, total)."""
     if isinstance(body, Mapping):
-        data = body.get("data")
-        records = data if isinstance(data, list) else []
-        pagination = body.get("pagination")
-        total = pagination.get("total") if isinstance(pagination, Mapping) else None
-        return records, total if isinstance(total, int) else None
+        records = _ensure_list(body)
+        if "pagination" not in body:
+            return records, None
+        pagination = body["pagination"]
+        if not isinstance(pagination, Mapping):
+            raise SnapTradeDataError("SnapTrade activity pagination must be an object")
+        if "total" not in pagination:
+            return records, None
+        total = pagination["total"]
+        if isinstance(total, bool) or not isinstance(total, int) or total < 0:
+            raise SnapTradeDataError(
+                "SnapTrade activity total must be a nonnegative integer"
+            )
+        return records, total
     if isinstance(body, list):
         return body, None
-    return [], None
+    raise SnapTradeDataError("SnapTrade activity payload must contain a list")
 
 
 def _summarize_activity(raw_activity: Any) -> dict[str, Any]:

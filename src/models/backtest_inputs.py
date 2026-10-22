@@ -193,8 +193,14 @@ class BacktestPerformanceMetrics(BaseModel):
     sharpe_ratio: float | None = Field(
         default=None, description="Sharpe ratio (risk-adjusted return)"
     )
-    max_drawdown: float = Field(..., description="Maximum peak-to-trough decline")
-    max_drawdown_pct: float = Field(..., description="Max drawdown as percentage")
+    max_drawdown: float = Field(
+        ...,
+        description="Largest dollar decline from a prior peak, independent of the percentage maximum",
+    )
+    max_drawdown_pct: float = Field(
+        ...,
+        description="Largest percentage decline from a prior peak, independent of the dollar maximum",
+    )
 
     total_trades: int = Field(..., ge=0, description="Total number of trades executed")
     winning_trades: int = Field(..., ge=0, description="Number of profitable trades")

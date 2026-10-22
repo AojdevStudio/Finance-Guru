@@ -46,6 +46,21 @@ Risk metrics use `null` for unavailable Sharpe, Sortino, and Calmar ratios.
 `zero_volatility` or `no_drawdown`. Finite ratios keep their numeric format.
 Text output and the terminal dashboard show unavailable ratios with their reasons.
 
+Margin coverage uses `--monthly-dividend-income`, then `FG_DIVIDEND_MONTHLY_INCOME`,
+then the ledger's three closed calendar months. The ledger path uses only the
+configured `taxable_margin` account and USD `DIVIDEND` rows. The current partial
+month and other account roles are excluded. `dividend_income` names the source,
+window start, and exclusive window end. Missing history stays unavailable with a
+reason. The fallback opens the ledger read-only.
+
+Total-return calculator models require finite price observations, dividend amounts,
+share counts, and return inputs. Missing prices, NaN, and infinities block calculation,
+including with `--force`. A zero terminal price remains valid and can produce a total loss.
+JSON output rejects nonfinite numbers, including portfolio CSV quantities, before
+printing or saving the report. The human report does not validate CSV quantities
+for finiteness.
+The CLI returns exit code 1 when all tickers fail or JSON formatting fails.
+
 ## Strategy commands
 
 | Command | Purpose |

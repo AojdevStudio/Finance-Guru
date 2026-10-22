@@ -360,9 +360,8 @@ def format_human_output(result) -> str:
     else:
         lines.append("Sharpe Ratio: N/A")
 
-    lines.append(
-        f"Max Drawdown: ${perf.max_drawdown:,.2f} ({perf.max_drawdown_pct:.2f}%)"
-    )
+    lines.append(f"Max Drawdown: {perf.max_drawdown_pct:.2f}%")
+    lines.append(f"Largest Dollar Drawdown: ${perf.max_drawdown:,.2f}")
     lines.append("")
 
     lines.append("TRADE STATISTICS")

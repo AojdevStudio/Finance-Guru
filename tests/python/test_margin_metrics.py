@@ -4,7 +4,7 @@ import json
 import os
 import sqlite3
 import sys
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
@@ -33,6 +33,15 @@ def write_balances(path):
         "Net debit,-10000.00,-500.00\n"
         "Margin interest accrued this month,12.34,\n"
     )
+
+
+def freeze_balance_clock(monkeypatch, current: datetime) -> None:
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz):
+            return current.astimezone(tz)
+
+    monkeypatch.setattr(mm, "datetime", FixedDatetime)
 
 
 def write_account_config(path: Path, accounts: list[tuple[str, str, bool]]) -> None:
@@ -243,6 +252,7 @@ def test_metrics_from_runtime_rejects_unsupported_source(monkeypatch):
 
 def test_read_db_balances_reads_latest_snapshot(tmp_path, monkeypatch):
     """read_db_balances returns the newest balances row as Fidelity-shaped facts."""
+    freeze_balance_clock(monkeypatch, datetime(2026, 7, 18, 16, tzinfo=UTC))
     write_account_config(
         tmp_path / "snaptrade-accounts.yaml",
         [("acct-1", "taxable_margin", True)],
@@ -276,6 +286,7 @@ def test_read_db_balances_reads_latest_snapshot(tmp_path, monkeypatch):
 def test_read_db_balances_routes_to_unique_enabled_taxable_margin_account(
     tmp_path, monkeypatch
 ):
+    freeze_balance_clock(monkeypatch, datetime(2026, 1, 1, 1, tzinfo=UTC))
     config_path = tmp_path / "snaptrade-accounts.yaml"
     write_account_config(
         config_path,
@@ -384,6 +395,7 @@ def test_read_db_balances_rejects_ambiguous_taxable_margin_accounts(
 
 
 def test_read_db_balances_rejects_incomplete_latest_generation(tmp_path, monkeypatch):
+    freeze_balance_clock(monkeypatch, datetime(2026, 1, 4, tzinfo=UTC))
     write_account_config(
         tmp_path / "snaptrade-accounts.yaml",
         [
@@ -466,3 +478,122 @@ def test_broker_balances_from_snaptrade_derives_margin_debt():
     assert balances.total_account_value == _FakeSnapClient.EQUITY
     assert balances.margin_debt == pytest.approx(expected_margin_debt)
     assert balances.margin_interest_accrued_this_month is None
+
+
+@pytest.fixture
+def dividend_instance(tmp_path, monkeypatch):
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.delenv("FG_DIVIDEND_MONTHLY_INCOME", raising=False)
+    monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "5000")
+    write_account_config(
+        tmp_path / "snaptrade-accounts.yaml",
+        [
+            ("synthetic-margin", "taxable_margin", True),
+            ("synthetic-retirement", "retirement", True),
+        ],
+    )
+    balances = tmp_path / "synthetic-balances.csv"
+    write_balances(balances)
+    ledger = tmp_path / "family_office.db"
+    with sqlite3.connect(ledger) as connection:
+        connection.execute(
+            "CREATE TABLE transactions (account_id TEXT, date TEXT, type TEXT, amount REAL, currency TEXT)"
+        )
+        connection.executemany(
+            "INSERT INTO transactions VALUES (?, ?, ?, ?, ?)",
+            [
+                ("synthetic-margin", "2025-10-01", "DIVIDEND", 60, "USD"),
+                ("synthetic-margin", "2025-11-15", "DIVIDEND", 90, "USD"),
+                ("synthetic-margin", "2025-12-31", "DIVIDEND", 150, "USD"),
+                ("synthetic-margin", "2025-09-30", "DIVIDEND", 1000, "USD"),
+                ("synthetic-margin", "2026-01-01", "DIVIDEND", 5000, "USD"),
+                ("synthetic-retirement", "2025-12-15", "DIVIDEND", 9000, "USD"),
+                ("synthetic-margin", "2025-12-15", "BUY", 9000, "USD"),
+            ],
+        )
+    write_balances_db(
+        ledger,
+        [
+            ("synthetic-margin", 50000, 100000, 10000, "2026-01-15T00:00:00Z"),
+            ("synthetic-retirement", 0, 500, 0, "2026-01-15T00:00:00Z"),
+        ],
+    )
+    return balances, ledger
+
+
+def test_margin_cli_derives_income_from_three_closed_months(
+    dividend_instance, monkeypatch, capsys
+):
+    from src.analysis.margin_metrics_cli import main
+
+    class FixedDate(date):
+        @classmethod
+        def today(cls):
+            return cls(2026, 1, 15)
+
+    monkeypatch.setattr(mm, "date", FixedDate)
+    freeze_balance_clock(monkeypatch, datetime(2026, 1, 15, tzinfo=UTC))
+    balances, ledger = dividend_instance
+    original_bytes = ledger.read_bytes()
+    assert main(["--annual-rate", "0.12"]) == 0
+    output = json.loads(capsys.readouterr().out)
+    assert output["monthly_dividend_income"] == 100
+    assert output["coverage_ratio"] == 1
+    assert output["dividend_income"]["source"] == "ledger"
+    assert output["dividend_income"]["window_start"] == "2025-10-01"
+    assert output["dividend_income"]["window_end_exclusive"] == "2026-01-01"
+    assert ledger.read_bytes() == original_bytes
+
+
+@pytest.mark.parametrize(
+    ("flag", "environment", "expected", "source"),
+    [
+        (0, "250", 0, "flag"),
+        (400, "250", 400, "flag"),
+        (None, "250", 250, "env"),
+    ],
+)
+def test_dividend_income_precedence(
+    dividend_instance, monkeypatch, flag, environment, expected, source
+):
+    balances, ledger = dividend_instance
+    monkeypatch.setenv("FG_DIVIDEND_MONTHLY_INCOME", environment)
+    ledger.write_bytes(b"not a SQLite database")
+    result = metrics_from_runtime(
+        csv_path=balances,
+        annual_rate=0.12,
+        monthly_dividend_income=flag,
+        today=date(2026, 1, 15),
+    )
+    assert result.monthly_dividend_income == expected
+    assert result.dividend_income.source == source
+    assert result.dividend_income.window_start is None
+
+
+def test_missing_dividend_ledger_is_explicit_and_never_created(tmp_path, monkeypatch):
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.delenv("FG_DIVIDEND_MONTHLY_INCOME", raising=False)
+    monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "5000")
+    balances = tmp_path / "synthetic-balances.csv"
+    write_balances(balances)
+    result = metrics_from_runtime(csv_path=balances, annual_rate=0.12)
+    assert result.monthly_dividend_income is None
+    assert result.dividend_income.source == "unavailable"
+    assert result.dividend_income.unavailable_reason == "ledger_missing"
+    assert not (tmp_path / "family_office.db").exists()
+
+
+@pytest.mark.parametrize(("amount", "currency"), [(None, "USD"), (60, "EUR")])
+def test_dividend_fallback_blocks_unknown_amount_or_currency(
+    dividend_instance, amount, currency
+):
+    balances, ledger = dividend_instance
+    with sqlite3.connect(ledger) as connection:
+        connection.execute(
+            "UPDATE transactions SET amount = ?, currency = ? WHERE date = '2025-10-01'",
+            (amount, currency),
+        )
+    with pytest.raises(ValueError, match="known USD amount"):
+        metrics_from_runtime(
+            csv_path=balances, annual_rate=0.12, today=date(2026, 1, 15)
+        )
