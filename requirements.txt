@@ -2,7 +2,7 @@
 #    uv export --format requirements.txt --no-hashes --no-emit-project --frozen
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.14.3
+aiohttp==3.14.4
     # via
     #   growthbook
     #   snaptrade-python-sdk
@@ -37,7 +37,7 @@ cachetools==6.2.0
     # via streamlit
 catalogue==2.0.10
     # via scrubadub
-certifi==2025.8.3
+certifi==2026.10.19
     # via
     #   curl-cffi
     #   httpcore
@@ -110,7 +110,7 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.62
+gitpython==3.2.1
     # via streamlit
 grimp==3.14
     # via import-linter
@@ -182,7 +182,7 @@ narwhals==2.5.0
     # via
     #   altair
     #   plotly
-nltk==3.10.3
+nltk==3.10.4
     # via textblob
 numpy==2.3.3
     # via
@@ -198,7 +198,7 @@ numpy==2.3.3
     #   yfinance
 openpyxl==3.1.5
     # via family-office
-opentelemetry-api==1.41.0
+opentelemetry-api==1.45.1
     # via
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
@@ -231,7 +231,7 @@ peewee==3.19.0
     # via yfinance
 phonenumbers==9.0.28
     # via scrubadub
-pillow==12.3.0
+pillow==13.0.0
     # via
     #   family-office
     #   matplotlib
