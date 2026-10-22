@@ -1,0 +1,109 @@
+name: Synchronize dependency exports
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-exports-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  synchronize:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+      actions: write
+    steps:
+      - name: Checkout the trusted repair script
+        uses: actions/checkout@v6
+        with:
+          path: trusted
+          persist-credentials: false
+
+      - name: Identify the current same-repository Dependabot PR
+        id: pr
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { identify } = require(`${process.env.GITHUB_WORKSPACE}/trusted/scripts/qa/dependency_repair.cjs`);
+            const repair = await identify({ github, context });
+            if (!repair) return;
+            for (const [name, value] of Object.entries(repair)) core.setOutput(name, value);
+
+      - name: Checkout dependency files at the verified head
+        if: steps.pr.outputs.action == 'repair'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+
+      - name: Set up uv
+        if: steps.pr.outputs.action == 'repair'
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up an isolated Python interpreter
+        if: steps.pr.outputs.action == 'repair'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Reconcile all requested pins and export without running project code
+        if: steps.pr.outputs.action == 'repair'
+        working-directory: candidate
+        env:
+          BASE_SHA: ${{ steps.pr.outputs.base }}
+        run: |
+          python -I ../trusted/scripts/qa/sync_dependency_exports.py --base "$BASE_SHA"
+          uv lock --check --no-build
+          uv export --format requirements.txt --no-hashes --no-emit-project --frozen | diff -u requirements.txt -
+
+      - name: Push only generated dependency files
+        id: push
+        if: steps.pr.outputs.action == 'repair'
+        working-directory: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          HEAD_BRANCH: ${{ steps.pr.outputs.branch }}
+          EXPECTED_SHA: ${{ steps.pr.outputs.sha }}
+          HELPER: ${{ github.workspace }}/trusted/scripts/qa/dependency_repair.cjs
+        run: |
+          if git diff --quiet -- uv.lock requirements.txt; then exit 0; fi
+          current_sha=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)
+          if [ "$current_sha" != "$EXPECTED_SHA" ]; then
+            echo "The PR head changed. The next CI run owns the repair."
+            exit 0
+          fi
+          git config user.name "$(node -p 'require(process.env.HELPER).REPAIR_IDENTITY.name')"
+          git config user.email "$(node -p 'require(process.env.HELPER).REPAIR_IDENTITY.email')"
+          git add -- uv.lock requirements.txt
+          git commit -m "$(node -p 'require(process.env.HELPER).REPAIR_MESSAGE')"
+          gh auth setup-git
+          git push origin "HEAD:$HEAD_BRANCH"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Run CI on the repaired head unless it already has a run
+        if: steps.push.outputs.sha || steps.pr.outputs.action == 'dispatch'
+        uses: actions/github-script@v8
+        env:
+          HEAD_BRANCH: ${{ steps.pr.outputs.branch }}
+          REPAIR_SHA: ${{ steps.push.outputs.sha || steps.pr.outputs.sha }}
+        with:
+          script: |
+            const { ensureCi } = require(`${process.env.GITHUB_WORKSPACE}/trusted/scripts/qa/dependency_repair.cjs`);
+            const outcome = await ensureCi({
+              github, context, branch: process.env.HEAD_BRANCH, sha: process.env.REPAIR_SHA,
+            });
+            core.info(`CI for ${process.env.REPAIR_SHA}: ${outcome}`);

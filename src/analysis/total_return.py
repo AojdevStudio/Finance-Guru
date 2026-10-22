@@ -32,6 +32,7 @@ Created: 2026-02-17
 
 from __future__ import annotations
 
+import math
 import statistics
 from dataclasses import dataclass, field
 from datetime import date
@@ -113,9 +114,9 @@ class TotalReturnCalculator:
 
     Args:
         data: Validated TotalReturnInput with ticker, dates, initial_shares.
-        prices: List of prices for the period (at minimum [start_price, end_price]).
+        prices: Finite prices for the period (at minimum [start_price, end_price]).
         dividends: List of DividendRecord for dividends during the period.
-        ex_date_prices: Dict mapping ex-date -> close price for DRIP reinvestment.
+        ex_date_prices: Dict mapping ex-date -> finite close for DRIP reinvestment.
     """
 
     def __init__(
@@ -129,6 +130,13 @@ class TotalReturnCalculator:
         self.prices = prices or []
         self.dividends = dividends or []
         self.ex_date_prices = ex_date_prices or {}
+        if any(price is None or not math.isfinite(price) for price in self.prices):
+            raise ValueError("All price observations must be finite")
+        if any(
+            price is None or not math.isfinite(price)
+            for price in self.ex_date_prices.values()
+        ):
+            raise ValueError("All reinvestment price observations must be finite")
         self._schedules: dict | None = None
 
     @property
@@ -257,11 +265,13 @@ class TotalReturnCalculator:
         FORMULA: (1 + total_return) ^ (365 / calendar_days) - 1
 
         Args:
-            total_return: Period return to annualize.
+            total_return: Finite period return to annualize, including a total loss.
 
         Returns:
             Annualized return as decimal.
         """
+        if not math.isfinite(total_return):
+            raise ValueError("Period return must be finite for annualization")
         calendar_days = (self.data.end_date - self.data.start_date).days
         if calendar_days <= 0:
             raise ValueError("Period must be positive for annualization")

@@ -191,3 +191,18 @@ Open an issue. Tag it `question`.
 ---
 
 _Last updated: 2026-09-02_
+
+
+## Dependency updates
+
+`uv.lock` is the canonical dependency file. Generate `requirements.txt` from it.
+The frozen export check stays enforced in CI. After a same-repository Dependabot
+CI run, the dependency-export workflow reconciles every requested pin, commits
+only the two dependency files, and starts CI on the repaired head. It runs the
+trusted repair script without building or executing project code.
+
+To repeat the repair on a trusted dependency branch, run:
+
+```bash
+uv run python scripts/qa/sync_dependency_exports.py --base origin/main
+```

@@ -173,7 +173,7 @@ multidict==6.9.1
     # via
     #   aiohttp
     #   yarl
-multitasking==0.0.12
+multitasking==0.0.13
     # via yfinance
 mypy==1.19.1
 mypy-extensions==1.1.0
@@ -227,7 +227,7 @@ pandas==3.0.2
 pandas-stubs==3.0.0.260204
 pathspec==1.0.3
     # via mypy
-peewee==3.18.2
+peewee==3.19.0
     # via yfinance
 phonenumbers==9.0.28
     # via scrubadub
