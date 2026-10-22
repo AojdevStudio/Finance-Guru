@@ -532,6 +532,7 @@ def test_margin_cli_derives_income_from_three_closed_months(
             return cls(2026, 1, 15)
 
     monkeypatch.setattr(mm, "date", FixedDate)
+    freeze_balance_clock(monkeypatch, datetime(2026, 1, 15, tzinfo=UTC))
     balances, ledger = dividend_instance
     original_bytes = ledger.read_bytes()
     assert main(["--annual-rate", "0.12"]) == 0
