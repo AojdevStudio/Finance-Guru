@@ -434,3 +434,160 @@ def test_sync_applies_household_merchant_rules(tmp_path) -> None:
     assert conn.execute("SELECT category FROM bank_transactions").fetchone() == (
         "Family Care",
     )
+
+
+@pytest.mark.parametrize(
+    "category",
+    [
+        "Groceries",
+        "Exempt",
+        "Retirement",
+        "Payroll",
+        "Business Income",
+        "Uncategorized",
+    ],
+)
+def test_transaction_override_survives_resync_without_matching_other_rows(
+    tmp_path, category
+):
+    database_url = f"sqlite:///{tmp_path / 'synthetic.db'}"
+    overrides = tmp_path / "category-overrides.yaml"
+    overrides.write_text(f"synthetic-one: {category}\n")
+    payload = {
+        "accounts": [
+            {
+                "id": "synthetic-account",
+                "name": "Synthetic Checking",
+                "transactions": [
+                    {
+                        "id": identity,
+                        "description": "GENERIC PAYMENT",
+                        "amount": "-10",
+                        "posted": 1704067200,
+                    }
+                    for identity in ["synthetic-one", "synthetic-two"]
+                ],
+            }
+        ]
+    }
+    for _ in range(2):
+        sync(
+            database_url, dump_provider=lambda *_: payload, category_overrides=overrides
+        )
+    with sqlite3.connect(tmp_path / "synthetic.db") as connection:
+        rows = connection.execute(
+            "SELECT txn_id, category FROM bank_transactions ORDER BY txn_id"
+        ).fetchall()
+    assert rows == [("synthetic-one", category), ("synthetic-two", "Uncategorized")]
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "synthetic: NotACategory",
+        "synthetic: Groceries\nsynthetic: Travel",
+        "- invalid",
+        "1: Groceries",
+    ],
+)
+def test_bad_override_blocks_before_provider_or_database_write(tmp_path, content):
+    from src.integrations.simplefin.categorize import CategoryOverridesError
+
+    overrides = tmp_path / "category-overrides.yaml"
+    overrides.write_text(content)
+    database = tmp_path / "synthetic.db"
+
+    def forbidden_provider(*_):
+        raise AssertionError("provider must not run for invalid overrides")
+
+    with pytest.raises(CategoryOverridesError):
+        sync(
+            f"sqlite:///{database}",
+            dump_provider=forbidden_provider,
+            category_overrides=overrides,
+        )
+    assert not database.exists()
+
+
+@pytest.mark.parametrize("historical", [False, True])
+@pytest.mark.parametrize("transaction_id", ["synthetic", 7])
+def test_ambiguous_override_id_blocks_sync(tmp_path, historical, transaction_id):
+    from src.integrations.simplefin.categorize import CategoryOverridesError
+
+    overrides = tmp_path / "category-overrides.yaml"
+    overrides.write_text(f'"{transaction_id}": Groceries\n')
+    payload = {
+        "accounts": [
+            {"id": account, "transactions": [{"id": transaction_id, "amount": "-10"}]}
+            for account in ["synthetic-a", "synthetic-b"]
+        ]
+    }
+    if historical:
+        sync(
+            f"sqlite:///{tmp_path / 'synthetic.db'}",
+            dump_provider=lambda *_: {"accounts": payload["accounts"][:1]},
+        )
+        payload["accounts"] = payload["accounts"][1:]
+    with pytest.raises(CategoryOverridesError, match="multiple accounts"):
+        sync(
+            f"sqlite:///{tmp_path / 'synthetic.db'}",
+            dump_provider=lambda *_: payload,
+            category_overrides=overrides,
+        )
+
+
+def test_concurrent_syncs_cannot_both_commit_an_ambiguous_override(
+    tmp_path, monkeypatch
+):
+    from src.integrations.simplefin.categorize import CategoryOverridesError
+
+    database = tmp_path / "synthetic.db"
+    overrides = tmp_path / "category-overrides.yaml"
+    overrides.write_text("synthetic: Groceries\n")
+
+    def sync_account(account: str) -> dict:
+        return sync(
+            f"sqlite:///{database}",
+            dump_provider=lambda *_: {
+                "accounts": [
+                    {
+                        "id": account,
+                        "transactions": [{"id": "synthetic", "amount": "-10"}],
+                    }
+                ]
+            },
+            category_overrides=overrides,
+        )
+
+    real_connect = sqlite3.connect
+    competing_errors: list[sqlite3.OperationalError] = []
+    competing_runs: list[str] = []
+
+    class FirstSyncConnection(sqlite3.Connection):
+        def executemany(self, sql, rows):
+            if not competing_runs:
+                competing_runs.append("synthetic-b")
+                try:
+                    sync_account("synthetic-b")
+                except sqlite3.OperationalError as error:
+                    competing_errors.append(error)
+            return super().executemany(sql, rows)
+
+    def connect(database_path, *args, **kwargs):
+        if competing_runs:
+            return real_connect(database_path, *args, **{**kwargs, "timeout": 0.05})
+        return real_connect(database_path, *args, factory=FirstSyncConnection, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", connect)
+    sync_account("synthetic-a")
+    monkeypatch.setattr(sqlite3, "connect", real_connect)
+
+    assert competing_runs == ["synthetic-b"]
+    assert [str(error) for error in competing_errors] == ["database is locked"]
+    with pytest.raises(CategoryOverridesError, match="multiple accounts"):
+        sync_account("synthetic-b")
+    with real_connect(database) as connection:
+        rows = connection.execute(
+            "SELECT account_id, txn_id, category FROM bank_transactions"
+        ).fetchall()
+    assert rows == [("synthetic-a", "synthetic", "Groceries")]

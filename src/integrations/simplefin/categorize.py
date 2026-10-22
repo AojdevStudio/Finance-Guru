@@ -415,6 +415,49 @@ def load_merchant_rules(path: Path) -> HouseholdRules:
     return rules
 
 
+class CategoryOverridesError(ValueError):
+    """The instance overrides are malformed or identify multiple accounts."""
+
+
+def load_category_overrides(path: Path | None) -> dict[str, str]:
+    """Read private transaction IDs mapped to existing categories.
+
+    A missing file means no overrides. Invalid or unreadable files block sync.
+    """
+    if path is None:
+        return {}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {}
+    except (OSError, UnicodeError) as exc:
+        raise CategoryOverridesError("Cannot read category overrides") from exc
+    try:
+        loaded = yaml.load(text, Loader=_UniqueKeyLoader)
+    except yaml.YAMLError as exc:
+        raise CategoryOverridesError(
+            "Category overrides must be valid YAML with unique keys"
+        ) from exc
+    if loaded is None:
+        return {}
+    if not isinstance(loaded, dict):
+        raise CategoryOverridesError(
+            "Category overrides must map transaction IDs to categories"
+        )
+    overrides: dict[str, str] = {}
+    for txn_id, category in loaded.items():
+        if not isinstance(txn_id, str) or not txn_id.strip():
+            raise CategoryOverridesError(
+                "Override transaction IDs must be non-empty strings"
+            )
+        if not isinstance(category, str) or category not in _OVERRIDE_CATEGORIES:
+            raise CategoryOverridesError(
+                "Override category must be an existing category"
+            )
+        overrides[txn_id] = category
+    return overrides
+
+
 def merge_patterns(base: PatternTable, extra: HouseholdRules) -> PatternTable:
     """Append household patterns to each category of the public table.
 
@@ -540,6 +583,12 @@ _RULES_BEFORE_TABLE: tuple[_Rule, ...] = (
 )
 
 _RULES_AFTER_TABLE: tuple[_Rule, ...] = (("Business Income", _is_business_inflow),)
+
+_OVERRIDE_CATEGORIES: frozenset[str] = (
+    frozenset(CATEGORIES)
+    | {category for category, _ in (*_RULES_BEFORE_TABLE, *_RULES_AFTER_TABLE)}
+    | {"Uncategorized"}
+)
 
 
 def categorize_expense(
