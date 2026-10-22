@@ -221,6 +221,37 @@ class TestMoneyness:
 
 
 class TestImpliedVolatility:
+    @pytest.mark.xfail(
+        strict=True, reason="Issue 267. Newton step leaves pricing domain"
+    )
+    @pytest.mark.parametrize(
+        ("option_type", "strike", "days"),
+        [("put", 80.0, 7), ("call", 200.0, 30)],
+    )
+    def test_recovers_supported_hedge_volatility(
+        self, calculator, option_type, strike, days
+    ):
+        contract = BlackScholesInput(
+            spot_price=100.0,
+            strike=strike,
+            time_to_expiry=days / 365,
+            volatility=0.8,
+            risk_free_rate=0.045,
+            option_type=option_type,
+        )
+        premium = calculator.price_option(contract).option_price
+        result = calculator.calculate_implied_vol(
+            ImpliedVolInput(
+                **contract.model_dump(exclude={"volatility"}), market_price=premium
+            ),
+            ticker="SYNTH",
+        )
+
+        assert result.converged
+        assert result.ticker == "SYNTH"
+        assert result.implied_volatility == pytest.approx(0.8, abs=0.001)
+        assert result.pricing_error < 0.0001
+
     def test_implied_vol_converges(self, calculator, atm_call_input):
         greeks = calculator.price_option(atm_call_input)
         market_price = greeks.option_price
