@@ -31,7 +31,7 @@ dependencies = [
     "questionary>=2.1.1",
     "pillow>=12.1.1",
     "anthropic>=0.107.1",
-    "snaptrade-python-sdk>=11.0.197,<12",
+    "snaptrade-python-sdk>=11.0.197,<14",
 ]
 
 [build-system]
