@@ -151,15 +151,33 @@ class SnapTradeClientWrapper:
         than the first page. This client is stateless; deduplication happens in
         the DB layer via ``dedupe_key`` on upsert.
         """
+        if page_size <= 0:
+            raise ValueError("page_size must be positive")
         activities: list[dict[str, Any]] = []
         offset = 0
+        expected_total: int | None = None
         while True:
             page, total = self._activities_page(account_id, offset, page_size)
+            if total is not None:
+                if expected_total is not None and total != expected_total:
+                    raise SnapTradeDataError(
+                        "SnapTrade activity total changed during pagination"
+                    )
+                expected_total = total
             activities.extend(_summarize_activity(item) for item in page)
             offset += len(page)
-            if not page or len(page) < page_size:
-                break
-            if total is not None and offset >= total:
+            if expected_total is not None:
+                if offset > expected_total:
+                    raise SnapTradeDataError(
+                        "SnapTrade activity count exceeds reported total"
+                    )
+                if offset == expected_total:
+                    break
+                if not page:
+                    raise SnapTradeDataError(
+                        "SnapTrade activity response is incomplete"
+                    )
+            elif len(page) < page_size:
                 break
         return activities
 
@@ -325,13 +343,13 @@ def _ensure_list(value: Any) -> list[Any]:
         return plain
     if isinstance(plain, Mapping) and isinstance(plain.get("data"), list):
         return cast(list[Any], plain["data"])
-    return []
+    raise SnapTradeDataError("SnapTrade collection payload must contain a list")
 
 
 def _summarize_balance(raw_balance: Any) -> dict[str, Any]:
     raw = _to_plain(raw_balance)
     if not isinstance(raw, Mapping):
-        return {}
+        raise SnapTradeDataError("SnapTrade balance payload was not an object")
     return {
         "currency": _currency_code(_first_present(raw, "currency")),
         "cash": _to_float(_first_present(raw, "cash")),
@@ -342,9 +360,12 @@ def _summarize_balance(raw_balance: Any) -> dict[str, Any]:
 def _summarize_position(raw_position: Any) -> dict[str, Any]:
     raw = _to_plain(raw_position)
     if not isinstance(raw, Mapping):
-        return {}
+        raise SnapTradeDataError("SnapTrade position payload was not an object")
+    symbol = _position_symbol(raw)
+    if not symbol or not symbol.strip():
+        raise SnapTradeDataError("SnapTrade position payload is missing symbol")
     return {
-        "symbol": _position_symbol(raw),
+        "symbol": symbol,
         "quantity": _to_float(
             _first_present(raw, "units", "quantity", "fractional_units")
         ),
@@ -360,8 +381,10 @@ def _summarize_position(raw_position: Any) -> dict[str, Any]:
 def _summarize_option(raw_option: Any) -> dict[str, Any]:
     raw = _to_plain(raw_option)
     if not isinstance(raw, Mapping):
-        return {}
+        raise SnapTradeDataError("SnapTrade option payload was not an object")
     occ = _option_occ_ticker(raw)
+    if not occ or not occ.strip():
+        raise SnapTradeDataError("SnapTrade option payload is missing symbol")
     avg_contract = _to_float(
         _first_present(raw, "average_purchase_price", "averagePurchasePrice")
     )
@@ -413,14 +436,13 @@ _BARE_TICKER = re.compile(r"\b([A-Z]{1,5})\b")
 def _activity_page(body: Any) -> tuple[list[Any], int | None]:
     """Split a paginated activities body into (records, total)."""
     if isinstance(body, Mapping):
-        data = body.get("data")
-        records = data if isinstance(data, list) else []
+        records = _ensure_list(body)
         pagination = body.get("pagination")
         total = pagination.get("total") if isinstance(pagination, Mapping) else None
         return records, total if isinstance(total, int) else None
     if isinstance(body, list):
         return body, None
-    return [], None
+    raise SnapTradeDataError("SnapTrade activity payload must contain a list")
 
 
 def _summarize_activity(raw_activity: Any) -> dict[str, Any]:
