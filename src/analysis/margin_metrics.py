@@ -12,7 +12,7 @@ from __future__ import annotations
 import csv
 import os
 import sqlite3
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from glob import glob
 from pathlib import Path
 from typing import Any
@@ -27,6 +27,8 @@ EDUCATIONAL_DISCLAIMER = (
     "and the use of margin involve risk, including possible loss of principal."
 )
 SUPPORTED_MARGIN_SOURCES = ("db", "snaptrade", "csv")
+BALANCE_MAX_AGE = timedelta(hours=24)
+BALANCE_CLOCK_SKEW = timedelta(minutes=5)
 
 
 class MarginAccountRoutingError(ValueError):
@@ -35,6 +37,10 @@ class MarginAccountRoutingError(ValueError):
 
 class IncompleteBalanceGenerationError(ValueError):
     """Raised when the latest DB balance generation is incomplete."""
+
+
+class StaleBalanceSnapshotError(ValueError):
+    """Raised when the DB balance generation cannot be verified as current."""
 
 
 class UnsupportedMarginSourceError(ValueError):
@@ -294,8 +300,9 @@ def read_db_balances(
 
     The sync-first refresh (``src.integrations.refresh_all``) writes one timestamp
     across all enabled+routed accounts. This reader requires that complete
-    generation, then selects its unique taxable-margin row. Margin debt is the
-    derived loan, so accrued interest and day-change are None.
+    generation, then selects its unique taxable-margin row. Generations older
+    than 24 hours or with unverifiable timestamps fail closed. Margin debt is
+    the derived loan, so accrued interest and day-change are None.
     """
     from src.config.instance_paths import _db_path
 
@@ -346,6 +353,7 @@ def read_db_balances(
             "The configured taxable_margin account is missing from the latest balance "
             "generation; run the sync-first refresh and resolve any per-account sync errors"
         )
+    _require_fresh_balance_snapshot(row["synced_at"])
     equity = row["account_equity"]
     if equity is None:
         msg = "Local DB balance row is missing account_equity"
@@ -360,6 +368,23 @@ def read_db_balances(
         net_debit_day_change=None,
         margin_interest_accrued_this_month=None,
     )
+
+
+def _require_fresh_balance_snapshot(synced_at: str) -> None:
+    """Refuse stale, future-dated, or timezone-less ledger generations."""
+    message = (
+        f"Local DB balance generation at {synced_at!r} is stale or unverifiable; "
+        "run the sync-first refresh before reading margin metrics"
+    )
+    try:
+        synced = datetime.fromisoformat(synced_at)
+    except (TypeError, ValueError) as error:
+        raise StaleBalanceSnapshotError(message) from error
+    if synced.utcoffset() is None:
+        raise StaleBalanceSnapshotError(message)
+    age = datetime.now(UTC) - synced
+    if age > BALANCE_MAX_AGE or age < -BALANCE_CLOCK_SKEW:
+        raise StaleBalanceSnapshotError(message)
 
 
 def months_elapsed_since_start(today: date | None = None) -> int | None:
