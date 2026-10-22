@@ -109,19 +109,22 @@ def test_activity_pagination_rejects_a_truncated_result() -> None:
 
 
 @pytest.mark.parametrize(
-    "pages",
+    ("pages", "expected_error"),
     [
-        [
-            {"data": [_activity("first")], "pagination": {"total": 2}},
-            {"data": [_activity("second")], "pagination": {"total": 3}},
-        ],
-        [{"data": [_activity("first")], "pagination": {"total": 0}}],
+        (
+            [
+                {"data": [_activity("first")], "pagination": {"total": 2}},
+                {"data": [_activity("second")], "pagination": {"total": 3}},
+            ],
+            "changed",
+        ),
+        ([{"data": [_activity("first")], "pagination": {"total": 0}}], "exceeds"),
     ],
 )
 def test_activity_pagination_rejects_inconsistent_totals(
-    pages: list[dict[str, Any]],
+    pages: list[dict[str, Any]], expected_error: str
 ) -> None:
-    with pytest.raises(SnapTradeDataError, match="total"):
+    with pytest.raises(SnapTradeDataError, match=expected_error):
         _paged_client(pages).get_activities("synthetic-account", page_size=1)
 
 
@@ -137,6 +140,11 @@ def test_activity_pagination_rejects_malformed_totals(total: Any) -> None:
 
     with pytest.raises(SnapTradeDataError, match="total"):
         client.get_activities("synthetic-account")
+
+
+def test_activity_pagination_rejects_non_object_metadata() -> None:
+    with pytest.raises(SnapTradeDataError, match="pagination must be an object"):
+        _client({"data": [], "pagination": None}).get_activities("synthetic-account")
 
 
 @pytest.mark.parametrize("page_size", [1, 2])

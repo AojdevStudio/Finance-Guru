@@ -146,10 +146,10 @@ class SnapTradeClientWrapper:
     ) -> list[dict[str, Any]]:
         """Return all normalized transaction/dividend activities for an account.
 
-        Pages through SnapTrade's offset/limit activities endpoint until the
-        reported total is consumed, so the result is the full history rather
-        than the first page. This client is stateless; deduplication happens in
-        the DB layer via ``dedupe_key`` on upsert.
+        Follow offset/limit pages until the reported total is consumed. Raise
+        SnapTradeDataError on malformed, incomplete, changing, or excess totals
+        and repeated activity identities, including field-based fallback IDs.
+        The DB layer deduplicates against rows from earlier syncs on upsert.
         """
         if page_size <= 0:
             raise ValueError("page_size must be positive")
@@ -169,7 +169,8 @@ class SnapTradeClientWrapper:
                 activity = _summarize_activity(item)
                 if activity["id"] in activity_ids:
                     raise SnapTradeDataError(
-                        "SnapTrade returned duplicate activity IDs"
+                        "SnapTrade returned duplicate activity identities "
+                        "(provider ID or field fallback)"
                     )
                 activity_ids.add(activity["id"])
                 activities.append(activity)
