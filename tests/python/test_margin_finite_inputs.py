@@ -80,11 +80,11 @@ def test_subprocess_cli_refuses_nonfinite_inputs_without_output_or_writes(
 
     assert result.returncode != 0, result.stdout
     assert result.stdout == ""
-    field = (
-        "jump_alert_threshold"
-        if source == "threshold_env"
-        else "monthly_dividend_income"
-    )
+    field = {
+        "threshold_env": "jump_alert_threshold",
+        "income_env": "monthly_income",
+        "income_flag": "monthly_dividend_income",
+    }[source]
     assert field in result.stderr
     assert "finite_number" in result.stderr
     assert balances_csv.read_bytes() == before

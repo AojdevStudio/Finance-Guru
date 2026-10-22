@@ -10,16 +10,17 @@ Fallbacks: ``--source snaptrade`` reads the SnapTrade API live, and
 from __future__ import annotations
 
 import csv
+import math
 import os
 import sqlite3
 from datetime import UTC, date, datetime, timedelta
 from glob import glob
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, FiniteFloat
 
-from src.config.instance_paths import InstancePaths, load_instance_env
+from src.config.instance_paths import InstancePaths, _db_path, load_instance_env
 
 EDUCATIONAL_DISCLAIMER = (
     "For educational purposes only. This is not investment advice. Consult a "
@@ -62,6 +63,23 @@ class FidelityBalances(BaseModel):
     margin_interest_accrued_this_month: float | None
 
 
+DIVIDEND_LOOKBACK_MONTHS = 3
+
+
+class DividendIncome(BaseModel):
+    """Monthly dividend income with an explicit source and calendar window."""
+
+    model_config = ConfigDict(frozen=True)
+
+    monthly_income: FiniteFloat | None
+    source: Literal["provided", "flag", "env", "ledger", "unavailable"]
+    window_start: date | None = None
+    window_end_exclusive: date | None = None
+    unavailable_reason: (
+        Literal["ledger_missing", "transactions_missing", "dividends_missing"] | None
+    ) = None
+
+
 class MarginMetricsInput(BaseModel):
     """Validated inputs for the margin calculator."""
 
@@ -71,6 +89,7 @@ class MarginMetricsInput(BaseModel):
     annual_rate: float = Field(ge=0.0, allow_inf_nan=False)
     jump_alert_threshold: float = Field(allow_inf_nan=False)
     monthly_dividend_income: float | None = Field(default=None, allow_inf_nan=False)
+    dividend_income: DividendIncome | None = None
     today: date | None = None
 
 
@@ -89,6 +108,7 @@ class MarginMetrics(BaseModel):
     monthly_interest_cost: float
     annual_interest_cost: float
     monthly_dividend_income: float | None
+    dividend_income: DividendIncome
     coverage_ratio: float | None
     portfolio_margin_ratio: float | None
     jump_alert_threshold: float
@@ -387,6 +407,74 @@ def _require_fresh_balance_snapshot(synced_at: str) -> None:
         raise StaleBalanceSnapshotError(message)
 
 
+def read_ledger_dividend_income(today: date | None = None) -> DividendIncome:
+    """Average received USD dividends across three closed calendar months.
+
+    The account is the same explicitly routed taxable-margin account as balances.
+    Missing history is unavailable. Invalid ledger amounts or currencies block.
+    """
+    current = today or date.today()
+    end = date(current.year, current.month, 1)
+    first_month_index = current.year * 12 + current.month - 1 - DIVIDEND_LOOKBACK_MONTHS
+    start = date(first_month_index // 12, first_month_index % 12 + 1, 1)
+    db = _db_path()
+    if not db.exists():
+        return DividendIncome(
+            monthly_income=None,
+            source="unavailable",
+            unavailable_reason="ledger_missing",
+            window_start=start,
+            window_end_exclusive=end,
+        )
+    connection = sqlite3.connect(f"{db.resolve().as_uri()}?mode=ro", uri=True)
+    try:
+        if (
+            connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='transactions'"
+            ).fetchone()
+            is None
+        ):
+            return DividendIncome(
+                monthly_income=None,
+                source="unavailable",
+                unavailable_reason="transactions_missing",
+                window_start=start,
+                window_end_exclusive=end,
+            )
+        account_id, _, _ = _resolve_margin_routing()
+        rows = connection.execute(
+            "SELECT amount, currency FROM transactions "
+            "WHERE account_id = ? AND type = 'DIVIDEND' AND date >= ? AND date < ?",
+            (account_id, start.isoformat(), end.isoformat()),
+        ).fetchall()
+    finally:
+        connection.close()
+    if not rows:
+        return DividendIncome(
+            monthly_income=None,
+            source="unavailable",
+            unavailable_reason="dividends_missing",
+            window_start=start,
+            window_end_exclusive=end,
+        )
+    amounts: list[float] = []
+    for amount, currency in rows:
+        if currency != "USD" or amount is None:
+            raise ValueError(
+                "Ledger dividend income requires a known USD amount for every dividend"
+            )
+        value = float(amount)
+        if not math.isfinite(value):
+            raise ValueError("Ledger dividend income requires finite amounts")
+        amounts.append(value)
+    return DividendIncome(
+        monthly_income=math.fsum(amounts) / DIVIDEND_LOOKBACK_MONTHS,
+        source="ledger",
+        window_start=start,
+        window_end_exclusive=end,
+    )
+
+
 def months_elapsed_since_start(today: date | None = None) -> int | None:
     """Return elapsed strategy months from FG_STRATEGY_START_DATE."""
     raw = os.getenv("FG_STRATEGY_START_DATE")
@@ -407,12 +495,17 @@ class MarginMetricsCalculator:
         """Return all derived margin metrics."""
         balances = self.inputs.balances
         margin_balance = balances.margin_debt
+        income = self.inputs.dividend_income or DividendIncome(
+            monthly_income=self.inputs.monthly_dividend_income,
+            source="provided"
+            if self.inputs.monthly_dividend_income is not None
+            else "unavailable",
+        )
         monthly_interest_cost = margin_balance * self.inputs.annual_rate / 12
         annual_interest_cost = monthly_interest_cost * 12
         coverage_ratio = (
-            self.inputs.monthly_dividend_income / monthly_interest_cost
-            if self.inputs.monthly_dividend_income is not None
-            and monthly_interest_cost > 0
+            income.monthly_income / monthly_interest_cost
+            if income.monthly_income is not None and monthly_interest_cost > 0
             else None
         )
         portfolio_margin_ratio = (
@@ -444,7 +537,8 @@ class MarginMetricsCalculator:
             annual_interest_rate=self.inputs.annual_rate,
             monthly_interest_cost=round(monthly_interest_cost, 2),
             annual_interest_cost=round(annual_interest_cost, 2),
-            monthly_dividend_income=self.inputs.monthly_dividend_income,
+            monthly_dividend_income=income.monthly_income,
+            dividend_income=income,
             coverage_ratio=(
                 round(coverage_ratio, 2) if coverage_ratio is not None else None
             ),
@@ -466,6 +560,7 @@ def calculate_margin_metrics(
     annual_rate: float,
     jump_alert_threshold: float,
     monthly_dividend_income: float | None = None,
+    dividend_income: DividendIncome | None = None,
     today: date | None = None,
 ) -> MarginMetrics:
     """Calculate live margin metrics through validated models."""
@@ -474,6 +569,7 @@ def calculate_margin_metrics(
         annual_rate=annual_rate,
         jump_alert_threshold=jump_alert_threshold,
         monthly_dividend_income=monthly_dividend_income,
+        dividend_income=dividend_income,
         today=today,
     )
     return MarginMetricsCalculator(inputs).calculate_all()
@@ -517,14 +613,20 @@ def metrics_from_runtime(
     if threshold is None:
         msg = "FG_MARGIN_JUMP_ALERT_THRESHOLD is required"
         raise ValueError(msg)
-    resolved_dividend = monthly_dividend_income
-    if resolved_dividend is None:
-        resolved_dividend = parse_money(os.getenv("FG_DIVIDEND_MONTHLY_INCOME", ""))
+    if monthly_dividend_income is not None:
+        income = DividendIncome(monthly_income=monthly_dividend_income, source="flag")
+    else:
+        environment_income = parse_money(os.getenv("FG_DIVIDEND_MONTHLY_INCOME", ""))
+        income = (
+            DividendIncome(monthly_income=environment_income, source="env")
+            if environment_income is not None
+            else read_ledger_dividend_income(today)
+        )
     return calculate_margin_metrics(
         balances,
         annual_rate=resolved_rate,
         jump_alert_threshold=threshold,
-        monthly_dividend_income=resolved_dividend,
+        dividend_income=income,
         today=today,
     )
 

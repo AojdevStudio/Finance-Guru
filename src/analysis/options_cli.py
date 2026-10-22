@@ -131,9 +131,17 @@ Examples:
 
             iv_result = calculator.calculate_implied_vol(iv_input, ticker=args.ticker)
 
-            print(
-                f"✅ Converged in {iv_result.iterations} iterations\n", file=sys.stderr
-            )
+            if iv_result.converged:
+                print(
+                    f"✅ Converged in {iv_result.iterations} iterations\n",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"❌ ERROR: Implied volatility did not converge after "
+                    f"{iv_result.iterations} iterations\n",
+                    file=sys.stderr,
+                )
 
             if args.output == "json":
                 output_text = iv_result.model_dump_json(indent=2)
@@ -168,6 +176,9 @@ Examples:
             print(f"💾 Saved to: {args.save_to}", file=sys.stderr)
         else:
             print(output_text)
+
+        if args.implied_vol and not iv_result.converged:
+            sys.exit(1)
 
     except Exception as e:
         print(f"❌ ERROR: {e}", file=sys.stderr)
