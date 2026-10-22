@@ -145,6 +145,90 @@ The engine reads every private file from an instance directory outside the repos
 
 Local-first does not mean network-free. Market data, brokerage, and LLM integrations send request data to their configured providers. Configure only the integrations you intend to use.
 
+### Scheduled checks with swamp
+
+[swamp](https://github.com/swamp-club/swamp) (Swamp Club) runs Finance Guru's scheduled checks. The engine computes the numbers. swamp runs checks on a timer, compares those numbers with outside sources, and keeps a record of every run. Everything lives in this repository under `automations/swamp/`, and swamp's own service runs the schedule, so no other tool is needed.
+
+Words used below:
+
+- A _behavior_ is a small TypeScript program with named methods. `fidelity-margin-rate` is one.
+- A _workflow_ is a YAML file that runs behavior methods in order. `margin-rate-check` is one.
+- `swamp serve` is swamp's long-running process. It fires every workflow that has a `trigger.schedule`.
+
+**The margin-rate check.** [Fidelity](https://www.fidelity.com/) charges a margin rate that depends on the size of your debt. The `margin-rate-check` workflow catches a rate in your `.env` that no longer matches:
+
+1. `refresh` runs the engine's SnapTrade positions sync in your instance, so the margin debt in `family_office.db` is current.
+2. `check` asks the engine's `margin_metrics_cli` for your margin debt and configured rate (`FG_MARGIN_INTEREST_RATE_DECIMAL`), reads [Fidelity](https://www.fidelity.com/)'s published rate table, and compares the rate for that debt with yours. A mismatch fails the run. The check never edits your `.env`.
+
+It runs Mondays at 9:15 in the machine's local time zone. On a machine set to US Central time, that is after SnapTrade's daily holdings sync, about 8:45 AM CT.
+
+#### What you need
+
+- A Finance Guru checkout and an instance with a Fidelity margin account routed as `taxable_margin` in `snaptrade-accounts.yaml`.
+- `FG_MARGIN_INTEREST_RATE_DECIMAL` and `FG_MARGIN_JUMP_ALERT_THRESHOLD` set in the instance `.env`. The engine's `margin_metrics_cli` needs both.
+- `uv` on the machine.
+- The swamp CLI, installed as its [README](https://github.com/swamp-club/swamp) describes, and signed in with `swamp auth login`. Every swamp process, the service included, needs that sign-in to start.
+
+#### Configure the check
+
+Create the behavior definition once. It records your instance path and the full path to `uv`, so it stays on your machine: `automations/swamp/.gitignore` ignores `models/`.
+
+```bash
+cd automations/swamp
+swamp behavior create @aojdevstudio/fidelity-margin-rate fidelity-margin-rate \
+  --global-arg instanceDir=/path/to/your/instance \
+  --global-arg uvPath="$(command -v uv)"
+swamp workflow validate margin-rate-check
+```
+
+The service starts with a minimal `PATH` and without your shell's variables, so give full paths here, not `FIN_GURU_DATA_ROOT`.
+
+#### Run it by hand
+
+```bash
+cd automations/swamp
+swamp workflow run margin-rate-check --json
+swamp data query 'behavior("fidelity-margin-rate") && name == "rate"' --select content --json
+```
+
+The last command prints the newest comparison: tier rate, configured rate, margin debt, and `drift`. To check the rate without syncing first, run `swamp behavior run fidelity-margin-rate check`. It refuses a ledger synced more than 24 hours ago.
+
+Run the tests with the Deno that ships with swamp (`swamp doctor extensions --json` prints its path as `denoPath`):
+
+```bash
+~/.swamp/deno/deno test --allow-read extensions/behaviors/fidelity_margin_rate_test.ts
+```
+
+#### Start the service
+
+swamp installs `swamp serve` as a per-user service: a launchd agent on macOS, a systemd user unit on Linux. The command is marked experimental in swamp's help.
+
+```bash
+cd automations/swamp
+swamp serve daemon enable --user --repo-dir "$PWD" --host 127.0.0.1 --port 9093
+swamp serve daemon status
+curl -s http://127.0.0.1:9093/health
+```
+
+`/health` lists each schedule with its `nextRun` in UTC. Check that the margin-rate check appears there. Stop the service with `swamp serve daemon disable`.
+
+- The service loads the behavior code once, at start. After you pull changes under `automations/swamp/extensions/`, run the `daemon enable` command again to restart it. Until then, scheduled runs use the old code. Workflow and schedule edits take effect without a restart.
+- swamp installs one serve service per user, so `daemon enable` here replaces a serve service you already run for another repository. The check needs this layout: the workflow, the behavior, and your local definition all in `automations/swamp/` inside a Finance Guru checkout, because the behavior finds the engine two folders up.
+- On Linux, a user unit stops when you log out unless lingering is on: `loginctl enable-linger "$USER"`.
+- A schedule missed while the machine was asleep or off does not run later. Run the workflow by hand when that happens.
+
+#### Where results and logs go
+
+- Run history: `swamp workflow history search --json`. A scheduled run shows `"triggerSource": "schedule"`.
+- The latest comparison: the `swamp data query` command above.
+- Why a run failed: `swamp report get @swamp/workflow-summary --workflow margin-rate-check --json`.
+- Service logs: `~/Library/Logs/swamp/serve.stdout.log` and `serve.stderr.log` on macOS, `journalctl --user -u swamp-serve` on Linux.
+- Run data lives in `automations/swamp/.swamp/`, which git ignores.
+
+A failed run notifies no one. Check the history, or point a tool you already use at it.
+
+**How it relates to the stale-equity guard.** The engine computes margin debt as gross market value minus SnapTrade's account equity, and the equity is only as fresh as SnapTrade's last holdings sync ([#259](https://github.com/AojdevStudio/Finance-Guru/issues/259)). The engine refuses equity over 12 hours old with `StaleAccountEquityError`, and the ledger stores an empty margin debt instead of a wrong one ([#260](https://github.com/AojdevStudio/Finance-Guru/pull/260)). The rate check reads the debt through the engine, so it fails on an empty debt too, and it refuses a ledger synced more than 24 hours ago. It reads that time from `ledger_synced_at` in the engine's output. Stale data never picks a rate tier. The engine guard stops wrong numbers before they exist. The swamp check catches settings that have drifted from the broker.
+
 ## If you are an agent
 
 You are the intended operator of this engine, not an afterthought. A few things that make you effective here:

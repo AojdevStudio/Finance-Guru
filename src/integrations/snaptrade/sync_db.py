@@ -181,6 +181,8 @@ def sync(config_path: Path, database_url: str | None) -> dict[str, Any]:
                         "settled_cash": balances.get("settled_cash"),
                         "margin_debt": balances.get("margin_debt"),
                         "account_equity": balances.get("account_equity"),
+                        "equity_stale": balances["equity_stale"],
+                        "equity_synced_at": balances["equity_synced_at"],
                         "unpriced_lots": [
                             lot.model_dump() for lot in netted.unpriced_lots
                         ],
@@ -239,6 +241,11 @@ def unpriced_lot_warning(lot: dict[str, Any]) -> str:
     )
 
 
+def stale_equity_warning(synced_at: str | None) -> str:
+    """Describe an account whose margin debt was left NULL for stale equity."""
+    return f"account equity stale (last synced {synced_at or 'unknown'})"
+
+
 def _format_money(value: float | int | None) -> str:
     return "n/a" if value is None else f"${value:,}"
 
@@ -283,6 +290,11 @@ def main(argv: list[str] | None = None) -> int:
         )
         for lot in a["unpriced_lots"]:
             print(f"  warning: {unpriced_lot_warning(lot)}", file=sys.stderr)
+        if a["equity_stale"]:
+            print(
+                f"  warning: {stale_equity_warning(a['equity_synced_at'])}",
+                file=sys.stderr,
+            )
     if not summary["accounts"]:
         print("- no syncable accounts (check config role/enabled)")
     return 0

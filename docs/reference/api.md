@@ -34,7 +34,7 @@ uv run python -m src.integrations.refresh_all --help
 | `src/analysis/hedge_comparison_cli.py` | Compare hedge approaches. |
 | `src/analysis/hedge_sizer_cli.py` | Calculate hedge sizing. |
 | `src/analysis/itc_risk_cli.py` | Query ITC risk-model data. |
-| `src/analysis/margin_metrics_cli.py` | Calculate margin metrics from configured local data. Prints JSON and has no `--output` flag. |
+| `src/analysis/margin_metrics_cli.py` | Calculate margin metrics from configured local data. Prints JSON and has no `--output` flag. `--source snaptrade` adds `equity_synced_at` and raises `StaleAccountEquityError` when the equity sync time is missing, in the future, or older than 12 hours. The default DB source raises `StaleEquitySnapshotError` when the sync stored NULL margin debt, and adds `ledger_synced_at`, the sync time of the balances row it read. `as_of_date` is the run date, not the data date. |
 | `src/analysis/options_chain_cli.py` | Inspect options-chain data. |
 | `src/analysis/options_cli.py` | Run options calculations. |
 | `src/analysis/risk_metrics_cli.py` | Calculate risk and benchmark metrics. |
@@ -123,7 +123,7 @@ and is not part of the command contract.
 | --- | --- |
 | `uv run python -m src.integrations.refresh_all` | Refresh configured [SnapTrade](https://snaptrade.com/) and [SimpleFIN](https://www.simplefin.org/) data into the local database. |
 | `uv run python -m src.integrations.snaptrade.cli` | Inspect linked SnapTrade accounts, positions, balances, or activities. |
-| `uv run python -m src.integrations.snaptrade.sync_db` | Refresh SnapTrade positions and balances into local [SQLite](https://www.sqlite.org/). |
+| `uv run python -m src.integrations.snaptrade.sync_db` | Refresh SnapTrade positions and balances into local [SQLite](https://www.sqlite.org/). When SnapTrade equity fails that same check, it stores `margin_debt` as NULL and prints `warning: account equity stale (last synced <ts>)`. |
 | `uv run python -m src.integrations.snaptrade.sync_transactions_db` | Refresh SnapTrade activities into local SQLite. |
 | `uv run python -m src.integrations.simplefin.sync_expenses_db` | Refresh SimpleFIN transactions into local SQLite. |
 
