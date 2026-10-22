@@ -44,6 +44,10 @@ class StaleBalanceSnapshotError(ValueError):
     """Raised when the DB balance generation cannot be verified as current."""
 
 
+class StaleEquitySnapshotError(ValueError):
+    """Raised when the DB margin row has NULL debt because equity was stale."""
+
+
 class UnsupportedMarginSourceError(ValueError):
     """Raised when runtime metrics receive an unknown balance source."""
 
@@ -61,6 +65,7 @@ class FidelityBalances(BaseModel):
     margin_debt: float = Field(ge=0.0)
     net_debit_day_change: float | None
     margin_interest_accrued_this_month: float | None
+    equity_synced_at: datetime | None = None
 
 
 DIVIDEND_LOOKBACK_MONTHS = 3
@@ -115,6 +120,7 @@ class MarginMetrics(BaseModel):
     margin_day_change: float | None
     alert_status: str
     months_elapsed: int | None
+    equity_synced_at: datetime | None = None
     disclaimer: str = EDUCATIONAL_DISCLAIMER
 
 
@@ -218,6 +224,7 @@ def _broker_balances_from_snaptrade(client: Any, account_id: str) -> FidelityBal
 
     Margin debt is derived (gross market value − net equity); SnapTrade does not
     expose the loan, accrued interest, or day-change directly, so those are None.
+    Stale equity raises ``StaleAccountEquityError`` instead of returning numbers.
     """
     from src.integrations.snaptrade.client import (
         BalanceCurrencyMismatchError,
@@ -244,21 +251,25 @@ def _broker_balances_from_snaptrade(client: Any, account_id: str) -> FidelityBal
         )
         raise BalanceCurrencyMismatchError("USD", available)
     equity = client.get_account_equity(account_id)
-    if equity is None:
+    if equity.amount is None:
         msg = "SnapTrade did not return account equity"
         raise ValueError(msg)
     margin_debt, _gross = derive_margin_debt(
-        client.get_positions(account_id), client.get_options(account_id), equity
+        client.get_positions(account_id),
+        client.get_options(account_id),
+        equity,
+        now=datetime.now(UTC),
     )
     return FidelityBalances(
         source_file=f"snaptrade:{account_id}",
-        total_account_value=equity,
+        total_account_value=equity.amount,
         total_account_day_change=None,
         margin_buying_power=usd_balance.get("buying_power"),
         margin_buying_power_day_change=None,
-        margin_debt=max(margin_debt or 0.0, 0.0),
+        margin_debt=margin_debt,
         net_debit_day_change=None,
         margin_interest_accrued_this_month=None,
+        equity_synced_at=equity.synced_at,
     )
 
 
@@ -322,7 +333,9 @@ def read_db_balances(
     across all enabled+routed accounts. This reader requires that complete
     generation, then selects its unique taxable-margin row. Generations older
     than 24 hours or with unverifiable timestamps fail closed. Margin debt is
-    the derived loan, so accrued interest and day-change are None.
+    the derived loan, so accrued interest and day-change are None. The sync
+    leaves margin debt NULL when SnapTrade equity was stale, and this reader
+    refuses it.
     """
     from src.config.instance_paths import _db_path
 
@@ -378,13 +391,20 @@ def read_db_balances(
     if equity is None:
         msg = "Local DB balance row is missing account_equity"
         raise ValueError(msg)
+    if row["margin_debt"] is None:
+        raise StaleEquitySnapshotError(
+            f"Margin debt is NULL in the balance generation at {row['synced_at']}: "
+            "SnapTrade account equity was stale at sync time. Rerun the refresh "
+            "after SnapTrade's daily holdings sync (about 13:40 UTC), or use the "
+            "broker's net debit (--source csv)"
+        )
     return FidelityBalances(
         source_file=f"db:{db}",
         total_account_value=equity,
         total_account_day_change=None,
         margin_buying_power=row["buying_power"],
         margin_buying_power_day_change=None,
-        margin_debt=max(row["margin_debt"] or 0.0, 0.0),
+        margin_debt=max(row["margin_debt"], 0.0),
         net_debit_day_change=None,
         margin_interest_accrued_this_month=None,
     )
@@ -551,6 +571,7 @@ class MarginMetricsCalculator:
             margin_day_change=balances.net_debit_day_change,
             alert_status=alert_status,
             months_elapsed=months_elapsed_since_start(self.inputs.today),
+            equity_synced_at=balances.equity_synced_at,
         )
 
 

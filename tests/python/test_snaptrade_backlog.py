@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -256,9 +257,9 @@ def test_position_sync_returns_unpriced_lots_to_caller(
             assert account_id == "acct-test"
             return [{"currency": "USD", "cash": 0.0, "buying_power": 0.0}]
 
-        def get_account_equity(self, account_id: str) -> float:
+        def get_account_equity(self, account_id: str) -> snaptrade_client.AccountEquity:
             assert account_id == "acct-test"
-            return 2200.0
+            return _fresh_equity(2200.0)
 
     monkeypatch.setattr(
         "src.integrations.snaptrade.sync_db.SnapTradeClientWrapper",
@@ -279,6 +280,12 @@ def test_position_sync_returns_unpriced_lots_to_caller(
         ).fetchone() == (20.0, 100.0)
 
 
+def _fresh_equity(amount: float | None) -> snaptrade_client.AccountEquity:
+    return snaptrade_client.AccountEquity(
+        amount=amount, synced_at=datetime.now(UTC) - timedelta(hours=1)
+    )
+
+
 class _BalanceClient:
     def __init__(
         self,
@@ -295,9 +302,9 @@ class _BalanceClient:
         assert account_id == "acct-test"
         return self.balances
 
-    def get_account_equity(self, account_id: str) -> float | None:
+    def get_account_equity(self, account_id: str) -> snaptrade_client.AccountEquity:
         assert account_id == "acct-test"
-        return self.equity
+        return _fresh_equity(self.equity)
 
     def get_positions(self, account_id: str) -> list[dict[str, Any]]:
         assert account_id == "acct-test"
@@ -343,7 +350,9 @@ def test_margin_debt_rejects_missing_equity_with_typed_failure() -> None:
     stocks = [{"symbol": "AAPL", "price": 100.0, "quantity": 10.0}]
 
     with pytest.raises(SnapTradeAPIError) as error:
-        snaptrade_client.derive_margin_debt(stocks, [], equity=None)
+        snaptrade_client.derive_margin_debt(
+            stocks, [], _fresh_equity(None), now=datetime.now(UTC)
+        )
 
     assert type(error.value).__name__ == "MissingAccountEquityError"
 
@@ -352,9 +361,89 @@ def test_margin_debt_rejects_missing_position_mark_with_typed_failure() -> None:
     stocks = [{"symbol": "AAPL", "price": None, "quantity": 10.0}]
 
     with pytest.raises(SnapTradeAPIError) as error:
-        snaptrade_client.derive_margin_debt(stocks, [], equity=1000.0)
+        snaptrade_client.derive_margin_debt(
+            stocks, [], _fresh_equity(1000.0), now=datetime.now(UTC)
+        )
 
     assert type(error.value).__name__ == "MissingPositionMarkError"
+
+
+# The 2026-10-22 read that overstated margin debt: equity last synced the day before.
+_INCIDENT_READ_AT = datetime(2026, 10, 22, 12, 47, tzinfo=UTC)
+_STALE_EQUITY_SYNC = datetime(2026, 10, 21, 13, 49, tzinfo=UTC)
+
+
+def test_margin_debt_rejects_stale_equity_with_typed_failure() -> None:
+    stocks = [{"symbol": "AAPL", "price": 100.0, "quantity": 10.0}]
+    equity = snaptrade_client.AccountEquity(amount=1000.0, synced_at=_STALE_EQUITY_SYNC)
+
+    with pytest.raises(snaptrade_client.StaleAccountEquityError) as error:
+        snaptrade_client.derive_margin_debt(stocks, [], equity, now=_INCIDENT_READ_AT)
+
+    assert error.value.synced_at == _STALE_EQUITY_SYNC
+    assert "2026-10-21T13:49:00+00:00" in str(error.value)
+    assert "net debit" in str(error.value)
+
+
+def test_margin_debt_rejects_missing_equity_sync_time() -> None:
+    stocks = [{"symbol": "AAPL", "price": 100.0, "quantity": 10.0}]
+    equity = snaptrade_client.AccountEquity(amount=1000.0, synced_at=None)
+
+    with pytest.raises(snaptrade_client.StaleAccountEquityError) as error:
+        snaptrade_client.derive_margin_debt(stocks, [], equity, now=_INCIDENT_READ_AT)
+
+    assert error.value.synced_at is None
+
+
+def test_margin_debt_from_fresh_equity_matches_broker_net_debit() -> None:
+    stocks = [{"symbol": "SYN", "price": 250390.04, "quantity": 1.0}]
+    equity = snaptrade_client.AccountEquity(
+        amount=170497.97, synced_at=datetime(2026, 10, 22, 13, 40, 41, tzinfo=UTC)
+    )
+
+    debt, gross = snaptrade_client.derive_margin_debt(
+        stocks, [], equity, now=datetime(2026, 10, 22, 14, 0, tzinfo=UTC)
+    )
+
+    assert gross == 250390.04
+    assert debt == pytest.approx(79892.07)
+
+
+def test_position_sync_writes_null_margin_debt_when_equity_stale(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    class StaleEquityClient(_BalanceClient):
+        @classmethod
+        def from_env(cls) -> StaleEquityClient:
+            return cls([{"currency": "USD", "cash": 50.0, "buying_power": 60.0}])
+
+        def get_account_equity(self, account_id: str) -> Any:
+            return snaptrade_client.AccountEquity(
+                amount=900.0, synced_at=_STALE_EQUITY_SYNC
+            )
+
+    monkeypatch.setattr(
+        "src.integrations.snaptrade.sync_db.SnapTradeClientWrapper",
+        StaleEquityClient,
+    )
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    _write_routing_config(tmp_path / "snaptrade-accounts.yaml")
+
+    assert sync_positions_main([]) == 0
+
+    with sqlite3.connect(tmp_path / "family_office.db") as connection:
+        row = connection.execute(
+            "SELECT settled_cash, account_equity, gross_market_value, margin_debt "
+            "FROM balances WHERE account_id = 'acct-test'"
+        ).fetchone()
+    assert row == (50.0, 900.0, 1000.0, None)
+    assert (
+        "warning: account equity stale (last synced 2026-10-21T13:49:00+00:00)"
+        in capsys.readouterr().err
+    )
 
 
 def test_position_sync_cli_renders_nullable_money_fields(
@@ -377,6 +466,8 @@ def test_position_sync_cli_renders_nullable_money_fields(
                     "account_equity": None,
                     "settled_cash": None,
                     "margin_debt": None,
+                    "equity_stale": False,
+                    "equity_synced_at": None,
                     "unpriced_lots": [],
                 }
             ],
@@ -477,7 +568,9 @@ def test_refresh_cli_prints_positions_generation_and_unpriced_lots(
                                         "instrument": "equity",
                                         "quantity": 10.0,
                                     }
-                                ]
+                                ],
+                                "equity_stale": True,
+                                "equity_synced_at": "2026-10-05T13:49:00+00:00",
                             }
                         ],
                     },
@@ -492,6 +585,10 @@ def test_refresh_cli_prints_positions_generation_and_unpriced_lots(
     assert "positions: ok" in output
     assert "generation 2026-10-06T15:00:00+00:00" in output
     assert "cost basis unavailable for 10.0 AAPL equity units" in output
+    assert (
+        "warning: account equity stale (last synced 2026-10-05T13:49:00+00:00)"
+        in output
+    )
 
 
 def test_refresh_cli_prints_no_generation_when_no_account_synced(

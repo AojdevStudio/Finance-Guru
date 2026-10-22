@@ -4,7 +4,7 @@ import json
 import os
 import sqlite3
 import sys
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -23,6 +23,7 @@ from src.analysis.margin_metrics import (
     read_fidelity_balances,
 )
 from src.analysis.options import OPTION_CONTRACT_MULTIPLIER
+from src.integrations.snaptrade import client as snaptrade_client
 
 
 def write_balances(path):
@@ -170,6 +171,7 @@ class _FakeSnapClient:
     """Minimal SnapTrade client double for the balance adapter."""
 
     EQUITY = 185294.88
+    EQUITY_SYNCED_AT = datetime.now(UTC) - timedelta(hours=1)
     STOCK = {"price": 100.0, "quantity": 2668.029}
     OPTION = {"price": 3.93, "quantity": 2.0}
 
@@ -177,7 +179,9 @@ class _FakeSnapClient:
         return [{"currency": "USD", "cash": 0.0, "buying_power": 0.0}]
 
     def get_account_equity(self, account_id):
-        return self.EQUITY
+        return snaptrade_client.AccountEquity(
+            amount=self.EQUITY, synced_at=self.EQUITY_SYNCED_AT
+        )
 
     def get_positions(self, account_id):
         return [self.STOCK]
@@ -281,6 +285,26 @@ def test_read_db_balances_reads_latest_snapshot(tmp_path, monkeypatch):
     assert balances.total_account_value == 150000.00
     assert balances.margin_debt == pytest.approx(50000.00)
     assert balances.margin_interest_accrued_this_month is None
+
+
+def test_read_db_balances_refuses_null_margin_debt(tmp_path, monkeypatch):
+    """A NULL margin_debt means equity was stale at sync time, never zero debt."""
+    write_account_config(
+        tmp_path / "snaptrade-accounts.yaml",
+        [("acct-1", "taxable_margin", True)],
+    )
+    db_path = tmp_path / "family_office.db"
+    write_balances_db(
+        db_path, [("acct-1", 0.0, 150000.0, None, "2026-10-22T12:47:00+00:00")]
+    )
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+
+    with pytest.raises(mm.StaleEquitySnapshotError) as exc_info:
+        mm.read_db_balances()
+
+    assert "2026-10-22T12:47:00+00:00" in str(exc_info.value)
+    assert "stale" in str(exc_info.value)
 
 
 def test_read_db_balances_routes_to_unique_enabled_taxable_margin_account(
@@ -597,3 +621,25 @@ def test_dividend_fallback_blocks_unknown_amount_or_currency(
         metrics_from_runtime(
             csv_path=balances, annual_rate=0.12, today=date(2026, 1, 15)
         )
+
+
+def test_snaptrade_margin_metrics_report_equity_sync_time():
+    balances = _broker_balances_from_snaptrade(_FakeSnapClient(), "acct-1")
+
+    metrics = calculate_margin_metrics(
+        balances, annual_rate=0.12, jump_alert_threshold=5000.0
+    )
+
+    reported = metrics.model_dump(mode="json")["equity_synced_at"]
+    assert datetime.fromisoformat(reported) == _FakeSnapClient.EQUITY_SYNCED_AT
+
+
+def test_broker_balances_from_snaptrade_refuses_stale_equity():
+    class StaleClient(_FakeSnapClient):
+        def get_account_equity(self, account_id):
+            return snaptrade_client.AccountEquity(
+                amount=self.EQUITY, synced_at=datetime.now(UTC) - timedelta(hours=23)
+            )
+
+    with pytest.raises(snaptrade_client.StaleAccountEquityError):
+        _broker_balances_from_snaptrade(StaleClient(), "acct-1")

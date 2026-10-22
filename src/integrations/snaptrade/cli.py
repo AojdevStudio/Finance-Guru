@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, assert_never, get_args
 
@@ -37,7 +38,9 @@ from src.integrations.snaptrade.client import (
     BalanceCurrencyMismatchError,
     SnapTradeAPIError,
     SnapTradeClientWrapper,
+    StaleAccountEquityError,
     derive_margin_debt,
+    gross_market_value,
 )
 from src.integrations.snaptrade.models import (
     SnapTradeAccountConfig,
@@ -243,16 +246,27 @@ def _account_balances(
         )
         raise BalanceCurrencyMismatchError(requested_currency, available)
     equity = client.get_account_equity(account_id)
-    margin_debt, gross_mv = derive_margin_debt(
-        client.get_positions(account_id),
-        client.get_options(account_id),
-        equity,
-    )
+    stocks = client.get_positions(account_id)
+    options = client.get_options(account_id)
+    margin_debt: float | None
+    try:
+        margin_debt, gross_mv = derive_margin_debt(
+            stocks, options, equity, now=datetime.now(UTC)
+        )
+        equity_stale = False
+    except StaleAccountEquityError:
+        # Stale equity must not fail the positions sync; NULL debt makes readers refuse.
+        margin_debt, gross_mv = None, gross_market_value(stocks, options)
+        equity_stale = True
     return {
         "currency": requested_currency,
         "settled_cash": selected.get("cash"),
         "buying_power": selected.get("buying_power"),
-        "account_equity": equity,
+        "account_equity": equity.amount,
+        "equity_synced_at": (
+            equity.synced_at.isoformat() if equity.synced_at is not None else None
+        ),
+        "equity_stale": equity_stale,
         "gross_market_value": gross_mv,
         "margin_debt": margin_debt,  # derived; SnapTrade omits it directly
     }
