@@ -56,6 +56,7 @@ from src.models.total_return_inputs import (
     DividendRecord,
     TotalReturnInput,
 )
+from src.utils.market_data import append_live_quote
 from src.utils.trading_calendar import TRADING_DAYS_PER_YEAR, calendar_days_for
 
 PER_SHARE_BASIS = 1.0
@@ -126,22 +127,7 @@ def fetch_ticker_data(
         ex_date_prices[ex_dt] = float(row["Close"])
 
     if realtime:
-        try:
-            from src.utils.market_data import get_prices
-
-            rt_data = get_prices(ticker, realtime=True)
-            if ticker.upper() in rt_data:
-                current_price = rt_data[ticker.upper()].price
-                prices[-1] = current_price
-                print(
-                    f"  Real-time price for {ticker}: ${current_price:.2f} (Finnhub)",
-                    file=sys.stderr,
-                )
-        except Exception as e:
-            print(
-                f"  Real-time price unavailable for {ticker}, using EOD: {e}",
-                file=sys.stderr,
-            )
+        append_live_quote(ticker, dates_list, prices)
 
     inp = TotalReturnInput(
         ticker=ticker.upper(),
