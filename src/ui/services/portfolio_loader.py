@@ -25,7 +25,7 @@ _NUMBER_NOISE = str.maketrans("", "", "$%+,")
 
 def _normalize_fidelity_symbol(raw_symbol: str) -> str:
     """Strip Fidelity's markers from a symbol, so "SPAXX**" becomes "SPAXX"."""
-    return "".join(c for c in raw_symbol.upper() if c.isalnum())
+    return raw_symbol.upper().replace("*", "").strip()
 
 
 class PortfolioLoader:
@@ -165,12 +165,12 @@ class PortfolioLoader:
         """Convenience method: find latest CSV and parse it.
 
         Returns:
-            PortfolioSnapshotInput if CSV found and parsed successfully, None otherwise
+            PortfolioSnapshotInput if a CSV exists, None if none exists.
+
+        Raises:
+            ValueError: If the latest CSV cannot be parsed.
         """
         csv_path = cls.find_latest_csv()
         if not csv_path:
             return None
-        try:
-            return cls.parse_portfolio(csv_path)
-        except ValueError:
-            return None
+        return cls.parse_portfolio(csv_path)
