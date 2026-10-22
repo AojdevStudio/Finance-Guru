@@ -1211,3 +1211,151 @@ def test_cli_strict_json_refusal_preserves_saved_report(monkeypatch, tmp_path, c
     assert captured.out == ""
     assert "Out of range float values" in captured.err
     assert destination.read_text() == "previous valid report"
+
+
+class TestDividendHoldingWindow:
+    @pytest.mark.parametrize("method", ["cash", "drip"])
+    @pytest.mark.parametrize(
+        ("ex_date", "expected"),
+        [
+            pytest.param(
+                date(2025, 1, 1),
+                0.0,
+                id="before-start",
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    raises=AssertionError,
+                    reason="issue 291 holding window",
+                ),
+            ),
+            pytest.param(
+                date(2025, 1, 2),
+                0.0,
+                id="at-start",
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    raises=AssertionError,
+                    reason="issue 291 holding window",
+                ),
+            ),
+            pytest.param(date(2025, 3, 15), 0.02, id="inside"),
+            pytest.param(date(2025, 7, 2), 0.02, id="at-end"),
+            pytest.param(
+                date(2025, 7, 3),
+                0.0,
+                id="after-end",
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    raises=AssertionError,
+                    reason="issue 291 holding window",
+                ),
+            ),
+        ],
+    )
+    def test_close_to_close_boundaries(self, method, ex_date, expected):
+        calc = TotalReturnCalculator(
+            _make_input(),
+            prices=[100.0, 100.0],
+            dividends=[_div(ex_date, 2.0)],
+            ex_date_prices={ex_date: 100.0},
+        )
+        actual = (
+            calc.calculate_dividend_return()
+            if method == "cash"
+            else calc.calculate_drip_return()[0]
+        )
+        assert actual == pytest.approx(expected)
+
+    @pytest.mark.xfail(
+        strict=True, raises=AssertionError, reason="issue 291 holding window"
+    )
+    def test_mixed_unsorted_records_use_one_window(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+        result = TotalReturnCalculator(
+            _make_input(),
+            prices=[100.0, 110.0],
+            dividends=[
+                _div(date(2025, 7, 3), 50.0),
+                _div(date(2025, 7, 2), 2.0),
+                _div(date(2025, 1, 2), 50.0),
+                _div(date(2025, 3, 15), 2.0),
+                _div(date(2025, 1, 1), 50.0),
+            ],
+            ex_date_prices={date(2025, 3, 15): 100.0, date(2025, 7, 2): 102.0},
+        ).calculate_all()
+        assert result.dividend_return == pytest.approx(0.04)
+        assert result.total_return == pytest.approx(0.14)
+        assert result.dividend_count == 2
+        assert result.drip_final_shares == pytest.approx(1.04)
+        assert result.drip_total_return == pytest.approx(0.144)
+        assert [event["date"] for event in result.period_breakdown] == [
+            date(2025, 3, 15),
+            date(2025, 7, 2),
+        ]
+        assert [event["cumulative_shares"] for event in result.period_breakdown] == (
+            pytest.approx([1.02, 1.04])
+        )
+        assert result.data_quality_warnings == []
+
+    @pytest.mark.xfail(
+        strict=True, raises=ZeroDivisionError, reason="issue 291 holding window"
+    )
+    def test_excluded_dividends_need_no_reinvestment_price(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+        result = TotalReturnCalculator(
+            _make_input(),
+            prices=[100.0, 0.0],
+            dividends=[
+                _div(date(2025, 1, 1), 2.0),
+                _div(date(2025, 1, 2), 2.0),
+                _div(date(2025, 7, 3), 2.0),
+            ],
+        ).calculate_all()
+        assert result.total_return == -1.0
+        assert result.drip_total_return == -1.0
+        assert result.drip_final_shares == 1.0
+        assert result.dividend_count == 0
+        assert result.period_breakdown == []
+
+    @pytest.mark.xfail(
+        strict=True, raises=AssertionError, reason="issue 291 holding window"
+    )
+    def test_cli_uses_quote_session_window(self, monkeypatch, tmp_path, capsys):
+        from src.analysis.total_return_cli import main
+
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+        destination = tmp_path / "returns.json"
+        destination.write_text("previous valid report")
+        mock_yf, _ = _mock_yfinance_history([100.0, 100.0, 100.0], [50.0, 2.0, 2.0])
+        monkeypatch.setattr(
+            "sys.argv",
+            [
+                "total_return_cli",
+                "SYNTH",
+                "--days",
+                "3",
+                "--output",
+                "json",
+                "--save-to",
+                str(destination),
+            ],
+        )
+        with patch.dict("sys.modules", {"yfinance": mock_yf}):
+            assert main() == 0
+        assert capsys.readouterr().out == ""
+        report = json.loads(
+            destination.read_text(),
+            parse_constant=lambda value: pytest.fail(f"Nonfinite JSON value {value}"),
+        )
+        entry = report["total_return_analysis"][0]
+        assert entry["start_date"] == "2025-01-02"
+        assert entry["end_date"] == "2025-01-04"
+        assert entry["dividend_return"] == pytest.approx(0.04)
+        assert entry["total_return"] == pytest.approx(0.04)
+        assert entry["drip_total_return"] == pytest.approx(0.0404)
+        assert entry["dividend_count"] == 2
+        assert [event["date"] for event in entry["period_breakdown"]] == [
+            "2025-01-03",
+            "2025-01-04",
+        ]
+        assert "educational" in report["disclaimer"].lower()
