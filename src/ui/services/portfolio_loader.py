@@ -25,7 +25,7 @@ _NUMBER_NOISE = str.maketrans("", "", "$%+,")
 
 def _normalize_fidelity_symbol(raw_symbol: str) -> str:
     """Strip Fidelity's markers from a symbol, so "SPAXX**" becomes "SPAXX"."""
-    return raw_symbol.strip().upper().replace("*", "")
+    return raw_symbol.upper().replace("*", "").strip()
 
 
 class PortfolioLoader:

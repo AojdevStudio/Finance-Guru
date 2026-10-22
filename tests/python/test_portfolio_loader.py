@@ -26,8 +26,9 @@ def test_parse_number(cell, expected) -> None:
     assert PortfolioLoader._parse_number(cell) == pytest.approx(expected)
 
 
+@pytest.mark.parametrize("symbol", ["SPAXX**", "SPAXX **"])
 def test_parse_portfolio_skips_metadata_rows_and_cleans_symbols(
-    tmp_path: Path, mocker
+    tmp_path: Path, mocker, symbol: str
 ) -> None:
     mocker.patch(
         "src.ui.services.portfolio_loader.FinGuruConfig.load_layers",
@@ -36,7 +37,7 @@ def test_parse_portfolio_skips_metadata_rows_and_cleans_symbols(
     csv_path = tmp_path / "Portfolio_Positions_REDACTED.csv"
     csv_path.write_text(
         "Symbol,Quantity,Current Value,Today's Gain/Loss Dollar,Today's Gain/Loss Percent\n"
-        "SPAXX**,100,$100.00,$0.00,0.00%\n"
+        f"{symbol},100,$100.00,$0.00,0.00%\n"
         "Pending Activity,,$5.00,,\n"
         "Total,,$105.00,,\n"
     )
