@@ -11,7 +11,8 @@ Available Models:
     - backtest_inputs: Backtesting models (BacktestConfig, TradeSignal, BacktestResults, etc.)
     - moving_avg_inputs: Moving average models (MovingAverageDataInput, MovingAverageOutput, etc.)
     - portfolio_inputs: Portfolio optimization models (PortfolioDataInput, OptimizationOutput, etc.)
-    - itc_risk_inputs: ITC Risk API models (ITCRiskRequest, RiskBand, ITCRiskResponse)
+    - itc_risk_inputs: ITC Risk API models (ITCRiskRequest, RiskBand, ITCRiskResponse,
+      ITCComplianceInput, ITCComplianceDecision)
     - hedging_inputs: Hedging position models (HedgePosition, RollSuggestion, HedgeSizeRequest)
     - total_return_inputs: Total return models (TotalReturnInput, DividendRecord, TickerReturn)
     - hedge_comparison_inputs: Hedge comparison models (ScenarioInput, ComparisonOutput, etc.)
@@ -45,6 +46,8 @@ from src.models.hedging_inputs import (
     RollSuggestion,
 )
 from src.models.itc_risk_inputs import (
+    ITCComplianceDecision,
+    ITCComplianceInput,
     ITCRiskRequest,
     ITCRiskResponse,
     RiskBand,
@@ -143,6 +146,8 @@ __all__ = [
     "OptimizationConfig",
     "OptimizationOutput",
     "EfficientFrontierOutput",
+    "ITCComplianceInput",
+    "ITCComplianceDecision",
     "ITCRiskRequest",
     "RiskBand",
     "ITCRiskResponse",

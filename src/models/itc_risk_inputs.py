@@ -355,6 +355,8 @@ class ITCRiskResponse(BaseModel):
 
 
 __all__ = [
+    "ITCComplianceInput",
+    "ITCComplianceDecision",
     "ITCRiskRequest",
     "RiskBand",
     "ITCRiskResponse",
