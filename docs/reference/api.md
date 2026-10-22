@@ -55,7 +55,9 @@ positive and at most 10 years. Interest and dividend rates range from 0.0 throug
 
 The solver brackets the premium between prices at the two volatility endpoints.
 A premium outside that range returns `converged: false` at the nearest endpoint,
-with its calculated price and absolute pricing error. A premium just outside the
+with its calculated price and absolute pricing error. The CLI writes this report,
+prints a non-convergence error to stderr, and exits with code 1. Valid solves keep
+exit code 0. A premium just outside the
 range does not converge, even when its price error is below the price tolerance.
 
 Interior roots require a volatility bracket no wider than `1e-8` and a pricing
