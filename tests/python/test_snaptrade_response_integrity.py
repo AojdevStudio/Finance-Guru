@@ -131,8 +131,39 @@ def test_activity_pagination_requires_a_positive_page_size(page_size: int) -> No
         _paged_client([]).get_activities("synthetic-account", page_size=page_size)
 
 
+@pytest.mark.parametrize("total", ["2", True, None, -1, 1.5])
+def test_activity_pagination_rejects_malformed_totals(total: Any) -> None:
+    client = _client({"data": [_activity("first")], "pagination": {"total": total}})
+
+    with pytest.raises(SnapTradeDataError, match="total"):
+        client.get_activities("synthetic-account")
+
+
+@pytest.mark.parametrize("page_size", [1, 2])
+def test_activity_pagination_rejects_duplicate_identities(page_size: int) -> None:
+    repeated = _activity("repeated")
+    pages = (
+        [
+            {"data": [repeated], "pagination": {"total": 2}},
+            {"data": [repeated], "pagination": {"total": 2}},
+        ]
+        if page_size == 1
+        else [{"data": [repeated, repeated], "pagination": {"total": 2}}]
+    )
+
+    with pytest.raises(SnapTradeDataError, match="duplicate"):
+        _paged_client(pages).get_activities("synthetic-account", page_size=page_size)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"unexpected": []},
+        [{"symbol": "NEW", "units": 1, "price": 10}, {"units": 1, "price": 10}],
+    ],
+)
 def test_malformed_holdings_preserve_the_existing_snapshot(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, body: Any
 ) -> None:
     config = tmp_path / "routing.yaml"
     config.write_text(
@@ -150,7 +181,7 @@ def test_malformed_holdings_preserve_the_existing_snapshot(
             "INSERT INTO balances (account_id, synced_at) VALUES (?, ?)",
             ("synthetic-account", "old"),
         )
-    client = _client({"unexpected": []})
+    client = _client(body)
     client._client.account_information.get_user_account_balance = lambda **kwargs: (
         SimpleNamespace(body=[{"currency": "USD", "cash": 0}])
     )

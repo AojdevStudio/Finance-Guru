@@ -154,6 +154,7 @@ class SnapTradeClientWrapper:
         if page_size <= 0:
             raise ValueError("page_size must be positive")
         activities: list[dict[str, Any]] = []
+        activity_ids: set[str] = set()
         offset = 0
         expected_total: int | None = None
         while True:
@@ -164,7 +165,14 @@ class SnapTradeClientWrapper:
                         "SnapTrade activity total changed during pagination"
                     )
                 expected_total = total
-            activities.extend(_summarize_activity(item) for item in page)
+            for item in page:
+                activity = _summarize_activity(item)
+                if activity["id"] in activity_ids:
+                    raise SnapTradeDataError(
+                        "SnapTrade returned duplicate activity IDs"
+                    )
+                activity_ids.add(activity["id"])
+                activities.append(activity)
             offset += len(page)
             if expected_total is not None:
                 if offset > expected_total:
@@ -437,9 +445,19 @@ def _activity_page(body: Any) -> tuple[list[Any], int | None]:
     """Split a paginated activities body into (records, total)."""
     if isinstance(body, Mapping):
         records = _ensure_list(body)
-        pagination = body.get("pagination")
-        total = pagination.get("total") if isinstance(pagination, Mapping) else None
-        return records, total if isinstance(total, int) else None
+        if "pagination" not in body:
+            return records, None
+        pagination = body["pagination"]
+        if not isinstance(pagination, Mapping):
+            raise SnapTradeDataError("SnapTrade activity pagination must be an object")
+        if "total" not in pagination:
+            return records, None
+        total = pagination["total"]
+        if isinstance(total, bool) or not isinstance(total, int) or total < 0:
+            raise SnapTradeDataError(
+                "SnapTrade activity total must be a nonnegative integer"
+            )
+        return records, total
     if isinstance(body, list):
         return body, None
     raise SnapTradeDataError("SnapTrade activity payload must contain a list")
