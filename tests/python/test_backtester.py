@@ -134,6 +134,43 @@ class TestBacktestExecution:
 
 
 class TestTransactionCosts:
+    @pytest.mark.parametrize("last_action", ["HOLD", "SELL"])
+    def test_final_equity_includes_sale_costs(self, last_action):
+        config = BacktestConfig(
+            initial_capital=20_000.0,
+            position_size_pct=0.5,
+            slippage_pct=0.01,
+            commission_per_trade=10.0,
+        )
+        signals = _make_signals([100.0, 100.0], ["BUY", last_action])
+
+        result = Backtester(config).run_backtest(signals, "TSLA")
+
+        assert result.equity_values[-1] == pytest.approx(
+            result.performance.final_capital
+        )
+        assert result.performance.max_drawdown == pytest.approx(
+            -result.performance.total_return
+        )
+
+    @pytest.mark.parametrize(
+        ("exit_price", "expected_slippage"),
+        [(50.0, 750.0), (100.0, 1000.0), (200.0, 1500.0)],
+    )
+    def test_total_slippage_matches_execution_cost(self, exit_price, expected_slippage):
+        config = BacktestConfig(
+            initial_capital=21_000.0,
+            position_size_pct=0.5,
+            slippage_pct=0.05,
+            commission_per_trade=0.0,
+        )
+        signals = _make_signals([100.0, exit_price], ["BUY", "SELL"])
+
+        result = Backtester(config).run_backtest(signals, "TSLA")
+
+        assert result.trades[0].shares == pytest.approx(100.0)
+        assert result.performance.total_slippage == pytest.approx(expected_slippage)
+
     def test_slippage_increases_buy_price(self):
         config = BacktestConfig(
             initial_capital=100_000.0,
@@ -273,6 +310,24 @@ class TestPerformanceMetrics:
 
 
 class TestMaxDrawdown:
+    @pytest.mark.parametrize(
+        ("trough_price", "expected_drawdown", "recommendation"),
+        [(50.0, 50.0, "REJECT"), (75.0, 25.0, "REJECT"), (90.0, 10.0, "DEPLOY")],
+    )
+    def test_worst_percent_loss_survives_later_growth(
+        self, default_config, trough_price, expected_drawdown, recommendation
+    ):
+        """A later larger dollar loss cannot erase an earlier percentage loss."""
+        signals = _make_signals(
+            [100.0, trough_price, 1000.0, 900.0], ["BUY", "HOLD", "HOLD", "SELL"]
+        )
+
+        result = Backtester(default_config).run_backtest(signals, "TSLA")
+
+        assert result.performance.max_drawdown == pytest.approx(100_000.0)
+        assert result.performance.max_drawdown_pct == pytest.approx(expected_drawdown)
+        assert result.recommendation == recommendation
+
     def test_no_drawdown_when_always_up(self, default_config):
         bt = Backtester(default_config)
         dd, dd_pct = bt._calculate_max_drawdown([100, 110, 120, 130])
