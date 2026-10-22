@@ -145,6 +145,27 @@ The engine reads every private file from an instance directory outside the repos
 
 Local-first does not mean network-free. Market data, brokerage, and LLM integrations send request data to their configured providers. Configure only the integrations you intend to use.
 
+### Scheduled checks with swamp
+
+[swamp](https://github.com/swamp-club/swamp) (Swamp Club) runs Finance Guru's scheduled checks. A swamp _behavior_ is a typed piece of code with methods. A swamp _workflow_ is a YAML file that runs those methods in order and records every result as versioned data. The engine computes the numbers, and swamp checks them against outside sources on a schedule.
+
+The checks live in a swamp workspace beside the instance, not in this repository: `~/.swamp/workspaces/family-office`. They read the instance files and change nothing.
+
+**Weekly margin-rate check.** The `margin-rate-check` workflow runs the `fidelity-margin-rate` behavior. It reads Fidelity's published margin rate table, picks the rate for the margin debt in `family_office.db`, and compares it with `FG_MARGIN_INTEREST_RATE_DECIMAL` in the instance `.env`. A mismatch fails the run. The rate depends on the size of the debt, so crossing a tier changes it even when Fidelity's base rate stays the same.
+
+It runs Mondays at 9:15 AM CT, after SnapTrade's daily holdings sync. A T3 scheduled task starts it for now, because `swamp serve`, which runs swamp's own schedules, does not run as a service yet. When it does, the schedule moves into the workflow's `trigger` and the T3 task goes away.
+
+Run it and its tests by hand:
+
+```bash
+cd ~/.swamp/workspaces/family-office
+swamp workflow run margin-rate-check --json
+swamp data query 'behavior("fidelity-margin-rate") && name == "rate"' --select content --json
+~/.swamp/deno/deno test --allow-read extensions/behaviors/fidelity_margin_rate_test.ts
+```
+
+**How it relates to the stale-equity guard.** The engine computes margin debt as gross market value minus SnapTrade's account equity. The equity is only as fresh as SnapTrade's last holdings sync ([#259](https://github.com/AojdevStudio/Finance-Guru/issues/259)). The engine now refuses equity over 12 hours old with `StaleAccountEquityError`, and the ledger stores an empty margin debt instead of a wrong one ([#260](https://github.com/AojdevStudio/Finance-Guru/pull/260)). The rate check relies on that guard: an empty debt fails the run, so a stale balance never picks the wrong rate tier. The engine guard stops wrong numbers before they exist. The swamp check catches config that has drifted from the broker.
+
 ## If you are an agent
 
 You are the intended operator of this engine, not an afterthought. A few things that make you effective here:
