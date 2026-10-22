@@ -78,6 +78,7 @@ If this command fails, keep the position snapshot from step 2 and record the typ
 - a required `.env` value is missing (`FG_MARGIN_INTEREST_RATE_DECIMAL`, `FG_MARGIN_JUMP_ALERT_THRESHOLD`)
 - `MarginAccountRoutingError`: `snaptrade-accounts.yaml` has zero or more than one enabled `taxable_margin` account
 - `IncompleteBalanceGenerationError`: the latest balance generation is missing an enabled, routed account or the margin account
+- `StaleBalanceSnapshotError`: the complete balance generation is older than 24 hours, more than five minutes in the future, or has a malformed or timezone-less timestamp. Run the sync-first refresh before retrying.
 - `FileNotFoundError` or `ValueError`: the ledger or its balances rows are missing
 
 ### 4. Check freshness
@@ -86,6 +87,8 @@ Compare the `# generation` line from step 2 with the `generation` line the refre
 
 - They match exactly: every account block in step 2 was written by this refresh. Proceed.
 - They differ, or the refresh printed no `generation` line: the refresh wrote no new generation. Stop. Do not quote the step 2 rows as current. Name `snaptrade-accounts.yaml` under data gaps.
+
+The margin calculator checks ledger generation freshness. A complete generation must be at most 24 hours old and no more than five minutes in the future. This timestamp records the ledger write. It does not prove provider equity freshness.
 
 Also compare the generation date with today's UTC date from `date -u +"%Y-%m-%d"`. The generation is UTC, so a local `{current_date}` can differ by a day in the evening. A matching generation is from this run, so a different date means the system clock or the refresh is wrong. Warn with the timestamp.
 - SnapTrade `price`, `account_equity`, and `gross_market_value` lag one session even when `synced_at` is current. Holdings, quantities, cost basis, settled cash, and margin debt do not. Say so whenever you quote a dollar value that comes from price.
