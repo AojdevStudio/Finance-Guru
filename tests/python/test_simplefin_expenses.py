@@ -520,3 +520,60 @@ def test_ambiguous_override_id_blocks_sync(tmp_path, historical):
             dump_provider=lambda *_: payload,
             category_overrides=overrides,
         )
+
+
+def test_concurrent_syncs_cannot_both_commit_an_ambiguous_override(
+    tmp_path, monkeypatch
+):
+    from src.integrations.simplefin.categorize import CategoryOverridesError
+
+    database = tmp_path / "synthetic.db"
+    overrides = tmp_path / "category-overrides.yaml"
+    overrides.write_text("synthetic: Groceries\n")
+
+    def sync_account(account: str) -> dict:
+        return sync(
+            f"sqlite:///{database}",
+            dump_provider=lambda *_: {
+                "accounts": [
+                    {
+                        "id": account,
+                        "transactions": [{"id": "synthetic", "amount": "-10"}],
+                    }
+                ]
+            },
+            category_overrides=overrides,
+        )
+
+    real_connect = sqlite3.connect
+    competing_errors: list[sqlite3.OperationalError] = []
+    competing_runs: list[str] = []
+
+    class FirstSyncConnection(sqlite3.Connection):
+        def executemany(self, sql, rows):
+            if not competing_runs:
+                competing_runs.append("synthetic-b")
+                try:
+                    sync_account("synthetic-b")
+                except sqlite3.OperationalError as error:
+                    competing_errors.append(error)
+            return super().executemany(sql, rows)
+
+    def connect(database_path, *args, **kwargs):
+        if competing_runs:
+            return real_connect(database_path, *args, **{**kwargs, "timeout": 0.05})
+        return real_connect(database_path, *args, factory=FirstSyncConnection, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", connect)
+    sync_account("synthetic-a")
+    monkeypatch.setattr(sqlite3, "connect", real_connect)
+
+    assert competing_runs == ["synthetic-b"]
+    assert [str(error) for error in competing_errors] == ["database is locked"]
+    with pytest.raises(CategoryOverridesError, match="multiple accounts"):
+        sync_account("synthetic-b")
+    with real_connect(database) as connection:
+        rows = connection.execute(
+            "SELECT account_id, txn_id, category FROM bank_transactions"
+        ).fetchall()
+    assert rows == [("synthetic-a", "synthetic", "Groceries")]

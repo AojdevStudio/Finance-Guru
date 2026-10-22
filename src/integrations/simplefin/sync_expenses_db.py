@@ -302,6 +302,7 @@ def sync(
     try:
         with conn:
             conn.executescript(_SCHEMA)
+            conn.execute("BEGIN IMMEDIATE")
             existing_keys = {
                 (account_id, txn_id)
                 for account_id, txn_id in conn.execute(

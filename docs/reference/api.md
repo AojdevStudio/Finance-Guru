@@ -92,7 +92,7 @@ Your instance can hold a private `category-overrides.yaml` mapping transaction I
 to existing categories. Both refresh commands apply these after merchant rules.
 The file stays outside Git. Re-sync keeps each override, while other transaction
 IDs keep their rule-based categories. Removing an override restores rule matching
-on the next sync. Duplicate keys, invalid categories, and IDs shared by multiple
+on the next sync for transactions still in the sync window. Duplicate keys, invalid categories, and IDs shared by multiple
 accounts block the sync.
 
 ```yaml
