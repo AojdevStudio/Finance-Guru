@@ -113,3 +113,11 @@ def test_weighted_bearish_signal_never_recommends_buying() -> None:
     result = screener.screen_ticker("TEST", prices, _business_dates(len(prices)))
 
     assert result.recommendation in {"hold", "sell", "strong_sell"}
+
+
+def test_portfolio_screening_propagates_a_ticker_failure(screener, mocker):
+    mocker.patch.object(
+        screener, "screen_ticker", side_effect=RuntimeError("failed detector")
+    )
+    with pytest.raises(RuntimeError, match="failed detector"):
+        screener.screen_portfolio({"SYNTHETIC": ([100.0], [date(2026, 1, 1)], None)})
