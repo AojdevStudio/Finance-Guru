@@ -146,7 +146,7 @@ Two gates run before anything reaches GitHub. The pre-commit hooks (`.pre-commit
 Repository PR workflows live in `.dev/pr-kit`, outside the finance skill tree.
 Read `.dev/pr-kit/open-pr/SKILL.md` before opening a PR and
 `.dev/pr-kit/land-pr/SKILL.md` before preparing a merge. The canonical installer
-uses `--layout developer`. Bun is required for the repository Bash gate and CI
+uses `--layout developer`. [Bun](https://bun.sh/) is required for the repository Bash gate and CI
 body checker. Instance and plugin settings run only the product session hook.
 
 ---

@@ -9,7 +9,7 @@ category: reference
 A checkout-mode instance owns its settings and runs one SessionStart hook,
 derived from the product manifest in `hooks/hooks.json`. Plugin mode runs that
 same product hook from the installed plugin. The engine repository wires four
-hooks for development. Bun must be installed before starting an agent session.
+hooks for development. [Bun](https://bun.sh/) must be installed before starting an agent session.
 The PR gate runs before every repository Bash tool call.
 
 | Event | Script | Runs in | What it does |
