@@ -14,6 +14,7 @@ RUNNING TESTS:
 from datetime import date
 
 import pytest
+from pydantic import ValidationError
 
 from src.models.backtest_inputs import BacktestConfig, TradeSignal
 from src.strategies.backtester import Backtester
@@ -241,6 +242,77 @@ class TestTransactionCosts:
 
         trade = result.trades[0]
         assert trade.shares == pytest.approx(500.0)
+
+
+class TestWholeShareOrders:
+    @pytest.mark.xfail(strict=True, raises=ValidationError, reason="Issue 289")
+    @pytest.mark.parametrize("commission", [0.0, 1.0])
+    def test_rounded_zero_open_preserves_state(self, commission):
+        config = BacktestConfig(
+            initial_capital=1000.0,
+            position_size_pct=0.1,
+            allow_fractional_shares=False,
+            slippage_pct=0.0,
+            commission_per_trade=commission,
+        )
+        bt = Backtester(config)
+        signal = _make_signals([1000.0], ["BUY"], ticker="ZZZZ")[0]
+
+        outcome = bt._open_position(signal)
+
+        assert outcome == "skipped_insufficient_capital"
+        assert bt.capital == config.initial_capital
+        assert bt.current_position is None
+        assert bt.trades == []
+
+    @pytest.mark.xfail(strict=True, raises=ValidationError, reason="Issue 289")
+    @pytest.mark.parametrize("last_action", ["SELL", "HOLD"])
+    def test_rounded_zero_backtest_skips_without_costs(self, last_action):
+        config = BacktestConfig(
+            initial_capital=1000.0,
+            position_size_pct=0.1,
+            allow_fractional_shares=False,
+            slippage_pct=0.01,
+            commission_per_trade=1.0,
+        )
+        signals = _make_signals([1000.0, 1000.0], ["BUY", last_action], ticker="ZZZZ")
+        bt = Backtester(config)
+
+        result = bt.run_backtest(signals, "ZZZZ")
+
+        assert bt.skipped_signals == [signals[0]]
+        assert bt.current_position is None
+        assert bt.trades == result.trades == []
+        assert bt.capital == result.performance.final_capital == config.initial_capital
+        assert result.equity_values == [config.initial_capital] * 3
+        assert result.performance.total_trades == 0
+        assert result.performance.total_commissions == 0.0
+        assert result.performance.total_slippage == 0.0
+        assert result.performance.total_return == 0.0
+
+    @pytest.mark.parametrize(
+        ("fractional", "price", "expected_shares"),
+        [(True, 1000.0, 0.1), (False, 40.0, 2.0)],
+    )
+    def test_affordable_orders_still_execute(self, fractional, price, expected_shares):
+        config = BacktestConfig(
+            initial_capital=1000.0,
+            position_size_pct=0.1,
+            allow_fractional_shares=fractional,
+            slippage_pct=0.0,
+            commission_per_trade=1.0,
+        )
+        signals = _make_signals([price, price], ["BUY", "SELL"], ticker="ZZZZ")
+        bt = Backtester(config)
+
+        result = bt.run_backtest(signals, "ZZZZ")
+
+        assert bt.skipped_signals == []
+        assert bt.current_position is None
+        assert len(result.trades) == 1
+        assert result.trades[0].shares == pytest.approx(expected_shares)
+        assert result.performance.total_commissions == 2.0
+        assert result.performance.final_capital == pytest.approx(998.0)
 
 
 class TestPerformanceMetrics:
