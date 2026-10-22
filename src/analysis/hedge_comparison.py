@@ -289,6 +289,10 @@ class HedgeComparisonCalculator:
             raise ValueError(
                 "Put premium must be positive and finite to compare investment returns"
             )
+        if not isfinite(self.sqqq_allocation) or self.sqqq_allocation <= 0:
+            raise ValueError(
+                "SQQQ allocation must be positive and finite to compare investment returns"
+            )
 
         rows: list[ComparisonRow] = []
 

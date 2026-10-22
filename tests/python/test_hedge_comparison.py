@@ -372,20 +372,20 @@ class TestComparisonOutput:
         for row in result.scenarios:
             assert row.winner in {"sqqq", "put", "neither"}
 
-            sqqq_pnl = row.sqqq.sqqq_return_pct
-            put_pnl = row.put.pnl_pct
+            sqqq_return = row.sqqq.sqqq_return_pct
+            put_return = row.put.pnl_pct
 
             if row.winner == "sqqq":
-                assert sqqq_pnl > put_pnl, (
-                    f"SQQQ declared winner but PnL ({sqqq_pnl}) <= put PnL ({put_pnl})"
+                assert sqqq_return > put_return, (
+                    f"SQQQ declared winner but return ({sqqq_return}) <= put return ({put_return})"
                 )
             elif row.winner == "put":
-                assert put_pnl > sqqq_pnl, (
-                    f"Put declared winner but PnL ({put_pnl}) <= SQQQ PnL ({sqqq_pnl})"
+                assert put_return > sqqq_return, (
+                    f"Put declared winner but return ({put_return}) <= SQQQ return ({sqqq_return})"
                 )
             elif row.winner == "neither":
-                assert sqqq_pnl <= 0 and put_pnl <= 0, (
-                    "Neither should only be set when both PnLs are non-positive"
+                assert sqqq_return <= 0 and put_return <= 0, (
+                    "Neither should only be set when both returns are non-positive"
                 )
 
     @pytest.mark.parametrize("allocation", [10.0, 10_000.0])
@@ -400,6 +400,31 @@ class TestComparisonOutput:
 
         assert row.put.pnl_pct > row.sqqq.sqqq_return_pct > 0
         assert row.winner == "put"
+
+    @pytest.mark.parametrize("allocation", [10.0, 10_000.0])
+    def test_sqqq_with_higher_return_wins_despite_smaller_dollar_profit(
+        self, allocation
+    ):
+        calc = HedgeComparisonCalculator(
+            spot_price=480.0,
+            put_strike=380.0,
+            put_premium=15.0,
+            sqqq_allocation=allocation,
+        )
+
+        row = calc.compare_all([-0.15]).scenarios[0]
+
+        assert row.sqqq.sqqq_return_pct > row.put.pnl_pct > 0
+        assert row.winner == "sqqq"
+
+    @pytest.mark.parametrize(
+        "allocation", [0.0, -1.0, float("nan"), float("inf"), float("-inf")]
+    )
+    def test_invalid_sqqq_allocation_cannot_define_investment_return(self, allocation):
+        calc = HedgeComparisonCalculator(sqqq_allocation=allocation)
+
+        with pytest.raises(ValueError, match="SQQQ allocation must be positive"):
+            calc.compare_all([-0.20])
 
     @pytest.mark.parametrize("premium", [0.0, -1.0, float("nan"), float("inf")])
     def test_invalid_put_premium_cannot_define_investment_return(self, premium):
