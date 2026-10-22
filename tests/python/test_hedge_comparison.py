@@ -360,8 +360,8 @@ class TestComparisonOutput:
         """Winner field must be one of sqqq, put, or neither.
 
         Verify that the winner field is logically consistent:
-        - If both PnL values are negative, winner should be 'neither'
-        - Otherwise winner should match the higher PnL strategy
+        - If both returns are non-positive, winner should be 'neither'
+        - Otherwise winner should match the higher return per dollar invested
         """
         calc = HedgeComparisonCalculator(
             spot_price=480.0,
@@ -372,8 +372,8 @@ class TestComparisonOutput:
         for row in result.scenarios:
             assert row.winner in {"sqqq", "put", "neither"}
 
-            sqqq_pnl = row.sqqq.final_value - row.sqqq.initial_value
-            put_pnl = row.put.pnl
+            sqqq_pnl = row.sqqq.sqqq_return_pct
+            put_pnl = row.put.pnl_pct
 
             if row.winner == "sqqq":
                 assert sqqq_pnl > put_pnl, (
@@ -387,3 +387,23 @@ class TestComparisonOutput:
                 assert sqqq_pnl <= 0 and put_pnl <= 0, (
                     "Neither should only be set when both PnLs are non-positive"
                 )
+
+    @pytest.mark.parametrize("allocation", [10.0, 10_000.0])
+    def test_winner_does_not_change_with_sqqq_allocation(self, allocation):
+        """A put with the higher return wins at either investment size."""
+        calc = HedgeComparisonCalculator(
+            spot_price=480.0,
+            sqqq_allocation=allocation,
+        )
+
+        row = calc.compare_all([-0.20]).scenarios[0]
+
+        assert row.put.pnl_pct > row.sqqq.sqqq_return_pct > 0
+        assert row.winner == "put"
+
+    @pytest.mark.parametrize("premium", [0.0, -1.0, float("nan"), float("inf")])
+    def test_invalid_put_premium_cannot_define_investment_return(self, premium):
+        calc = HedgeComparisonCalculator(put_premium=premium)
+
+        with pytest.raises(ValueError, match="Put premium must be positive"):
+            calc.compare_all([-0.20])

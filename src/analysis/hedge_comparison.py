@@ -24,6 +24,7 @@ Created: 2026-02-18
 
 from collections.abc import Callable
 from datetime import date
+from math import isfinite
 from typing import Literal, NamedTuple
 
 import numpy as np
@@ -276,7 +277,7 @@ class HedgeComparisonCalculator:
 
         WHAT: Main entry point for SQQQ vs puts comparison
         WHY: Produces complete side-by-side analysis for all scenario levels
-        HOW: Simulate SQQQ + price puts for each drop, determine winner, find breakevens
+        HOW: Simulate SQQQ + price puts, compare returns per dollar invested, find breakevens
 
         Args:
             scenarios: List of market drops as negative decimals, e.g. [-0.05, -0.10, -0.20, -0.40]
@@ -284,6 +285,11 @@ class HedgeComparisonCalculator:
         Returns:
             ComparisonOutput with all scenario rows, breakevens, disclaimers, and parameters
         """
+        if not isfinite(self.put_premium) or self.put_premium <= 0:
+            raise ValueError(
+                "Put premium must be positive and finite to compare investment returns"
+            )
+
         rows: list[ComparisonRow] = []
 
         for drop in scenarios:
@@ -296,15 +302,15 @@ class HedgeComparisonCalculator:
             sqqq_result = self.simulate_sqqq(scenario)
             put_result = self.calculate_put_payoff(scenario)
 
-            sqqq_pnl = sqqq_result.final_value - sqqq_result.initial_value
-            put_pnl = put_result.pnl
+            sqqq_return = sqqq_result.sqqq_return_pct
+            put_return = put_result.pnl_pct
 
             winner: Literal["sqqq", "put", "neither"]
-            if sqqq_pnl <= 0 and put_pnl <= 0:
+            if sqqq_return <= 0 and put_return <= 0:
                 winner = "neither"
-            elif sqqq_pnl > put_pnl:
+            elif sqqq_return > put_return:
                 winner = "sqqq"
-            elif put_pnl > sqqq_pnl:
+            elif put_return > sqqq_return:
                 winner = "put"
             else:
                 winner = "neither"
