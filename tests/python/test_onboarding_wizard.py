@@ -25,6 +25,7 @@ from src.cli.onboarding_wizard import (
     load_progress,
     save_progress,
 )
+from src.config.instance_paths import InstancePaths
 from src.models.onboarding_inputs import OnboardingState, SectionName
 from src.models.yaml_generation_inputs import (
     AllocationStrategy,
@@ -39,6 +40,18 @@ from src.models.yaml_generation_inputs import (
     UserIdentityInput,
     UserPreferencesInput,
 )
+
+
+@pytest.fixture(autouse=True)
+def no_process_handlers(monkeypatch):
+    """Keep run_wizard's atexit save and SIGINT handler from outliving a test.
+
+    The atexit save runs after monkeypatch has restored cwd and the environment,
+    so it would write mock progress into the checkout.
+    """
+    monkeypatch.setattr(
+        "src.cli.onboarding_wizard.WizardInterruptHandler.setup", lambda self: None
+    )
 
 
 @pytest.fixture
@@ -263,23 +276,10 @@ class TestConvertStateToUserData:
 class TestGenerateConfigFiles:
     """Test config file generation to correct paths."""
 
-    def test_generates_all_files(self, valid_user_data, tmp_path, monkeypatch):
+    def test_generates_all_files(self, valid_user_data, tmp_path):
         """All config files are created at correct locations."""
-        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
 
-        import shutil
-
-        template_src = Path("scripts/onboarding/modules/templates")
-        if not template_src.exists():
-            pytest.skip("Template directory not found")
-
-        template_dest = tmp_path / "scripts" / "onboarding" / "modules" / "templates"
-        shutil.copytree(template_src, template_dest)
-
-        (tmp_path / ".claude").mkdir(exist_ok=True)
-
-        valid_user_data.project_root = str(tmp_path)
-        generate_config_files(valid_user_data, tmp_path)
+        generate_config_files(valid_user_data, InstancePaths(root=tmp_path))
 
         assert (tmp_path / "user-profile.yaml").exists()
         assert (tmp_path / "config.yaml").exists()
@@ -287,79 +287,60 @@ class TestGenerateConfigFiles:
 
         assert (tmp_path / "CLAUDE.md").exists()
         assert (tmp_path / ".env").exists()
-        assert (tmp_path / ".claude" / "mcp.json").exists()
+        assert (tmp_path / ".mcp.json").exists()
 
-    def test_generated_files_contain_user_name(
-        self, valid_user_data, tmp_path, monkeypatch
-    ):
+    def test_generated_files_contain_user_name(self, valid_user_data, tmp_path):
         """Generated files contain actual user name, not template placeholders."""
-        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
 
-        import shutil
-
-        template_src = Path("scripts/onboarding/modules/templates")
-        if not template_src.exists():
-            pytest.skip("Template directory not found")
-
-        template_dest = tmp_path / "scripts" / "onboarding" / "modules" / "templates"
-        shutil.copytree(template_src, template_dest)
-        (tmp_path / ".claude").mkdir(exist_ok=True)
-
-        valid_user_data.project_root = str(tmp_path)
-        generate_config_files(valid_user_data, tmp_path)
+        generate_config_files(valid_user_data, InstancePaths(root=tmp_path))
 
         profile = (tmp_path / "user-profile.yaml").read_text()
         assert "TestUser" in profile
         assert "{{user_name}}" not in profile
 
     def test_backs_up_existing_files(self, valid_user_data, tmp_path):
-        """Existing CLAUDE.md, .env, and mcp.json are backed up."""
-        import shutil
-
-        template_src = Path("scripts/onboarding/modules/templates")
-        if not template_src.exists():
-            pytest.skip("Template directory not found")
-
-        template_dest = tmp_path / "scripts" / "onboarding" / "modules" / "templates"
-        shutil.copytree(template_src, template_dest)
+        """Existing CLAUDE.md, .env, and .mcp.json are backed up."""
 
         (tmp_path / "CLAUDE.md").write_text("existing claude", encoding="utf-8")
         (tmp_path / ".env").write_text("existing env", encoding="utf-8")
-        claude_dir = tmp_path / ".claude"
-        claude_dir.mkdir(exist_ok=True)
-        (claude_dir / "mcp.json").write_text("existing mcp", encoding="utf-8")
+        (tmp_path / ".mcp.json").write_text("existing mcp", encoding="utf-8")
 
-        valid_user_data.project_root = str(tmp_path)
-        generate_config_files(valid_user_data, tmp_path)
+        generate_config_files(valid_user_data, InstancePaths(root=tmp_path))
 
         assert (tmp_path / "CLAUDE.md.backup").exists()
         assert (tmp_path / ".env.backup").exists()
-        assert (claude_dir / "mcp.json.backup").exists()
+        assert (tmp_path / ".mcp.json.backup").exists()
 
         assert (tmp_path / "CLAUDE.md.backup").read_text() == "existing claude"
         assert (tmp_path / ".env.backup").read_text() == "existing env"
-        assert (claude_dir / "mcp.json.backup").read_text() == "existing mcp"
+        assert (tmp_path / ".mcp.json.backup").read_text() == "existing mcp"
 
         new_claude = (tmp_path / "CLAUDE.md").read_text()
         assert new_claude != "existing claude"
         assert "TestUser" in new_claude
 
+    def test_backup_never_writes_through_a_symlink(self, valid_user_data, tmp_path):
+        """A planted .backup symlink is replaced, so the backup stays in the instance."""
+        engine_file = tmp_path / "engine" / "CLAUDE.md"
+        engine_file.parent.mkdir()
+        engine_file.write_text("tracked engine instructions\n")
+        instance = tmp_path / "instance"
+        instance.mkdir()
+        (instance / "CLAUDE.md").write_text("existing claude", encoding="utf-8")
+        (instance / "CLAUDE.md.backup").symlink_to(engine_file)
+
+        generate_config_files(valid_user_data, InstancePaths(root=instance))
+
+        assert engine_file.read_text() == "tracked engine instructions\n"
+        assert not (instance / "CLAUDE.md.backup").is_symlink()
+        assert (instance / "CLAUDE.md.backup").read_text() == "existing claude"
+
     def test_mcp_json_written_via_explicit_path(self, valid_user_data, tmp_path):
-        """mcp.json is written to .claude/mcp.json at project root."""
-        import shutil
+        """MCP servers are written to .mcp.json at the instance root."""
 
-        template_src = Path("scripts/onboarding/modules/templates")
-        if not template_src.exists():
-            pytest.skip("Template directory not found")
+        generate_config_files(valid_user_data, InstancePaths(root=tmp_path))
 
-        template_dest = tmp_path / "scripts" / "onboarding" / "modules" / "templates"
-        shutil.copytree(template_src, template_dest)
-        (tmp_path / ".claude").mkdir(exist_ok=True)
-
-        valid_user_data.project_root = str(tmp_path)
-        generate_config_files(valid_user_data, tmp_path)
-
-        mcp_path = tmp_path / ".claude" / "mcp.json"
+        mcp_path = tmp_path / ".mcp.json"
         assert mcp_path.exists()
         content = mcp_path.read_text()
         parsed = json.loads(content)
@@ -377,10 +358,9 @@ class TestGenerateConfigFiles:
 
 @pytest.fixture
 def progress_file(tmp_path, monkeypatch):
-    """Override PROGRESS_FILE to use a temp directory."""
-    progress_path = tmp_path / ".onboarding-progress.json"
-    monkeypatch.setattr("src.cli.onboarding_wizard.PROGRESS_FILE", progress_path)
-    return progress_path
+    """Point the instance root, and so the progress file, at a temp directory."""
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    return tmp_path / ".onboarding-progress.json"
 
 
 @pytest.fixture
@@ -436,7 +416,7 @@ class TestSaveProgress:
     def test_atomic_write_no_partial_on_error(self, tmp_path, monkeypatch):
         """If JSON serialization fails, no progress file is left behind."""
         progress_path = tmp_path / ".onboarding-progress.json"
-        monkeypatch.setattr("src.cli.onboarding_wizard.PROGRESS_FILE", progress_path)
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
         state = OnboardingState.create_new()
         state.data["bad"] = {"value": object()}
         with pytest.raises(ValueError):
@@ -624,3 +604,134 @@ class TestWizardSaveResume:
             run_wizard()
 
         assert not progress_file.exists()
+
+
+ENGINE_RULES = Path(__file__).resolve().parents[2] / "CLAUDE.md"
+PRIVATE_OUTPUTS = (
+    "user-profile.yaml",
+    "config.yaml",
+    "system-context.md",
+    "CLAUDE.md",
+    ".env",
+)
+
+
+def _snapshot(root: Path) -> dict[Path, bytes]:
+    """Return every regular file under root with its bytes."""
+    return {
+        path: path.read_bytes()
+        for path in root.rglob("*")
+        if path.is_file() and not path.is_symlink()
+    }
+
+
+@pytest.fixture
+def engine_and_instance(tmp_path, monkeypatch):
+    """Build a template-free engine stand-in and an empty private instance.
+
+    The stand-in has no templates, so generation must load them from the
+    installed engine rather than the working directory.
+    """
+    engine = tmp_path / "engine"
+    engine.mkdir()
+    (engine / "CLAUDE.md").write_text("tracked engine instructions\n")
+    (engine / ".claude").mkdir()
+    (engine / ".claude" / "mcp.json").write_text('{"mcpServers": {}}\n')
+    instance = tmp_path / "instance"
+    instance.mkdir()
+    monkeypatch.delenv("FIN_GURU_DATA_ROOT", raising=False)
+    return engine, instance
+
+
+def _run_confirmed_wizard(state: OnboardingState) -> None:
+    from unittest.mock import patch
+
+    from src.cli.onboarding_wizard import run_wizard
+
+    with (
+        patch("src.cli.onboarding_wizard.load_progress", return_value=None),
+        patch(
+            "src.cli.onboarding_wizard.SECTION_ORDER",
+            [(name, lambda _state: state) for name, _ in SECTION_ORDER],
+        ),
+    ):
+        run_wizard()
+
+
+class TestWizardWritesOnlyTheInstance:
+    """Templates come from the installed engine. Personal files go to the instance."""
+
+    def test_engine_cwd_with_data_root_writes_only_instance(
+        self, engine_and_instance, completed_state, monkeypatch
+    ):
+        engine, instance = engine_and_instance
+        engine_before = _snapshot(engine)
+        monkeypatch.chdir(engine)
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(instance))
+
+        _run_confirmed_wizard(completed_state)
+
+        assert _snapshot(engine) == engine_before
+        for name in PRIVATE_OUTPUTS:
+            assert "TestUser" in (instance / name).read_text(), name
+        mcp = json.loads((instance / ".mcp.json").read_text())
+        assert "exa" in mcp["mcpServers"]
+        assert f'PROJECT_ROOT="{instance.resolve()}"' in (instance / ".env").read_text()
+        assert (instance / "CLAUDE.md").read_text().startswith(f"@{ENGINE_RULES}\n")
+
+    def test_instance_cwd_uses_installed_engine_templates(
+        self, engine_and_instance, completed_state, monkeypatch
+    ):
+        engine, instance = engine_and_instance
+        (instance / ".claude").symlink_to(engine / ".claude", target_is_directory=True)
+        engine_before = _snapshot(engine)
+        monkeypatch.chdir(instance)
+
+        _run_confirmed_wizard(completed_state)
+
+        assert _snapshot(engine) == engine_before
+        for name in PRIVATE_OUTPUTS:
+            assert "TestUser" in (instance / name).read_text(), name
+        assert (instance / ".mcp.json").is_file()
+        written = {path.resolve() for path in _snapshot(instance)}
+        assert all(path.is_relative_to(instance.resolve()) for path in written)
+
+    def test_progress_is_saved_in_the_instance(
+        self, engine_and_instance, partial_state, monkeypatch
+    ):
+        engine, instance = engine_and_instance
+        monkeypatch.chdir(engine)
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(instance))
+
+        save_progress(partial_state)
+
+        assert (instance / ".onboarding-progress.json").is_file()
+        assert not (engine / ".onboarding-progress.json").exists()
+
+    @pytest.mark.parametrize("cwd_in_engine", [".", "src"])
+    def test_refuses_when_instance_root_is_in_the_engine(
+        self, engine_and_instance, completed_state, monkeypatch, cwd_in_engine
+    ):
+        engine, _instance = engine_and_instance
+        (engine / "src").mkdir()
+        (engine / "src" / "CLAUDE.md").write_text("tracked src instructions\n")
+        monkeypatch.setattr(
+            "src.cli.onboarding_wizard._ENGINE_ROOT", engine.resolve(), raising=False
+        )
+        engine_before = _snapshot(engine)
+        monkeypatch.chdir(engine / cwd_in_engine)
+
+        def never_prompt(_state: OnboardingState) -> OnboardingState:
+            raise AssertionError("the wizard prompted before refusing")
+
+        from src.cli.onboarding_wizard import run_wizard
+
+        monkeypatch.setattr(
+            "src.cli.onboarding_wizard.SECTION_ORDER",
+            [(name, never_prompt) for name, _ in SECTION_ORDER],
+        )
+        with pytest.raises(SystemExit) as exit_info:
+            run_wizard()
+
+        assert exit_info.value.code == 1
+        assert _snapshot(engine) == engine_before

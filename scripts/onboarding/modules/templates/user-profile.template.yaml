@@ -33,14 +33,6 @@ user_profile:
     allocation: "{{allocation_strategy}}"
     risk_profile: "{{risk_tolerance}}"
 
-    {{#if google_sheets_id}}
-    google_sheets:
-      spreadsheet_id: "{{google_sheets_id}}"
-      url: "https://docs.google.com/spreadsheets/d/{{google_sheets_id}}/edit"
-      purpose: "Finance Guru portfolio tracking"
-      last_updated: "{{timestamp}}"
-    {{/if}}
-
   cash_flow:
     monthly_income: {{monthly_income}}
     fixed_expenses: {{fixed_expenses}}

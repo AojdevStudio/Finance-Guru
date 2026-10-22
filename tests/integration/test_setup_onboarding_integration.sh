@@ -98,26 +98,6 @@ cleanup() {
 
 trap cleanup EXIT
 
-TMPBIN=""
-PYTHON3_VERSION="0.0"
-if command -v python3 &>/dev/null; then
-  PYTHON3_VERSION=$(python3 --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
-fi
-PYTHON3_MAJOR=$(echo "$PYTHON3_VERSION" | cut -d. -f1)
-PYTHON3_MINOR=$(echo "$PYTHON3_VERSION" | cut -d. -f2)
-
-if [ "$PYTHON3_MAJOR" -lt 3 ] || { [ "$PYTHON3_MAJOR" -eq 3 ] && [ "$PYTHON3_MINOR" -lt 12 ]; }; then
-  if command -v python3.12 &>/dev/null; then
-    TMPBIN=$(mktemp -d)
-    ln -s "$(command -v python3.12)" "$TMPBIN/python3"
-    export PATH="$TMPBIN:$PATH"
-    printf "  Note: python3 is %s, using python3.12 via PATH override\n\n" "$PYTHON3_VERSION"
-  else
-    printf "  ${RED}Error: python3 is %s and python3.12 not found. Cannot run tests.${NC}\n" "$PYTHON3_VERSION"
-    exit 1
-  fi
-fi
-
 log_step "Setting up test environment"
 
 mkdir -p "$TEST_DIR"
@@ -185,6 +165,8 @@ assert_grep "$TEST_DIR/.setup-progress" "^python_deps_installed$" ".setup-progre
 assert_grep "/tmp/setup-test-first.log" "Setup Complete" "Summary printed on first run"
 
 printf "\n"
+
+assert_grep "/tmp/setup-test-first.log" "uv run python -m src.cli.onboarding_wizard" "Summary names the real onboarding module"
 
 log_step "Test 2: --check-deps-only does not modify filesystem"
 
@@ -272,6 +254,45 @@ fi
 
 printf "\n"
 
+log_step "Test 6: Missing uv is reported as uv, not as Python"
+
+NO_UV_PATH="/usr/bin:/bin"
+if PATH="$NO_UV_PATH" command -v uv &>/dev/null; then
+  log_fail "uv is on $NO_UV_PATH, so this host cannot simulate a missing uv"
+else
+  NO_UV_EXIT=0
+  (cd "$TEST_DIR_DEPS" && PATH="$NO_UV_PATH" /bin/bash setup.sh --check-deps-only < /dev/null > /tmp/setup-test-no-uv.log 2>&1) || NO_UV_EXIT=$?
+
+  if [ "$NO_UV_EXIT" -eq 1 ]; then
+    log_pass "--check-deps-only without uv exited with code 1"
+  else
+    log_fail "--check-deps-only without uv exited with code $NO_UV_EXIT (expected 1)"
+  fi
+  assert_grep "/tmp/setup-test-no-uv.log" "MISSING.* uv (not found)" "Missing uv is reported"
+  assert_no_grep "/tmp/setup-test-no-uv.log" "Python" "Python is not probed or reported while uv is missing"
+fi
+
+printf "\n"
+
+log_step "Test 7: Missing Python through uv prints an install hint"
+
+FAKE_UV_DIR="$(mktemp -d)"
+printf '#!/bin/sh\n[ "$1" = "--version" ] && echo "uv 0.5.0" && exit 0\nexit 1\n' > "$FAKE_UV_DIR/uv"
+chmod +x "$FAKE_UV_DIR/uv"
+NO_PY_EXIT=0
+(cd "$TEST_DIR_DEPS" && PATH="$FAKE_UV_DIR:/usr/bin:/bin" /bin/bash setup.sh --check-deps-only < /dev/null > /tmp/setup-test-no-python.log 2>&1) || NO_PY_EXIT=$?
+rm -rf "$FAKE_UV_DIR"
+
+if [ "$NO_PY_EXIT" -eq 1 ]; then
+  log_pass "--check-deps-only without Python through uv exited with code 1"
+else
+  log_fail "--check-deps-only without Python through uv exited with code $NO_PY_EXIT (expected 1)"
+fi
+assert_grep "/tmp/setup-test-no-python.log" "MISSING.* Python >= 3.12 through uv" "Missing Python is reported"
+assert_grep "/tmp/setup-test-no-python.log" "python@3.12\|python3.12\|python.org/downloads" "Missing Python prints an install hint"
+
+printf "\n"
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 
 printf "====================================================\n"
@@ -291,9 +312,10 @@ printf "  First run:   /tmp/setup-test-first.log\n"
 printf "  Deps only:   /tmp/setup-test-deps.log\n"
 printf "  Second run:  /tmp/setup-test-second.log\n"
 printf "  Missing dir: /tmp/setup-test-missing.log\n"
+printf "  No uv:       /tmp/setup-test-no-uv.log\n"
+printf "  No Python:   /tmp/setup-test-no-python.log\n"
 printf "\n"
 
-[ -n "$TMPBIN" ] && rm -rf "$TMPBIN"
 
 if [ "$FAIL_COUNT" -gt 0 ]; then
   exit 1
