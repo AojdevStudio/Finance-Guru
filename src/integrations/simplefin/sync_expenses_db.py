@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sqlite3
 import subprocess
 import sys
@@ -109,13 +110,17 @@ def run_dump(months: int, app_dir: Path = DEFAULT_APP_DIR) -> dict[str, Any]:
     return payload
 
 
-def _to_float(v: Any) -> float | None:
-    if v is None:
-        return None
+def _to_float(v: Any) -> float:
+    message = "SimpleFIN transaction amount must be a finite number"
+    if isinstance(v, bool):
+        raise SimpleFinSyncError(message)
     try:
-        return float(v)
-    except (TypeError, ValueError):
-        return None
+        amount = float(v)
+    except (TypeError, ValueError, OverflowError):
+        raise SimpleFinSyncError(message) from None
+    if not math.isfinite(amount):
+        raise SimpleFinSyncError(message)
+    return amount
 
 
 def _iso_date(posted_ts: Any) -> str | None:
@@ -201,6 +206,9 @@ def normalize_transaction(
 
     Returns:
         A tuple matching the ``bank_transactions`` column order.
+
+    Raises:
+        SimpleFinSyncError: If the transaction amount is missing or not finite.
     """
     posted = txn.get("posted")
     try:
