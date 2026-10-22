@@ -31,9 +31,11 @@ uv run python -m src.integrations.refresh_all --months 3 # narrow the expense wi
 uv run python -m src.integrations.refresh_all --show     # print DB snapshot, no sync
 ```
 
-It exits 0 when any source succeeds and prints a per-source `ok` / `error` line.
-Read the output: if a source a skill depends on shows `error`, surface that (do
-not report its facts as fresh).
+It exits 0 only when every source succeeds, and 1 if any source fails. It prints
+a per-source `ok` / `error` line. A partial refresh still attempts every source.
+Read the output: if a source a skill depends on shows `error`, surface that and
+do not report its saved facts as fresh. `--show` only displays saved data. Its
+zero exit does not prove that a refresh ran or succeeded.
 
 ### Targeted refresh (when a skill needs only one source)
 
@@ -59,7 +61,18 @@ expose the loan directly. It tracks Fidelity "Net debit" within ~0.1%.
 
 ## Freshness check
 
-After Step 0, confirm the tables carry this run's timestamp before reading:
+After Step 0, require a successful result for each source the analysis needs.
+Keep that result with the analysis date and data source. Do not use a table's
+`MAX(synced_at)` alone as proof that the source refreshed successfully.
+
+Positions and balances are snapshots. Inspect their generation timestamp and
+the refresh output for the accounts the analysis needs. Transaction history is
+append-only. A successful refresh that fetches only duplicate activities adds
+no rows, so its row timestamps can stay unchanged. An empty history also has no
+row timestamp. Neither case proves a refresh failure.
+
+This query shows the latest stored row timestamps for context. It is not a
+refresh success check:
 
 ```bash
 sqlite3 family_office.db "SELECT 'balances', MAX(synced_at) FROM balances
