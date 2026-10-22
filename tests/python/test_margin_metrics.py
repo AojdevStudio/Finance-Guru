@@ -300,6 +300,8 @@ def test_read_db_balances_refuses_null_margin_debt(tmp_path, monkeypatch):
     monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
 
+    freeze_balance_clock(monkeypatch, datetime(2026, 10, 22, 13, tzinfo=UTC))
+
     with pytest.raises(mm.StaleEquitySnapshotError) as exc_info:
         mm.read_db_balances()
 
