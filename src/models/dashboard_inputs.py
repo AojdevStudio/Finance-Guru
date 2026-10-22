@@ -120,6 +120,7 @@ class HoldingInput(BaseModel):
     }
 
 
+# Pydantic documents these computed-field suppressions for mypy issue 1362.
 class PortfolioSnapshotInput(BaseModel):
     """Complete portfolio snapshot from Fidelity CSV.
 
@@ -209,37 +210,37 @@ class PortfolioSnapshotInput(BaseModel):
 
         return v
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def layer1_value(self) -> float:
         """Calculate total value of Layer 1 (growth) holdings."""
         return sum(h.current_value for h in self.holdings if h.layer == "layer1")
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def layer2_value(self) -> float:
         """Calculate total value of Layer 2 (income) holdings."""
         return sum(h.current_value for h in self.holdings if h.layer == "layer2")
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def layer3_value(self) -> float:
         """Calculate total value of Layer 3 (hedge) holdings."""
         return sum(h.current_value for h in self.holdings if h.layer == "layer3")
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def layer1_pct(self) -> float:
         """Layer 1 as percentage of total portfolio."""
         return (self.layer1_value / self.total_value * 100) if self.total_value else 0.0
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def layer2_pct(self) -> float:
         """Layer 2 as percentage of total portfolio."""
         return (self.layer2_value / self.total_value * 100) if self.total_value else 0.0
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def layer3_pct(self) -> float:
         """Layer 3 as percentage of total portfolio."""
@@ -341,7 +342,7 @@ class AnalysisResultsInput(BaseModel):
             raise ValueError(f"Ticker '{v}' must be uppercase")
         return v
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def tools_run(self) -> list[str]:
         """List of analysis tools that were executed."""
@@ -356,7 +357,7 @@ class AnalysisResultsInput(BaseModel):
             tools.append("moving_averages")
         return tools
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_errors(self) -> bool:
         """Check if any analysis tool returned an error."""

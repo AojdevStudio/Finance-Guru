@@ -171,9 +171,11 @@ class MCPConfigInput(BaseModel):
     has_alphavantage: bool = Field(
         default=False, description="Has Alpha Vantage API key"
     )
-    alphavantage_key: str | None = Field(None, description="Alpha Vantage API key")
+    alphavantage_key: str | None = Field(
+        default=None, description="Alpha Vantage API key"
+    )
     has_brightdata: bool = Field(default=False, description="Has BrightData API key")
-    brightdata_key: str | None = Field(None, description="BrightData API key")
+    brightdata_key: str | None = Field(default=None, description="BrightData API key")
 
 
 class UserDataInput(BaseModel):

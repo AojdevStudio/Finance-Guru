@@ -18,6 +18,13 @@ from src.models.correlation_inputs import (
     PortfolioPriceData,
 )
 
+SAMPLE_SESSIONS = 60
+RANDOM_SEED = 42
+DAILY_DRIFT = 0.0005
+DAILY_VOLATILITY = 0.01
+BASE_PRICE = 100.0
+TICKER_PRICE_STEP = 10
+
 
 def _make_dates(n: int) -> list[date]:
     start = date(2025, 1, 2)
@@ -26,9 +33,9 @@ def _make_dates(n: int) -> list[date]:
 
 def _make_portfolio_data(
     tickers: list[str] | None = None,
-    n: int = 60,
+    n: int = SAMPLE_SESSIONS,
     correlation: float = 0.5,
-    seed: int = 42,
+    seed: int = RANDOM_SEED,
 ) -> PortfolioPriceData:
     """Build PortfolioPriceData with correlated synthetic price series.
 
@@ -37,14 +44,14 @@ def _make_portfolio_data(
     tickers = tickers or ["AAAA", "BBBB", "CCCC"]
     rng = np.random.default_rng(seed)
 
-    factor_returns = rng.normal(0.0005, 0.01, n - 1)
+    factor_returns = rng.normal(DAILY_DRIFT, DAILY_VOLATILITY, n - 1)
 
     prices: dict[str, list[float]] = {}
     for i, ticker in enumerate(tickers):
         loading = correlation
-        idio = rng.normal(0, 0.01 * (1 - correlation), n - 1)
+        idio = rng.normal(0, DAILY_VOLATILITY * (1 - correlation), n - 1)
         asset_returns = factor_returns * loading + idio
-        p = [100.0 + i * 10]
+        p = [BASE_PRICE + i * TICKER_PRICE_STEP]
         for r in asset_returns:
             p.append(p[-1] * (1 + r))
         prices[ticker] = p

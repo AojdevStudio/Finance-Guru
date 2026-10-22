@@ -433,7 +433,10 @@ class ITCRiskCalculator:
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
 
-        return response.json()
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise ValueError("ITC response must be a JSON object")
+        return payload
 
     def _parse_risk_bands(self, data: dict[str, Any]) -> list[RiskBand]:
         """Parse risk bands from ITC API response.
