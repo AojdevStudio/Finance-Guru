@@ -34,6 +34,9 @@ const BROWSER_HEADERS = {
   "Accept": "text/html",
   "Accept-Language": "en-US",
 };
+// A stalled page fails the run instead of hanging it. The fetch signal also
+// bounds reading the body.
+const FETCH_TIMEOUT_MS = 30_000;
 const TIER_RE =
   /<td id="Debit balance">\$([\d,]+)–\$([\d,]+)<\/td>\s*<td id="Margin interest rate">([\d.]+)%/g;
 const BASE_RE = /base margin rate, effective since ([A-Z][a-z]+ \d{1,2}, \d{4}), is ([\d.]+)%/;
@@ -153,7 +156,7 @@ async function runEngine(ctx: Ctx, module: string): Promise<string> {
 
 export const behavior = {
   type: "@aojdevstudio/fidelity-margin-rate",
-  version: "2026.10.22.3",
+  version: "2026.10.22.4",
   globalArguments: GlobalArgsSchema,
   resources: {
     "check": {
@@ -194,7 +197,10 @@ export const behavior = {
           new Date(),
           args.maxLedgerAgeHours,
         );
-        const res = await fetch(RATES_URL, { headers: BROWSER_HEADERS });
+        const res = await fetch(RATES_URL, {
+          headers: BROWSER_HEADERS,
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        });
         if (!res.ok) throw new Error(`GET ${RATES_URL} returned ${res.status}`);
         const table = parseRateTable(await res.text());
         const debt = metrics.margin_balance;
