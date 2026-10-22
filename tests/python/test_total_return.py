@@ -1222,21 +1222,11 @@ class TestDividendHoldingWindow:
                 date(2025, 1, 1),
                 0.0,
                 id="before-start",
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    raises=AssertionError,
-                    reason="issue 291 holding window",
-                ),
             ),
             pytest.param(
                 date(2025, 1, 2),
                 0.0,
                 id="at-start",
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    raises=AssertionError,
-                    reason="issue 291 holding window",
-                ),
             ),
             pytest.param(date(2025, 3, 15), 0.02, id="inside"),
             pytest.param(date(2025, 7, 2), 0.02, id="at-end"),
@@ -1244,11 +1234,6 @@ class TestDividendHoldingWindow:
                 date(2025, 7, 3),
                 0.0,
                 id="after-end",
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    raises=AssertionError,
-                    reason="issue 291 holding window",
-                ),
             ),
         ],
     )
@@ -1266,9 +1251,6 @@ class TestDividendHoldingWindow:
         )
         assert actual == pytest.approx(expected)
 
-    @pytest.mark.xfail(
-        strict=True, raises=AssertionError, reason="issue 291 holding window"
-    )
     def test_mixed_unsorted_records_use_one_window(self, monkeypatch, tmp_path):
         monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
         result = TotalReturnCalculator(
@@ -1297,9 +1279,6 @@ class TestDividendHoldingWindow:
         )
         assert result.data_quality_warnings == []
 
-    @pytest.mark.xfail(
-        strict=True, raises=ZeroDivisionError, reason="issue 291 holding window"
-    )
     def test_excluded_dividends_need_no_reinvestment_price(self, monkeypatch, tmp_path):
         monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
         result = TotalReturnCalculator(
@@ -1317,9 +1296,6 @@ class TestDividendHoldingWindow:
         assert result.dividend_count == 0
         assert result.period_breakdown == []
 
-    @pytest.mark.xfail(
-        strict=True, raises=AssertionError, reason="issue 291 holding window"
-    )
     def test_cli_uses_quote_session_window(self, monkeypatch, tmp_path, capsys):
         from src.analysis.total_return_cli import main
 

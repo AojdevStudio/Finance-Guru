@@ -97,12 +97,12 @@ class TotalReturnInput(BaseModel):
 
     start_date: date = Field(
         ...,
-        description="Start of measurement period",
+        description="Starting close date, excludes dividends with this ex-date",
     )
 
     end_date: date = Field(
         ...,
-        description="End of measurement period",
+        description="Ending close date, includes dividends with this ex-date",
     )
 
     include_drip: bool = Field(

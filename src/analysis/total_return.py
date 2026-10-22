@@ -115,7 +115,7 @@ class TotalReturnCalculator:
     Args:
         data: Validated TotalReturnInput with ticker, dates, initial_shares.
         prices: Finite prices for the period (at minimum [start_price, end_price]).
-        dividends: List of DividendRecord for dividends during the period.
+        dividends: Records to filter to start_date < ex_date <= end_date.
         ex_date_prices: Dict mapping ex-date -> finite close for DRIP reinvestment.
     """
 
@@ -128,7 +128,14 @@ class TotalReturnCalculator:
     ) -> None:
         self.data = data
         self.prices = prices or []
-        self.dividends = dividends or []
+        self.dividends = sorted(
+            (
+                dividend
+                for dividend in dividends or []
+                if data.start_date < dividend.ex_date <= data.end_date
+            ),
+            key=lambda dividend: dividend.ex_date,
+        )
         self.ex_date_prices = ex_date_prices or {}
         if any(price is None or not math.isfinite(price) for price in self.prices):
             raise ValueError("All price observations must be finite")
