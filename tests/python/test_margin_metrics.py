@@ -4,7 +4,7 @@ import json
 import os
 import sqlite3
 import sys
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
@@ -33,6 +33,15 @@ def write_balances(path):
         "Net debit,-10000.00,-500.00\n"
         "Margin interest accrued this month,12.34,\n"
     )
+
+
+def freeze_balance_clock(monkeypatch, current: datetime) -> None:
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return current if tz is None else current.astimezone(tz)
+
+    monkeypatch.setattr(mm, "datetime", FixedDatetime)
 
 
 def write_account_config(path: Path, accounts: list[tuple[str, str, bool]]) -> None:
@@ -243,6 +252,7 @@ def test_metrics_from_runtime_rejects_unsupported_source(monkeypatch):
 
 def test_read_db_balances_reads_latest_snapshot(tmp_path, monkeypatch):
     """read_db_balances returns the newest balances row as Fidelity-shaped facts."""
+    freeze_balance_clock(monkeypatch, datetime(2026, 7, 18, 16, tzinfo=UTC))
     write_account_config(
         tmp_path / "snaptrade-accounts.yaml",
         [("acct-1", "taxable_margin", True)],
@@ -276,6 +286,7 @@ def test_read_db_balances_reads_latest_snapshot(tmp_path, monkeypatch):
 def test_read_db_balances_routes_to_unique_enabled_taxable_margin_account(
     tmp_path, monkeypatch
 ):
+    freeze_balance_clock(monkeypatch, datetime(2026, 1, 1, 1, tzinfo=UTC))
     config_path = tmp_path / "snaptrade-accounts.yaml"
     write_account_config(
         config_path,
