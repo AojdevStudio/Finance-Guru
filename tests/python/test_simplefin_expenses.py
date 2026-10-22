@@ -436,10 +436,23 @@ def test_sync_applies_household_merchant_rules(tmp_path) -> None:
     )
 
 
-def test_transaction_override_survives_resync_without_matching_other_rows(tmp_path):
+@pytest.mark.parametrize(
+    "category",
+    [
+        "Groceries",
+        "Exempt",
+        "Retirement",
+        "Payroll",
+        "Business Income",
+        "Uncategorized",
+    ],
+)
+def test_transaction_override_survives_resync_without_matching_other_rows(
+    tmp_path, category
+):
     database_url = f"sqlite:///{tmp_path / 'synthetic.db'}"
     overrides = tmp_path / "category-overrides.yaml"
-    overrides.write_text("synthetic-one: Groceries\n")
+    overrides.write_text(f"synthetic-one: {category}\n")
     payload = {
         "accounts": [
             {
@@ -465,7 +478,7 @@ def test_transaction_override_survives_resync_without_matching_other_rows(tmp_pa
         rows = connection.execute(
             "SELECT txn_id, category FROM bank_transactions ORDER BY txn_id"
         ).fetchall()
-    assert rows == [("synthetic-one", "Groceries"), ("synthetic-two", "Uncategorized")]
+    assert rows == [("synthetic-one", category), ("synthetic-two", "Uncategorized")]
 
 
 @pytest.mark.parametrize(

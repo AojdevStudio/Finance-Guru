@@ -450,7 +450,7 @@ def load_category_overrides(path: Path | None) -> dict[str, str]:
             raise CategoryOverridesError(
                 "Override transaction IDs must be non-empty strings"
             )
-        if not isinstance(category, str) or category not in CATEGORIES:
+        if not isinstance(category, str) or category not in _OVERRIDE_CATEGORIES:
             raise CategoryOverridesError(
                 "Override category must be an existing category"
             )
@@ -583,6 +583,12 @@ _RULES_BEFORE_TABLE: tuple[_Rule, ...] = (
 )
 
 _RULES_AFTER_TABLE: tuple[_Rule, ...] = (("Business Income", _is_business_inflow),)
+
+_OVERRIDE_CATEGORIES: frozenset[str] = (
+    frozenset(CATEGORIES)
+    | {category for category, _ in (*_RULES_BEFORE_TABLE, *_RULES_AFTER_TABLE)}
+    | {"Uncategorized"}
+)
 
 
 def categorize_expense(
