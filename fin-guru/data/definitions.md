@@ -473,8 +473,10 @@ Bounded bisection over the supported volatility interval `[0.01, 3.0]`:
 vol_mid  =  (vol_lower + vol_upper) / 2
 ```
 
-Exact endpoint prices return that endpoint. Prices outside the endpoint range
-return a non-converged result at the nearest endpoint, with its pricing error.
+An exact endpoint-price match returns a supported endpoint. If both endpoint
+prices are numerically equal, the solver returns the lower endpoint.
+Prices outside the endpoint range return a non-converged result at the nearest
+endpoint, with its pricing error.
 Interior roots converge on an exact model-price match, or when the bracket width
 is at most `1e-8` and the price error is below $0.0001 per share.
 The limit is 100 model price evaluations, including both endpoints.
