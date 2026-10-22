@@ -40,3 +40,16 @@ def test_invalid_calculator_json_propagates(mocker):
     )
     with pytest.raises(json.JSONDecodeError):
         module.run_cli_tool("calculator", [])
+
+
+def test_failed_calculator_keeps_stderr(tmp_path, monkeypatch, capfd):
+    module = chart_kit()
+    (tmp_path / "synthetic_calculator.py").write_text(
+        'raise SystemExit("synthetic calculator failed")\n'
+    )
+    monkeypatch.setenv("PYTHONPATH", str(tmp_path))
+
+    with pytest.raises(subprocess.CalledProcessError):
+        module.run_cli_tool("synthetic_calculator", [])
+
+    assert "synthetic calculator failed" in capfd.readouterr().err

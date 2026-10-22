@@ -32,7 +32,7 @@ COLORS = {
 def run_cli_tool(module_name: str, args: list[str]) -> dict[str, Any]:
     """Run a Finance Guru CLI tool and parse JSON output."""
     cmd = [sys.executable, "-m", module_name] + args + ["--output", "json"]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, text=True, check=True)
     data = json.loads(result.stdout)
     if not isinstance(data, dict):
         raise ValueError(f"Expected a JSON object from {module_name}")
