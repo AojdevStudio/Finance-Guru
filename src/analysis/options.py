@@ -38,6 +38,8 @@ from math import exp, log, sqrt
 from scipy.stats import norm
 
 from src.models.options_inputs import (
+    MAX_OPTION_VOLATILITY,
+    MIN_OPTION_VOLATILITY,
     BlackScholesInput,
     GreeksOutput,
     ImpliedVolInput,
@@ -53,6 +55,8 @@ PERCENT_POINTS_PER_UNIT = 100
 
 IV_PRICE_TOLERANCE_DOLLARS = 0.0001
 """Implied-vol solve stops when the model price is this close to market, per share."""
+
+IV_VOLATILITY_TOLERANCE = 1e-8
 
 PUT_CALL_PARITY_ARBITRAGE_DOLLARS = 0.10
 """A parity gap above this, per share, survives transaction costs and flags arbitrage."""
@@ -169,22 +173,11 @@ class OptionsCalculator:
     def calculate_implied_vol(
         self, params: ImpliedVolInput, *, ticker: str = UNNAMED_UNDERLYING
     ) -> ImpliedVolOutput:
-        """Calculate implied volatility using Newton-Raphson method.
+        """Invert the supported Black-Scholes price range with bisection.
 
-        WHAT: Reverse-engineer volatility from market price
-        WHY: Implied vol shows market's expectation
-        HOW: Iterative solver (Newton-Raphson)
-
-        ALGORITHM:
-        1. Start with initial guess (e.g., 30%)
-        2. Calculate option price at this vol
-        3. Calculate vega (sensitivity to vol)
-        4. Update guess: new_vol = old_vol + (market_price - calc_price) / vega
-        5. Repeat until convergence
-
-        EDUCATIONAL NOTE:
-        Newton-Raphson converges quickly (usually < 10 iterations)
-        unless the option is deep ITM/OTM or near expiry.
+        Prices outside the endpoint range return a non-converged result at the
+        nearest endpoint. Exact endpoint prices return that supported volatility.
+        Interior roots require a narrow volatility bracket and a small price error.
         """
         S = params.spot_price
         K = params.strike
@@ -192,64 +185,49 @@ class OptionsCalculator:
         target_price = params.market_price
         r = params.risk_free_rate
         q = params.dividend_yield
+        price = self._call_price if params.option_type == "call" else self._put_price
 
-        vol = 0.30
-        max_iterations = 100
+        def price_at(volatility: float) -> float:
+            d1, d2 = self._calculate_d1_d2(S, K, T, volatility, r, q)
+            return float(price(S, K, T, r, q, d1, d2))
 
-        for iteration in range(max_iterations):
-            bs_input = BlackScholesInput(
-                spot_price=S,
-                strike=K,
-                time_to_expiry=T,
-                volatility=vol,
-                risk_free_rate=r,
-                dividend_yield=q,
-                option_type=params.option_type,
-            )
-
-            greeks = self.price_option(bs_input)
-            calc_price = greeks.option_price
-            vega = greeks.vega
-
-            price_diff = target_price - calc_price
-            if abs(price_diff) < IV_PRICE_TOLERANCE_DOLLARS:
-                return ImpliedVolOutput(
-                    ticker=ticker,
-                    implied_volatility=float(vol),
-                    iterations=iteration + 1,
-                    converged=True,
-                    market_price=target_price,
-                    calculated_price=calc_price,
-                    pricing_error=abs(price_diff),
-                )
-
-            if vega > 0:
-                price_change_per_unit_vol = vega * PERCENT_POINTS_PER_UNIT
-                vol = vol + price_diff / price_change_per_unit_vol
-            else:
-                break
-
-            vol = max(0.01, min(vol, 5.0))
-
-        bs_input = BlackScholesInput(
-            spot_price=S,
-            strike=K,
-            time_to_expiry=T,
-            volatility=vol,
-            risk_free_rate=r,
-            dividend_yield=q,
-            option_type=params.option_type,
+        lower = MIN_OPTION_VOLATILITY
+        upper = MAX_OPTION_VOLATILITY
+        lower_price = price_at(lower)
+        upper_price = price_at(upper)
+        iterations = 2
+        vol, calc_price = (
+            (lower, lower_price)
+            if target_price <= lower_price
+            else (upper, upper_price)
         )
-        greeks = self.price_option(bs_input)
+        converged = target_price == calc_price
+
+        if lower_price < target_price < upper_price:
+            for _ in range(98):
+                iterations += 1
+                vol = (lower + upper) / 2
+                calc_price = price_at(vol)
+                price_diff = target_price - calc_price
+                if price_diff == 0 or (
+                    upper - lower <= IV_VOLATILITY_TOLERANCE
+                    and abs(price_diff) < IV_PRICE_TOLERANCE_DOLLARS
+                ):
+                    converged = True
+                    break
+                if calc_price < target_price:
+                    lower = vol
+                else:
+                    upper = vol
 
         return ImpliedVolOutput(
             ticker=ticker,
-            implied_volatility=float(vol),
-            iterations=max_iterations,
-            converged=False,
+            implied_volatility=vol,
+            iterations=iterations,
+            converged=converged,
             market_price=target_price,
-            calculated_price=greeks.option_price,
-            pricing_error=abs(target_price - greeks.option_price),
+            calculated_price=calc_price,
+            pricing_error=abs(target_price - calc_price),
         )
 
     def check_put_call_parity(self, params: PutCallParityInput) -> dict:

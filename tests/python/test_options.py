@@ -13,7 +13,10 @@ RUNNING TESTS:
     uv run pytest tests/python/test_options.py -v
 """
 
+from math import inf, nextafter
+
 import pytest
+from pydantic import ValidationError
 
 from src.analysis.options import OptionsCalculator, price_option
 from src.models.options_inputs import (
@@ -221,9 +224,6 @@ class TestMoneyness:
 
 
 class TestImpliedVolatility:
-    @pytest.mark.xfail(
-        strict=True, reason="Issue 267. Newton step leaves pricing domain"
-    )
     @pytest.mark.parametrize(
         ("option_type", "strike", "days"),
         [("put", 80.0, 7), ("call", 200.0, 30)],
@@ -251,6 +251,182 @@ class TestImpliedVolatility:
         assert result.ticker == "SYNTH"
         assert result.implied_volatility == pytest.approx(0.8, abs=0.001)
         assert result.pricing_error < 0.0001
+
+    @pytest.mark.parametrize(
+        ("option_type", "strike", "time", "rate", "dividend", "volatility"),
+        [
+            ("put", 80.0, 30 / 365, 0.045, 0.0, 0.6),
+            ("call", 100.0, 10.0, 0.0, 0.20, 0.4),
+            ("put", 100.0, 10.0, 0.20, 0.0, 0.6),
+            ("call", 100.0, 1e-6, 0.0, 0.0, 1.0),
+        ],
+    )
+    def test_recovers_supported_contract_extremes(
+        self, calculator, option_type, strike, time, rate, dividend, volatility
+    ):
+        contract = BlackScholesInput(
+            spot_price=100.0,
+            strike=strike,
+            time_to_expiry=time,
+            volatility=volatility,
+            risk_free_rate=rate,
+            dividend_yield=dividend,
+            option_type=option_type,
+        )
+        premium = calculator.price_option(contract).option_price
+        result = calculator.calculate_implied_vol(
+            ImpliedVolInput(
+                **contract.model_dump(exclude={"volatility"}), market_price=premium
+            )
+        )
+
+        assert result.converged
+        assert result.implied_volatility == pytest.approx(volatility, abs=0.001)
+        assert result.pricing_error < 0.0001
+
+    @pytest.mark.parametrize("option_type", ["call", "put"])
+    @pytest.mark.parametrize("volatility", [0.01, 0.010001, 2.999999, 3.0])
+    def test_supported_volatility_boundaries(self, calculator, option_type, volatility):
+        contract = BlackScholesInput(
+            spot_price=100.0,
+            strike=100.0,
+            time_to_expiry=1.0,
+            volatility=volatility,
+            risk_free_rate=0.0,
+            dividend_yield=0.0,
+            option_type=option_type,
+        )
+        premium = calculator.price_option(contract).option_price
+        result = calculator.calculate_implied_vol(
+            ImpliedVolInput(
+                **contract.model_dump(exclude={"volatility"}), market_price=premium
+            )
+        )
+
+        assert result.converged
+        assert result.implied_volatility == pytest.approx(volatility, abs=1e-6)
+        assert 0.01 <= result.implied_volatility <= 3.0
+        repriced = calculator.price_option(
+            BlackScholesInput(
+                **contract.model_dump(exclude={"volatility"}),
+                volatility=result.implied_volatility,
+            )
+        ).option_price
+        assert result.calculated_price == repriced
+        assert result.pricing_error == abs(premium - repriced)
+        assert result.pricing_error < 0.0001
+
+    def test_recovers_low_vega_root(self, calculator):
+        contract = BlackScholesInput(
+            spot_price=100.0,
+            strike=200.0,
+            time_to_expiry=7 / 365,
+            volatility=0.8,
+            option_type="call",
+        )
+        premium = calculator.price_option(contract).option_price
+        assert 0.0 < premium < 0.0001
+        result = calculator.calculate_implied_vol(
+            ImpliedVolInput(
+                **contract.model_dump(exclude={"volatility"}), market_price=premium
+            )
+        )
+
+        assert result.converged
+        assert result.implied_volatility == pytest.approx(0.8, abs=0.001)
+
+    @pytest.mark.parametrize("option_type", ["call", "put"])
+    @pytest.mark.parametrize("boundary", [0.01, 3.0])
+    @pytest.mark.parametrize("outside_by", ["adjacent_float", "large_gap"])
+    def test_rejects_prices_outside_supported_range(
+        self, calculator, option_type, boundary, outside_by
+    ):
+        contract = BlackScholesInput(
+            spot_price=100.0,
+            strike=100.0,
+            time_to_expiry=1.0,
+            volatility=boundary,
+            risk_free_rate=0.0,
+            option_type=option_type,
+        )
+        endpoint_price = calculator.price_option(contract).option_price
+        if outside_by == "adjacent_float":
+            premium = nextafter(endpoint_price, -inf if boundary == 0.01 else inf)
+        else:
+            premium = endpoint_price / 2 if boundary == 0.01 else 101.0
+        result = calculator.calculate_implied_vol(
+            ImpliedVolInput(
+                **contract.model_dump(exclude={"volatility"}), market_price=premium
+            )
+        )
+
+        assert not result.converged
+        assert result.implied_volatility == boundary
+        assert result.calculated_price == endpoint_price
+        assert result.pricing_error == abs(premium - endpoint_price)
+        assert result.pricing_error > 0.0
+        assert 0 < result.iterations <= 100
+
+    @pytest.mark.parametrize(
+        ("option_type", "strike", "has_zero_endpoint"),
+        [
+            ("call", 200.0, True),
+            ("put", 50.0, True),
+            ("call", 100.0, False),
+            ("put", 100.0, False),
+        ],
+    )
+    def test_zero_premium_requires_zero_model_endpoint(
+        self, calculator, option_type, strike, has_zero_endpoint
+    ):
+        contract = BlackScholesInput(
+            spot_price=100.0,
+            strike=strike,
+            time_to_expiry=7 / 365,
+            volatility=0.01,
+            risk_free_rate=0.0,
+            option_type=option_type,
+        )
+        endpoint_price = calculator.price_option(contract).option_price
+        result = calculator.calculate_implied_vol(
+            ImpliedVolInput(
+                **contract.model_dump(exclude={"volatility"}), market_price=0.0
+            )
+        )
+
+        assert result.converged is has_zero_endpoint
+        assert result.implied_volatility == 0.01
+        assert result.calculated_price == endpoint_price
+        assert result.pricing_error == endpoint_price
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("time_to_expiry", 0.0),
+            ("time_to_expiry", 10.01),
+            ("risk_free_rate", -0.01),
+            ("risk_free_rate", 0.21),
+            ("dividend_yield", -0.01),
+            ("dividend_yield", 0.21),
+            ("market_price", -0.01),
+            ("market_price", float("nan")),
+            ("market_price", inf),
+            ("spot_price", inf),
+        ],
+    )
+    def test_implied_vol_input_rejects_unsupported_contract(self, field, value):
+        contract = dict(
+            spot_price=100.0,
+            strike=100.0,
+            time_to_expiry=1.0,
+            risk_free_rate=0.045,
+            dividend_yield=0.0,
+            option_type="call",
+            market_price=10.0,
+        )
+        contract[field] = value
+        with pytest.raises(ValidationError):
+            ImpliedVolInput(**contract)
 
     def test_implied_vol_converges(self, calculator, atm_call_input):
         greeks = calculator.price_option(atm_call_input)

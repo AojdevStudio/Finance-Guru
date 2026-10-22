@@ -46,6 +46,25 @@ Risk metrics use `null` for unavailable Sharpe, Sortino, and Calmar ratios.
 `zero_volatility` or `no_drawdown`. Finite ratios keep their numeric format.
 Text output and the terminal dashboard show unavailable ratios with their reasons.
 
+### Implied volatility
+
+`options_cli.py --implied-vol --output json` solves within the pricing model's
+annual volatility range of 0.01 through 3.0, inclusive. Time to expiry must be
+positive and at most 10 years. Interest and dividend rates range from 0.0 through
+0.20. Inputs must be finite. Market premiums must be non-negative.
+
+The solver brackets the premium between prices at the two volatility endpoints.
+A premium outside that range returns `converged: false` at the nearest endpoint,
+with its calculated price and absolute pricing error. A premium just outside the
+range does not converge, even when its price error is below the price tolerance.
+
+Interior roots require a volatility bracket no wider than `1e-8` and a pricing
+error below $0.0001 per share, or an exact model-price match. `iterations` counts
+model price evaluations, including both endpoints, up to 100 evaluations.
+A zero premium converges only when the model also returns zero at its lower
+endpoint. Numerically flat prices can match more than one supported volatility.
+Zero volatility and zero time to expiry remain outside the pricing domain.
+
 ## Strategy commands
 
 | Command | Purpose |
