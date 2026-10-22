@@ -307,6 +307,31 @@ def test_read_db_balances_refuses_null_margin_debt(tmp_path, monkeypatch):
     assert "stale" in str(exc_info.value)
 
 
+def test_db_margin_metrics_report_the_ledger_sync_time(tmp_path, monkeypatch):
+    """as_of_date is the run date, so callers judge freshness by ledger_synced_at."""
+    write_account_config(
+        tmp_path / "snaptrade-accounts.yaml",
+        [("acct-1", "taxable_margin", True)],
+    )
+    db_path = tmp_path / "family_office.db"
+    write_balances_db(
+        db_path, [("acct-1", 0.0, 150000.0, 50000.0, "2001-01-01T14:00:00+00:00")]
+    )
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    freeze_balance_clock(monkeypatch, datetime(2001, 1, 1, 15, tzinfo=UTC))
+
+    balances = mm.read_db_balances()
+    metrics = mm.calculate_margin_metrics(
+        balances, annual_rate=0.10, jump_alert_threshold=5000.0
+    )
+
+    synced = metrics.model_dump(mode="json")["ledger_synced_at"]
+    assert datetime.fromisoformat(synced) == datetime.fromisoformat(
+        "2001-01-01T14:00:00+00:00"
+    )
+
+
 def test_read_db_balances_routes_to_unique_enabled_taxable_margin_account(
     tmp_path, monkeypatch
 ):

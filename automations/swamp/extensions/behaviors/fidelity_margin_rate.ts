@@ -39,7 +39,7 @@ const TIER_RE =
 const BASE_RE = /base margin rate, effective since ([A-Z][a-z]+ \d{1,2}, \d{4}), is ([\d.]+)%/;
 // The engine stores rates as decimals. Compare to a hundredth of a basis point.
 const RATE_TOLERANCE = 0.000001;
-const DAY_MS = 86_400_000;
+const HOUR_MS = 3_600_000;
 
 const TierSchema = z.object({ min: z.number(), max: z.number(), rate: z.number() });
 
@@ -47,7 +47,9 @@ const TierSchema = z.object({ min: z.number(), max: z.number(), rate: z.number()
 const MetricsSchema = z.object({
   margin_balance: z.number(),
   annual_interest_rate: z.number(),
-  as_of_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  // The sync time of the balances row the engine read. `as_of_date` is only
+  // the run date, so it says nothing about how old the data is.
+  ledger_synced_at: z.string().refine((s) => !Number.isNaN(Date.parse(s)), "not a timestamp"),
 });
 
 const CheckSchema = z.object({
@@ -55,7 +57,7 @@ const CheckSchema = z.object({
   baseEffective: z.string(),
   tiers: z.array(TierSchema),
   marginDebt: z.number(),
-  asOfDate: z.string().describe("The ledger date margin_metrics_cli reported"),
+  ledgerSyncedAt: z.string().describe("When the balances row the engine read was written"),
   tierRate: z.number().describe("Fidelity's rate for this debt, as a decimal"),
   configuredRate: z.number().describe("The engine's annual_interest_rate"),
   drift: z.boolean(),
@@ -109,17 +111,16 @@ export function tierRateFor(tiers: Tier[], debt: number): number {
   return tier.rate;
 }
 
-/** Parse `margin_metrics_cli` output and refuse a ledger older than `maxAgeDays`. */
-export function readMetrics(stdout: string, now: Date, maxAgeDays: number): Metrics {
+/** Parse `margin_metrics_cli` output and refuse a ledger older than `maxAgeHours`. */
+export function readMetrics(stdout: string, now: Date, maxAgeHours: number): Metrics {
   const parsed = MetricsSchema.safeParse(JSON.parse(stdout));
   if (!parsed.success) {
-    throw new Error(`margin_metrics_cli output is missing margin_balance, annual_interest_rate or as_of_date`);
+    throw new Error("margin_metrics_cli output is missing margin_balance, annual_interest_rate or ledger_synced_at");
   }
-  const ageDays = (now.getTime() - Date.parse(`${parsed.data.as_of_date}T00:00:00Z`)) / DAY_MS;
-  // as_of_date is a UTC date, so a ledger synced today is up to one day "old".
-  if (!(ageDays < maxAgeDays + 1)) {
+  const ageHours = (now.getTime() - Date.parse(parsed.data.ledger_synced_at)) / HOUR_MS;
+  if (!(ageHours <= maxAgeHours)) {
     throw new Error(
-      `The ledger is from ${parsed.data.as_of_date}, more than ${maxAgeDays} day(s) ago. Run the refresh method first`,
+      `The ledger was synced at ${parsed.data.ledger_synced_at}, more than ${maxAgeHours} hours ago. Run the refresh method first`,
     );
   }
   return parsed.data;
@@ -185,13 +186,13 @@ export const behavior = {
     check: {
       description: "Compare Fidelity's published margin rate for the current debt with the engine's configured rate",
       arguments: z.object({
-        maxLedgerAgeDays: z.number().default(1).describe("Refuse a ledger older than this many days"),
+        maxLedgerAgeHours: z.number().default(24).describe("Refuse a ledger synced longer ago than this"),
       }),
-      execute: async (args: { maxLedgerAgeDays: number }, context: Ctx) => {
+      execute: async (args: { maxLedgerAgeHours: number }, context: Ctx) => {
         const metrics = readMetrics(
           await runEngine(context, "src.analysis.margin_metrics_cli"),
           new Date(),
-          args.maxLedgerAgeDays,
+          args.maxLedgerAgeHours,
         );
         const res = await fetch(RATES_URL, { headers: BROWSER_HEADERS });
         if (!res.ok) throw new Error(`GET ${RATES_URL} returned ${res.status}`);
@@ -203,7 +204,7 @@ export const behavior = {
         const handle = await context.writeResource("check", "rate", {
           ...table,
           marginDebt: debt,
-          asOfDate: metrics.as_of_date,
+          ledgerSyncedAt: metrics.ledger_synced_at,
           tierRate,
           configuredRate: configured,
           drift,

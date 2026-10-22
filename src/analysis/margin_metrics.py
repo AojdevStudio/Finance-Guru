@@ -66,6 +66,8 @@ class FidelityBalances(BaseModel):
     net_debit_day_change: float | None
     margin_interest_accrued_this_month: float | None
     equity_synced_at: datetime | None = None
+    # When the ledger row was written. Set on the db source only.
+    ledger_synced_at: datetime | None = None
 
 
 DIVIDEND_LOOKBACK_MONTHS = 3
@@ -121,6 +123,7 @@ class MarginMetrics(BaseModel):
     alert_status: str
     months_elapsed: int | None
     equity_synced_at: datetime | None = None
+    ledger_synced_at: datetime | None = None
     disclaimer: str = EDUCATIONAL_DISCLAIMER
 
 
@@ -407,6 +410,7 @@ def read_db_balances(
         margin_debt=max(row["margin_debt"], 0.0),
         net_debit_day_change=None,
         margin_interest_accrued_this_month=None,
+        ledger_synced_at=datetime.fromisoformat(row["synced_at"]),
     )
 
 
@@ -572,6 +576,7 @@ class MarginMetricsCalculator:
             alert_status=alert_status,
             months_elapsed=months_elapsed_since_start(self.inputs.today),
             equity_synced_at=balances.equity_synced_at,
+            ledger_synced_at=balances.ledger_synced_at,
         )
 
 

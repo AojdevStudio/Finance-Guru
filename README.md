@@ -165,7 +165,7 @@ It runs Mondays at 9:15 in the machine's local time zone. On a machine set to US
 #### What you need
 
 - A Finance Guru checkout and an instance with a Fidelity margin account routed as `taxable_margin` in `snaptrade-accounts.yaml`.
-- `FG_MARGIN_INTEREST_RATE_DECIMAL` set in the instance `.env`.
+- `FG_MARGIN_INTEREST_RATE_DECIMAL` and `FG_MARGIN_JUMP_ALERT_THRESHOLD` set in the instance `.env`. The engine's `margin_metrics_cli` needs both.
 - `uv` on the machine.
 - The swamp CLI, installed as its [README](https://github.com/swamp-club/swamp) describes, and signed in with `swamp auth login`. Every swamp process, the service included, needs that sign-in to start.
 
@@ -191,7 +191,7 @@ swamp workflow run margin-rate-check --json
 swamp data query 'behavior("fidelity-margin-rate") && name == "rate"' --select content --json
 ```
 
-The last command prints the newest comparison: tier rate, configured rate, margin debt, and `drift`. To check the rate without syncing first, run `swamp behavior run fidelity-margin-rate check`. It refuses a ledger more than a day old.
+The last command prints the newest comparison: tier rate, configured rate, margin debt, and `drift`. To check the rate without syncing first, run `swamp behavior run fidelity-margin-rate check`. It refuses a ledger synced more than 24 hours ago.
 
 Run the tests with the Deno that ships with swamp (`swamp doctor extensions --json` prints its path as `denoPath`):
 
@@ -227,7 +227,7 @@ curl -s http://127.0.0.1:9093/health
 
 A failed run notifies no one. Check the history, or point a tool you already use at it.
 
-**How it relates to the stale-equity guard.** The engine computes margin debt as gross market value minus SnapTrade's account equity, and the equity is only as fresh as SnapTrade's last holdings sync ([#259](https://github.com/AojdevStudio/Finance-Guru/issues/259)). The engine refuses equity over 12 hours old with `StaleAccountEquityError`, and the ledger stores an empty margin debt instead of a wrong one ([#260](https://github.com/AojdevStudio/Finance-Guru/pull/260)). The rate check reads the debt through the engine, so it fails on an empty debt too, and it refuses a ledger more than a day old. Stale data never picks a rate tier. The engine guard stops wrong numbers before they exist. The swamp check catches settings that have drifted from the broker.
+**How it relates to the stale-equity guard.** The engine computes margin debt as gross market value minus SnapTrade's account equity, and the equity is only as fresh as SnapTrade's last holdings sync ([#259](https://github.com/AojdevStudio/Finance-Guru/issues/259)). The engine refuses equity over 12 hours old with `StaleAccountEquityError`, and the ledger stores an empty margin debt instead of a wrong one ([#260](https://github.com/AojdevStudio/Finance-Guru/pull/260)). The rate check reads the debt through the engine, so it fails on an empty debt too, and it refuses a ledger synced more than 24 hours ago. It reads that time from `ledger_synced_at` in the engine's output. Stale data never picks a rate tier. The engine guard stops wrong numbers before they exist. The swamp check catches settings that have drifted from the broker.
 
 ## If you are an agent
 

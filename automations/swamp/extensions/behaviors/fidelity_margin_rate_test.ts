@@ -32,25 +32,21 @@ Deno.test("a changed page layout fails instead of returning no tiers", () => {
 });
 
 const now = new Date("2026-10-26T14:20:00Z");
-const metrics = (asOf: string) =>
-  JSON.stringify({ margin_balance: 75000, annual_interest_rate: 0.10625, as_of_date: asOf, alert_status: "green" });
+const metrics = (syncedAt: string) =>
+  JSON.stringify({ margin_balance: 75000, annual_interest_rate: 0.10625, as_of_date: "2026-10-26", ledger_synced_at: syncedAt });
 
-Deno.test("today's ledger gives the engine's debt and configured rate", () => {
-  const m = readMetrics(metrics("2026-10-26"), now, 1);
+Deno.test("a ledger synced minutes ago gives the engine's debt and configured rate", () => {
+  const m = readMetrics(metrics("2026-10-26T14:18:00+00:00"), now, 24);
   assertEquals([m.margin_balance, m.annual_interest_rate], [75000, 0.10625]);
 });
 
-Deno.test("yesterday's ledger still counts as fresh for a one-day limit", () => {
-  assertEquals(readMetrics(metrics("2026-10-25"), now, 1).margin_balance, 75000);
+Deno.test("an old ledger fails even though as_of_date is today", () => {
+  assertThrows(() => readMetrics(metrics("2001-01-01T14:00:00+00:00"), now, 24), Error, "Run the refresh method first");
 });
 
-Deno.test("an older ledger fails instead of picking a tier", () => {
-  assertThrows(() => readMetrics(metrics("2026-10-22"), now, 1), Error, "Run the refresh method first");
-});
-
-Deno.test("engine output without the debt fails", () => {
+Deno.test("engine output without ledger_synced_at fails", () => {
   assertThrows(
-    () => readMetrics(JSON.stringify({ annual_interest_rate: 0.10625, as_of_date: "2026-10-26" }), now, 1),
+    () => readMetrics(JSON.stringify({ margin_balance: 75000, annual_interest_rate: 0.10625 }), now, 24),
     Error,
     "missing margin_balance",
   );
