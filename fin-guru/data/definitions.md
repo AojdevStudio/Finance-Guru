@@ -467,13 +467,19 @@ P   =  K·e^(−rT)·N(−d₂) − S·e^(−qT)·N(−d₁)
 
 ### 10.3 Implied volatility
 
-Newton–Raphson root-finding:
+Bounded bisection over the supported volatility interval `[0.01, 3.0]`:
 
 ```
-vol_new  =  vol_old + (target_price − calc_price) / vega
+vol_mid  =  (vol_lower + vol_upper) / 2
 ```
 
-Tolerance ~$0.01, max 100 iterations, bounded `[0.01, 5.0]`.
+Exact endpoint prices return that endpoint. Prices outside the endpoint range
+return a non-converged result at the nearest endpoint, with its pricing error.
+Interior roots converge on an exact model-price match, or when the bracket width
+is at most `1e-8` and the price error is below $0.0001 per share.
+The limit is 100 model price evaluations, including both endpoints.
+A zero premium converges only when the lower endpoint model price is zero.
+Numerically flat prices can match more than one supported volatility.
 
 ### 10.4 Put-call parity (arbitrage check)
 
