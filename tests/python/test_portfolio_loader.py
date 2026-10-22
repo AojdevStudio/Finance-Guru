@@ -80,8 +80,12 @@ def test_load_latest_returns_none_when_no_csv_exists(mocker) -> None:
 
 
 def test_csv_reload_preserves_file_timestamp(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mocker
 ) -> None:
+    mocker.patch(
+        "src.ui.services.portfolio_loader.FinGuruConfig.load_layers",
+        return_value={},
+    )
     monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
     imports = tmp_path / "imports"
     imports.mkdir()
@@ -99,10 +103,11 @@ def test_csv_reload_preserves_file_timestamp(
     assert first.timestamp == second.timestamp == exported_at
 
 
-def test_csv_future_timestamp_is_rejected(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+def test_csv_future_timestamp_is_rejected(tmp_path: Path, mocker) -> None:
+    mocker.patch(
+        "src.ui.services.portfolio_loader.FinGuruConfig.load_layers",
+        return_value={},
+    )
     csv = tmp_path / "Portfolio_Positions_synthetic.csv"
     csv.write_text(
         "Symbol,Quantity,Current Value,Today's Gain/Loss Dollar\nABC,1,100,0\n"
