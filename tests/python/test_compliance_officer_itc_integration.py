@@ -529,3 +529,27 @@ def test_offline_compliance_cli(inputs, expected_rule):
     assert output["date"]
     assert "Supplied inputs" in output["source"]
     assert "Not investment advice" in output["disclaimer"]
+
+
+def test_offline_compliance_cli_rejects_invalid_input():
+    import json
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.analysis.itc_risk_cli",
+            "--compliance-input",
+            json.dumps({"itc_supported": True, "itc_risk": 1.5}),
+            "--output",
+            "json",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "less_than_equal" in result.stderr
