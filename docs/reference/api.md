@@ -46,6 +46,11 @@ Risk metrics use `null` for unavailable Sharpe, Sortino, and Calmar ratios.
 `zero_volatility` or `no_drawdown`. Finite ratios keep their numeric format.
 Text output and the terminal dashboard show unavailable ratios with their reasons.
 
+Margin metrics require finite monthly dividend income and a finite
+`FG_MARGIN_JUMP_ALERT_THRESHOLD`. The calculator and CLI reject NaN and infinity
+before returning metrics. The CLI exits unsuccessfully and prints no metrics JSON.
+Zero and finite negative income remain valid. Omitted income remains optional.
+
 Margin coverage uses `--monthly-dividend-income`, then `FG_DIVIDEND_MONTHLY_INCOME`,
 then the ledger's three closed calendar months. The ledger path uses only the
 configured `taxable_margin` account and USD `DIVIDEND` rows. The current partial
