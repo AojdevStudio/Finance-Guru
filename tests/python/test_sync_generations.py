@@ -140,6 +140,9 @@ def test_reader_sees_complete_generation_during_sync(generation_store):
 
     def fetch_positions(*, account_id, **kwargs):
         if account_id == "acct-second":
+            with sqlite3.connect(database, timeout=0) as writer:
+                writer.execute("BEGIN IMMEDIATE")
+                writer.rollback()
             observations.append(_snapshot(database))
         return positions
 
