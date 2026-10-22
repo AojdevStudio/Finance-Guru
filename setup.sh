@@ -175,6 +175,7 @@ check_dependency() {
       local python_version
       if ! python_version=$(uv run --no-project --python '>=3.12' --no-python-downloads python --version 2>&1); then
         printf "  ${RED}[MISSING]${NC} Python >= 3.12 through uv\n"
+        print_install_hint "$cmd"
         return 1
       fi
       found_version=$(printf '%s' "$python_version" | grep -oE '[0-9]+\.[0-9]+' | head -1)
@@ -207,8 +208,12 @@ check_all_deps() {
   FAILED_DEPS=()
   FAILED_NAMES=()
 
-  check_dependency "python3" "Python" "3.12" || { missing=$((missing + 1)); FAILED_DEPS+=("python3"); FAILED_NAMES+=("Python"); }
-  check_dependency "uv" "uv" "" || { missing=$((missing + 1)); FAILED_DEPS+=("uv"); FAILED_NAMES+=("uv"); }
+  # Python is found through uv, so a missing uv says nothing about Python.
+  if check_dependency "uv" "uv" ""; then
+    check_dependency "python3" "Python" "3.12" || { missing=$((missing + 1)); FAILED_DEPS+=("python3"); FAILED_NAMES+=("Python"); }
+  else
+    missing=$((missing + 1)); FAILED_DEPS+=("uv"); FAILED_NAMES+=("uv")
+  fi
   check_dependency "bun" "Bun" "" || { missing=$((missing + 1)); FAILED_DEPS+=("bun"); FAILED_NAMES+=("Bun"); }
 
   if [ "$missing" -gt 0 ]; then
@@ -535,7 +540,7 @@ print_summary() {
   printf "  1. Edit .env to add your API keys (optional)\n"
   printf "     yfinance works without API keys for basic market data.\n"
   printf "\n"
-  printf "  2. Run the onboarding wizard:\n"
+  printf "  2. Set FIN_GURU_DATA_ROOT to your instance, or run from that instance.\n"
   printf "     uv run python -m src.cli.onboarding_wizard\n"
   printf "\n"
   printf "  3. After onboarding: claude --agent fg-finance-orchestrator\n"

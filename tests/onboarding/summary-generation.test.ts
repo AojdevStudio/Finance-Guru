@@ -48,7 +48,7 @@ test("onboarding entry point runs the real wizard help", async () => {
 
 test("broker selection and summary use valid section and profile types", async () => {
   const child = Bun.spawn([
-    "bunx", "--package", "typescript", "tsc", "--noEmit", "--target", "esnext",
+    "bunx", "tsc", "--noEmit", "--target", "esnext",
     "--module", "preserve", "--moduleResolution", "bundler", "--types", "bun", "--skipLibCheck",
     "scripts/onboarding/sections/broker-selection.ts", "scripts/onboarding/sections/summary.ts",
     "scripts/onboarding/sections/investment-portfolio.ts",

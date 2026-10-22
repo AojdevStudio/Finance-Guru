@@ -198,8 +198,6 @@ class TestEnvSetup:
             result = subprocess.run(
                 [
                     "bunx",
-                    "--package",
-                    "typescript",
                     "tsc",
                     "--noEmit",
                     "--target",
