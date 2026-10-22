@@ -106,8 +106,10 @@ monthly_interest_cost × 12
 
 #### Dividend Income
 
-Sum `type = 'DIVIDEND'` rows in `transactions` for the trailing month. See the
-`dividend-tracking` skill; do not recompute its aggregation differently here.
+Quote `monthly_dividend_income` from `margin_metrics_cli` with its `dividend_income`
+source and calendar window. The ledger fallback uses the routed taxable-margin
+account's three closed months of USD dividends. Do not recompute the aggregation.
+When the value is null, report `dividend_income.unavailable_reason`.
 
 #### Coverage Ratio
 
