@@ -20,7 +20,7 @@ def margin_ledger(tmp_path, monkeypatch):
         def now(cls, tz=None):
             return NOW if tz is None else NOW.astimezone(tz)
 
-    monkeypatch.setattr(mm, "datetime", FixedDatetime, raising=False)
+    monkeypatch.setattr(mm, "datetime", FixedDatetime)
     monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'family_office.db'}")
     (tmp_path / "snaptrade-accounts.yaml").write_text(
@@ -57,8 +57,16 @@ def margin_ledger(tmp_path, monkeypatch):
         "2026-01-02T12:05:00.000001Z",
         "2026-01-02T12:00:00",
         "not-a-timestamp",
+        "2026-01-01T13:00:00+02:00",
     ],
-    ids=["old-ledger", "past-age-limit", "future", "missing-timezone", "malformed"],
+    ids=[
+        "old-ledger",
+        "past-age-limit",
+        "future",
+        "missing-timezone",
+        "malformed",
+        "stale-in-utc",
+    ],
 )
 def test_margin_ledger_refuses_stale_or_unverifiable_generation(
     margin_ledger, synced_at
@@ -66,10 +74,8 @@ def test_margin_ledger_refuses_stale_or_unverifiable_generation(
     with sqlite3.connect(margin_ledger) as connection:
         connection.execute("UPDATE balances SET synced_at = ?", (synced_at,))
 
-    with pytest.raises(ValueError, match="sync-first refresh") as error:
+    with pytest.raises(mm.StaleBalanceSnapshotError, match="sync-first refresh"):
         mm.read_db_balances()
-
-    assert type(error.value).__name__ == "StaleBalanceSnapshotError"
 
 
 @pytest.mark.parametrize(
@@ -77,7 +83,7 @@ def test_margin_ledger_refuses_stale_or_unverifiable_generation(
     [
         "2026-01-01T12:00:00Z",
         "2026-01-02T12:05:00Z",
-        "2026-01-02T07:00:00-05:00",
+        "2026-01-01T07:00:00-05:00",
     ],
     ids=["age-limit", "clock-skew-limit", "equivalent-offset"],
 )
@@ -95,7 +101,7 @@ def test_margin_ledger_accepts_fresh_generation_and_boundary(margin_ledger, sync
 def test_margin_cli_refuses_wholly_stale_ledger(margin_ledger, monkeypatch, capsys):
     monkeypatch.setenv("FG_MARGIN_JUMP_ALERT_THRESHOLD", "5000")
 
-    with pytest.raises(ValueError, match="sync-first refresh"):
+    with pytest.raises(mm.StaleBalanceSnapshotError, match="sync-first refresh"):
         mm.main(["--annual-rate", "0.12"])
 
     assert capsys.readouterr().out == ""

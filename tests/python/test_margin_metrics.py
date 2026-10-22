@@ -395,6 +395,7 @@ def test_read_db_balances_rejects_ambiguous_taxable_margin_accounts(
 
 
 def test_read_db_balances_rejects_incomplete_latest_generation(tmp_path, monkeypatch):
+    freeze_balance_clock(monkeypatch, datetime(2026, 1, 4, tzinfo=UTC))
     write_account_config(
         tmp_path / "snaptrade-accounts.yaml",
         [
