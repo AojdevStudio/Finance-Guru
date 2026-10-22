@@ -158,7 +158,7 @@ Words used below:
 **The margin-rate check.** [Fidelity](https://www.fidelity.com/) charges a margin rate that depends on the size of your debt. The `margin-rate-check` workflow catches a rate in your `.env` that no longer matches:
 
 1. `refresh` runs the engine's SnapTrade positions sync in your instance, so the margin debt in `family_office.db` is current.
-2. `check` reads [Fidelity](https://www.fidelity.com/)'s published rate table, picks the rate for that debt, and compares it with `FG_MARGIN_INTEREST_RATE_DECIMAL` in your instance `.env`. A mismatch fails the run. The check never edits your `.env`.
+2. `check` reads [Fidelity](https://www.fidelity.com/)'s published rate table, picks the rate for your `taxable_margin` account's debt, and compares it with `FG_MARGIN_INTEREST_RATE_DECIMAL` in your instance `.env`. A mismatch fails the run. The check never edits your `.env`.
 
 It runs Mondays at 9:15 in the machine's local time zone. On a machine set to US Central time, that is after SnapTrade's daily holdings sync, about 8:45 AM CT.
 
@@ -213,7 +213,7 @@ curl -s http://127.0.0.1:9093/health
 `/health` lists each schedule with its `nextRun` in UTC. Check that the margin-rate check appears there. Stop the service with `swamp serve daemon disable`.
 
 - The service loads the behavior code once, at start. After you pull changes under `automations/swamp/extensions/`, run the `daemon enable` command again to restart it. Until then, scheduled runs use the old code. Workflow and schedule edits take effect without a restart.
-- swamp installs one serve service per user. If you already run `swamp serve` for another repository, add this workflow there instead.
+- swamp installs one serve service per user, so `daemon enable` here replaces a serve service you already run for another repository. The check needs this layout: the workflow, the behavior, and your local definition all in `automations/swamp/` inside a Finance Guru checkout, because the behavior finds the engine two folders up.
 - On Linux, a user unit stops when you log out unless lingering is on: `loginctl enable-linger "$USER"`.
 - A schedule missed while the machine was asleep or off does not run later. Run the workflow by hand when that happens.
 

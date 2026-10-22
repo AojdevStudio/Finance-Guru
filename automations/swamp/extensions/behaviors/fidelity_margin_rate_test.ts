@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from "jsr:@std/assert@1.0.13";
-import { configuredRate, parseRateTable, tierRateFor, usableDebt } from "./fidelity_margin_rate.ts";
+import { configuredRate, marginAccountId, parseRateTable, tierRateFor, usableDebt } from "./fidelity_margin_rate.ts";
 
 const html = Deno.readTextFileSync(new URL("./testdata/fidelity-rates-2026-10-22.html", import.meta.url));
 
@@ -45,4 +45,26 @@ Deno.test("a balances row older than the limit fails instead of picking a tier",
 
 Deno.test("an empty ledger fails", () => {
   assertThrows(() => usableDebt(undefined, now, 36), Error, "No balances row");
+});
+
+Deno.test("a debit with cents at a tier's top stays in that tier", () => {
+  const { tiers } = parseRateTable(html);
+  assertEquals(tierRateFor(tiers, 99999.5), 0.10625);
+  assertEquals(tierRateFor(tiers, 100000), 0.10575);
+});
+
+const routing = (accounts: string) => `generated_at: x\naccounts:\n${accounts}`;
+const account = (id: string, role: string, enabled = true) =>
+  `  - snaptrade_account_id: ${id}\n    role: ${role}\n    enabled: ${enabled}\n`;
+
+Deno.test("the check reads the taxable_margin account, not another account", () => {
+  const yaml = routing(account("ira-1", "retirement") + account("margin-1", "taxable_margin"));
+  assertEquals(marginAccountId(yaml), "margin-1");
+});
+
+Deno.test("zero or two enabled margin accounts fail", () => {
+  assertThrows(() => marginAccountId(routing(account("ira-1", "retirement"))), Error, "0 enabled");
+  const two = routing(account("m-1", "taxable_margin") + account("m-2", "taxable_margin"));
+  assertThrows(() => marginAccountId(two), Error, "2 enabled");
+  assertEquals(marginAccountId(routing(account("m-1", "taxable_margin") + account("m-2", "taxable_margin", false))), "m-1");
 });

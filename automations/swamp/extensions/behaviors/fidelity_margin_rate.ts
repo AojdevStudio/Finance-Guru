@@ -6,7 +6,7 @@
  *   instance, so the ledger's margin debt is current. It skips the bank and
  *   card feeds, which the rate check does not need.
  * - `check` reads Fidelity's published rate table, picks the tier for the
- *   margin debt in `family_office.db`, and compares it with
+ *   margin account's debt in `family_office.db`, and compares it with
  *   `FG_MARGIN_INTEREST_RATE_DECIMAL` in the instance `.env`. It writes the
  *   comparison, then fails the run when the two differ or an input is missing
  *   or stale, so a drift is a red run, never a quiet record.
@@ -19,6 +19,8 @@
  * @module
  */
 import { z } from "npm:zod@4.6.5";
+import { resolve } from "jsr:@std/path@1.1.2";
+import { parse as parseYaml } from "jsr:@std/yaml@1.0.9";
 
 const RATES_URL = "https://www.fidelity.com/trading/margin-loans/margin-rates";
 // Fidelity's CDN returns Access Denied to clients without browser headers.
@@ -88,7 +90,9 @@ export function parseRateTable(html: string): { tiers: Tier[]; baseRate: number;
 }
 
 export function tierRateFor(tiers: Tier[], debt: number): number {
-  const tier = tiers.find((t) => debt >= t.min && debt <= t.max);
+  // Fidelity prints whole-dollar bounds ($50,000–$99,999), so a debit of
+  // $99,999.50 belongs to that tier: the upper bound is exclusive at max + 1.
+  const tier = tiers.find((t) => debt >= t.min && debt < t.max + 1);
   if (!tier) throw new Error(`No Fidelity tier covers a debit of $${debt}`);
   return tier.rate;
 }
@@ -103,6 +107,22 @@ export function configuredRate(envText: string): number {
 }
 
 type BalancesRow = { margin_debt: number | null; synced_at: string };
+
+const ACCOUNT_ID_RE = /^[A-Za-z0-9-]+$/;
+
+/** The one enabled `taxable_margin` account in `snaptrade-accounts.yaml`, as the engine routes it. */
+export function marginAccountId(yamlText: string): string {
+  const doc = parseYaml(yamlText) as { accounts?: { role?: string; enabled?: boolean; snaptrade_account_id?: string }[] };
+  const matches = (doc?.accounts ?? []).filter((a) => a.enabled === true && a.role === "taxable_margin");
+  if (matches.length !== 1) {
+    throw new Error(
+      `snaptrade-accounts.yaml has ${matches.length} enabled taxable_margin accounts; exactly one is required`,
+    );
+  }
+  const id = matches[0].snaptrade_account_id;
+  if (!id || !ACCOUNT_ID_RE.test(id)) throw new Error("The taxable_margin account has no valid snaptrade_account_id");
+  return id;
+}
 
 /** The newest balances row must carry a debt and be younger than `maxAgeHours`. */
 export function usableDebt(
@@ -130,8 +150,8 @@ function instanceDir(ctx: Ctx): string {
   return dir;
 }
 
-async function run(cmd: string, args: string[], cwd?: string): Promise<string> {
-  const out = await new Deno.Command(cmd, { args, cwd, stdout: "piped", stderr: "piped" }).output();
+async function run(cmd: string, args: string[], cwd?: string, env?: Record<string, string>): Promise<string> {
+  const out = await new Deno.Command(cmd, { args, cwd, env, stdout: "piped", stderr: "piped" }).output();
   const text = (b: Uint8Array) => new TextDecoder().decode(b).trim();
   if (!out.success) {
     throw new Error(`${cmd} ${args.join(" ")} failed (exit ${out.code}): ${text(out.stdout)}\n${text(out.stderr)}`);
@@ -139,8 +159,10 @@ async function run(cmd: string, args: string[], cwd?: string): Promise<string> {
   return text(out.stdout);
 }
 
-async function newestBalancesRow(dbPath: string): Promise<BalancesRow | undefined> {
-  const sql = "select margin_debt, synced_at from balances order by synced_at desc limit 1;";
+async function newestBalancesRow(dbPath: string, accountId: string): Promise<BalancesRow | undefined> {
+  // accountId passed ACCOUNT_ID_RE, so it is safe inside the quoted literal.
+  const sql =
+    `select margin_debt, synced_at from balances where account_id = '${accountId}' order by synced_at desc limit 1;`;
   const rows = JSON.parse((await run("sqlite3", ["-json", dbPath, sql])) || "[]") as BalancesRow[];
   return rows[0];
 }
@@ -169,11 +191,13 @@ export const behavior = {
       arguments: z.object({}),
       execute: async (_args: Record<string, never>, context: Ctx) => {
         const dir = instanceDir(context);
-        const engineDir = new URL("../..", `file://${context.repoDir}/`).pathname;
+        const engineDir = resolve(context.repoDir, "../..");
         const output = await run(
           context.globalArgs.uvPath,
           ["run", "--project", engineDir, "python", "-m", "src.integrations.snaptrade.sync_db"],
           dir,
+          // The engine prefers FIN_GURU_DATA_ROOT over its working directory, so pin it.
+          { FIN_GURU_DATA_ROOT: dir },
         );
         const handle = await context.writeResource("refresh", "ledger", {
           instanceDir: dir,
@@ -193,7 +217,8 @@ export const behavior = {
         const res = await fetch(RATES_URL, { headers: BROWSER_HEADERS });
         if (!res.ok) throw new Error(`GET ${RATES_URL} returned ${res.status}`);
         const table = parseRateTable(await res.text());
-        const row = await newestBalancesRow(`${dir}/family_office.db`);
+        const accountId = marginAccountId(await Deno.readTextFile(`${dir}/snaptrade-accounts.yaml`));
+        const row = await newestBalancesRow(`${dir}/family_office.db`, accountId);
         const { debt, syncedAt } = usableDebt(row, new Date(), args.maxDebtAgeHours);
         const tierRate = tierRateFor(table.tiers, debt);
         const configured = configuredRate(await Deno.readTextFile(`${dir}/.env`));
