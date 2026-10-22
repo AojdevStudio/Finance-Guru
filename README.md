@@ -147,24 +147,87 @@ Local-first does not mean network-free. Market data, brokerage, and LLM integrat
 
 ### Scheduled checks with swamp
 
-[swamp](https://github.com/swamp-club/swamp) (Swamp Club) runs Finance Guru's scheduled checks. A swamp _behavior_ is a typed piece of code with methods. A swamp _workflow_ is a YAML file that runs those methods in order and records every result as versioned data. The engine computes the numbers, and swamp checks them against outside sources on a schedule.
+[swamp](https://github.com/swamp-club/swamp) (Swamp Club) runs Finance Guru's scheduled checks. The engine computes the numbers. swamp runs checks on a timer, compares those numbers with outside sources, and keeps a record of every run. Everything lives in this repository under `automations/swamp/`, and swamp's own service runs the schedule, so no other tool is needed.
 
-The checks live in a swamp workspace beside the instance, not in this repository: `~/.swamp/workspaces/family-office`. The examples below assume that workspace exists. The swamp behavior only reads the instance files.
+Words used below:
 
-**Weekly margin-rate check.** The `margin-rate-check` workflow runs the `fidelity-margin-rate` behavior. It reads [Fidelity](https://www.fidelity.com/)'s published margin rate table, picks the rate for the margin debt in `family_office.db`, and compares it with `FG_MARGIN_INTEREST_RATE_DECIMAL` in the instance `.env`. A mismatch fails the run. The rate depends on the size of the debt, so crossing a tier changes it even when Fidelity's base rate stays the same.
+- A _behavior_ is a small TypeScript program with named methods. `fidelity-margin-rate` is one.
+- A _workflow_ is a YAML file that runs behavior methods in order. `margin-rate-check` is one.
+- `swamp serve` is swamp's long-running process. It fires every workflow that has a `trigger.schedule`.
 
-It runs Mondays at 9:15 AM CT, after SnapTrade's daily holdings sync. A T3 scheduled task starts it for now. That task does write: it refreshes the ledger first, and on a drift it updates the two rate settings in the instance `.env`, then reruns the check. It uses the T3 task because `swamp serve`, which runs swamp's own schedules, does not run as a service yet. When it does, the schedule moves into the workflow's `trigger` and the T3 task goes away.
+**The margin-rate check.** [Fidelity](https://www.fidelity.com/) charges a margin rate that depends on the size of your debt. The `margin-rate-check` workflow catches a rate in your `.env` that no longer matches:
 
-Run it and its tests by hand:
+1. `refresh` runs the engine's SnapTrade positions sync in your instance, so the margin debt in `family_office.db` is current.
+2. `check` reads [Fidelity](https://www.fidelity.com/)'s published rate table, picks the rate for that debt, and compares it with `FG_MARGIN_INTEREST_RATE_DECIMAL` in your instance `.env`. A mismatch fails the run. The check never edits your `.env`.
+
+It runs Mondays at 9:15 in the machine's local time zone. On a machine set to US Central time, that is after SnapTrade's daily holdings sync, about 8:45 AM CT.
+
+#### What you need
+
+- A Finance Guru checkout and an instance with a Fidelity margin account routed as `taxable_margin` in `snaptrade-accounts.yaml`.
+- `FG_MARGIN_INTEREST_RATE_DECIMAL` set in the instance `.env`.
+- `uv` and `sqlite3` on the machine.
+- The swamp CLI, installed as its [README](https://github.com/swamp-club/swamp) describes, and signed in with `swamp auth login`. Every swamp process, the service included, needs that sign-in to start.
+
+#### Configure the check
+
+Create the behavior definition once. It records your instance path and the full path to `uv`, so it stays on your machine: `automations/swamp/.gitignore` ignores `models/`.
 
 ```bash
-cd ~/.swamp/workspaces/family-office
+cd automations/swamp
+swamp behavior create @aojdevstudio/fidelity-margin-rate fidelity-margin-rate \
+  --global-arg instanceDir=/path/to/your/instance \
+  --global-arg uvPath="$(command -v uv)"
+swamp workflow validate margin-rate-check
+```
+
+The service starts with a minimal `PATH` and without your shell's variables, so give full paths here, not `FIN_GURU_DATA_ROOT`.
+
+#### Run it by hand
+
+```bash
+cd automations/swamp
 swamp workflow run margin-rate-check --json
 swamp data query 'behavior("fidelity-margin-rate") && name == "rate"' --select content --json
+```
+
+The last command prints the newest comparison: tier rate, configured rate, margin debt, and `drift`. To check one rate without syncing first, run `swamp behavior run fidelity-margin-rate check`. It refuses a balances row older than 36 hours.
+
+Run the tests with the Deno that ships with swamp (`swamp doctor extensions --json` prints its path as `denoPath`):
+
+```bash
 ~/.swamp/deno/deno test --allow-read extensions/behaviors/fidelity_margin_rate_test.ts
 ```
 
-**How it relates to the stale-equity guard.** The engine computes margin debt as gross market value minus SnapTrade's account equity. The equity is only as fresh as SnapTrade's last holdings sync ([#259](https://github.com/AojdevStudio/Finance-Guru/issues/259)). The engine now refuses equity over 12 hours old with `StaleAccountEquityError`, and the ledger stores an empty margin debt instead of a wrong one ([#260](https://github.com/AojdevStudio/Finance-Guru/pull/260)). The rate check relies on that guard: it reads the newest balances row, and an empty debt there fails the run. It does not check how old that row is, so refresh the ledger before you run it by hand. The engine guard stops wrong numbers before they exist. The swamp check catches config that has drifted from the broker.
+#### Start the service
+
+swamp installs `swamp serve` as a per-user service: a launchd agent on macOS, a systemd user unit on Linux. The command is marked experimental in swamp's help.
+
+```bash
+cd automations/swamp
+swamp serve daemon enable --user --repo-dir "$PWD" --host 127.0.0.1 --port 9093
+swamp serve daemon status
+curl -s http://127.0.0.1:9093/health
+```
+
+`/health` lists each schedule with its `nextRun` in UTC. Check that the margin-rate check appears there. Stop the service with `swamp serve daemon disable`.
+
+- The service loads the behavior code once, at start. After you pull changes under `automations/swamp/extensions/`, run the `daemon enable` command again to restart it. Until then, scheduled runs use the old code. Workflow and schedule edits take effect without a restart.
+- swamp installs one serve service per user. If you already run `swamp serve` for another repository, add this workflow there instead.
+- On Linux, a user unit stops when you log out unless lingering is on: `loginctl enable-linger "$USER"`.
+- A schedule missed while the machine was asleep or off does not run later. Run the workflow by hand when that happens.
+
+#### Where results and logs go
+
+- Run history: `swamp workflow history search --json`. A scheduled run shows `"triggerSource": "schedule"`.
+- The latest comparison: the `swamp data query` command above.
+- Why a run failed: `swamp report get @swamp/workflow-summary --workflow margin-rate-check --json`.
+- Service logs: `~/Library/Logs/swamp/serve.stdout.log` and `serve.stderr.log` on macOS, `journalctl --user -u swamp-serve` on Linux.
+- Run data lives in `automations/swamp/.swamp/`, which git ignores.
+
+A failed run notifies no one. Check the history, or point a tool you already use at it.
+
+**How it relates to the stale-equity guard.** The engine computes margin debt as gross market value minus SnapTrade's account equity, and the equity is only as fresh as SnapTrade's last holdings sync ([#259](https://github.com/AojdevStudio/Finance-Guru/issues/259)). The engine refuses equity over 12 hours old with `StaleAccountEquityError`, and the ledger stores an empty margin debt instead of a wrong one ([#260](https://github.com/AojdevStudio/Finance-Guru/pull/260)). The rate check fails on an empty debt and on a balances row older than 36 hours, so stale data never picks a rate tier. The engine guard stops wrong numbers before they exist. The swamp check catches settings that have drifted from the broker.
 
 ## If you are an agent
 
