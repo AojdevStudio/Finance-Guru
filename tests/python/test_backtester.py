@@ -14,7 +14,6 @@ RUNNING TESTS:
 from datetime import date
 
 import pytest
-from pydantic import ValidationError
 
 from src.models.backtest_inputs import BacktestConfig, TradeSignal
 from src.strategies.backtester import Backtester
@@ -245,7 +244,6 @@ class TestTransactionCosts:
 
 
 class TestWholeShareOrders:
-    @pytest.mark.xfail(strict=True, raises=ValidationError, reason="Issue 289")
     @pytest.mark.parametrize("commission", [0.0, 1.0])
     def test_rounded_zero_open_preserves_state(self, commission):
         config = BacktestConfig(
@@ -265,7 +263,6 @@ class TestWholeShareOrders:
         assert bt.current_position is None
         assert bt.trades == []
 
-    @pytest.mark.xfail(strict=True, raises=ValidationError, reason="Issue 289")
     @pytest.mark.parametrize("last_action", ["SELL", "HOLD"])
     def test_rounded_zero_backtest_skips_without_costs(self, last_action):
         config = BacktestConfig(
