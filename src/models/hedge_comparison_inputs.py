@@ -201,7 +201,7 @@ class ComparisonRow(BaseModel):
     put: PutResult = Field(..., description="Protective put result")
 
     winner: Literal["sqqq", "put", "neither"] = Field(
-        ..., description="Which strategy performed better in this scenario"
+        ..., description="Strategy with the higher positive return per dollar invested"
     )
 
 
