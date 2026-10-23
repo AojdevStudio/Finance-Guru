@@ -6,7 +6,8 @@ import hashlib
 import json
 import re
 from collections.abc import Callable, Mapping
-from datetime import UTC, date, datetime
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, TypeVar, cast
 
 from src.integrations.snaptrade.models import (
@@ -18,6 +19,18 @@ from src.integrations.snaptrade.models import (
 T = TypeVar("T")
 
 OPTION_CONTRACT_MULTIPLIER = 100
+# SnapTrade syncs equity about once a day, so an older read can miss deposits.
+EQUITY_MAX_AGE = timedelta(hours=12)
+# A sync time further ahead than clock drift explains is not trustworthy.
+EQUITY_CLOCK_SKEW = timedelta(minutes=5)
+
+
+@dataclass(frozen=True)
+class AccountEquity:
+    """Net account equity and the holdings sync that produced it."""
+
+    amount: float | None
+    synced_at: datetime | None
 
 
 class SnapTradeAPIError(RuntimeError):
@@ -49,6 +62,34 @@ class MissingAccountEquityError(SnapTradeDataError):
 
     def __init__(self) -> None:
         super().__init__("SnapTrade account equity is missing")
+
+
+class StaleAccountEquityError(SnapTradeDataError):
+    """Margin debt cannot be derived from equity with an untrustworthy sync time."""
+
+    def __init__(self, synced_at: datetime | None, now: datetime) -> None:
+        self.synced_at = synced_at
+        fix = (
+            "wait for SnapTrade's daily holdings sync (about 13:40 UTC) or use "
+            "the broker's net debit"
+        )
+        if synced_at is None:
+            super().__init__(
+                f"SnapTrade account equity has no holdings sync time; {fix}"
+            )
+            return
+        age_hours = (now - synced_at).total_seconds() / 3600
+        if age_hours < 0:
+            super().__init__(
+                f"SnapTrade account equity sync time {synced_at.isoformat()} is "
+                f"{-age_hours:.1f}h in the future; {fix}"
+            )
+            return
+        super().__init__(
+            f"SnapTrade account equity was last synced {synced_at.isoformat()} "
+            f"({age_hours:.1f}h ago, limit {EQUITY_MAX_AGE.total_seconds() / 3600:.0f}h); "
+            f"{fix}"
+        )
 
 
 class MissingPositionMarkError(SnapTradeDataError):
@@ -202,8 +243,8 @@ class SnapTradeClientWrapper:
         )
         return _activity_page(_response_body(response))
 
-    def get_account_equity(self, account_id: str) -> float | None:
-        """Return net account equity (total value) from account details."""
+    def get_account_equity(self, account_id: str) -> AccountEquity:
+        """Return net account equity (total value) and its holdings sync time."""
         response = self._call(
             lambda: self._client.account_information.get_user_account_details(
                 account_id=account_id,
@@ -212,9 +253,14 @@ class SnapTradeClientWrapper:
             )
         )
         body = _response_body(response)
-        if isinstance(body, Mapping):
-            return _to_float(_nested_first(body, ("balance", "total", "amount")))
-        return None
+        if not isinstance(body, Mapping):
+            return AccountEquity(amount=None, synced_at=None)
+        return AccountEquity(
+            amount=_to_float(_nested_first(body, ("balance", "total", "amount"))),
+            synced_at=_to_aware_datetime(
+                _nested_first(body, ("sync_status", "holdings", "last_successful_sync"))
+            ),
+        )
 
     def probe_account(self, account_id: str) -> dict[str, Any]:
         """Return minimal balance/position diagnostics for Phase 0 proof-of-life."""
@@ -604,7 +650,8 @@ def _occ_to_fidelity_symbol(occ: str | None) -> str | None:
 def derive_margin_debt(
     stocks: list[dict[str, Any]],
     options: list[dict[str, Any]],
-    equity: float | None,
+    equity: AccountEquity,
+    now: datetime,
 ) -> tuple[float, float]:
     """Derive margin debt and gross market value from holdings and net equity.
 
@@ -614,16 +661,30 @@ def derive_margin_debt(
     reported net debit). Options use the x100 contract multiplier. margin_debt is
     a loan, so it is clamped to >= 0 (a net-cash account owes nothing). Missing
     equity, quantities, or marks fail closed because they make the result partial.
+    Equity whose holdings sync is missing, older than EQUITY_MAX_AGE, or in the
+    future fails closed too: the marks are current, so stale equity skews the
+    difference.
     """
-    if equity is None:
+    if equity.amount is None:
         raise MissingAccountEquityError
+    if equity.synced_at is None or not (
+        -EQUITY_CLOCK_SKEW <= now - equity.synced_at <= EQUITY_MAX_AGE
+    ):
+        raise StaleAccountEquityError(equity.synced_at, now)
+    gross_mv = gross_market_value(stocks, options)
+    return max(round(gross_mv - equity.amount, 2), 0.0), gross_mv
+
+
+def gross_market_value(
+    stocks: list[dict[str, Any]], options: list[dict[str, Any]]
+) -> float:
+    """Sum position marks, with options at the x100 contract multiplier."""
     stock_mv = sum(_position_market_value(position, 1) for position in stocks)
     option_mv = sum(
         _position_market_value(position, OPTION_CONTRACT_MULTIPLIER)
         for position in options
     )
-    gross_mv = round(stock_mv + option_mv, 2)
-    return max(round(gross_mv - equity, 2), 0.0), gross_mv
+    return round(stock_mv + option_mv, 2)
 
 
 def _position_market_value(position: Mapping[str, Any], multiplier: int) -> float:
@@ -689,6 +750,16 @@ def _currency_code(raw: Any) -> str | None:
         )
         return str(value) if value else None
     return None
+
+
+def _to_aware_datetime(value: Any) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else None
 
 
 def _to_float(value: Any) -> float | None:

@@ -45,10 +45,17 @@ Created: 2026-01-09
 """
 
 import argparse
+import json
 import sys
+from datetime import date
 
-from src.analysis.itc_risk import HIGH_RISK_FLOOR, LOW_RISK_CEILING, ITCRiskCalculator
-from src.models.itc_risk_inputs import ITCRiskResponse
+from src.analysis.itc_risk import (
+    HIGH_RISK_FLOOR,
+    LOW_RISK_CEILING,
+    ITCRiskCalculator,
+    evaluate_var_compliance,
+)
+from src.models.itc_risk_inputs import ITCComplianceInput, ITCRiskResponse
 
 
 def format_output_human(result: ITCRiskResponse, full_table: bool = False) -> str:  # noqa: C901
@@ -322,7 +329,43 @@ For unsupported tickers, use risk_metrics_cli.py instead.
         help="Skip current price enrichment from yfinance (faster, but no price context)",
     )
 
+    parser.add_argument(
+        "--compliance-input",
+        help="Evaluate supplied ITCComplianceInput JSON offline, without an API key",
+    )
+
     args = parser.parse_args()
+
+    if args.compliance_input is not None:
+        if args.tickers or args.list_supported:
+            parser.error("--compliance-input cannot be combined with ticker queries")
+        try:
+            inputs = ITCComplianceInput.model_validate_json(args.compliance_input)
+        except ValueError as validation_error:
+            parser.error(str(validation_error))
+        decision = evaluate_var_compliance(inputs)
+        disclaimer = (
+            "Educational purposes only. Not investment advice. Consult licensed "
+            "professionals. Investing can lose principal. This is a proposed "
+            "decision based on supplied inputs, not an executed trade."
+        )
+        source = "Supplied inputs and fin-guru-compliance-review/itc-divergence.md"
+        if args.output == "json":
+            print(
+                json.dumps(
+                    {
+                        **decision.model_dump(),
+                        "date": date.today().isoformat(),
+                        "source": source,
+                        "disclaimer": disclaimer,
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            print(f"{decision.rule}: {decision.action}\n{decision.reason}")
+            print(f"Date: {date.today().isoformat()}\nSource: {source}\n{disclaimer}")
+        return
 
     if args.list_supported:
         list_supported_tickers(args.list_supported)

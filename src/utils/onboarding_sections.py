@@ -186,12 +186,6 @@ def run_investments_section(state: OnboardingState) -> OnboardingState:
     if risk_tolerance is None:
         return state
 
-    google_sheets_id: str | None = questionary.text(
-        "Google Sheets portfolio tracker ID (optional, press Enter to skip):"
-    ).ask()
-    if google_sheets_id is not None:
-        google_sheets_id = google_sheets_id.strip() or None
-
     account_number: str | None = questionary.text(
         "Primary account number last 4 digits (optional, press Enter to skip):"
     ).ask()
@@ -205,7 +199,6 @@ def run_investments_section(state: OnboardingState) -> OnboardingState:
         "retirement_value": retirement_value,
         "allocation_strategy": allocation_strategy,
         "risk_tolerance": risk_tolerance,
-        "google_sheets_id": google_sheets_id,
         "account_number": account_number,
     }
 
@@ -597,7 +590,6 @@ def run_env_setup_section(state: OnboardingState) -> OnboardingState:
             "Your name (used in reports and agent communications):"
         ).ask(),
         validator=_validate_name,
-        default="User",
     )
     if user_name_raw is None:
         return state
@@ -642,13 +634,6 @@ def run_env_setup_section(state: OnboardingState) -> OnboardingState:
         if bd_key_raw is not None:
             bd_key = bd_key_raw.strip() or None
 
-    gs_creds_raw: str | None = questionary.text(
-        "Path to Google Sheets credentials JSON (optional, press Enter to skip):"
-    ).ask()
-    gs_creds: str | None = None
-    if gs_creds_raw is not None:
-        gs_creds = gs_creds_raw.strip() or None
-
     state.data[SectionName.ENV_SETUP.value] = {
         "user_name": user_name,
         "language": language,
@@ -656,7 +641,6 @@ def run_env_setup_section(state: OnboardingState) -> OnboardingState:
         "alphavantage_key": av_key,
         "has_brightdata": has_bd,
         "brightdata_key": bd_key,
-        "google_sheets_credentials": gs_creds,
     }
 
     state.mark_complete(SectionName.ENV_SETUP, SectionName.SUMMARY)
@@ -837,9 +821,6 @@ def _display_full_summary(state: OnboardingState) -> None:  # noqa: C901
         )
         print(
             f"    BrightData:      {'Configured' if env.get('brightdata_key') else 'Not set'}"
-        )
-        print(
-            f"    Google Sheets:   {'Configured' if env.get('google_sheets_credentials') else 'Not set'}"
         )
         print()
 

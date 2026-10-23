@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,7 @@ from src.integrations.snaptrade.models import (
 )
 
 OPTION_CONTRACT_MULTIPLIER = 100
+HOLDINGS_SYNCED_AT = datetime.now(UTC) - timedelta(hours=1)
 
 _SCHD_DIVIDEND = {
     "id": "a1",
@@ -142,10 +144,15 @@ class FakeAccountInformation:
         )
 
     def get_user_account_details(self, account_id: str, user_id: str, user_secret: str):
-        """Return account details with net equity total."""
+        """Return account details with net equity total and its sync time."""
         assert account_id == "acct-1"
         return FakeResponse(
-            {"balance": {"total": {"amount": 1000.0, "currency": "USD"}}}
+            {
+                "balance": {"total": {"amount": 1000.0, "currency": "USD"}},
+                "sync_status": {
+                    "holdings": {"last_successful_sync": HOLDINGS_SYNCED_AT.isoformat()}
+                },
+            }
         )
 
     def get_account_activities(
@@ -419,6 +426,8 @@ def test_balances_command_derives_margin_debt(
     assert bal["settled_cash"] == 100.5
     assert bal["gross_market_value"] == 3036.5
     assert bal["account_equity"] == 1000.0
+    assert bal["equity_synced_at"] == HOLDINGS_SYNCED_AT.isoformat()
+    assert bal["equity_stale"] is False
     assert bal["margin_debt"] == 2036.5
 
 
@@ -479,25 +488,29 @@ def test_occ_to_fidelity_symbol_conversion():
 def test_derive_margin_debt_math():
     """Margin debt = gross long MV (options x100) minus net equity."""
     from src.integrations.snaptrade.client import (
+        AccountEquity,
         MissingAccountEquityError,
         derive_margin_debt,
     )
 
+    def equity(amount: float | None) -> AccountEquity:
+        return AccountEquity(amount=amount, synced_at=HOLDINGS_SYNCED_AT)
+
+    now = HOLDINGS_SYNCED_AT + timedelta(hours=1)
     stocks = [{"price": 100, "quantity": 10}]
     options = [{"price": 2.0, "quantity": 3}]
     expected_gross = 100 * 10 + 2.0 * 3 * OPTION_CONTRACT_MULTIPLIER
-    equity = 1200.0
-    debt, gross = derive_margin_debt(stocks, options, equity=equity)
+    debt, gross = derive_margin_debt(stocks, options, equity(1200.0), now=now)
     assert gross == expected_gross
-    assert debt == expected_gross - equity
+    assert debt == expected_gross - 1200.0
     with pytest.raises(MissingAccountEquityError):
-        derive_margin_debt(stocks, options, equity=None)
-    debt3, _ = derive_margin_debt(stocks, options, equity=2000.0)
+        derive_margin_debt(stocks, options, equity(None), now=now)
+    debt3, _ = derive_margin_debt(stocks, options, equity(2000.0), now=now)
     assert debt3 == 0.0
     # settled cash rides inside the SPAXX position, so a cash balance does NOT
     # understate the loan: securities 1000 + SPAXX 100, equity 800 -> loan 300
     with_spaxx = [{"price": 100, "quantity": 10}, {"price": 1.0, "quantity": 100}]
-    debt4, gross4 = derive_margin_debt(with_spaxx, [], equity=800.0)
+    debt4, gross4 = derive_margin_debt(with_spaxx, [], equity(800.0), now=now)
     assert gross4 == 1100.0
     assert debt4 == 300.0
 

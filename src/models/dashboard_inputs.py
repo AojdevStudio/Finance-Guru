@@ -120,7 +120,8 @@ class HoldingInput(BaseModel):
     }
 
 
-# Pydantic documents these computed-field suppressions for mypy issue 1362.
+# PortfolioSnapshotInput and AnalysisResultsInput need computed-field suppressions.
+# Pydantic tracks the mypy limitation at https://github.com/python/mypy/issues/1362.
 class PortfolioSnapshotInput(BaseModel):
     """Complete portfolio snapshot from Fidelity CSV.
 
