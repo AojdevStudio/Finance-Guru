@@ -159,14 +159,14 @@ def _get_prices_polygon(symbols: list[str]) -> dict[str, PriceData]:
                 session_date=_quote_session_date(data.get("t"), "America/New_York"),
             )
 
-        except requests.exceptions.RequestException as e:
-            print(f"⚠️  Network error fetching {symbol} from Finnhub: {e}")
+        except requests.exceptions.RequestException:
+            print(f"⚠️  Network error fetching {symbol} from Finnhub")
             print(f"   Falling back to yfinance for {symbol}")
             fallback = _get_prices_yfinance([symbol])
             if fallback:
                 results.update(fallback)
-        except Exception as e:
-            print(f"⚠️  Error fetching {symbol} from Finnhub: {e}")
+        except Exception:
+            print(f"⚠️  Error fetching {symbol} from Finnhub")
             print(f"   Falling back to yfinance for {symbol}")
             fallback = _get_prices_yfinance([symbol])
             if fallback:
