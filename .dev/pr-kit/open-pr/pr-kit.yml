@@ -1,0 +1,31 @@
+name: pr-kit
+
+# pull_request_target runs this workflow, and the checker it calls, from the base branch.
+# Under pull_request a PR could edit check.ts or this file and pass its own check.
+# So this job checks out the base SHA and reads the PR only through the event payload.
+# Never check out or run the PR's code here.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  body:
+    name: PR body contract
+    # Fork and Dependabot PRs skip this check, so they never run on our runners.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: __RUNS_ON__
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        env:
+          HOME: ${{ runner.temp }}/setup-bun
+      - run: bun .claude/skills/open-pr/check.ts --event "$GITHUB_EVENT_PATH"

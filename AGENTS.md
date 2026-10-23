@@ -30,7 +30,7 @@ Skills live in `.claude/skills/<name>/SKILL.md`. Route on the `description` in e
 
 ### Codex instance skill discovery
 
-A scaffolded checkout-mode instance holds `.agents` and `.claude` symlinks to the engine's single `.claude` tree. Codex started from an instance discovers skills under `./.agents/skills`. Read the selected `SKILL.md` in full. Never copy skill content into the instance or maintain a second harness-specific skill tree. A plugin-mode instance omits both symlinks because the installed plugin is the source of agents, skills, and hooks.
+A scaffolded checkout-mode instance owns its `.claude` runtime directory and settings. Its finance skills and agents link to the engine's single `.claude` tree. Its `.agents` symlink points at that local runtime view. Codex started from an instance discovers skills under `./.agents/skills`. Read the selected `SKILL.md` in full. Never copy skill content into the instance or maintain a second harness-specific skill tree. A plugin-mode instance omits discovery links because the installed plugin is the source of agents, skills, and hooks. Repository developer tools and settings stay outside both instance modes.
 
 ## Code
 
@@ -68,3 +68,11 @@ The startup script already runs `uv sync --dev` and `bun install`. `uv` lives at
 ## Documentation
 
 The [documentation hub](docs/index.md) covers setup, the CLI reference, live-sync credentials, runbooks, and troubleshooting. [Contributing](docs/CONTRIBUTING.md) states the accepted surfaces and the privacy rules every push must pass. The [changelog](CHANGELOG.md) carries every release.
+
+<!-- pr-kit:start -->
+## Pull requests
+
+- Open every PR with `.dev/pr-kit/open-pr/SKILL.md` and land it with `.dev/pr-kit/land-pr/SKILL.md`. Read the full skill before use.
+- The PR body has five fixed sections: Problem, Change, Proof, Review, Merge danger. Merge danger names the door and the blast radius.
+- The open-pr gate and the `pr-kit` CI check refuse a body that breaks the contract. Fix the body. Never route around either.
+<!-- pr-kit:end -->

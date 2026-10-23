@@ -7,7 +7,8 @@ An installed Finance Guru plugin is the source of truth for agents, skills, and
 hooks, so plugin-mode instances omit ``.claude`` and ``.agents`` symlinks. They
 get a real ``.claude/settings.json`` that makes the plugin's orchestrator the
 main agent in that instance only.
-Checkout-mode instances link both paths to the checkout's ``.claude`` tree.
+Checkout-mode instances share finance assets through an instance-owned runtime
+view and settings. Repository developer settings stay in the checkout.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -22,6 +24,11 @@ from pathlib import Path
 from typing import Literal
 
 from src.config import InstancePaths
+from src.config.instance_instructions import (
+    FINANCE_RULES,
+    migrate_generated_instructions,
+    product_instructions,
+)
 
 GITIGNORE = """.env
 .DS_Store
@@ -65,6 +72,7 @@ session_context: {}
 """
 PLUGIN_AGENT = "finance-guru:fg-finance-orchestrator"
 CHECKOUT_DISCOVERY_MARKER = "`.agents` symlink points to"
+CHECKOUT_RUNTIME_MARKER = ".finance-guru-checkout"
 SCAFFOLD_GIT_NAME = "Finance Guru"
 SCAFFOLD_GIT_EMAIL = "finance-guru@example.invalid"
 
@@ -78,6 +86,162 @@ class PlanStep:
 
     target: Path
     action: StepAction
+
+
+@dataclass(frozen=True)
+class CheckoutRuntime:
+    """Product assets and settings declared by the finance hook manifest."""
+
+    links: dict[Path, Path]
+    settings: str
+
+
+def _checkout_runtime(repo: Path) -> CheckoutRuntime:
+    links = {Path(name): repo / ".claude" / name for name in ("skills", "agents")}
+    hooks = json.loads((repo / "hooks/hooks.json").read_text("utf-8"))["hooks"]
+    prefix = "${CLAUDE_PLUGIN_ROOT}/"
+    for groups in hooks.values():
+        for group in groups:
+            for hook in group["hooks"]:
+                argv = [hook["command"], *hook.pop("args", [])]
+                for arg in argv:
+                    if arg.startswith(prefix + ".claude/hooks/"):
+                        relative = Path(arg.removeprefix(prefix))
+                        links[relative.relative_to(".claude")] = repo / relative
+                hook["command"] = shlex.join(
+                    arg.replace("${CLAUDE_PLUGIN_ROOT}", str(repo)) for arg in argv
+                )
+    settings = json.dumps({"hooks": hooks}, indent=2) + "\n"
+    return CheckoutRuntime(links=links, settings=settings)
+
+
+def _preflight_asset_links(claude: Path, runtime: CheckoutRuntime) -> None:
+    for relative, source in runtime.links.items():
+        path = claude / relative
+        for parent in path.parents:
+            if parent == claude:
+                break
+            if parent.is_symlink() or (parent.exists() and not parent.is_dir()):
+                raise FileExistsError(f"{parent} is not a runtime directory")
+        if path.is_symlink():
+            if path.resolve() != source.resolve():
+                raise FileExistsError(f"{path} points outside its finance asset")
+        elif path.exists():
+            raise FileExistsError(f"{path} exists and is not a symlink")
+
+
+def _preflight_checkout(root: Path, repo: Path, runtime: CheckoutRuntime) -> None:
+    claude = root / ".claude"
+    agents = root / ".agents"
+    if agents.is_symlink():
+        if agents.resolve() not in {repo / ".claude", claude}:
+            raise FileExistsError(f"{agents} points outside this checkout runtime")
+    elif agents.exists():
+        raise FileExistsError(f"{agents} exists and is not a symlink")
+    if claude.is_symlink():
+        if claude.resolve() != repo / ".claude":
+            raise FileExistsError(f"{claude} points outside this engine checkout")
+        return
+    if not claude.exists():
+        return
+    marker = claude / CHECKOUT_RUNTIME_MARKER
+    if (
+        not claude.is_dir()
+        or marker.is_symlink()
+        or not marker.is_file()
+        or marker.read_text("utf-8") != f"{repo}\n"
+    ):
+        raise FileExistsError(f"{claude} is not a managed checkout runtime")
+    _preflight_asset_links(claude, runtime)
+
+
+def _preflight_runtime(root: Path, repo: Path, runtime: CheckoutRuntime | None) -> None:
+    claude = root / ".claude"
+    agents = root / ".agents"
+    if runtime is None:
+        for path in (claude, agents):
+            if path.is_symlink():
+                raise FileExistsError(
+                    f"{path} is a symlink from a checkout-mode scaffold; "
+                    "remove .claude and .agents to use --plugin"
+                )
+        if agents.exists():
+            raise FileExistsError(
+                f"{agents} retains checkout discovery; move it before using --plugin"
+            )
+        if (claude / CHECKOUT_RUNTIME_MARKER).exists():
+            raise FileExistsError(
+                f"{claude} is a checkout-mode runtime; move .claude and "
+                "remove .agents before using --plugin"
+            )
+    else:
+        _preflight_checkout(root, repo, runtime)
+    if not claude.is_symlink() and (claude / "settings.json").is_symlink():
+        raise FileExistsError(f"{claude / 'settings.json'} is a symlink")
+    _preflight_instructions(root, repo, plugin_mode=runtime is None)
+
+
+def _preflight_instructions(root: Path, repo: Path, *, plugin_mode: bool) -> None:
+    for name, marker in (
+        ("AGENTS.md", str(repo / "AGENTS.md")),
+        ("CLAUDE.md", f"@{repo / 'CLAUDE.md'}"),
+    ):
+        path = root / name
+        if path.is_symlink():
+            raise FileExistsError(f"{path} is a symlink")
+        if not path.exists():
+            continue
+        old = (
+            tuple(
+                _instance_agent_instructions(repo, plugin_mode=mode, legacy=legacy)
+                for mode, legacy in ((False, True), (True, True), (False, False))
+            )
+            if name == "AGENTS.md"
+            else (_instance_instructions(repo, legacy=True),)
+        )
+        current = path.read_text("utf-8")
+        if name == "CLAUDE.md" and migrate_generated_instructions(current, repo):
+            continue
+        inherited = marker in current or (
+            plugin_mode and name == "AGENTS.md" and CHECKOUT_DISCOVERY_MARKER in current
+        )
+        if inherited and current not in old:
+            raise FileExistsError(
+                f"{path} has checkout-mode discovery text and your own edits; "
+                "remove its repository instruction reference before rerunning"
+            )
+
+
+def _create_checkout_runtime(repo: Path, runtime: CheckoutRuntime) -> StepAction:
+    def create(path: Path) -> StepResult:
+        existed = path.exists() or path.is_symlink()
+        replaced = path.is_symlink()
+        if replaced:
+            path.unlink()
+        path.mkdir(exist_ok=True)
+        results = [_write_text(f"{repo}\n")(path / CHECKOUT_RUNTIME_MARKER)]
+        for relative, source in runtime.links.items():
+            destination = path / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            results.append(_create_symlink(source)(destination))
+        results.append(_write_text(runtime.settings)(path / "settings.json"))
+        if not existed:
+            return "created"
+        return "updated" if replaced or "created" in results else "exists"
+
+    return create
+
+
+def _link_checkout_discovery(repo: Path) -> StepAction:
+    def create(path: Path) -> StepResult:
+        source = path.parent / ".claude"
+        if path.is_symlink() and path.resolve() == repo / ".claude":
+            path.unlink()
+            path.symlink_to(source, target_is_directory=True)
+            return "updated"
+        return _create_symlink(source)(path)
+
+    return create
 
 
 def _create_directory(path: Path) -> StepResult:
@@ -114,8 +278,10 @@ def _merge_agent_setting(path: Path) -> StepResult:
     return "updated" if existed else "created"
 
 
-def _replace_checkout_instructions(content: str, checkout_content: str) -> StepAction:
-    """Write plugin-mode AGENTS.md, replacing an unedited checkout-mode scaffold."""
+def _replace_instance_instructions(
+    content: str, previous: tuple[str, ...], repo: Path
+) -> StepAction:
+    """Update recognized generated instructions and preserve other owner text."""
 
     def write(path: Path) -> StepResult:
         if path.is_symlink():
@@ -124,15 +290,18 @@ def _replace_checkout_instructions(content: str, checkout_content: str) -> StepA
             path.write_text(content, encoding="utf-8")
             return "created"
         current = path.read_text(encoding="utf-8")
-        if CHECKOUT_DISCOVERY_MARKER not in current:
-            return "exists"
-        if current != checkout_content:
-            raise FileExistsError(
-                f"{path} has checkout-mode discovery text and your own edits; "
-                "remove its .agents paragraph or delete the file, then rerun --plugin"
-            )
-        path.write_text(content, encoding="utf-8")
-        return "updated"
+        migrated = (
+            migrate_generated_instructions(current, repo)
+            if path.name == "CLAUDE.md"
+            else None
+        )
+        if migrated is not None:
+            path.write_text(migrated, encoding="utf-8")
+            return "updated"
+        if current != content and current in previous:
+            path.write_text(content, encoding="utf-8")
+            return "updated"
+        return "exists"
 
     return write
 
@@ -249,9 +418,9 @@ def _instance_env(example: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _instance_instructions(repo: Path) -> str:
-    project_file = repo / "CLAUDE.md"
-    return f"""@{project_file}
+def _instance_instructions(repo: Path, *, legacy: bool = False) -> str:
+    prefix = f"@{repo / 'CLAUDE.md'}" if legacy else product_instructions(repo)
+    return f"""{prefix}
 
 # Instance
 
@@ -263,22 +432,39 @@ Example: `uv run python -m src.integrations.refresh_all --show`
 """
 
 
-def _instance_agent_instructions(repo: Path, *, plugin_mode: bool) -> str:
+def _instance_agent_instructions(
+    repo: Path, *, plugin_mode: bool, legacy: bool = False
+) -> str:
     if plugin_mode:
         discovery_instructions = """The installed Finance Guru plugin is the source of truth for agents, skills, and hooks.
 This instance intentionally omits `.claude` and `.agents` symlinks. Its
 `.claude/settings.json` makes the plugin's finance orchestrator the main agent.
 """
-    else:
+    elif legacy:
         discovery_instructions = f"""This instance's `.agents` symlink points to
 `{repo / ".claude"}`, so Codex discovers the canonical skills under
 `.agents/skills/`. Read a skill's complete `SKILL.md` before using it. Do not
 copy or fork skill content into this instance.
 """
+    else:
+        discovery_instructions = """This instance's `.agents` symlink points to its own `.claude` runtime view.
+That view shares the canonical finance skills under `.agents/skills/` and the
+finance agents. Its own settings run only the product session hook. Read a
+skill's complete `SKILL.md` before using it. Do not
+copy or fork skill content into this instance.
+"""
 
-    return f"""# Finance Guru instance
+    source = (
+        f"Before doing Finance Guru work, read `{repo / 'AGENTS.md'}` in full."
+        if legacy
+        else f"Before doing Finance Guru work, read `{repo / '.claude/skills/fin-core/SKILL.md'}` in full."
+    )
+    rules = "" if legacy else f"\n{FINANCE_RULES}\n"
 
-Before doing Finance Guru work, read `{repo / "AGENTS.md"}` in full.
+    return (
+        f"""# Finance Guru instance
+
+{source}
 
 The engine lives at `{repo}`.
 
@@ -287,6 +473,8 @@ The engine lives at `{repo}`.
 Run engine commands from this instance as `uv run python -m src.<tool>` so all
 private paths resolve from the current directory.
 """
+        + rules
+    )
 
 
 def _instance_pyproject(repo: Path) -> str:
@@ -312,7 +500,7 @@ def _sync_environment(path: Path) -> StepResult:
 
 
 def _build_plan(
-    paths: InstancePaths, repo: Path, *, plugin_mode: bool
+    paths: InstancePaths, repo: Path, *, runtime: CheckoutRuntime | None
 ) -> list[PlanStep]:
     directory_paths = (
         paths.imports,
@@ -340,7 +528,7 @@ def _build_plan(
             PlanStep(paths.merchant_rules, _write_text(MERCHANT_RULES)),
         )
     )
-    if plugin_mode:
+    if runtime is None:
         plan.extend(
             (
                 PlanStep(paths.root / ".claude", _create_real_directory),
@@ -352,24 +540,38 @@ def _build_plan(
     else:
         plan.extend(
             (
-                PlanStep(paths.root / ".agents", _create_symlink(repo / ".claude")),
-                PlanStep(paths.root / ".claude", _create_symlink(repo / ".claude")),
+                PlanStep(
+                    paths.root / ".claude", _create_checkout_runtime(repo, runtime)
+                ),
+                PlanStep(paths.root / ".agents", _link_checkout_discovery(repo)),
             )
         )
     plan.extend(
         (
             PlanStep(
                 paths.root / "CLAUDE.md",
-                _write_text(_instance_instructions(repo)),
+                _replace_instance_instructions(
+                    _instance_instructions(repo),
+                    (_instance_instructions(repo, legacy=True),),
+                    repo,
+                ),
             ),
             PlanStep(
                 paths.root / "AGENTS.md",
-                _replace_checkout_instructions(
-                    _instance_agent_instructions(repo, plugin_mode=True),
-                    _instance_agent_instructions(repo, plugin_mode=False),
-                )
-                if plugin_mode
-                else _write_text(_instance_agent_instructions(repo, plugin_mode=False)),
+                _replace_instance_instructions(
+                    _instance_agent_instructions(repo, plugin_mode=runtime is None),
+                    tuple(
+                        _instance_agent_instructions(
+                            repo, plugin_mode=mode, legacy=legacy
+                        )
+                        for mode, legacy in (
+                            (False, True),
+                            (True, True),
+                            (False, False),
+                        )
+                    ),
+                    repo,
+                ),
             ),
             PlanStep(paths.root / ".git", _initialize_git),
             PlanStep(paths.root / ".venv", _sync_environment),
@@ -415,7 +617,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if (paths.root / ".git").exists():
         _reject_git_remotes(paths.root)
 
-    for step in _build_plan(paths, repo, plugin_mode=plugin_mode):
+    runtime = None if plugin_mode else _checkout_runtime(repo)
+    _preflight_runtime(paths.root, repo, runtime)
+    for step in _build_plan(paths, repo, runtime=runtime):
         result = step.action(step.target)
         print(f"{result} {step.target}")
 

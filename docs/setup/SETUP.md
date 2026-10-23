@@ -16,10 +16,15 @@ integration is required.
 - [Python](https://www.python.org/) 3.12 or later
 - [uv](https://docs.astral.sh/uv/)
 - [Git](https://git-scm.com/)
-- Bun only when working on `apps/simplefin-sync/`
+- [Bun](https://bun.sh/) for agent session hooks, repository PR gates, and `apps/simplefin-sync/`
 
 The [Claude Code](https://code.claude.com/) plugin is not required to run the Python analysis engine from
 a shell.
+Bun is not required for that shell-only path. Agent sessions need it before the
+session-start hook runs. Repository sessions also run the PR gate before each
+Bash tool call.
+Repository Claude Code sessions require v2.1.295 or later so
+`onFailure: "block"` keeps an unavailable PR gate closed.
 
 ## Install
 
@@ -29,11 +34,15 @@ Clone your fork, then install the development dependency group:
 git clone https://github.com/YOUR-USERNAME/Finance-Guru.git
 cd Finance-Guru
 uv sync --dev
+bun install --frozen-lockfile
 ```
 
 The legacy `./setup.sh` scaffolds private-profile files and points to an
 unfinished onboarding flow. It is not part of the supported analysis-engine
 setup path.
+
+The locked Bun install supplies the repository's TypeScript checks. Run it
+before the commit hook so `bunx` uses the pinned compiler.
 
 ## Create an instance
 
@@ -48,6 +57,26 @@ uv run python -m src.cli.instance_init ~/finance-guru-data --repo .
 The instance is a small uv project that depends on the engine, so
 `uv run python -m src.<tool>` works from inside it with no extra flags. Run
 Finance Guru sessions and sync commands from the instance directory.
+
+Checkout instances own their `.claude` settings and link only finance assets.
+Their `.agents` link points to that local runtime view. They do not inherit
+repository developer hooks or PR tools. Rerun the scaffold command to migrate
+an older instance with known checkout symlinks. The migration preserves shared
+repository settings and owner notes. An
+unknown link or an edited inherited instruction file stops migration before
+writes and names the conflicting path.
+
+The scaffold and onboarding writer load the `fin-core` skill and the same
+finance rules. They do not import repository developer instructions. The scaffold
+can migrate a recognized wizard-generated `CLAUDE.md`. It replaces the old
+repository import and removes only the exact generated repository push workflow.
+The profile text and owner notes stay intact. An edited legacy push workflow
+stops migration before writes.
+
+To switch a checkout instance to plugin mode, first move its `.claude` runtime
+directory aside and remove its `.agents` discovery link. Keep any local settings
+you need. Then rerun with `--plugin`. The scaffold refuses leftover checkout
+discovery paths so the plugin remains the single source of finance assets.
 
 For the [SimpleFIN](https://www.simplefin.org/) workspace, install its Bun dependencies from that workspace:
 
