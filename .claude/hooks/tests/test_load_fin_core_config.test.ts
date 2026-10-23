@@ -412,7 +412,25 @@ describe("load-fin-core-config contract with src/", () => {
     const parent = mkdtempSync(join(tmpdir(), "finance-guru-init-"));
     const instance = join(parent, "instance");
     try {
-      runEnginePython(["-m", "src.cli.instance_init", instance, "--repo", REPO_ROOT]);
+      runEnginePython([
+        "-c",
+        [
+          "import subprocess, sys",
+          "from pathlib import Path",
+          "from unittest.mock import patch",
+          "from src.cli import instance_init",
+          "run = subprocess.run",
+          "def install_boundary(args, *positional, **kwargs):",
+          "    if args == ['uv', 'sync', '--quiet'] and Path(kwargs['cwd']) == Path(sys.argv[1]):",
+          "        return subprocess.CompletedProcess(args, 0)",
+          "    return run(args, *positional, **kwargs)",
+          "with patch.object(subprocess, 'run', side_effect=install_boundary):",
+          "    raise SystemExit(instance_init.main(sys.argv[1:]))",
+        ].join("\n"),
+        instance,
+        "--repo",
+        REPO_ROOT,
+      ]);
 
       const result = await runHook(
         { session_id: "test-scaffolded", event: "session_start" },
