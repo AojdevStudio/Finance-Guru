@@ -51,6 +51,12 @@ def migrate_generated_instructions(content: str, repo: Path) -> str | None:
     if not content.startswith(prefix + "# CLAUDE.md\n"):
         return None
     heading = "\n## Landing the Plane (Session Completion)\n"
+    legacy_body = LEGACY_SESSION_RULES.removeprefix(heading)
+    if heading not in content and legacy_body in content:
+        raise FileExistsError(
+            "CLAUDE.md has edited legacy developer instructions; "
+            "move those instructions aside before rerunning"
+        )
     if heading in content:
         if content.count(heading) != 1 or LEGACY_SESSION_RULES not in content:
             raise FileExistsError(

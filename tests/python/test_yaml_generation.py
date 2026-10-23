@@ -21,6 +21,7 @@ import pytest
 
 from src.cli import instance_init
 from src.cli.onboarding_wizard import generate_config_files
+from src.config.instance_instructions import LEGACY_SESSION_RULES
 from src.config.instance_paths import InstancePaths
 from src.models.yaml_generation_inputs import (
     AllocationStrategy,
@@ -196,6 +197,49 @@ def test_scaffold_refuses_edited_legacy_workflow_before_writing(
 
     assert list(root.iterdir()) == [root / "CLAUDE.md"]
     assert (root / "CLAUDE.md").read_text() == content
+
+
+@pytest.mark.parametrize("plugin", [False, True])
+@pytest.mark.parametrize("heading", ["\n## Owner session rules\n", ""])
+def test_scaffold_refuses_legacy_body_with_changed_heading_before_any_write(
+    tmp_path: Path,
+    yaml_generator: YAMLGenerator,
+    valid_user_data: UserDataInput,
+    plugin: bool,
+    heading: str,
+) -> None:
+    repo = Path(__file__).resolve().parents[2]
+    root = tmp_path / "instance"
+    (root / "imports/empty").mkdir(parents=True)
+    (root / ".env").write_bytes(b"# synthetic private environment\n")
+    (root / "user-profile.yaml").write_bytes(b"user_profile: {}\n")
+    (root / "imports/owner.bin").write_bytes(b"owner bytes\x00\xff")
+    generated = yaml_generator.generate_claude_md(valid_user_data)
+    body = generated[generated.index("# CLAUDE.md\n") :]
+    legacy = LEGACY_SESSION_RULES.replace(
+        "\n## Landing the Plane (Session Completion)\n", heading, 1
+    )
+    content = (
+        f"@{repo / 'CLAUDE.md'}\n\n{body}{legacy}"
+        "\n## Household notes\nPreserve this exact note.\n"
+    )
+    (root / "CLAUDE.md").write_text(content)
+    before_paths = sorted(path.relative_to(root) for path in root.rglob("*"))
+    before_bytes = {
+        path: (root / path).read_bytes()
+        for path in before_paths
+        if (root / path).is_file()
+    }
+
+    with pytest.raises(FileExistsError, match="edited legacy developer instructions"):
+        instance_init.main(
+            [str(root), "--repo", str(repo), *(["--plugin"] if plugin else [])]
+        )
+
+    assert sorted(path.relative_to(root) for path in root.rglob("*")) == before_paths
+    assert all(
+        (root / path).read_bytes() == data for path, data in before_bytes.items()
+    )
 
 
 class TestPydanticModelValidation:
