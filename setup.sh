@@ -399,13 +399,6 @@ user_profile:
     risk_tolerance: ""
     investment_philosophy: ""
     time_horizon: ""
-
-# Google Sheets Integration (optional)
-google_sheets:
-  portfolio_tracker:
-    spreadsheet_id: ""
-    url: ""
-    purpose: "Finance Guru portfolio tracking"
 PROFILE_EOF
     printf "  ${GREEN}Created:${NC} %s\n" "$user_profile"
     CREATED_ITEMS+=("file: $user_profile")

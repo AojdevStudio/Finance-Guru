@@ -251,6 +251,14 @@ class TestConvertStateToUserData:
             result = convert_state_to_user_data(completed_state, "/tmp/test")
         assert result.portfolio.risk_tolerance == RiskTolerance.MODERATE
 
+    @pytest.mark.parametrize("env_setup", [{}, {"user_name": "  "}])
+    def test_missing_owner_name_fails_closed(self, completed_state, env_setup):
+        """No stored owner name means no personalized output and no invented name."""
+        completed_state.data[SectionName.ENV_SETUP.value] = env_setup
+
+        with pytest.raises(ValueError, match="owner name"):
+            convert_state_to_user_data(completed_state, "/tmp/test")
+
     def test_missing_section_uses_defaults(self):
         """Missing section data uses sensible defaults."""
         state = OnboardingState.create_new()
@@ -735,3 +743,18 @@ class TestWizardWritesOnlyTheInstance:
 
         assert exit_info.value.code == 1
         assert _snapshot(engine) == engine_before
+
+    def test_missing_owner_name_writes_nothing(
+        self, engine_and_instance, completed_state, monkeypatch
+    ):
+        engine, instance = engine_and_instance
+        completed_state.data[SectionName.ENV_SETUP.value] = {"language": "English"}
+        monkeypatch.chdir(engine)
+        monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(instance))
+
+        with pytest.raises(SystemExit) as exit_info:
+            _run_confirmed_wizard(completed_state)
+
+        assert exit_info.value.code == 1
+        for name in PRIVATE_OUTPUTS:
+            assert not (instance / name).exists(), name

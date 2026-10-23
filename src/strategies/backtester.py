@@ -178,7 +178,8 @@ class Backtester:
 
         Returns:
             "opened", or "skipped_insufficient_capital" when the position plus
-            commission costs more than the cash on hand.
+            commission costs more than the cash on hand, or the allocation cannot
+            buy one whole share.
         """
         position_capital = self.capital * self.config.position_size_pct
 
@@ -188,6 +189,8 @@ class Backtester:
 
         if not self.config.allow_fractional_shares:
             shares = int(shares)
+            if shares == 0:
+                return "skipped_insufficient_capital"
 
         capital_needed = shares * entry_price
 
@@ -413,7 +416,7 @@ class Backtester:
     def _generate_recommendation(
         self,
         performance: BacktestPerformanceMetrics,
-    ) -> tuple[str, str]:
+    ) -> tuple[Literal["DEPLOY", "OPTIMIZE", "REJECT"], str]:
         """Generate deployment recommendation based on performance.
 
         DECISION CRITERIA:
@@ -470,7 +473,7 @@ class Backtester:
             reasons.append(f"Low win rate ({performance.win_rate * 100:.1f}%)")
 
         if good_return and good_sharpe and acceptable_dd and decent_win_rate:
-            recommendation = "DEPLOY"
+            recommendation: Literal["DEPLOY", "OPTIMIZE", "REJECT"] = "DEPLOY"
         elif (good_return or good_sharpe) and acceptable_dd:
             recommendation = "OPTIMIZE"
         else:

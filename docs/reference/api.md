@@ -34,7 +34,7 @@ uv run python -m src.integrations.refresh_all --help
 | `src/analysis/hedge_comparison_cli.py` | Compare hedge approaches. |
 | `src/analysis/hedge_sizer_cli.py` | Calculate hedge sizing. |
 | `src/analysis/itc_risk_cli.py` | Query ITC risk-model data. |
-| `src/analysis/margin_metrics_cli.py` | Calculate margin metrics from configured local data. Prints JSON and has no `--output` flag. |
+| `src/analysis/margin_metrics_cli.py` | Calculate margin metrics from configured local data. Prints JSON and has no `--output` flag. `--source snaptrade` adds `equity_synced_at` and raises `StaleAccountEquityError` when the equity sync time is missing, in the future, or older than 12 hours. The default DB source raises `StaleEquitySnapshotError` when the sync stored NULL margin debt, and adds `ledger_synced_at`, the sync time of the balances row it read. `as_of_date` is the run date, not the data date. |
 | `src/analysis/options_chain_cli.py` | Inspect options-chain data. |
 | `src/analysis/options_cli.py` | Run options calculations. |
 | `src/analysis/risk_metrics_cli.py` | Calculate risk and benchmark metrics. |
@@ -46,12 +46,46 @@ Risk metrics use `null` for unavailable Sharpe, Sortino, and Calmar ratios.
 `zero_volatility` or `no_drawdown`. Finite ratios keep their numeric format.
 Text output and the terminal dashboard show unavailable ratios with their reasons.
 
+Margin metrics require finite monthly dividend income and a finite
+`FG_MARGIN_JUMP_ALERT_THRESHOLD`. The calculator and CLI reject NaN and infinity
+before returning metrics. The CLI exits unsuccessfully and prints no metrics JSON.
+Zero and finite negative income remain valid. Omitted income remains optional.
+
 Margin coverage uses `--monthly-dividend-income`, then `FG_DIVIDEND_MONTHLY_INCOME`,
 then the ledger's three closed calendar months. The ledger path uses only the
 configured `taxable_margin` account and USD `DIVIDEND` rows. The current partial
 month and other account roles are excluded. `dividend_income` names the source,
 window start, and exclusive window end. Missing history stays unavailable with a
 reason. The fallback opens the ledger read-only.
+
+Total-return calculator models require finite price observations, dividend amounts,
+share counts, and return inputs. Missing prices, NaN, and infinities block calculation,
+including with `--force`. A zero terminal price remains valid and can produce a total loss.
+JSON output rejects nonfinite numbers, including portfolio CSV quantities, before
+printing or saving the report. The human report does not validate CSV quantities
+for finiteness.
+The CLI returns exit code 1 when all tickers fail or JSON formatting fails.
+
+### Implied volatility
+
+`options_cli.py --implied-vol --output json` solves within the pricing model's
+annual volatility range of 0.01 through 3.0, inclusive. Time to expiry must be
+positive and at most 10 years. Interest and dividend rates range from 0.0 through
+0.20. Inputs must be finite. Market premiums must be non-negative.
+
+The solver brackets the premium between prices at the two volatility endpoints.
+A premium outside that range returns `converged: false` at the nearest endpoint,
+with its calculated price and absolute pricing error. The CLI writes this report,
+prints a non-convergence error to stderr, and exits with code 1. Valid solves keep
+exit code 0. A premium just outside the
+range does not converge, even when its price error is below the price tolerance.
+
+Interior roots require a volatility bracket no wider than `1e-8` and a pricing
+error below $0.0001 per share, or an exact model-price match. `iterations` counts
+model price evaluations, including both endpoints, up to 100 evaluations.
+A zero premium converges only when the model also returns zero at its lower
+endpoint. Numerically flat prices can match more than one supported volatility.
+Zero volatility and zero time to expiry remain outside the pricing domain.
 
 ## Strategy commands
 
@@ -89,7 +123,7 @@ and is not part of the command contract.
 | --- | --- |
 | `uv run python -m src.integrations.refresh_all` | Refresh configured [SnapTrade](https://snaptrade.com/) and [SimpleFIN](https://www.simplefin.org/) data into the local database. |
 | `uv run python -m src.integrations.snaptrade.cli` | Inspect linked SnapTrade accounts, positions, balances, or activities. |
-| `uv run python -m src.integrations.snaptrade.sync_db` | Refresh SnapTrade positions and balances into local [SQLite](https://www.sqlite.org/). |
+| `uv run python -m src.integrations.snaptrade.sync_db` | Refresh SnapTrade positions and balances into local [SQLite](https://www.sqlite.org/). When SnapTrade equity fails that same check, it stores `margin_debt` as NULL and prints `warning: account equity stale (last synced <ts>)`. |
 | `uv run python -m src.integrations.snaptrade.sync_transactions_db` | Refresh SnapTrade activities into local SQLite. |
 | `uv run python -m src.integrations.simplefin.sync_expenses_db` | Refresh SimpleFIN transactions into local SQLite. |
 

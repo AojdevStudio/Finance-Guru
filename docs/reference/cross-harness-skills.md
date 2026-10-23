@@ -6,7 +6,7 @@ category: reference
 
 # Skills across harnesses
 
-Finance skills live in one place, `.claude/skills/<name>/SKILL.md`, and ship in the plugin. [Claude Code](https://code.claude.com/) discovers them from the plugin or from the checkout instance's local `.claude/skills` link. [Codex](https://github.com/openai/codex) reaches the same files through the `.agents` symlink that `src.cli.instance_init` points at the local runtime view. A Codex session started from the instance discovers skills under `./.agents/skills`. A plugin-mode instance omits the discovery link because the installed plugin is the source of skills.
+Finance skills live in one place, `.claude/skills/<name>/SKILL.md`, and ship in the plugin. [Claude Code](https://code.claude.com/) discovers them from the plugin or from the checkout instance's local `.claude/skills` link. [Codex](https://github.com/openai/codex) reaches the same files through the `.agents` symlink that `src.cli.instance_init` creates. The symlink points at the local runtime view. A Codex session started from the instance discovers skills under `./.agents/skills`. A plugin-mode instance omits the discovery link because the installed plugin is the source of skills.
 
 Repository PR tools live under `.dev/pr-kit`, outside the finance skill tree.
 The repository's instructions name their `SKILL.md` files explicitly. They are

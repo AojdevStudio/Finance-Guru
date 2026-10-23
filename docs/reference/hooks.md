@@ -11,11 +11,13 @@ derived from the product manifest in `hooks/hooks.json`. Plugin mode runs that
 same product hook from the installed plugin. The engine repository wires four
 hooks for development. [Bun](https://bun.sh/) must be installed before starting an agent session.
 The PR gate runs before every repository Bash tool call.
+Repository [Claude Code](https://code.claude.com/) sessions require v2.1.295 or later for `onFailure: "block"` to keep
+the gate closed if its command cannot run.
 
 | Event | Script | Runs in | What it does |
 | --- | --- | --- | --- |
 | `SessionStart` | `.claude/hooks/load-fin-core-config.ts` | Instances, plugin and repository | Prints the `fin-core` skill, the instance profile and configuration, and the ledger's last balance sync. Prints nothing outside an instance. |
-| `PreToolUse` | `.dev/pr-kit/open-pr/gate.ts` | Repository only | Checks PR commands and blocks a failed or unavailable gate. |
+| `PreToolUse` | `.dev/pr-kit/open-pr/gate.ts` | Repository only | Checks PR commands and blocks a failed or unavailable gate, unless the owner sets `PR_KIT_OFF=1` in the session environment. |
 | `PostToolUse` | `.claude/hooks/post-tool-use-tracker.ts` | Repository only | Records tool use for the stop check. |
 | `Stop` | `.claude/hooks/stop-build-check-enhanced.sh` | Repository only | Runs the build check before the session ends. |
 
@@ -24,6 +26,10 @@ The canonical kit uses its developer layout. Its unchanged payload lives in
 does not add developer skills to `.claude/skills` or the finance plugin manifest.
 Checkout instances share finance assets through links and own their settings.
 They never inherit the repository PR gate, tool tracker, or build hook.
+
+`PR_KIT_OFF=1` is an owner-controlled session setting. Agents must not set it.
+A Bash command cannot set the variable for its own hook because the hook runs
+before that command.
 
 ## Personal plugins
 

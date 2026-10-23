@@ -30,19 +30,85 @@ import time
 import warnings
 from collections.abc import Mapping
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 import requests
 import yfinance as yf
 from yfinance.exceptions import YFException
 
-from src.models.itc_risk_inputs import ITCRiskResponse, RiskBand
+from src.models.itc_risk_inputs import (
+    ITCComplianceDecision,
+    ITCComplianceInput,
+    ITCRiskResponse,
+    RiskBand,
+)
 
 LOW_RISK_CEILING = 0.3
 """ITC risk scores below this are the low-risk (green) band."""
 
 HIGH_RISK_FLOOR = 0.7
 """ITC risk scores at or above this are the high-risk (red) band."""
+
+CRITICAL_RISK_FLOOR = 0.85
+MAX_DAILY_VAR = 0.05
+MAX_DIVERGENCE_PCT = 30
+
+
+def evaluate_var_compliance(inputs: ITCComplianceInput) -> ITCComplianceDecision:
+    """Apply DR-1 to DR-5, with missing-input and internal-limit guards.
+
+    Critical risk and divergence take precedence over band approvals. VaR uses
+    its absolute loss magnitude, so either signed or positive-loss inputs work.
+    """
+    if not inputs.itc_supported:
+        return ITCComplianceDecision(
+            action="INTERNAL ONLY", rule="DR-5", reason="ITC coverage is unavailable"
+        )
+    if inputs.itc_risk is None or inputs.daily_var is None:
+        return ITCComplianceDecision(
+            action="BLOCK",
+            rule="GUARDRAIL",
+            reason="ITC risk and daily VaR are required",
+        )
+    internal = abs(Decimal(str(inputs.daily_var)))
+    limit = Decimal(str(MAX_DAILY_VAR))
+    divergence = abs(Decimal(str(inputs.itc_risk)) - internal / limit) * 100
+    if internal > limit:
+        return ITCComplianceDecision(
+            action="BLOCK",
+            rule="GUARDRAIL",
+            reason="Internal daily VaR exceeds the policy limit",
+            divergence_pct=float(divergence),
+        )
+    if inputs.itc_risk > CRITICAL_RISK_FLOOR or divergence > MAX_DIVERGENCE_PCT:
+        return ITCComplianceDecision(
+            action="BLOCK",
+            rule="DR-4",
+            reason="Critical ITC risk or excessive divergence",
+            divergence_pct=float(divergence),
+        )
+    if inputs.itc_risk >= HIGH_RISK_FLOOR:
+        return ITCComplianceDecision(
+            action="ENHANCED REVIEW",
+            rule="DR-3",
+            reason="High ITC risk requires position review",
+            divergence_pct=float(divergence),
+        )
+    if inputs.itc_risk >= LOW_RISK_CEILING:
+        return ITCComplianceDecision(
+            action="APPROVE WITH NOTE",
+            rule="DR-2",
+            reason="Medium ITC risk requires monitoring",
+            divergence_pct=float(divergence),
+        )
+    return ITCComplianceDecision(
+        action="APPROVE",
+        rule="DR-1",
+        reason="Low ITC risk and internal VaR within policy",
+        divergence_pct=float(divergence),
+    )
+
 
 QUOTED_PRICE_FIELDS = ("currentPrice", "regularMarketPrice", "previousClose")
 """yfinance ``info`` price fields, from the live quote back to the last close."""
@@ -367,7 +433,10 @@ class ITCRiskCalculator:
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
 
-        return response.json()
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise ValueError("ITC response must be a JSON object")
+        return payload
 
     def _parse_risk_bands(self, data: dict[str, Any]) -> list[RiskBand]:
         """Parse risk bands from ITC API response.

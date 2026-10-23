@@ -83,7 +83,7 @@ def fetch_price_data(ticker: str, days: int) -> pd.DataFrame:
             f"Insufficient data for {ticker}. Need at least 30 days, got {len(hist)}"
         )
 
-    return hist
+    return pd.DataFrame(hist)
 
 
 def generate_rsi_signals(

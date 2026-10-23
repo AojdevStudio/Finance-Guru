@@ -360,7 +360,7 @@ class MovingAverageCalculator:
         fast_ma: pd.Series,
         slow_ma: pd.Series,
         dates: list,
-    ) -> tuple[str, date | None, int | None]:
+    ) -> tuple[Literal["BULLISH", "BEARISH", "NEUTRAL"], date | None, int | None]:
         """Detect MA crossover and determine signal.
 
         WHAT: Identifies when fast MA crosses slow MA
@@ -401,7 +401,7 @@ class MovingAverageCalculator:
                 break
 
         if current_fast > current_slow:
-            signal = "BULLISH"
+            signal: Literal["BULLISH", "BEARISH", "NEUTRAL"] = "BULLISH"
         elif current_fast < current_slow:
             signal = "BEARISH"
         else:
@@ -520,9 +520,9 @@ def calculate_moving_average(
     ticker: str,
     dates: list[str],
     prices: list[float],
-    ma_type: str = "SMA",
+    ma_type: MAType = "SMA",
     period: int = 50,
-    secondary_ma_type: str | None = None,
+    secondary_ma_type: MAType | None = None,
     secondary_period: int | None = None,
 ) -> MovingAverageAnalysis:
     """Convenience function for calculating moving averages.

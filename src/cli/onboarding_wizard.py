@@ -242,7 +242,7 @@ def convert_state_to_user_data(
         Validated UserDataInput ready for YAML generation.
 
     Raises:
-        KeyError: If required section data is missing.
+        ValueError: If Environment Setup stored no owner name.
     """
     la = state.data.get(SectionName.LIQUID_ASSETS.value, {})
     inv = state.data.get(SectionName.INVESTMENTS.value, {})
@@ -251,8 +251,15 @@ def convert_state_to_user_data(
     prefs = state.data.get(SectionName.PREFERENCES.value, {})
     env = state.data.get(SectionName.ENV_SETUP.value, {})
 
+    user_name = env.get("user_name")
+    if not isinstance(user_name, str) or not user_name.strip():
+        raise ValueError(
+            "Environment Setup has no owner name. "
+            "Run the wizard again and enter your name."
+        )
+
     identity = UserIdentityInput(
-        user_name=env.get("user_name", "User"),
+        user_name=user_name,
         language=env.get("language", "English"),
     )
 
@@ -278,7 +285,7 @@ def convert_state_to_user_data(
             inv.get("risk_tolerance"),
             RiskTolerance.MODERATE,
         ),
-        google_sheets_id=inv.get("google_sheets_id"),
+        google_sheets_id=None,
         account_number=inv.get("account_number"),
     )
 
@@ -332,7 +339,7 @@ def convert_state_to_user_data(
         preferences=preferences,
         mcp=mcp,
         project_root=project_root,
-        google_sheets_credentials=env.get("google_sheets_credentials"),
+        google_sheets_credentials=None,
     )
 
 
@@ -454,7 +461,11 @@ def run_wizard(dry_run: bool = False) -> None:
         print("  Onboarding was not confirmed. No files generated.")
         return
 
-    user_data = convert_state_to_user_data(state, str(paths.root))
+    try:
+        user_data = convert_state_to_user_data(state, str(paths.root))
+    except ValueError as error:
+        print(f"  {error} No files generated.")
+        raise SystemExit(1) from error
 
     if dry_run:
         print()

@@ -30,7 +30,7 @@ Created: 2025-10-13
 """
 
 from datetime import date
-from typing import assert_never
+from typing import Literal, assert_never
 
 import numpy as np
 import pandas as pd
@@ -174,7 +174,7 @@ class DataValidator:
         if total_missing > 0:
             missing_ratio = total_missing / len(df)
 
-            severity = "low"
+            severity: Literal["low", "medium", "high", "critical"] = "low"
             if missing_ratio > self.config.missing_data_threshold:
                 severity = "critical"
             elif missing_ratio > self.config.missing_data_threshold / 2:
@@ -237,24 +237,31 @@ class DataValidator:
             case OutlierMethod.Z_SCORE:
                 mean_return = returns.mean()
                 std_return = returns.std()
-                z_scores = np.abs((returns - mean_return) / std_return)
-                outlier_mask = z_scores > self.config.outlier_threshold
+                z_scores = ((returns - mean_return) / std_return).abs()
+                outlier_mask = np.asarray(
+                    z_scores > self.config.outlier_threshold, dtype=bool
+                )
             case OutlierMethod.IQR:
                 q1 = returns.quantile(0.25)
                 q3 = returns.quantile(0.75)
                 iqr = q3 - q1
                 lower_bound = q1 - (self.config.outlier_threshold * iqr)
                 upper_bound = q3 + (self.config.outlier_threshold * iqr)
-                outlier_mask = (returns < lower_bound) | (returns > upper_bound)
+                outlier_mask = np.asarray(
+                    (returns < lower_bound) | (returns > upper_bound), dtype=bool
+                )
             case OutlierMethod.MODIFIED_Z:
                 median_return = returns.median()
                 mad = np.median(np.abs(returns - median_return))
                 if mad == 0:
                     mad = np.std(returns) / MAD_TO_STD_SCALE
-                modified_z_scores = MODIFIED_Z_SCORE_SCALE * np.abs(
-                    (returns - median_return) / mad
+                modified_z_scores = (
+                    MODIFIED_Z_SCORE_SCALE
+                    * ((returns - median_return) / float(mad)).abs()
                 )
-                outlier_mask = modified_z_scores > self.config.outlier_threshold
+                outlier_mask = np.asarray(
+                    modified_z_scores > self.config.outlier_threshold, dtype=bool
+                )
             case _:
                 assert_never(self.config.outlier_method)
 
@@ -266,7 +273,7 @@ class DataValidator:
         if outlier_count > 0:
             outlier_ratio = outlier_count / len(returns)
 
-            severity = "low"
+            severity: Literal["low", "medium", "high", "critical"] = "low"
             if outlier_ratio > _HIGH_OUTLIER_RATIO:
                 severity = "high"
             elif outlier_ratio > _MEDIUM_OUTLIER_RATIO:
@@ -331,7 +338,7 @@ class DataValidator:
                     start_date = df.loc[idx - 1, "date"]
                     end_date = df.loc[idx, "date"]
 
-                    severity = "low"
+                    severity: Literal["low", "medium", "high", "critical"] = "low"
                     if gap_days > 30:
                         severity = "critical"
                     elif gap_days > 20:
@@ -394,39 +401,35 @@ class DataValidator:
 
         if split_count > 0:
             for idx, return_val in potential_splits.items():
-                if idx < len(df):
-                    split_date = df.loc[idx, "date"]
-                    df.loc[idx - 1, "price"] if idx > 0 else None
-                    df.loc[idx, "price"]
+                split_date = df.at[idx, "date"]
 
-                    split_ratio = "unknown"
-                    if -0.60 < return_val < -0.40:
-                        split_ratio = "2:1"
-                    elif -0.70 < return_val < -0.60:
-                        split_ratio = "3:1"
-                    elif return_val > 1.0:
-                        split_ratio = "1:2 (reverse)"
+                split_ratio = "unknown"
+                if -0.60 < return_val < -0.40:
+                    split_ratio = "2:1"
+                elif -0.70 < return_val < -0.60:
+                    split_ratio = "3:1"
+                elif return_val > 1.0:
+                    split_ratio = "1:2 (reverse)"
 
-                    anomalies.append(
-                        DataAnomaly(
-                            anomaly_type="split",
-                            severity="high",
-                            description=(
-                                f"Potential stock split detected: {return_val:.1%} price change"
-                            ),
-                            location=str(split_date),
-                            value=float(return_val),
-                            recommendation=(
-                                f"Verify stock split (estimated {split_ratio} ratio) and ensure "
-                                "historical prices are split-adjusted. Check company announcements."
-                            ),
-                        )
+                anomalies.append(
+                    DataAnomaly(
+                        anomaly_type="split",
+                        severity="high",
+                        description=(
+                            f"Potential stock split detected: {return_val:.1%} price change"
+                        ),
+                        location=str(split_date),
+                        value=float(return_val),
+                        recommendation=(
+                            f"Verify stock split (estimated {split_ratio} ratio) and ensure "
+                            "historical prices are split-adjusted. Check company announcements."
+                        ),
                     )
+                )
 
             warnings_list.append(
                 f"Found {split_count} potential stock splits or large price gaps"
             )
-
         return split_count
 
     def _calculate_completeness_score(

@@ -23,6 +23,8 @@ a shell.
 Bun is not required for that shell-only path. Agent sessions need it before the
 session-start hook runs. Repository sessions also run the PR gate before each
 Bash tool call.
+Repository Claude Code sessions require v2.1.295 or later so
+`onFailure: "block"` keeps an unavailable PR gate closed.
 
 ## Install
 
