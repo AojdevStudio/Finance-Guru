@@ -21,11 +21,10 @@ def _client(body: Any) -> SnapTradeClientWrapper:
 
     sdk = SimpleNamespace(
         account_information=SimpleNamespace(
-            get_user_account_positions=response,
+            get_all_account_positions=response,
             get_user_account_balance=response,
             get_account_activities=response,
         ),
-        options=SimpleNamespace(list_option_holdings=response),
     )
     credentials = SnapTradeCredentials(
         client_id=SecretStr("synthetic-client"),
@@ -48,13 +47,24 @@ def test_collection_endpoints_reject_malformed_bodies(method: str, body: Any) ->
 @pytest.mark.parametrize("method", ["get_positions", "get_options", "get_balances"])
 def test_collection_endpoints_reject_non_object_records(method: str) -> None:
     with pytest.raises(SnapTradeDataError):
-        getattr(_client([None]), method)("synthetic-account")
+        getattr(
+            _client({"results": [None]} if method != "get_balances" else [None]), method
+        )("synthetic-account")
 
 
 @pytest.mark.parametrize("method", ["get_positions", "get_options"])
 def test_holdings_require_an_identity(method: str) -> None:
     with pytest.raises(SnapTradeDataError, match="symbol"):
-        getattr(_client([{"units": 1, "price": 10}]), method)("synthetic-account")
+        getattr(
+            _client(
+                {
+                    "results": [
+                        {"instrument": {"kind": "stock"}, "units": 1, "price": 10}
+                    ]
+                }
+            ),
+            method,
+        )("synthetic-account")
 
 
 @pytest.mark.parametrize(
@@ -64,6 +74,8 @@ def test_holdings_require_an_identity(method: str) -> None:
 def test_collection_endpoints_allow_explicitly_empty_results(
     method: str, body: Any
 ) -> None:
+    if method in {"get_positions", "get_options"}:
+        body = {"results": []}
     assert getattr(_client(body), method)("synthetic-account") == []
 
 
@@ -172,7 +184,16 @@ def test_activity_pagination_rejects_duplicate_identities(
     "body",
     [
         {"unexpected": []},
-        [{"symbol": "NEW", "units": 1, "price": 10}, {"units": 1, "price": 10}],
+        {
+            "results": [
+                {
+                    "instrument": {"kind": "stock", "symbol": "NEW"},
+                    "units": 1,
+                    "price": 10,
+                },
+                {"instrument": {"kind": "stock"}, "units": 1, "price": 10},
+            ]
+        },
     ],
 )
 def test_malformed_holdings_preserve_the_existing_snapshot(
@@ -217,3 +238,31 @@ def test_malformed_holdings_preserve_the_existing_snapshot(
             ("old",)
         ]
     assert failure is not None
+
+
+@pytest.mark.parametrize(
+    "body", [[], {"data": []}, {"results": None}, {"results": "invalid"}]
+)
+@pytest.mark.parametrize("method", ["get_positions", "get_options"])
+def test_unified_holdings_require_a_results_list(body, method):
+    with pytest.raises(SnapTradeDataError, match="results"):
+        getattr(_client(body), method)("synthetic-account")
+
+
+@pytest.mark.parametrize(
+    "instrument",
+    [
+        {"kind": "stock"},
+        {"kind": "stock", "symbol": " "},
+        {"kind": "future", "symbol": "TEST"},
+        {"kind": "option", "symbol": "SPY   260918P00620000", "multiplier": "10"},
+        {"kind": "option", "symbol": "SPY   260918P00620000"},
+    ],
+)
+@pytest.mark.parametrize("method", ["get_positions", "get_options"])
+def test_unified_holdings_validate_every_instrument_before_filtering(
+    instrument, method
+):
+    body = {"results": [{"instrument": instrument, "units": "1", "price": "10"}]}
+    with pytest.raises(SnapTradeDataError):
+        getattr(_client(body), method)("synthetic-account")

@@ -153,34 +153,32 @@ class SnapTradeClientWrapper:
 
     def get_positions(self, account_id: str) -> list[dict[str, Any]]:
         """Return normalized symbol / quantity / cost-basis positions."""
-        response = self._call(
-            lambda: self._client.account_information.get_user_account_positions(
-                account_id=account_id,
-                user_id=self.credentials.user_id_value,
-                user_secret=self.credentials.user_secret_value,
-            )
-        )
         return [
-            _summarize_position(item) for item in _ensure_list(_response_body(response))
+            position
+            for position in self._all_positions(account_id)
+            if position["instrument"] == "equity"
         ]
 
     def get_options(self, account_id: str) -> list[dict[str, Any]]:
-        """Return normalized option holdings (per-share cost, Fidelity symbol).
+        """Return options with SDK 13 per-share cost and Fidelity symbols."""
+        return [
+            position
+            for position in self._all_positions(account_id)
+            if position["instrument"] == "option"
+        ]
 
-        SnapTrade excludes options from get_user_account_positions; they come
-        from this separate endpoint. Cost/price are reported per contract (x100),
-        normalized here to per-share to match the Fidelity CSV convention.
-        """
+    def _all_positions(self, account_id: str) -> list[dict[str, Any]]:
         response = self._call(
-            lambda: self._client.options.list_option_holdings(
+            lambda: self._client.account_information.get_all_account_positions(
                 account_id=account_id,
                 user_id=self.credentials.user_id_value,
                 user_secret=self.credentials.user_secret_value,
             )
         )
-        return [
-            _summarize_option(item) for item in _ensure_list(_response_body(response))
-        ]
+        body = _response_body(response)
+        if not isinstance(body, Mapping) or not isinstance(body.get("results"), list):
+            raise SnapTradeDataError("SnapTrade positions payload must contain results")
+        return [_summarize_account_position(item) for item in body["results"]]
 
     def get_activities(
         self, account_id: str, page_size: int = 1000
@@ -287,13 +285,16 @@ class SnapTradeClientWrapper:
     def _build_sdk_client(self) -> Any:
         try:
             from snaptrade_client import SnapTrade
+            from snaptrade_client.auth import SnapTradeAuth
         except ImportError as exc:  # pragma: no cover - dependency gate
             raise RuntimeError(
                 "snaptrade-python-sdk is not installed. Run `uv sync`."
             ) from exc
         return SnapTrade(
-            consumer_key=self.credentials.consumer_key_value,
-            client_id=self.credentials.client_id_value,
+            auth=SnapTradeAuth.commercial_api_key(
+                consumer_key=self.credentials.consumer_key_value,
+                client_id=self.credentials.client_id_value,
+            ),
         )
 
     def _call(self, fn: Callable[[], T]) -> T:
@@ -401,6 +402,42 @@ def _summarize_balance(raw_balance: Any) -> dict[str, Any]:
     }
 
 
+def _summarize_account_position(raw: Any) -> dict[str, Any]:
+    """Validate SDK 13 instruments before selecting equities or options."""
+    if not isinstance(raw, Mapping):
+        raise SnapTradeDataError("SnapTrade position payload was not an object")
+    instrument = raw.get("instrument")
+    if not isinstance(instrument, Mapping):
+        raise SnapTradeDataError("SnapTrade position instrument is missing symbol")
+    symbol = instrument.get("symbol")
+    if not isinstance(symbol, str) or not symbol.strip():
+        raise SnapTradeDataError("SnapTrade position payload is missing symbol")
+    kind = instrument.get("kind")
+    if kind == "option":
+        if _to_float(instrument.get("multiplier")) != OPTION_CONTRACT_MULTIPLIER:
+            raise SnapTradeDataError("SnapTrade option multiplier must be 100")
+        return {
+            "symbol": _occ_to_fidelity_symbol(symbol),
+            "occ_symbol": symbol,
+            "quantity": _to_float(raw.get("units")),
+            "average_purchase_price": _to_float(raw.get("cost_basis")),
+            "price": _to_float(raw.get("price")),
+            "instrument": "option",
+        }
+    if kind not in {"stock", "adr", "etf", "mutualfund", "cef", "crypto"}:
+        raise SnapTradeDataError(
+            "SnapTrade position has an unsupported instrument kind"
+        )
+    return _summarize_position(
+        {
+            "symbol": symbol,
+            "units": raw.get("units"),
+            "price": raw.get("price"),
+            "average_purchase_price": raw.get("cost_basis"),
+        }
+    )
+
+
 def _summarize_position(raw_position: Any) -> dict[str, Any]:
     raw = _to_plain(raw_position)
     if not isinstance(raw, Mapping):
@@ -419,29 +456,6 @@ def _summarize_position(raw_position: Any) -> dict[str, Any]:
         "price": _to_float(_first_present(raw, "price", "last_price", "lastPrice")),
         "open_pnl": _to_float(_first_present(raw, "open_pnl", "openPnl")),
         "instrument": "equity",
-    }
-
-
-def _summarize_option(raw_option: Any) -> dict[str, Any]:
-    raw = _to_plain(raw_option)
-    if not isinstance(raw, Mapping):
-        raise SnapTradeDataError("SnapTrade option payload was not an object")
-    occ = _option_occ_ticker(raw)
-    if not occ or not occ.strip():
-        raise SnapTradeDataError("SnapTrade option payload is missing symbol")
-    avg_contract = _to_float(
-        _first_present(raw, "average_purchase_price", "averagePurchasePrice")
-    )
-    return {
-        "symbol": _occ_to_fidelity_symbol(occ),
-        "occ_symbol": occ,
-        "quantity": _to_float(_first_present(raw, "units", "quantity")),
-        # SnapTrade reports cost per contract (x100); normalize to per-share.
-        "average_purchase_price": (avg_contract / OPTION_CONTRACT_MULTIPLIER)
-        if avg_contract is not None
-        else None,
-        "price": _to_float(_first_present(raw, "price", "last_price")),
-        "instrument": "option",
     }
 
 
@@ -612,18 +626,6 @@ def _activity_account(raw: Mapping[str, Any]) -> str | None:
     if isinstance(account, str):
         return account
     return None
-
-
-def _option_occ_ticker(raw: Mapping[str, Any]) -> str | None:
-    sym = raw.get("symbol")
-    if isinstance(sym, Mapping):
-        option_symbol = sym.get("option_symbol")
-        if isinstance(option_symbol, Mapping):
-            ticker = option_symbol.get("ticker")
-            if isinstance(ticker, str):
-                return ticker
-    ticker = _first_present(raw, "ticker", "option_symbol")
-    return ticker if isinstance(ticker, str) else None
 
 
 def _occ_to_fidelity_symbol(occ: str | None) -> str | None:
