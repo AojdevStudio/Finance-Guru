@@ -3,7 +3,7 @@
  * Pure: it never reads files or calls gh. The gate resolves file bodies and merge state.
  *
  * Covered: `gh pr create|edit|merge`, `gh api` POST/PATCH on `repos/O/R/pulls[/N]` and PUT on
- * `repos/O/R/pulls/N/merge`, and every `gh api graphql` call whose query is not a literal that provably
+ * `repos/O/R/pulls/N/merge`, PATCH on numbered `repos/O/R/issues/N`, and every `gh api graphql` call whose query is not a literal that provably
  * neither merges nor writes a PR. The same holds inside `ssh host '...'`, `bash -c`, and a program a shell
  * reads on stdin: its last heredoc or here-string, a pipe from cat or from echo or printf of literal words,
  * also into a group or compound opened right after `|`, a heredoc on a closing `)`, `}`, `done`, `fi`, or
@@ -75,13 +75,19 @@ interface Base {
   crowded?: true;
 }
 
+type RestWrite =
+  | { kind: "input"; write: "create" | "edit"; request: BodySource }
+  | { kind: "fields"; write: "create" | "edit"; fields: Partial<Record<PrField, FieldValue>> };
+
+type IssueEditAction = (RestWrite & { write: "edit" }) | { kind: "opaque"; part: "field" };
+
 export type PrCommand =
   | (Base & { kind: "create"; title?: BodySource; draft: boolean; body: BodySource })
   | (Base & { kind: "edit"; title?: BodySource; body?: BodySource })
-  /** A REST create or edit whose JSON `request` sets the PR's title, body, and draft. */
-  | (Base & { kind: "input"; write: "create" | "edit"; request: BodySource })
-  /** A REST create or edit whose `-f`/`-F` flags set the PR's title, body, and draft. */
-  | (Base & { kind: "fields"; write: "create" | "edit"; fields: Partial<Record<PrField, FieldValue>> })
+  /** A REST create or edit, decoded from --input JSON or -f/-F fields. */
+  | (Base & RestWrite)
+  /** A numbered Issues edit whose resource must be classified before applying PR rules. */
+  | (Base & { kind: "issue-edit"; repo: string; target: string; hosts: string[]; drift?: "repo" | "host"; edit: IssueEditAction })
   /**
    * A PR write the shell computes part of: the method or a word gh could read as flags (`control`), a field name (`field`), or the
    * stdin program it runs in (`program`), or a shell whose options the gate does not read (`shell`). Any write could hide in it.
@@ -977,11 +983,12 @@ function ghApi(found: Found, seg: Segment, ctx: Ctx): PrCommand | null {
     if (source.kind === "inline" && !source.expands && !json && graphqlRisk(source.text, operationName) === null) return null;
     return { ...where, kind: "graphql", query, json, operationName };
   }
-  const m = path?.match(PULLS);
+  const issue = path?.match(ISSUES);
+  const m = path?.match(PULLS) ?? issue;
   const explicit = last(args, "method");
   const control = args.unknown || (explicit?.includes("\0") ?? false);
   // A computed word can be a flag that takes the real endpoint as its value, or the family name, which makes a later pulls or GraphQL path the endpoint.
-  const endpoint = (w: string): boolean => PULLS.test(apiPath(w)) || apiPath(w).toLowerCase() === "graphql";
+  const endpoint = (w: string): boolean => (PULLS.test(apiPath(w)) || ISSUES.test(apiPath(w))) || apiPath(w).toLowerCase() === "graphql";
   if (!m) return control && seg.words.some(endpoint) ? { ...where, kind: "opaque", part: "control" } : null;
   const [, repo, number, merge] = m;
   const base = { ...where, repo };
@@ -1004,9 +1011,17 @@ function ghApi(found: Found, seg: Segment, ctx: Ctx): PrCommand | null {
   }
   const write = !number && method === "POST" ? "create" : number && method === "PATCH" ? "edit" : null;
   if (write === null) return null;
+  const issueEdit = (edit: IssueEditAction): PrCommand => ({
+    ...base, kind: "issue-edit", repo, target: number, hosts,
+    drift: drift(ctx.scope.env.names, !pinned, false, ctx), edit,
+  });
   // With --input, gh sends the JSON as the payload and moves every field flag to the query string.
-  if (input !== undefined) return unresolved ?? { ...base, kind: "input", write, request: pathSource(input, seg, ctx) };
-  if (opaque) return { ...base, kind: "opaque", part: "field" };
+  if (input !== undefined) {
+    if (unresolved) return unresolved;
+    const request = pathSource(input, seg, ctx);
+    return issue ? issueEdit({ kind: "input", write: "edit", request }) : { ...base, kind: "input", write, request };
+  }
+  if (opaque) return issue ? issueEdit({ kind: "opaque", part: "field" }) : { ...base, kind: "opaque", part: "field" };
   if (write === "edit" && !fields.has("title") && !fields.has("body")) return null;
   if (unresolved) return unresolved;
   const set: Partial<Record<PrField, FieldValue>> = {};
@@ -1014,9 +1029,10 @@ function ghApi(found: Found, seg: Segment, ctx: Ctx): PrCommand | null {
     const field = fields.get(key);
     if (field) set[key] = fieldValue(field, seg, ctx);
   }
-  return { ...base, kind: "fields", write, fields: set };
+  return issue ? issueEdit({ kind: "fields", write: "edit", fields: set }) : { ...base, kind: "fields", write, fields: set };
 }
 
+const ISSUES = /^repos\/([^/]+\/[^/]+)\/issues\/([^/]+)$/i;
 const PULLS = /^repos\/([^/]+\/[^/]+)\/pulls(?:\/([^/]+)(\/merge)?)?$/i;
 
 interface ApiField {
@@ -1210,7 +1226,7 @@ function alone(segments: Segment[], at: number, made: PrCommand[], reads: Read[]
     if (merge || !gh || part === undefined || !filter(part, scope)) return false;
   }
   if (end !== segments.length - 1 || orBefore(segments, at)) return false;
-  if (reads.length === 0 && !merge) return true;
+  if (reads.length === 0 && !merge && !made.some((c) => c.kind === "issue-edit")) return true;
   // A second read can open the heredoc's file by another name, a link, and get the bytes on disk before cat runs.
   const only = reads.length === 1 && reads[0] !== "unknown" ? reads[0].key : undefined;
   let docs = 0;

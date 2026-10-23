@@ -339,14 +339,43 @@ function checkMerge(cmd: Extract<PrCommand, { kind: "merge" }>, cwd: string): vo
   if (!verdict.ok) throw new Refusal(`${repo}#${pull.number} cannot merge: ${verdict.reason} Follow the land-pr skill.`);
 }
 
+function classifyIssue(cmd: Extract<PrCommand, { kind: "issue-edit" }>, cwd: string): "issue" | "pull-request" {
+  if (cmd.host || cmd.drift || cmd.lost) throw new Refusal("the Issues edit has an unknown host or repository context. Run it locally with a stable directory and GitHub configuration.");
+  if (cmd.hosts.some((h) => h.toLowerCase().replace(/^api\.(?=github\.com$)/, "") !== DEFAULT_HOST)) {
+    throw new Refusal(`the Issues edit names another GitHub host. This gate reads ${DEFAULT_HOST} only.`);
+  }
+  const parts = cmd.repo.split("/");
+  if (!parts.every((part, i) => /^[a-z0-9_.-]+$/i.test(part) || part === (i === 0 ? "{owner}" : "{repo}")) ||
+    !Number.isSafeInteger(Number(cmd.target)) || Number(cmd.target) < 1) {
+    throw new Refusal("the Issues edit does not name a literal repository and issue number, or stable owner/repo placeholders.");
+  }
+  const response = ghJson(`repos/${cmd.repo}/issues/${cmd.target}`, cwd);
+  const number = field(response, "number", isNum, "an issue");
+  const url = new URL(field(response, "url", isStr, "an issue"));
+  const identity = url.pathname.match(/^\/(?:api\/v3\/)?repos\/([a-z0-9_.-]+)\/([a-z0-9_.-]+)\/issues\/(\d+)$/i);
+  const host = DEFAULT_HOST === "github.com" ? "api.github.com" : DEFAULT_HOST;
+  if (!Number.isSafeInteger(number) || number !== Number(cmd.target) || !identity || Number(identity[3]) !== number ||
+    url.protocol !== "https:" || url.host.toLowerCase() !== host || url.username || url.password || url.search || url.hash ||
+    parts.some((part, i) => !part.startsWith("{") && part.toLowerCase() !== identity[i + 1].toLowerCase())) {
+    throw new Refusal("GitHub returned an issue whose identity does not match the Issues edit target.");
+  }
+  if (!isObj(response) || !Object.hasOwn(response, "pull_request")) return "issue";
+  field(response, "pull_request", isObj, "an issue");
+  return "pull-request";
+}
+
 function check(cmd: PrCommand, hookCwd: string): void {
   if (cmd.kind === "merge" && cmd.drift) throw new Refusal(DRIFT[cmd.drift]);
   if (cmd.crowded) throw new Refusal(ALONE);
   const cwd = cmd.host || cmd.lost ? hookCwd : expand(cmd.dir ?? ".", hookCwd);
+  if (cmd.kind === "issue-edit") {
+    if (classifyIssue(cmd, cwd) === "issue") return;
+    return check({ ...cmd, ...cmd.edit }, hookCwd);
+  }
   if (cmd.kind === "merge") return checkMerge(cmd, cwd);
   if (cmd.kind === "graphql") return checkGraphql(cmd, cwd);
   if (cmd.kind === "opaque") throw new Refusal(OPAQUE[cmd.part]);
-  if (cmd.kind === "unresolved") throw new Refusal(`the PR number \`${cmd.target}\` is not a literal number, so this gate cannot tell which PR this writes. Put the number in the path, for example \`repos/${cmd.repo}/pulls/38\`.`);
+  if (cmd.kind === "unresolved") throw new Refusal(`the PR or issue number \`${cmd.target}\` is not a literal number, so this gate cannot tell which PR this writes. Put the number in the path, for example \`repos/${cmd.repo}/pulls/38\`.`);
   const title = cmd.kind === "create" || cmd.kind === "edit" ? cmd.title && readBody(cmd.title, cmd, cwd) : undefined;
   if (cmd.kind === "create") return checkFields("create", { title, draft: cmd.draft, body: readBody(cmd.body, cmd, cwd) });
   if (cmd.kind === "input") return checkFields(cmd.write, readRequest(cmd, cwd));

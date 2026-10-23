@@ -303,14 +303,18 @@ function writeWorkflow(label: string): void {
   writeIfChanged(join(repo, ".github", "workflows", "pr-kit.yml"), yml);
 }
 
-function writeBlock(path: string): void {
-  const text = existsSync(path) ? readFileSync(path, "utf8") : "";
+type InstructionWrite = { path: string; text: string };
+
+function replaceRuleBlock(text: string, path: string): string {
+  const starts = text.split(BLOCK_START).length - 1;
+  const ends = text.split(BLOCK_END).length - 1;
   const at = text.indexOf(BLOCK_START);
   const end = text.indexOf(BLOCK_END);
-  const next = at >= 0 && end > at
-    ? text.slice(0, at) + BLOCK + text.slice(end + BLOCK_END.length)
-    : `${text.replace(/\s*$/, text ? "\n\n" : "")}${BLOCK}\n`;
-  writeIfChanged(path, next);
+  if (starts === 0 && ends === 0) return `${text}${text ? "\n\n" : ""}${BLOCK}\n`;
+  if (starts !== 1 || ends !== 1 || end < at) {
+    throw new Error(`${path} has invalid PR kit instruction markers. Expected none or one ordered pair, found ${starts} start and ${ends} end markers.`);
+  }
+  return text.slice(0, at) + BLOCK + text.slice(end + BLOCK_END.length);
 }
 
 function assertDestination(path: string, directory = false): void {
@@ -320,7 +324,7 @@ function assertDestination(path: string, directory = false): void {
   if (path !== repo) assertDestination(join(path, ".."), true);
 }
 
-function preflightDestinations(): void {
+function preflightDestinations(): InstructionWrite[] {
   for (const name of SKILLS) {
     const dest = join(repo, layout.directory, name);
     assertDestination(dest, true);
@@ -329,6 +333,13 @@ function preflightDestinations(): void {
   }
   for (const file of [".claude/settings.json", ".github/workflows/pr-kit.yml", "AGENTS.md", "CLAUDE.md"]) assertDestination(join(repo, file));
   if (layout.name === "skills") assertDestination(join(repo, ".agents", "skills"), true);
+  return ["AGENTS.md", "CLAUDE.md"].flatMap((file) => {
+    const path = join(repo, file);
+    if (file === "CLAUDE.md" && !existsSync(path)) return [];
+    const text = existsSync(path) ? readFileSync(path, "utf8") : "";
+    const next = replaceRuleBlock(text, path);
+    return file === "CLAUDE.md" && text.includes("AGENTS.md") ? [] : [{ path, text: next }];
+  });
 }
 
 const label = runnerLabel();
@@ -345,15 +356,13 @@ else if (remote.stamp.version > own.version) {
   throw new Error(`this kit copy is version ${own.version} but ${remote.repo} kits/pr on main is at ${remote.stamp.version}. Install from kits/pr after the change merges to main.`);
 }
 // The remote lookup can take seconds, so read the markers again: another install may have landed.
-preflightDestinations();
+const instructions = preflightDestinations();
 guardInstalled();
 for (const name of SKILLS) copySkill(name);
 if (layout.name === "skills") for (const name of SKILLS) linkSkill(name);
 wireHook();
 writeWorkflow(label);
-writeBlock(join(repo, "AGENTS.md"));
-const claude = join(repo, "CLAUDE.md");
-if (existsSync(claude) && !readFileSync(claude, "utf8").includes("AGENTS.md")) writeBlock(claude);
+for (const { path, text } of instructions) writeIfChanged(path, text);
 
 console.log(changes.length ? changes.map((c) => `- ${c}`).join("\n") : "PR kit already current.");
 console.log("Next: commit these files in their own PR, then make the pr-kit check required in the repo ruleset.");
