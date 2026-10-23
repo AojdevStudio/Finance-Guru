@@ -65,13 +65,15 @@ class DividendRecord(BaseModel):
     amount: float = Field(
         ...,
         gt=0.0,
-        description="Per-share dividend amount in dollars",
+        allow_inf_nan=False,
+        description="Finite per-share dividend amount in dollars",
     )
 
     shares_at_ex: float = Field(
         ...,
         gt=0.0,
-        description="Shares held at ex-date (fractional for DRIP positions)",
+        allow_inf_nan=False,
+        description="Finite shares held at ex-date (fractional for DRIP positions)",
     )
 
 
@@ -95,12 +97,12 @@ class TotalReturnInput(BaseModel):
 
     start_date: date = Field(
         ...,
-        description="Start of measurement period",
+        description="Starting close date, excludes dividends with this ex-date",
     )
 
     end_date: date = Field(
         ...,
-        description="End of measurement period",
+        description="Ending close date, includes dividends with this ex-date",
     )
 
     include_drip: bool = Field(
@@ -111,7 +113,8 @@ class TotalReturnInput(BaseModel):
     initial_shares: float = Field(
         default=1.0,
         gt=0.0,
-        description="Starting share count for the calculation",
+        allow_inf_nan=False,
+        description="Finite starting share count for the calculation",
     )
 
     @field_validator("ticker")
@@ -177,17 +180,20 @@ class TickerReturn(BaseModel):
 
     price_return: float = Field(
         ...,
-        description="Price-only return as decimal (0.15 = 15%)",
+        allow_inf_nan=False,
+        description="Finite price-only return as decimal (0.15 = 15%)",
     )
 
     dividend_return: float = Field(
         ...,
-        description="Dividend contribution to return as decimal (0.035 = 3.5%)",
+        allow_inf_nan=False,
+        description="Finite dividend contribution as decimal (0.035 = 3.5%)",
     )
 
     total_return: float = Field(
         ...,
-        description="Total return as decimal (price_return + dividend_return)",
+        allow_inf_nan=False,
+        description="Finite total return as decimal (price_return + dividend_return)",
     )
 
     dividends: list[DividendRecord] = Field(
@@ -198,7 +204,8 @@ class TickerReturn(BaseModel):
     final_shares: float = Field(
         default=1.0,
         gt=0.0,
-        description="Shares held at end of period (reflects DRIP accumulation)",
+        allow_inf_nan=False,
+        description="Finite shares held at end of period (reflects DRIP accumulation)",
     )
 
     data_quality_warnings: list[str] = Field(

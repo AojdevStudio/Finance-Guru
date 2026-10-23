@@ -25,17 +25,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.analysis.itc_risk import HIGH_RISK_FLOOR, LOW_RISK_CEILING, ITCRiskCalculator
-from src.models.itc_risk_inputs import ITCRiskResponse, RiskBand
-
-CRITICAL_RISK_FLOOR = 0.85
-"""DR-4: ITC risk above this blocks the trade."""
-
-MAX_DAILY_VAR = 0.05
-"""Internal daily VaR limit that normalizes VaR onto the ITC 0 to 1 scale."""
-
-MAX_DIVERGENCE_PCT = 30
-"""DR-4: ITC and normalized internal risk this far apart blocks the trade."""
+from src.analysis.itc_risk import (
+    CRITICAL_RISK_FLOOR,
+    MAX_DIVERGENCE_PCT,
+    ITCRiskCalculator,
+    evaluate_var_compliance,
+)
+from src.models.itc_risk_inputs import ITCComplianceInput, ITCRiskResponse, RiskBand
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 ITC_REFERENCE = (
@@ -194,14 +190,16 @@ class TestScenarioDivergenceDetection:
     def test_divergence_scenario_identified(self):
         """High ITC (0.82) + Low internal VaR (2.1%) = Divergence scenario DIV-1."""
 
-        itc_risk = 0.82
-        internal_var = 0.021
-
-        normalized_internal = internal_var / MAX_DAILY_VAR
-
-        divergence_pct = abs(itc_risk - normalized_internal) * 100
-
-        assert divergence_pct > MAX_DIVERGENCE_PCT
+        decision = evaluate_var_compliance(
+            ITCComplianceInput(
+                itc_supported=True,
+                itc_risk=0.82,
+                daily_var=-0.021,
+            )
+        )
+        assert decision.divergence_pct is not None
+        assert decision.divergence_pct > MAX_DIVERGENCE_PCT
+        assert (decision.rule, decision.action) == ("DR-4", "BLOCK")
 
     @patch("src.analysis.itc_risk.requests.get")
     def test_divergence_flow_returns_high_risk(self, mock_get):
@@ -315,9 +313,14 @@ class TestScenarioHighRisk:
 
     def test_critical_risk_triggers_dr4(self):
         """Risk > 0.85 should trigger DR-4 (Critical Risk Block)."""
-        itc_risk = 0.92
-
-        assert itc_risk > CRITICAL_RISK_FLOOR
+        decision = evaluate_var_compliance(
+            ITCComplianceInput(
+                itc_supported=True,
+                itc_risk=0.92,
+                daily_var=-0.046,
+            )
+        )
+        assert (decision.rule, decision.action) == ("DR-4", "BLOCK")
 
     @patch("src.analysis.itc_risk.requests.get")
     def test_high_risk_flow_returns_very_high_score(self, mock_get):
@@ -342,39 +345,49 @@ class TestScenarioHighRisk:
 
 
 class TestDecisionRulesCompliance:
-    """Verify the decision rules from the spec are correctly implementable."""
+    """The typed decision function applies the documented rules in precedence order."""
 
-    def test_dr1_low_risk_approval(self):
-        """DR-1: ITC 0.0-0.3 AND internal VaR within limits -> APPROVE."""
-        itc_risk = 0.2
-        internal_var = 0.03
+    @pytest.mark.parametrize(
+        ("score", "daily_var", "rule", "action"),
+        [
+            (0.2, -0.01, "DR-1", "APPROVE"),
+            (0.52, -0.026, "DR-2", "APPROVE WITH NOTE"),
+            (0.78, -0.039, "DR-3", "ENHANCED REVIEW"),
+            (0.92, -0.046, "DR-4", "BLOCK"),
+            (0.82, -0.021, "DR-4", "BLOCK"),
+            (0.3, -0.015, "DR-2", "APPROVE WITH NOTE"),
+            (0.7, -0.035, "DR-3", "ENHANCED REVIEW"),
+            (0.85, -0.0425, "DR-3", "ENHANCED REVIEW"),
+            (0.5, -0.01, "DR-2", "APPROVE WITH NOTE"),
+            (0.8, -0.025, "DR-3", "ENHANCED REVIEW"),
+            (0.8001, -0.025, "DR-4", "BLOCK"),
+        ],
+    )
+    def test_documented_rules(self, score, daily_var, rule, action):
+        result = evaluate_var_compliance(
+            ITCComplianceInput(itc_supported=True, itc_risk=score, daily_var=daily_var)
+        )
+        assert (result.rule, result.action) == (rule, action)
 
-        assert itc_risk < LOW_RISK_CEILING
-        assert internal_var < MAX_DAILY_VAR
-
-    def test_dr2_medium_risk_note(self):
-        """DR-2: ITC 0.3-0.7 OR elevated but manageable -> APPROVE WITH NOTE."""
-        itc_risk = 0.52
-
-        assert LOW_RISK_CEILING <= itc_risk < HIGH_RISK_FLOOR
-
-    def test_dr3_high_risk_review(self):
-        """DR-3: ITC 0.7-0.85 -> ENHANCED REVIEW - Position limit review required."""
-        itc_risk = 0.78
-
-        assert HIGH_RISK_FLOOR <= itc_risk < CRITICAL_RISK_FLOOR
-
-    def test_dr4_critical_risk_block(self):
-        """DR-4: ITC > 0.85 OR divergence > 30% -> BLOCK."""
-        itc_risk = 0.92
-
-        assert itc_risk > CRITICAL_RISK_FLOOR
-
-    def test_dr5_unsupported_ticker(self):
-        """DR-5: Unsupported ticker -> INTERNAL ONLY."""
-        calc = ITCRiskCalculator(api_key="dummy")
-
-        assert not calc.is_ticker_supported("NVDA", "tradfi")
+    @pytest.mark.parametrize(
+        ("supported", "score", "daily_var", "action"),
+        [
+            (False, None, None, "INTERNAL ONLY"),
+            (True, None, -0.01, "BLOCK"),
+            (True, 0.2, None, "BLOCK"),
+            (True, 0.8, -0.06, "BLOCK"),
+        ],
+    )
+    def test_unsupported_missing_and_over_limit_inputs(
+        self, supported, score, daily_var, action
+    ):
+        result = evaluate_var_compliance(
+            ITCComplianceInput(
+                itc_supported=supported, itc_risk=score, daily_var=daily_var
+            )
+        )
+        assert result.action == action
+        assert result.reason
 
 
 class TestCLIOutputFormats:
@@ -482,3 +495,61 @@ class TestEndToEndIntegration:
             timestamp=datetime.now(),
         )
         assert "HIGH" in high_start.get_risk_interpretation()
+
+
+@pytest.mark.parametrize(
+    ("inputs", "expected_rule"),
+    [
+        ({"itc_supported": True, "itc_risk": 0.8, "daily_var": -0.025}, "DR-3"),
+        ({"itc_supported": True, "itc_risk": 0.8}, "GUARDRAIL"),
+        ({"itc_supported": False}, "DR-5"),
+    ],
+)
+def test_offline_compliance_cli(inputs, expected_rule):
+    import json
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.analysis.itc_risk_cli",
+            "--compliance-input",
+            json.dumps(inputs),
+            "--output",
+            "json",
+        ],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    output = json.loads(result.stdout)
+    assert output["rule"] == expected_rule
+    assert output["date"]
+    assert "Supplied inputs" in output["source"]
+    assert "Not investment advice" in output["disclaimer"]
+
+
+def test_offline_compliance_cli_rejects_invalid_input():
+    import json
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.analysis.itc_risk_cli",
+            "--compliance-input",
+            json.dumps({"itc_supported": True, "itc_risk": 1.5}),
+            "--output",
+            "json",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "less_than_equal" in result.stderr

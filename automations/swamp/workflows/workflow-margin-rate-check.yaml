@@ -1,0 +1,36 @@
+id: 7a6bb731-9cc0-42fc-a7e3-820250dcb5ca
+name: margin-rate-check
+description: Refresh the ledger, then fail when Fidelity's margin rate for the current debt differs from the instance .env
+tags: {}
+trigger:
+  # Mondays 9:15 in the machine's local time zone. SnapTrade's daily holdings
+  # sync lands about 8:45 AM CT, so a CT machine runs after it.
+  schedule: "15 9 * * 1"
+jobs:
+  - name: main
+    description: Refresh the ledger, then compare Fidelity's tier rate with FG_MARGIN_INTEREST_RATE_DECIMAL
+    steps:
+      - name: refresh
+        description: Run the engine's SnapTrade positions sync in the instance
+        task:
+          type: model_method
+          modelIdOrName: fidelity-margin-rate
+          methodName: refresh
+        dependsOn: []
+        weight: 0
+        allowFailure: false
+      - name: check
+        description: Fetch Fidelity's rate table and compare it with the instance .env
+        task:
+          type: model_method
+          modelIdOrName: fidelity-margin-rate
+          methodName: check
+        dependsOn:
+          - step: refresh
+            condition:
+              type: succeeded
+        weight: 0
+        allowFailure: false
+    dependsOn: []
+    weight: 0
+version: 1

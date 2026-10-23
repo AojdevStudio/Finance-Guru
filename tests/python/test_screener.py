@@ -113,3 +113,29 @@ def test_weighted_bearish_signal_never_recommends_buying() -> None:
     result = screener.screen_ticker("TEST", prices, _business_dates(len(prices)))
 
     assert result.recommendation in {"hold", "sell", "strong_sell"}
+
+
+def test_portfolio_screening_propagates_a_ticker_failure(screener, mocker):
+    mocker.patch.object(
+        screener, "screen_ticker", side_effect=RuntimeError("failed detector")
+    )
+    with pytest.raises(RuntimeError, match="failed detector"):
+        screener.screen_portfolio({"SYNTHETIC": ([100.0], [date(2026, 1, 1)], None)})
+
+
+def test_batch_cli_fails_without_partial_output(monkeypatch, capsys):
+    from src.utils import screener_cli
+
+    def fetch(ticker, days):
+        if ticker == "BROKEN":
+            raise RuntimeError("synthetic provider failure")
+        return [100.0] * 60, _business_dates(60), None
+
+    monkeypatch.setattr(screener_cli, "fetch_ticker_data", fetch)
+    monkeypatch.setattr("sys.argv", ["screener", "GOOD", "BROKEN", "--output", "json"])
+    with pytest.raises(SystemExit) as exited:
+        screener_cli.main()
+    captured = capsys.readouterr()
+    assert exited.value.code == 1
+    assert captured.out == ""
+    assert "synthetic provider failure" in captured.err

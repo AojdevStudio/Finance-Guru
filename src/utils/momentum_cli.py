@@ -437,6 +437,14 @@ Examples:
         calculator = MomentumIndicators(config)
 
         indicator: Indicator = args.indicator
+        results: (
+            AllMomentumOutput
+            | RSIOutput
+            | MACDOutput
+            | StochasticOutput
+            | WilliamsROutput
+            | ROCOutput
+        )
         match indicator:
             case "all":
                 results = calculator.calculate_all(momentum_data)

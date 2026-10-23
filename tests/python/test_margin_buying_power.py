@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 
 from src.analysis.margin_metrics import _broker_balances_from_snaptrade
-from src.integrations.snaptrade.client import BalanceCurrencyMismatchError
+from src.integrations.snaptrade.client import (
+    AccountEquity,
+    BalanceCurrencyMismatchError,
+)
 
 
 class SyntheticMarginClient:
@@ -15,8 +20,8 @@ class SyntheticMarginClient:
     def get_balances(self, account_id: str) -> list[dict[str, object]]:
         return self.balances
 
-    def get_account_equity(self, account_id: str) -> float:
-        return 100000.0
+    def get_account_equity(self, account_id: str) -> AccountEquity:
+        return AccountEquity(amount=100000.0, synced_at=datetime.now(UTC))
 
     def get_positions(self, account_id: str) -> list[dict[str, object]]:
         return [{"symbol": "SYNTHETIC", "quantity": 1100.0, "price": 100.0}]

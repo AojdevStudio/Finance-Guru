@@ -842,7 +842,7 @@ class PortfolioOptimizer:
                 f"status {result.status}, {result.message}"
             )
 
-        return result.x
+        return np.asarray(result.x, dtype=float)
 
 
 def optimize_portfolio(

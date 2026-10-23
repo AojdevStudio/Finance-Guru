@@ -36,6 +36,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+MIN_OPTION_VOLATILITY = 0.01
+MAX_OPTION_VOLATILITY = 3.0
+
 
 class OptionInput(BaseModel):
     """Basic option contract specifications.
@@ -81,7 +84,7 @@ class BlackScholesInput(BaseModel):
     WHY: Black-Scholes is the standard model for European options
     VALIDATES:
         - All prices/rates are non-negative
-        - Volatility is reasonable (0-300%)
+        - Volatility is between 1% and 300%, inclusive
         - Time to expiry is positive
 
     EDUCATIONAL NOTE:
@@ -105,8 +108,8 @@ class BlackScholesInput(BaseModel):
 
     volatility: float = Field(
         ...,
-        ge=0.01,
-        le=3.0,
+        ge=MIN_OPTION_VOLATILITY,
+        le=MAX_OPTION_VOLATILITY,
         description="Annual volatility as decimal (e.g., 0.35 = 35%)",
     )
 
@@ -238,7 +241,6 @@ class ImpliedVolInput(BaseModel):
 
     WHAT: Reverse-engineer volatility from market option price
     WHY: Market price reflects market's volatility expectation
-    HOW: Newton-Raphson iterative solver
 
     EDUCATIONAL NOTE:
     Implied volatility (IV) is what the market THINKS volatility will be.
@@ -247,13 +249,21 @@ class ImpliedVolInput(BaseModel):
     If IV < historical vol: Market expects decreased volatility (complacency)
     """
 
+    model_config = {"allow_inf_nan": False}
+
     spot_price: float = Field(..., gt=0.0, description="Current stock price")
     strike: float = Field(..., gt=0.0, description="Option strike")
-    time_to_expiry: float = Field(..., gt=0.0, description="Time to expiry (years)")
-    market_price: float = Field(..., gt=0.0, description="Observed market price")
+    time_to_expiry: float = Field(
+        ..., gt=0.0, le=10.0, description="Time to expiry (years)"
+    )
+    market_price: float = Field(..., ge=0.0, description="Observed market price")
     option_type: Literal["call", "put"] = Field(..., description="Option type")
-    risk_free_rate: float = Field(default=0.045, description="Risk-free rate")
-    dividend_yield: float = Field(default=0.0, description="Dividend yield")
+    risk_free_rate: float = Field(
+        default=0.045, ge=0.0, le=0.20, description="Risk-free rate"
+    )
+    dividend_yield: float = Field(
+        default=0.0, ge=0.0, le=0.20, description="Dividend yield"
+    )
 
 
 class ImpliedVolOutput(BaseModel):
@@ -266,12 +276,15 @@ class ImpliedVolOutput(BaseModel):
     ticker: str = Field(..., description="Underlying ticker")
     implied_volatility: float = Field(
         ...,
-        ge=0.0,
-        le=5.0,
+        ge=MIN_OPTION_VOLATILITY,
+        le=MAX_OPTION_VOLATILITY,
         description="Implied volatility (decimal, e.g., 0.45 = 45%)",
     )
 
-    iterations: int = Field(..., description="Solver iterations required")
+    iterations: int = Field(
+        ...,
+        description="Number of model price evaluations, including bracket endpoints",
+    )
     converged: bool = Field(..., description="Whether solver converged")
 
     market_price: float = Field(..., description="Input market price")

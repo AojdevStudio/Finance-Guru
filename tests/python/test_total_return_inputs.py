@@ -255,3 +255,62 @@ class TestTickerReturn:
             )
             relevant = [x for x in w if "deviates" in str(x.message)]
             assert len(relevant) == 0
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -float("inf")])
+@pytest.mark.parametrize(
+    "model,field,values",
+    [
+        (
+            DividendRecord,
+            "amount",
+            {"ex_date": date(2025, 3, 15), "amount": 2.0, "shares_at_ex": 1.0},
+        ),
+        (
+            DividendRecord,
+            "shares_at_ex",
+            {"ex_date": date(2025, 3, 15), "amount": 2.0, "shares_at_ex": 1.0},
+        ),
+        (
+            TotalReturnInput,
+            "initial_shares",
+            {
+                "ticker": "SYNTH",
+                "start_date": date(2025, 1, 2),
+                "end_date": date(2025, 7, 2),
+            },
+        ),
+        *[
+            (
+                TickerReturn,
+                field,
+                {
+                    "ticker": "SYNTH",
+                    "start_date": date(2025, 1, 2),
+                    "end_date": date(2025, 7, 2),
+                    "price_return": 0.1,
+                    "dividend_return": 0.02,
+                    "total_return": 0.12,
+                },
+            )
+            for field in (
+                "price_return",
+                "dividend_return",
+                "total_return",
+                "final_shares",
+            )
+        ],
+    ],
+    ids=[
+        "dividend-amount",
+        "dividend-shares",
+        "initial-shares",
+        "price-return",
+        "dividend-return",
+        "total-return",
+        "final-shares",
+    ],
+)
+def test_financial_models_refuse_nonfinite_values(bad, model, field, values):
+    with pytest.raises(ValueError):
+        model(**(values | {field: bad}))

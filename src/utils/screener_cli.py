@@ -357,19 +357,14 @@ Examples:
                 f"📥 Fetching data for {len(args.tickers)} tickers...", file=sys.stderr
             )
 
-            tickers_data = {}
+            tickers_data: dict[
+                str, tuple[list[float], list[date], list[float] | None]
+            ] = {}
             for ticker in args.tickers:
                 ticker = ticker.upper()
-                try:
-                    data = fetch_ticker_data(ticker, args.days)
-                    tickers_data[ticker] = data
-                    print(f"  ✅ {ticker}: {len(data[0])} points", file=sys.stderr)
-                except Exception as e:
-                    print(f"  ❌ {ticker}: {e}", file=sys.stderr)
-
-            if not tickers_data:
-                print("ERROR: No valid data fetched", file=sys.stderr)
-                sys.exit(1)
+                data = fetch_ticker_data(ticker, args.days)
+                tickers_data[ticker] = data
+                print(f"  ✅ {ticker}: {len(data[0])} points", file=sys.stderr)
 
             print("🔍 Running portfolio screening...", file=sys.stderr)
             portfolio_results = screener.screen_portfolio(tickers_data)

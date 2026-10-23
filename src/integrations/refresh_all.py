@@ -9,8 +9,11 @@ from typing import Any
 
 from src.config.instance_paths import InstancePaths, load_instance_env
 from src.integrations.simplefin.sync_expenses_db import sync as sync_expenses
+from src.integrations.snaptrade.sync_db import (
+    stale_equity_warning,
+    unpriced_lot_warning,
+)
 from src.integrations.snaptrade.sync_db import sync as sync_positions
-from src.integrations.snaptrade.sync_db import unpriced_lot_warning
 from src.integrations.snaptrade.sync_transactions_db import sync as sync_transactions
 
 
@@ -35,7 +38,7 @@ def _run_source(name: str, operation: Callable[[], dict[str, Any]]) -> dict[str,
 
 
 def _print_positions_summary(summary: dict[str, Any]) -> None:
-    """Print the positions generation and any unpriced-lot warnings."""
+    """Print the positions generation, unpriced-lot, and stale-equity warnings."""
     if not summary["accounts"]:
         print("  no enabled, routed account synced")
         return
@@ -43,6 +46,8 @@ def _print_positions_summary(summary: dict[str, Any]) -> None:
     for account in summary["accounts"]:
         for lot in account["unpriced_lots"]:
             print(f"  warning: {unpriced_lot_warning(lot)}")
+        if account["equity_stale"]:
+            print(f"  warning: {stale_equity_warning(account['equity_synced_at'])}")
 
 
 def refresh(database_url: str | None, *, months: int = 12) -> dict[str, Any]:

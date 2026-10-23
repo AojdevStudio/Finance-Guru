@@ -38,6 +38,7 @@ import io
 import logging
 import sys
 from datetime import date
+from typing import Literal
 
 import yaml
 
@@ -66,7 +67,7 @@ EXPIRING_WINDOW_DAYS = 14
 
 def scan_chain_quiet(
     ticker: str,
-    option_type: str,
+    option_type: Literal["call", "put"],
     otm_min: float,
     otm_max: float,
     days_min: int,

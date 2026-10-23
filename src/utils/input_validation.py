@@ -28,7 +28,7 @@ Created: 2026-01-16
 """
 
 from datetime import date
-from typing import assert_never
+from typing import Literal, assert_never
 
 import numpy as np
 import pandas as pd
@@ -165,7 +165,9 @@ class InputValidator:
             missing_ratio = missing_count / len(df)
 
             if missing_ratio > self.config.missing_data_threshold:
-                severity = "critical" if missing_ratio > 0.10 else "high"
+                severity: Literal["low", "medium", "high", "critical"] = (
+                    "critical" if missing_ratio > 0.10 else "high"
+                )
                 anomalies.append(
                     DataAnomaly(
                         anomaly_type="missing",
@@ -199,7 +201,7 @@ class InputValidator:
         - IQR: Robust to skewed data
         - Modified Z: Best for extreme outliers
         """
-        prices = df["price"].values
+        prices = df["price"].to_numpy(dtype=float)
 
         match self.config.outlier_method:
             case OutlierMethod.Z_SCORE:
@@ -212,7 +214,7 @@ class InputValidator:
                 assert_never(self.config.outlier_method)
 
         for idx in outlier_indices:
-            severity = (
+            severity: Literal["low", "medium", "high", "critical"] = (
                 "medium"
                 if abs(outliers[idx]) < self.config.outlier_threshold * 1.5
                 else "high"
@@ -317,7 +319,9 @@ class InputValidator:
 
         for idx in gap_indices:
             gap_days = int(date_diffs.iloc[idx])
-            severity = "medium" if gap_days < 30 else "high"
+            severity: Literal["low", "medium", "high", "critical"] = (
+                "medium" if gap_days < 30 else "high"
+            )
 
             anomalies.append(
                 DataAnomaly(
@@ -352,7 +356,7 @@ class InputValidator:
         These are NOT real returns - they're corporate actions.
         Most data providers adjust for splits, but sometimes they miss them.
         """
-        prices = df["price"].values
+        prices = df["price"].to_numpy(dtype=float)
         dates = df["date"].values
 
         returns = np.diff(prices) / prices[:-1]
@@ -362,7 +366,9 @@ class InputValidator:
 
         for idx in split_indices:
             return_pct = returns[idx]
-            severity = "medium" if abs(return_pct) < 0.40 else "high"
+            severity: Literal["low", "medium", "high", "critical"] = (
+                "medium" if abs(return_pct) < 0.40 else "high"
+            )
 
             anomalies.append(
                 DataAnomaly(
