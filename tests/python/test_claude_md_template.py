@@ -283,7 +283,6 @@ def test_required_sections_present(
         "## Agent-Tool Matrix",
         "## Output & Validation",
         "## Version Info",
-        "## Landing the Plane",
     ]
 
     for section in required_sections:
@@ -352,18 +351,24 @@ def test_agent_tool_matrix_present(
         assert agent in result, f"Agent-Tool Matrix missing {agent}"
 
 
-def test_landing_the_plane_section(
+def test_product_instructions_keep_finance_rules_without_repository_workflow(
     generator: YAMLGenerator, valid_user_data: UserDataInput
 ):
-    """Test that Landing the Plane section is complete with all steps."""
+    """Retain finance guardrails without telling an instance to push code."""
     result = generator.generate_claude_md(valid_user_data)
 
-    assert "git pull --rebase" in result, "Landing the Plane missing git commands"
-    assert "bd sync" not in result, "Landing the Plane should not reference bd sync"
-    assert "git push" in result, "Landing the Plane missing git push"
-    assert "MANDATORY WORKFLOW" in result, (
-        "Landing the Plane missing mandatory workflow section"
-    )
+    for rule in (
+        "Quote calculator output",
+        "Fail closed",
+        "not investment advice",
+        "licensed professionals",
+        "risk disclosure",
+        "data source",
+    ):
+        assert rule in result
+    assert "git push" not in result
+    assert "git pull --rebase" not in result
+    assert "## Landing the Plane" not in result
 
 
 def test_no_unreplaced_variables(
@@ -411,8 +416,10 @@ def test_full_generation_workflow(
     """Test complete CLAUDE.md generation workflow end-to-end."""
     result = generator.generate_claude_md(valid_user_data)
 
-    engine_rules = Path(__file__).resolve().parents[2] / "CLAUDE.md"
-    assert result.startswith(f"@{engine_rules}\n\n# CLAUDE.md")
+    product_rules = (
+        Path(__file__).resolve().parents[2] / ".claude/skills/fin-core/SKILL.md"
+    )
+    assert result.startswith(f"@{product_rules}\n")
     assert len(result) > 1000, "Generated CLAUDE.md seems too short"
 
     assert "Alex's" in result, "Missing personalization"
@@ -421,7 +428,7 @@ def test_full_generation_workflow(
 
     assert "## Architecture" in result, "Missing Architecture section"
     assert "## Financial Analysis Tools" in result, "Missing Tools section"
-    assert "## Landing the Plane" in result, "Missing Landing section"
+    assert "Quote calculator output" in result, "Missing finance rules"
 
     assert "{{" not in result, "Contains unreplaced template variables"
     assert "}}" not in result, "Contains unreplaced template variables"

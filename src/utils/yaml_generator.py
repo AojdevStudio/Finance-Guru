@@ -23,6 +23,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from src.config.instance_instructions import product_instructions
 from src.config.instance_paths import InstancePaths
 from src.models.yaml_generation_inputs import (
     UserDataInput,
@@ -250,9 +251,9 @@ class YAMLGenerator:
         """
         template = self._load_template("CLAUDE", "md")
         prepared_data = self._prepare_user_data(data)
-        engine_rules = Path(__file__).resolve().parents[2] / "CLAUDE.md"
+        repo = Path(__file__).resolve().parents[2]
         content = self._process_template(template, prepared_data)
-        return f"@{engine_rules}\n\n{content}"
+        return f"{product_instructions(repo)}\n\n{content}"
 
     def generate_env(self, data: UserDataInput) -> str:
         """Generate .env file from template.
@@ -307,8 +308,8 @@ def config_file_targets(
     """Map each generated file to its path inside the instance.
 
     The MCP servers go to ``.mcp.json`` at the instance root, the file Claude
-    Code reads for project-scoped servers. A checkout-mode instance links
-    ``.claude`` to the engine, so a file under it would land in the engine.
+    Code reads for project-scoped servers. Keep it outside the checkout's
+    linked finance assets, so writes stay within the private instance.
 
     Args:
         output: YAMLGenerationOutput with generated content

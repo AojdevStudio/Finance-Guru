@@ -24,6 +24,11 @@ from pathlib import Path
 from typing import Literal
 
 from src.config import InstancePaths
+from src.config.instance_instructions import (
+    FINANCE_RULES,
+    migrate_generated_instructions,
+    product_instructions,
+)
 
 GITIGNORE = """.env
 .DS_Store
@@ -195,6 +200,8 @@ def _preflight_instructions(root: Path, repo: Path, *, plugin_mode: bool) -> Non
             else (_instance_instructions(repo, legacy=True),)
         )
         current = path.read_text("utf-8")
+        if name == "CLAUDE.md" and migrate_generated_instructions(current, repo):
+            continue
         inherited = marker in current or (
             plugin_mode and name == "AGENTS.md" and CHECKOUT_DISCOVERY_MARKER in current
         )
@@ -272,7 +279,7 @@ def _merge_agent_setting(path: Path) -> StepResult:
 
 
 def _replace_instance_instructions(
-    content: str, previous: tuple[str, ...]
+    content: str, previous: tuple[str, ...], repo: Path
 ) -> StepAction:
     """Update recognized generated instructions and preserve other owner text."""
 
@@ -283,6 +290,14 @@ def _replace_instance_instructions(
             path.write_text(content, encoding="utf-8")
             return "created"
         current = path.read_text(encoding="utf-8")
+        migrated = (
+            migrate_generated_instructions(current, repo)
+            if path.name == "CLAUDE.md"
+            else None
+        )
+        if migrated is not None:
+            path.write_text(migrated, encoding="utf-8")
+            return "updated"
         if current != content and current in previous:
             path.write_text(content, encoding="utf-8")
             return "updated"
@@ -404,8 +419,8 @@ def _instance_env(example: str) -> str:
 
 
 def _instance_instructions(repo: Path, *, legacy: bool = False) -> str:
-    project_file = repo / "CLAUDE.md" if legacy else Path("AGENTS.md")
-    return f"""@{project_file}
+    prefix = f"@{repo / 'CLAUDE.md'}" if legacy else product_instructions(repo)
+    return f"""{prefix}
 
 # Instance
 
@@ -444,17 +459,7 @@ copy or fork skill content into this instance.
         if legacy
         else f"Before doing Finance Guru work, read `{repo / '.claude/skills/fin-core/SKILL.md'}` in full."
     )
-    rules = (
-        ""
-        if legacy
-        else """
-Run `date` before analysis. Quote calculator output and pass `--output json`
-where offered. Fail closed on missing inputs. Every financial output needs an
-educational-only disclaimer, a not investment advice statement, a recommendation
-to consult licensed professionals, a risk disclosure, a date and its data source.
-Speak to the owner in the second person. Keep private data in this instance.
-"""
-    )
+    rules = "" if legacy else f"\n{FINANCE_RULES}\n"
 
     return (
         f"""# Finance Guru instance
@@ -548,6 +553,7 @@ def _build_plan(
                 _replace_instance_instructions(
                     _instance_instructions(repo),
                     (_instance_instructions(repo, legacy=True),),
+                    repo,
                 ),
             ),
             PlanStep(
@@ -564,6 +570,7 @@ def _build_plan(
                             (False, False),
                         )
                     ),
+                    repo,
                 ),
             ),
             PlanStep(paths.root / ".git", _initialize_git),

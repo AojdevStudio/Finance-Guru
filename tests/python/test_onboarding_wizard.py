@@ -614,7 +614,7 @@ class TestWizardSaveResume:
         assert not progress_file.exists()
 
 
-ENGINE_RULES = Path(__file__).resolve().parents[2] / "CLAUDE.md"
+ENGINE_RULES = Path(__file__).resolve().parents[2] / ".claude/skills/fin-core/SKILL.md"
 PRIVATE_OUTPUTS = (
     "user-profile.yaml",
     "config.yaml",

@@ -92,7 +92,11 @@ def test_checkout_runtime_keeps_developer_settings_and_tools_in_the_repo(
     assert set(json.loads(settings)["hooks"]) == {"SessionStart"}
     assert "developer" not in settings
     assert (repo / ".claude/settings.json").read_text() == developer_settings
-    assert (root / "CLAUDE.md").read_text().startswith("@AGENTS.md\n")
+    assert (
+        (root / "CLAUDE.md")
+        .read_text()
+        .startswith(f"@{repo / '.claude/skills/fin-core/SKILL.md'}\n")
+    )
     assert str(repo / "AGENTS.md") not in (root / "AGENTS.md").read_text()
     assert str(repo / "CLAUDE.md") not in (root / "CLAUDE.md").read_text()
 
@@ -139,7 +143,11 @@ private paths resolve from the current directory.
     assert not (root / ".claude").is_symlink()
     assert (root / ".agents").resolve() == root / ".claude"
     assert (repo / ".claude/settings.json").read_text() == shared
-    assert (root / "CLAUDE.md").read_text().startswith("@AGENTS.md\n")
+    assert (
+        (root / "CLAUDE.md")
+        .read_text()
+        .startswith(f"@{repo / '.claude/skills/fin-core/SKILL.md'}\n")
+    )
     assert str(repo / "AGENTS.md") not in (root / "AGENTS.md").read_text()
     assert _run_init(root, repo).returncode == 0
 
@@ -396,7 +404,9 @@ def test_fresh_root_creates_complete_instance(tmp_path: Path) -> None:
         "session_context",
     }
 
-    assert claude_text.splitlines()[0] == "@AGENTS.md"
+    assert claude_text.splitlines()[0] == (
+        f"@{repo / '.claude/skills/fin-core/SKILL.md'}"
+    )
     assert claude_text.index("# Instance") < claude_text.index(
         "This directory is a Finance Guru instance"
     )

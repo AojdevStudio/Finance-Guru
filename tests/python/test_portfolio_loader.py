@@ -1,5 +1,7 @@
 """Fidelity CSV parsing in the dashboard portfolio loader."""
 
+import os
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -75,3 +77,43 @@ def test_share_class_symbol_keeps_its_layer(
 def test_load_latest_returns_none_when_no_csv_exists(mocker) -> None:
     mocker.patch.object(PortfolioLoader, "find_latest_csv", return_value=None)
     assert PortfolioLoader.load_latest() is None
+
+
+def test_csv_reload_preserves_file_timestamp(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mocker
+) -> None:
+    mocker.patch(
+        "src.ui.services.portfolio_loader.FinGuruConfig.load_layers",
+        return_value={},
+    )
+    monkeypatch.setenv("FIN_GURU_DATA_ROOT", str(tmp_path))
+    imports = tmp_path / "imports"
+    imports.mkdir()
+    csv = imports / "Portfolio_Positions_synthetic.csv"
+    csv.write_text(
+        "Symbol,Quantity,Current Value,Today's Gain/Loss Dollar\nABC,1,100,0\n"
+    )
+    exported_at = datetime(2025, 1, 2, 12, 0)
+    os.utime(csv, (exported_at.timestamp(), exported_at.timestamp()))
+
+    first = PortfolioLoader.load_latest()
+    second = PortfolioLoader.load_latest()
+
+    assert first is not None and second is not None
+    assert first.timestamp == second.timestamp == exported_at
+
+
+def test_csv_future_timestamp_is_rejected(tmp_path: Path, mocker) -> None:
+    mocker.patch(
+        "src.ui.services.portfolio_loader.FinGuruConfig.load_layers",
+        return_value={},
+    )
+    csv = tmp_path / "Portfolio_Positions_synthetic.csv"
+    csv.write_text(
+        "Symbol,Quantity,Current Value,Today's Gain/Loss Dollar\nABC,1,100,0\n"
+    )
+    future = datetime.now() + timedelta(days=1)
+    os.utime(csv, (future.timestamp(), future.timestamp()))
+
+    with pytest.raises(ValueError, match="future"):
+        PortfolioLoader.parse_portfolio(csv)

@@ -62,9 +62,16 @@ Checkout instances own their `.claude` settings and link only finance assets.
 Their `.agents` link points to that local runtime view. They do not inherit
 repository developer hooks or PR tools. Rerun the scaffold command to migrate
 an older instance with known checkout symlinks. The migration preserves shared
-repository settings and replaces only unedited generated instructions. An
+repository settings and owner notes. An
 unknown link or an edited inherited instruction file stops migration before
 writes and names the conflicting path.
+
+The scaffold and onboarding writer load the `fin-core` skill and the same
+finance rules. They do not import repository developer instructions. The scaffold
+can migrate a recognized wizard-generated `CLAUDE.md`. It replaces the old
+repository import and removes only the exact generated repository push workflow.
+The profile text and owner notes stay intact. An edited legacy push workflow
+stops migration before writes.
 
 To switch a checkout instance to plugin mode, first move its `.claude` runtime
 directory aside and remove its `.agents` discovery link. Keep any local settings

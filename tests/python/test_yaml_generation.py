@@ -19,6 +19,9 @@ from pathlib import Path
 
 import pytest
 
+from src.cli import instance_init
+from src.cli.onboarding_wizard import generate_config_files
+from src.config.instance_paths import InstancePaths
 from src.models.yaml_generation_inputs import (
     AllocationStrategy,
     CashFlowInput,
@@ -93,6 +96,106 @@ def yaml_generator(tmp_path: Path) -> YAMLGenerator:
     if not template_dir.exists():
         pytest.skip("Template directory not found - skipping integration tests")
     return YAMLGenerator(str(template_dir))
+
+
+@pytest.mark.parametrize("plugin", [False, True])
+def test_scaffold_and_wizard_share_product_instructions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    valid_user_data: UserDataInput,
+    plugin: bool,
+) -> None:
+    repo = Path(__file__).resolve().parents[2]
+    root = tmp_path / "instance"
+    monkeypatch.setattr(instance_init, "_run_uv_sync", lambda _root: None)
+    args = [str(root), "--repo", str(repo), *(["--plugin"] if plugin else [])]
+    assert instance_init.main(args) == 0
+    initial_prefix = (root / "CLAUDE.md").read_text().splitlines()[0]
+    agents = root / "AGENTS.md"
+    owner_notes = agents.read_text() + "\n## Household notes\nPreserve this note.\n"
+    agents.write_text(owner_notes)
+
+    generate_config_files(valid_user_data, InstancePaths(root=root))
+
+    claude = root / "CLAUDE.md"
+    content = claude.read_text()
+    assert (
+        content.splitlines()[0]
+        == initial_prefix
+        == (f"@{repo / '.claude/skills/fin-core/SKILL.md'}")
+    )
+    for rule in (
+        "Quote calculator output",
+        "Fail closed",
+        "not investment advice",
+        "licensed professionals",
+        "risk disclosure",
+        "data source",
+    ):
+        assert rule in content
+    assert f"@{repo / 'CLAUDE.md'}" not in content
+    assert "git push" not in content
+    claude_notes = content + "\n## Household notes\nPreserve this note too.\n"
+    claude.write_text(claude_notes)
+    private = {
+        name: (root / name).read_bytes()
+        for name in (".env", "user-profile.yaml", "config.yaml")
+    }
+
+    assert instance_init.main(args) == 0
+    assert claude.read_text() == claude_notes
+    assert agents.read_text() == owner_notes
+    assert all((root / name).read_bytes() == data for name, data in private.items())
+
+
+@pytest.mark.parametrize("plugin", [False, True])
+def test_scaffold_migrates_wizard_import_without_losing_owner_content(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    yaml_generator: YAMLGenerator,
+    valid_user_data: UserDataInput,
+    plugin: bool,
+) -> None:
+    repo = Path(__file__).resolve().parents[2]
+    root = tmp_path / "instance"
+    monkeypatch.setattr(instance_init, "_run_uv_sync", lambda _root: None)
+    args = [str(root), "--repo", str(repo), *(["--plugin"] if plugin else [])]
+    assert instance_init.main(args) == 0
+    generated = yaml_generator.generate_claude_md(valid_user_data)
+    body = generated[generated.index("# CLAUDE.md\n") :]
+    notes = "\n## Household notes\nPreserve this note.\n"
+    (root / "CLAUDE.md").write_text(f"@{repo / 'CLAUDE.md'}\n\n{body}{notes}")
+    private = {
+        name: (root / name).read_bytes() for name in (".env", "user-profile.yaml")
+    }
+
+    assert instance_init.main(args) == 0
+
+    migrated = (root / "CLAUDE.md").read_text()
+    assert migrated.startswith(f"@{repo / '.claude/skills/fin-core/SKILL.md'}\n")
+    assert body + notes in migrated
+    assert all((root / name).read_bytes() == data for name, data in private.items())
+
+
+def test_scaffold_refuses_edited_legacy_workflow_before_writing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = Path(__file__).resolve().parents[2]
+    root = tmp_path / "instance"
+    root.mkdir()
+    content = (
+        f"@{repo / 'CLAUDE.md'}\n\n# CLAUDE.md\n"
+        "\n## Landing the Plane (Session Completion)\nMy own workflow.\n"
+    )
+    (root / "CLAUDE.md").write_text(content)
+    monkeypatch.setattr(instance_init, "_run_uv_sync", lambda _root: None)
+
+    with pytest.raises(FileExistsError, match="edited legacy developer instructions"):
+        instance_init.main([str(root), "--repo", str(repo)])
+
+    assert list(root.iterdir()) == [root / "CLAUDE.md"]
+    assert (root / "CLAUDE.md").read_text() == content
 
 
 class TestPydanticModelValidation:
@@ -252,8 +355,10 @@ class TestConfigGeneration:
         result = yaml_generator.generate_claude_md(valid_user_data)
 
         assert "TestUser" in result or "CLAUDE" in result
-        engine_rules = Path(__file__).resolve().parents[2] / "CLAUDE.md"
-        assert result.startswith(f"@{engine_rules}\n")
+        product_rules = (
+            Path(__file__).resolve().parents[2] / ".claude/skills/fin-core/SKILL.md"
+        )
+        assert result.startswith(f"@{product_rules}\n")
 
     def test_generate_env(
         self, yaml_generator: YAMLGenerator, valid_user_data: UserDataInput
