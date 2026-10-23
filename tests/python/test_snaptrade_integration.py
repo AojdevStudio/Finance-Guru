@@ -108,25 +108,37 @@ class FakeAccountInformation:
             ]
         )
 
-    def get_user_account_positions(
+    def get_all_account_positions(
         self, account_id: str, user_id: str, user_secret: str
     ):
-        """Return representative position payload."""
+        """Return unified SDK 13 holdings with per-share cost basis."""
         assert account_id == "acct-1"
         return FakeResponse(
-            [
-                {
-                    "symbol": {"symbol": {"symbol": "SPAXX"}},
-                    "units": 250.5,
-                    "price": 1,
-                    "average_purchase_price": 1,
-                },
-                {
-                    "symbol": {"symbol": {"symbol": "TSLA"}},
-                    "units": 10,
-                    "price": 200,
-                },
-            ]
+            {
+                "results": [
+                    {
+                        "instrument": {"kind": "mutualfund", "symbol": "SPAXX"},
+                        "units": 250.5,
+                        "price": 1,
+                        "cost_basis": 1,
+                    },
+                    {
+                        "instrument": {"kind": "stock", "symbol": "TSLA"},
+                        "units": 10,
+                        "price": 200,
+                    },
+                    {
+                        "instrument": {
+                            "kind": "option",
+                            "symbol": "SPY   260918P00620000",
+                            "multiplier": "100",
+                        },
+                        "units": 2,
+                        "price": 3.93,
+                        "cost_basis": 4.61675,
+                    },
+                ]
+            }
         )
 
     def get_user_account_details(self, account_id: str, user_id: str, user_secret: str):
@@ -160,29 +172,10 @@ class FakeAccountInformation:
         )
 
 
-class FakeOptions:
-    """Fake SnapTrade options API."""
-
-    def list_option_holdings(self, account_id: str, user_id: str, user_secret: str):
-        """Return one representative option holding (per-contract cost)."""
-        assert account_id == "acct-1"
-        return FakeResponse(
-            [
-                {
-                    "symbol": {"option_symbol": {"ticker": "SPY   260918P00620000"}},
-                    "units": 2,
-                    "price": 3.93,
-                    "average_purchase_price": 461.675,
-                }
-            ]
-        )
-
-
 class FakeSDKClient:
     """Fake SnapTrade SDK client root."""
 
     account_information = FakeAccountInformation()
-    options = FakeOptions()
 
 
 def _credentials() -> SnapTradeCredentials:

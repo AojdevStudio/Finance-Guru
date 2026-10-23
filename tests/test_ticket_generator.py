@@ -302,3 +302,50 @@ def test_generate_applies_configured_rate_to_projected_interest(
     result = generate(_layer3_bundle(), portfolio, client=client)
 
     assert result.guardrails.advisory_block == "coverage<2x"
+
+
+def test_installed_anthropic_sdk_generates_a_guarded_ticket_offline() -> None:
+    import json
+
+    import httpx2
+    from anthropic import Anthropic
+
+    requests = []
+
+    def respond(request):
+        requests.append(json.loads(request.content))
+        return httpx2.Response(
+            200,
+            json={
+                "id": "synthetic-message",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-sonnet-4-6",
+                "stop_reason": "tool_use",
+                "stop_sequence": None,
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "synthetic-tool",
+                        "name": "emit_buy_ticket",
+                        "input": _ticket_payload(),
+                    }
+                ],
+                "usage": {
+                    "input_tokens": 100,
+                    "output_tokens": 50,
+                    "cache_read_input_tokens": 20,
+                },
+            },
+        )
+
+    with Anthropic(
+        api_key="synthetic-offline-key",
+        http_client=httpx2.Client(transport=httpx2.MockTransport(respond)),
+    ) as client:
+        result = generate(_layer3_bundle(), _portfolio_state(), client=client)
+    assert result.guardrails.status == "accepted"
+    assert result.usage.cache_read_input_tokens == 20
+    assert "not investment advice" in result.ticket.educational_notice
+    assert requests[0]["tool_choice"]["name"] == "emit_buy_ticket"
+    assert requests[0]["tool_choice"]["disable_parallel_tool_use"] is True

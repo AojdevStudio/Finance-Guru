@@ -70,14 +70,16 @@ def generation_store(tmp_path: Path, monkeypatch):
                 ),
             )
     sdk = MagicMock()
-    sdk.account_information.get_user_account_positions.return_value = [
-        {
-            "symbol": {"symbol": "ABC"},
-            "units": 2.0,
-            "price": 100.0,
-            "average_purchase_price": 100.0,
-        }
-    ]
+    sdk.account_information.get_all_account_positions.return_value = {
+        "results": [
+            {
+                "instrument": {"kind": "stock", "symbol": "ABC"},
+                "units": 2.0,
+                "price": 100.0,
+                "cost_basis": 100.0,
+            }
+        ]
+    }
     sdk.account_information.get_user_account_balance.return_value = [
         {"currency": {"code": "USD"}, "cash": 0.0, "buying_power": 0.0}
     ]
@@ -87,7 +89,6 @@ def generation_store(tmp_path: Path, monkeypatch):
             "holdings": {"last_successful_sync": datetime.now(UTC).isoformat()}
         },
     }
-    sdk.options.list_option_holdings.return_value = []
     client = SnapTradeClientWrapper(
         SnapTradeCredentials(
             client_id="synthetic-client",
@@ -108,14 +109,14 @@ def test_failed_account_preserves_complete_generation(generation_store, failure)
     config, database, sdk = generation_store
     before = _snapshot(database)
     if failure == "provider":
-        positions = sdk.account_information.get_user_account_positions.return_value
+        positions = sdk.account_information.get_all_account_positions.return_value
 
         def fetch_positions(*, account_id, **kwargs):
             if account_id == "acct-second":
                 raise RuntimeError("synthetic provider failure")
             return positions
 
-        sdk.account_information.get_user_account_positions.side_effect = fetch_positions
+        sdk.account_information.get_all_account_positions.side_effect = fetch_positions
         error = SnapTradeAPIError
     else:
         with sqlite3.connect(database) as connection:
@@ -135,7 +136,7 @@ def test_failed_account_preserves_complete_generation(generation_store, failure)
 def test_reader_sees_complete_generation_during_sync(generation_store):
     config, database, sdk = generation_store
     before = _snapshot(database)
-    positions = sdk.account_information.get_user_account_positions.return_value
+    positions = sdk.account_information.get_all_account_positions.return_value
     observations = []
 
     def fetch_positions(*, account_id, **kwargs):
@@ -146,7 +147,7 @@ def test_reader_sees_complete_generation_during_sync(generation_store):
             observations.append(_snapshot(database))
         return positions
 
-    sdk.account_information.get_user_account_positions.side_effect = fetch_positions
+    sdk.account_information.get_all_account_positions.side_effect = fetch_positions
 
     summary = sync_db.sync(config, str(database))
 
