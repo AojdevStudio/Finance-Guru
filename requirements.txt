@@ -35,8 +35,6 @@ boolean-py==5.0
     # via license-expression
 cachecontrol==0.14.4
     # via pip-audit
-catalogue==2.0.10
-    # via scrubadub
 certifi==2026.10.19
     # via
     #   curl-cffi
@@ -55,7 +53,6 @@ click==8.5.0
     # via
     #   deptry
     #   import-linter
-    #   nltk
     #   streamlit
     #   uvicorn
 cloudpickle==3.1.2
@@ -64,7 +61,6 @@ colorama==0.4.6 ; sys_platform == 'win32'
     # via
     #   deptry
     #   pytest
-    #   tqdm
 contourpy==1.4.0
     # via matplotlib
 coverage==7.16.2
@@ -79,12 +75,8 @@ cycler==0.12.1
     # via matplotlib
 cyclonedx-python-lib==11.12.0
     # via pip-audit
-dateparser==1.4.3
-    # via scrubadub
 defusedxml==0.7.1
-    # via
-    #   nltk
-    #   py-serializable
+    # via py-serializable
 deptry==0.25.1
 docstring-parser==0.18.0
     # via anthropic
@@ -92,8 +84,6 @@ et-xmlfile==2.0.0
     # via openpyxl
 execnet==2.1.2
     # via pytest-xdist
-faker==40.43.0
-    # via scrubadub
 filelock==4.2.4
     # via cachecontrol
 fonttools==4.67.0
@@ -135,9 +125,7 @@ jinja2==3.1.6
 jiter==0.17.0
     # via anthropic
 joblib==1.6.0
-    # via
-    #   nltk
-    #   scikit-learn
+    # via scikit-learn
 jsonschema==4.26.0
     # via altair
 jsonschema-specifications==2025.9.1
@@ -181,8 +169,6 @@ narwhals==2.27.1
     #   altair
     #   plotly
     #   scikit-learn
-nltk==3.10.4
-    # via textblob
 numpy==2.5.4
     # via
     #   contourpy
@@ -229,8 +215,6 @@ pathspec==1.1.1
     # via mypy
 peewee==4.5.3
     # via yfinance
-phonenumbers==9.0.41
-    # via scrubadub
 pillow==13.0.0
     # via
     #   family-office
@@ -303,7 +287,6 @@ pytest-rerunfailures==16.7
 pytest-xdist==3.8.0
 python-dateutil==2.9.0.post0
     # via
-    #   dateparser
     #   matplotlib
     #   pandas
     #   snaptrade-python-sdk
@@ -312,12 +295,8 @@ python-dotenv==1.2.4
 python-json-logger==4.2.0
 python-multipart==0.0.32
     # via streamlit
-python-stdnum==2.2
-    # via scrubadub
 pytz==2026.5
-    # via
-    #   dateparser
-    #   yfinance
+    # via yfinance
 pyyaml==6.0.3
     # via family-office
 questionary==2.1.1
@@ -326,10 +305,6 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-regex==2026.9.29
-    # via
-    #   dateparser
-    #   nltk
 reportlab==5.0.1
     # via family-office
 requests==2.34.2
@@ -352,14 +327,11 @@ rpds-py==2026.9.1
     #   referencing
 ruff==0.17.1
 scikit-learn==1.9.1
-    # via
-    #   family-office
-    #   scrubadub
+    # via family-office
 scipy==1.18.1
     # via
     #   family-office
     #   scikit-learn
-scrubadub==2.0.1
 sentry-sdk==2.72.0
 six==1.17.0
     # via python-dateutil
@@ -376,8 +348,6 @@ starlette==1.9.0
 streamlit==1.66.1
     # via family-office
 structlog==26.1.0
-textblob==0.15.3
-    # via scrubadub
 textual==8.2.8
     # via family-office
 threadpoolctl==3.7.0
@@ -388,8 +358,6 @@ tomli==2.5.0
     #   pip-audit
 tomli-w==1.2.0
     # via pip-audit
-tqdm==4.70.1
-    # via nltk
 truststore==0.10.5 ; sys_platform != 'emscripten'
     # via
     #   httpcore2
@@ -415,7 +383,6 @@ typing-extensions==4.16.0
     #   pydantic
     #   pydantic-core
     #   referencing
-    #   scrubadub
     #   snaptrade-python-sdk
     #   starlette
     #   streamlit
@@ -424,12 +391,7 @@ typing-extensions==4.16.0
 typing-inspection==0.4.4
     # via pydantic
 tzdata==2026.5 ; sys_platform == 'emscripten' or sys_platform == 'win32'
-    # via
-    #   faker
-    #   pandas
-    #   tzlocal
-tzlocal==5.4.4
-    # via dateparser
+    # via pandas
 urllib3==2.8.0
     # via
     #   family-office

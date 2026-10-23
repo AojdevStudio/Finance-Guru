@@ -55,7 +55,6 @@ dev = [
     "types-requests>=2.33.0.20261006",
     "structlog>=26.1.0",
     "python-json-logger>=4.2.0",
-    "scrubadub>=2.0.1",
     "growthbook>=3.2.2",
     "vulture>=2.11",
     "import-linter>=2.15",
@@ -175,7 +174,6 @@ module = [
     "rich.text",
     "rich.table",
     "structlog.*",
-    "scrubadub.*",
     "growthbook.*",
     "prometheus_client.*",
 ]
