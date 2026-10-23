@@ -2,7 +2,7 @@
  * Finds pull-request writes inside a Bash command, so the gate can check them.
  * Pure: it never reads files or calls gh. The gate resolves file bodies and merge state.
  *
- * Covered: `gh pr create|edit|merge`, `gh api` POST/PATCH on `repos/O/R/pulls[/N]` and PUT on
+ * Covered: `gh pr create|edit|merge`, `gh issue edit` title/body/attachment edits, `gh api` POST/PATCH on `repos/O/R/pulls[/N]` and PUT on
  * `repos/O/R/pulls/N/merge`, PATCH on numbered `repos/O/R/issues/N`, and every `gh api graphql` call whose query is not a literal that provably
  * neither merges nor writes a PR. The same holds inside `ssh host '...'`, `bash -c`, and a program a shell
  * reads on stdin: its last heredoc or here-string, a pipe from cat or from echo or printf of literal words,
@@ -86,7 +86,7 @@ export type PrCommand =
   | (Base & { kind: "edit"; title?: BodySource; body?: BodySource })
   /** A REST create or edit, decoded from --input JSON or -f/-F fields. */
   | (Base & RestWrite)
-  /** A numbered Issues edit whose resource must be classified before applying PR rules. */
+  /** A numbered Issues API or CLI edit whose resource must be classified before applying PR rules. */
   | (Base & { kind: "issue-edit"; repo: string; target: string; hosts: string[]; drift?: "repo" | "host"; edit: IssueEditAction })
   /**
    * A PR write the shell computes part of: the method or a word gh could read as flags (`control`), a field name (`field`), or the
@@ -746,7 +746,8 @@ interface Level {
   names: string[];
 }
 
-const GH_ROOT: Level = { bools: ["--help", "--version"], names: ["pr", "api"] };
+const GH_ROOT: Level = { bools: ["--help", "--version"], names: ["pr", "issue", "api"] };
+const GH_ISSUE: Level = { bools: ["--help"], names: ["edit"] };
 const GH_PR: Level = { bools: ["--help"], names: ["create", "new", "edit", "merge"] };
 
 /** The subcommand gh's command finder picks, and the words left for that subcommand's flag parser. */
@@ -935,6 +936,50 @@ function ghPr(found: Found, seg: Segment, ctx: Ctx): PrCommand | null {
   return body === undefined && title === undefined ? null : { ...base, kind: "edit", title, body };
 }
 
+/** The flags of `gh issue edit` in gh 2.100.0, as `--help` lists them. */
+const ISSUE_EDIT_FLAGS = flagTable(
+  "add-assignee, add-blocked-by, add-blocking, add-label, add-project, add-sub-issue, attach, b body, F body-file, m milestone, parent, remove-assignee, remove-blocked-by, remove-blocking, remove-label, remove-project, remove-sub-issue, t title, type, R repo",
+  "remove-milestone, remove-parent, remove-type, help",
+);
+
+function ghIssue(found: Found, seg: Segment, ctx: Ctx): PrCommand[] {
+  const base = at(seg, ctx);
+  const opaque = (): PrCommand[] => [{ ...base, kind: "opaque", part: "control" }];
+  if (found.name !== "edit") return found.unknown ? opaque() : [];
+  const args = readArgs(found.words, ISSUE_EDIT_FLAGS, ctx.scope);
+  if (args.unknown || found.unknown) return opaque();
+  const fields: Partial<Record<PrField, FieldValue>> = {};
+  const title = last(args, "title");
+  const file = last(args, "body-file");
+  const text = last(args, "body");
+  if (title !== undefined) fields.title = { source: wordSource(title, ctx), typed: false };
+  if (file !== undefined) fields.body = { source: pathSource(file, seg, ctx), typed: false };
+  else if (text !== undefined) fields.body = { source: wordSource(text, ctx), typed: false };
+  const attach = last(args, "attach");
+  if (fields.title === undefined && fields.body === undefined && attach === undefined) return [];
+  const targets = args.positionals.map((word) => {
+    const url = word.match(/^https?:\/\/([a-z0-9_.-]+)\/([a-z0-9_.-]+\/[a-z0-9_.-]+)\/(?:issues|pull)\/(\d+)/i);
+    if (url) return { target: url[3], repo: url[2], host: url[1].toLowerCase() };
+    return /^#?\d+$/.test(word) ? { target: word.replace(/^#/, "") } : undefined;
+  });
+  if (targets.length === 0 || targets.some((target) => target === undefined)) return opaque();
+  // gh takes every number's repository from the first URL, ahead of -R, and rejects conflicting URLs.
+  const url = targets.find((target) => target?.repo !== undefined);
+  if (url && targets.some((target) => target?.repo !== undefined &&
+    (target.repo.toLowerCase() !== url.repo?.toLowerCase() || target.host !== url.host))) return opaque();
+  const named = last(args, "repo");
+  const repoMatch = named?.match(/^(?:https?:\/\/)?(?:([a-z0-9_.-]+)\/)?([a-z0-9_.-]+\/[a-z0-9_.-]+)\/?$/i);
+  if (!url && named !== undefined && !repoMatch) return opaque();
+  const repo = url?.repo ?? repoMatch?.[2] ?? "{owner}/{repo}";
+  const host = url?.host ?? repoMatch?.[1];
+  // A bare number leaves gh's repository and host selection unknown to the API classifier.
+  const context = drift(ctx.scope.env.names, false, false, ctx) ?? (!url && !repoMatch ? "repo" : undefined);
+  return targets.flatMap((target): PrCommand[] => target === undefined ? [] : [{
+    ...base, kind: "issue-edit", repo, target: target.target, hosts: host === undefined ? [] : [host],
+    drift: context, edit: attach === undefined ? { kind: "fields", write: "edit", fields } : { kind: "opaque", part: "field" },
+  }]);
+}
+
 /**
  * The query of a `gh api graphql` call. As on REST, an `--input` file is the payload, wherever it
  * comes, and gh moves the field flags to the URL. Without it, the `query` field's value is read as
@@ -1088,16 +1133,21 @@ function handOver(words: string[], outer: Scope): Scope {
 }
 
 /**
- * The PR command a gh call makes. A word the shell computes where gh reads the command name could
- * be `pr` or `api`, and one where gh reads the pr subcommand could be any write, so both are opaque.
+ * The PR commands a gh call makes. A word the shell computes where gh reads a command name could
+ * choose a PR write, so it is opaque. An issue edit can name several targets in the same repository.
  */
-function ghCommand(seg: Segment, ctx: Ctx, unknown: boolean): PrCommand | null {
+function ghCommand(seg: Segment, ctx: Ctx, unknown: boolean): PrCommand[] {
   const top = subcommand(seg.words.slice(1), GH_ROOT, ctx.scope, unknown);
+  if (top.name === "issue") return ghIssue(subcommand(top.words, GH_ISSUE, ctx.scope, top.unknown), seg, ctx);
   if (top.name === "pr" || (top.name === undefined && top.unknown)) {
     const pr = subcommand(top.words, GH_PR, ctx.scope, top.unknown);
-    if (pr.name !== undefined || (top.name === "pr" && pr.unknown)) return ghPr(pr, seg, ctx);
+    if (pr.name !== undefined || (top.name === "pr" && pr.unknown)) {
+      const command = ghPr(pr, seg, ctx);
+      return command ? [command] : [];
+    }
   }
-  return top.name === "api" || (top.name === undefined && top.unknown) ? ghApi(top, seg, ctx) : null;
+  const command = top.name === "api" || (top.name === undefined && top.unknown) ? ghApi(top, seg, ctx) : null;
+  return command ? [command] : [];
 }
 
 /** The text a segment's substitutions sit in: its words, its redirect targets, and its unquoted heredocs, on any descriptor, since all of them expand before the command runs. */
@@ -1550,12 +1600,10 @@ function command(seg: Segment, found: Head, ctx: Ctx): PrCommand[] {
     return program(input, seg, ctx, { ...ctx, lost, wrapped: ctx.wrapped || found.at !== 0 });
   }
   if (name !== undefined && found.sure && isGh(name)) {
-    const cmd = ghCommand({ ...seg, words: words.slice(found.at) }, { ...ctx, lost, known: !ctx.wrapped && found.at === 0 }, false);
-    return cmd ? [cmd] : [];
+    return ghCommand({ ...seg, words: words.slice(found.at) }, { ...ctx, lost, known: !ctx.wrapped && found.at === 0 }, false);
   }
   if (!found.sure && found.at >= 0 && hidesShell(seg, found.at, ctx)) return [{ ...at(seg, ctx), kind: "opaque", part: "shell" }];
   const start = gh >= 0 ? gh : found.sure ? -1 : found.at;
   if (start < 0) return [];
-  const cmd = ghCommand({ ...seg, words: words.slice(start) }, { ...ctx, lost, known: false }, true);
-  return cmd ? [cmd] : [];
+  return ghCommand({ ...seg, words: words.slice(start) }, { ...ctx, lost, known: false }, true);
 }
