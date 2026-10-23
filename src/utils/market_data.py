@@ -135,7 +135,13 @@ def _get_prices_polygon(symbols: list[str]) -> dict[str, PriceData]:
             params = {"symbol": symbol.upper()}
             headers = {"X-Finnhub-Token": api_key}
 
-            response = requests.get(url, params=params, headers=headers, timeout=10)
+            response = requests.get(
+                url, params=params, headers=headers, timeout=10, allow_redirects=False
+            )
+            if 300 <= response.status_code < 400:
+                raise requests.exceptions.HTTPError(
+                    "Finnhub redirect refused", response=response
+                )
             response.raise_for_status()
 
             data = response.json()

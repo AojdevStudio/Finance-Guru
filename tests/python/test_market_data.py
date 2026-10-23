@@ -133,6 +133,7 @@ class TestGetPricesRealtime:
     def test_realtime_finnhub_success(self, mock_requests: MagicMock):
         """Realtime call should use Finnhub API."""
         mock_response = MagicMock()
+        mock_response.status_code = 200
         mock_response.json.return_value = {
             "c": 250.50,
             "d": 5.25,
