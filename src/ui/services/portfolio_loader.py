@@ -78,6 +78,8 @@ class PortfolioLoader:
     def parse_portfolio(csv_path: Path) -> PortfolioSnapshotInput:
         """Parse CSV file into validated PortfolioSnapshotInput.
 
+        Preserve the file's modification time so reloading does not renew its age.
+
         Args:
             csv_path: Path to Fidelity CSV file
 
@@ -88,6 +90,7 @@ class PortfolioLoader:
             ValueError: If CSV cannot be read or required columns are missing
         """
         try:
+            snapshot_time = datetime.fromtimestamp(csv_path.stat().st_mtime)
             df = pd.read_csv(csv_path)
         except (OSError, ValueError) as e:
             raise ValueError(f"Failed to read CSV: {e}") from e
@@ -159,7 +162,7 @@ class PortfolioLoader:
             day_change=day_change,
             day_change_pct=day_change_pct,
             holdings=holdings,
-            timestamp=datetime.now(),
+            timestamp=snapshot_time,
         )
 
     @classmethod
