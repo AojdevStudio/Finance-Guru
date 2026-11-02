@@ -285,7 +285,7 @@ pytest-cov==7.1.0
 pytest-mock==3.17.0
 pytest-rerunfailures==16.7
 pytest-xdist==3.8.0
-python-dateutil==3.0.0
+python-dateutil==2.9.0.post0
     # via
     #   matplotlib
     #   pandas
