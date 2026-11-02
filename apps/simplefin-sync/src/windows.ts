@@ -3,7 +3,6 @@ import type {
   SfinAccount,
   SfinAccountSet,
   SfinAccountsQuery,
-  SfinError,
   SfinTransaction,
 } from "./types";
 
@@ -28,26 +27,6 @@ export function dateWindows(startDate: number, now: number): DateWindow[] {
   }
   windows.push({ startDate: cursor });
   return windows;
-}
-
-export function isRangeLimitMessage(error: string | SfinError): boolean {
-  const message = typeof error === "string" ? error : (error.msg ?? "");
-  return /date range exceeds (limit|recommended range)/i.test(message);
-}
-
-function mergeErrors(
-  pages: SfinAccountSet[],
-  key: "errors" | "errlist",
-): (string | SfinError)[] {
-  const merged: (string | SfinError)[] = [];
-  for (const page of pages) {
-    for (const error of page[key] ?? []) {
-      if (!isRangeLimitMessage(error)) {
-        merged.push(error);
-      }
-    }
-  }
-  return merged;
 }
 
 /** A later copy wins, except a pending copy never replaces a posted one. */
@@ -81,8 +60,8 @@ export function mergeAccountSets(pages: SfinAccountSet[]): SfinAccountSet {
     .reverse()
     .find((page) => page.connections !== undefined);
   return {
-    errors: mergeErrors(pages, "errors"),
-    errlist: mergeErrors(pages, "errlist"),
+    errors: pages.flatMap((page) => page.errors),
+    errlist: pages.flatMap((page) => page.errlist ?? []),
     accounts: [...accounts.values()].map(({ account, transactions }) => ({
       ...account,
       transactions: [...transactions.values()],
@@ -113,7 +92,12 @@ export async function fetchAccountHistory(
     if (window.endDate !== undefined) {
       pageQuery.endDate = window.endDate;
     }
-    pages.push(await client.fetchAccounts(pageQuery));
+    const page = await client.fetchAccounts(pageQuery);
+    pages.push(page);
+    // Bridge reports quota warnings here, and more requests past a warning disable the token.
+    if (page.errors.length > 0 || (page.errlist?.length ?? 0) > 0) {
+      break;
+    }
   }
   return mergeAccountSets(pages);
 }

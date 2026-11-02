@@ -11,7 +11,6 @@ import {
   WINDOW_SECONDS,
   dateWindows,
   fetchAccountHistory,
-  isRangeLimitMessage,
   mergeAccountSets,
 } from "./windows";
 
@@ -102,40 +101,15 @@ describe("mergeAccountSets", () => {
     }
   });
 
-  test("drops Bridge range-cap warnings so the Python sync does not abort", () => {
+  test("keeps every error, including a Bridge range-cap warning", () => {
+    const capped = "Requested date range exceeds limit of 90 days and was capped.";
+    const quota = { code: "gen.api", msg: "quota warning" };
     const merged = mergeAccountSets([
-      page([], {
-        errors: [
-          "Requested date range exceeds limit of 90 days and was capped.",
-          "real error",
-        ],
-        errlist: [
-          {
-            code: "gen.api",
-            msg: "Requested date range exceeds recommended range of 45 days. In the future, this may be capped.",
-          },
-        ],
-      }),
+      page([], { errors: [capped] }),
+      page([], { errors: ["real error"], errlist: [quota] }),
     ]);
-    expect(merged.errors).toEqual(["real error"]);
-    expect(merged.errlist).toEqual([]);
-  });
-});
-
-describe("isRangeLimitMessage", () => {
-  test("matches both Bridge wordings", () => {
-    expect(
-      isRangeLimitMessage(
-        "Requested date range exceeds limit of 90 days and was capped.",
-      ),
-    ).toBe(true);
-    expect(
-      isRangeLimitMessage({
-        code: "gen.api",
-        msg: "Requested date range exceeds recommended range of 45 days. In the future, this may be capped.",
-      }),
-    ).toBe(true);
-    expect(isRangeLimitMessage("Authentication failed")).toBe(false);
+    expect(merged.errors).toEqual([capped, "real error"]);
+    expect(merged.errlist).toEqual([quota]);
   });
 });
 
@@ -170,5 +144,28 @@ describe("fetchAccountHistory", () => {
       "head",
       "tail",
     ]);
+  });
+
+  test("stops paging at the first window that reports an error", async () => {
+    const queries: SfinAccountsQuery[] = [];
+    const start = 1_700_000_000;
+    const now = start + WINDOW_SECONDS * 3;
+    const client = {
+      async fetchAccounts(query: SfinAccountsQuery = {}) {
+        queries.push(query);
+        return queries.length === 1
+          ? page([account("a", ["t1"])], { errors: ["quota warning"] })
+          : page([account("a", ["t2"])]);
+      },
+    };
+
+    const result = await fetchAccountHistory(
+      client,
+      { startDate: start, pending: true },
+      now,
+    );
+
+    expect(queries).toHaveLength(1);
+    expect(result.errors).toEqual(["quota warning"]);
   });
 });
