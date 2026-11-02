@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import type { SfinAccount, SfinAccountSet, SfinAccountsQuery } from "./types";
+import {
+  toNumericString,
+  type SfinAccount,
+  type SfinAccountSet,
+  type SfinAccountsQuery,
+  type SfinTransaction,
+} from "./types";
 import {
   WINDOW_SECONDS,
   dateWindows,
@@ -9,24 +15,34 @@ import {
   mergeAccountSets,
 } from "./windows";
 
+function txn(
+  id: string,
+  extras: Partial<SfinTransaction> = {},
+): SfinTransaction {
+  return {
+    id,
+    posted: 1,
+    amount: toNumericString("1.00"),
+    description: id,
+    ...extras,
+  };
+}
+
 function account(
   id: string,
-  txnIds: string[],
+  txns: (string | SfinTransaction)[],
   extras: Partial<SfinAccount> = {},
 ): SfinAccount {
   return {
     id,
     name: id,
     currency: "USD",
-    balance: "1.00",
+    balance: toNumericString("1.00"),
     "balance-date": 1,
     org: { name: "Test" },
-    transactions: txnIds.map((txnId) => ({
-      id: txnId,
-      posted: 1,
-      amount: "1.00",
-      description: txnId,
-    })),
+    transactions: txns.map((entry) =>
+      typeof entry === "string" ? txn(entry) : entry,
+    ),
     ...extras,
   };
 }
@@ -59,15 +75,31 @@ describe("dateWindows", () => {
 describe("mergeAccountSets", () => {
   test("unions transactions by account and keeps the latest balance", () => {
     const merged = mergeAccountSets([
-      page([account("a", ["t1"], { balance: "10.00" })]),
-      page([account("a", ["t1", "t2"], { balance: "20.00" })]),
+      page([account("a", ["t1"], { balance: toNumericString("10.00") })]),
+      page([account("a", ["t1", "t2"], { balance: toNumericString("20.00") })]),
     ]);
     expect(merged.accounts).toHaveLength(1);
-    expect(merged.accounts[0]?.balance).toBe("20.00");
+    expect(merged.accounts[0]?.balance).toBe(toNumericString("20.00"));
     expect(merged.accounts[0]?.transactions?.map((txn) => txn.id)).toEqual([
       "t1",
       "t2",
     ]);
+  });
+
+  test("a posted copy replaces a pending copy of the same transaction, in either order", () => {
+    const pending = txn("t1", { posted: 0, pending: true, amount: toNumericString("-5.00") });
+    const posted = txn("t1", { posted: 1_700_000_500, amount: toNumericString("-5.25") });
+
+    for (const windows of [[pending, posted], [posted, pending]]) {
+      const merged = mergeAccountSets(
+        windows.map((copy) => page([account("a", ["t0", copy, "t2"])])),
+      );
+      expect(merged.accounts[0]?.transactions).toEqual([
+        txn("t0"),
+        posted,
+        txn("t2"),
+      ]);
+    }
   });
 
   test("drops Bridge range-cap warnings so the Python sync does not abort", () => {

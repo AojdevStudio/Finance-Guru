@@ -4,6 +4,7 @@ import type {
   SfinAccountSet,
   SfinAccountsQuery,
   SfinError,
+  SfinTransaction,
 } from "./types";
 
 /** Bridge warns at 45 days and hard-caps a single request at 90. Stay under the warning. */
@@ -49,26 +50,31 @@ function mergeErrors(
   return merged;
 }
 
+/** A later copy wins, except a pending copy never replaces a posted one. */
+function keepsEarlierCopy(
+  earlier: SfinTransaction,
+  later: SfinTransaction,
+): boolean {
+  return earlier.pending !== true && later.pending === true;
+}
+
 export function mergeAccountSets(pages: SfinAccountSet[]): SfinAccountSet {
-  const accounts = new Map<string, SfinAccount>();
+  const accounts = new Map<
+    string,
+    { account: SfinAccount; transactions: Map<string, SfinTransaction> }
+  >();
   for (const page of pages) {
     for (const account of page.accounts ?? []) {
-      const previous = accounts.get(account.id);
-      if (!previous) {
-        accounts.set(account.id, {
-          ...account,
-          transactions: [...(account.transactions ?? [])],
-        });
-        continue;
+      const transactions =
+        accounts.get(account.id)?.transactions ??
+        new Map<string, SfinTransaction>();
+      for (const txn of account.transactions ?? []) {
+        const earlier = transactions.get(txn.id);
+        if (earlier === undefined || !keepsEarlierCopy(earlier, txn)) {
+          transactions.set(txn.id, txn);
+        }
       }
-      const seen = new Set((previous.transactions ?? []).map((txn) => txn.id));
-      const extra = (account.transactions ?? []).filter(
-        (txn) => !seen.has(txn.id),
-      );
-      accounts.set(account.id, {
-        ...account,
-        transactions: [...(previous.transactions ?? []), ...extra],
-      });
+      accounts.set(account.id, { account, transactions });
     }
   }
   const lastWithConnections = [...pages]
@@ -77,7 +83,10 @@ export function mergeAccountSets(pages: SfinAccountSet[]): SfinAccountSet {
   return {
     errors: mergeErrors(pages, "errors"),
     errlist: mergeErrors(pages, "errlist"),
-    accounts: [...accounts.values()],
+    accounts: [...accounts.values()].map(({ account, transactions }) => ({
+      ...account,
+      transactions: [...transactions.values()],
+    })),
     ...(lastWithConnections?.connections !== undefined
       ? { connections: lastWithConnections.connections }
       : {}),
