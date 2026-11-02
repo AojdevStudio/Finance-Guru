@@ -84,11 +84,11 @@ def run_dump(months: int, app_dir: Path = DEFAULT_APP_DIR) -> dict[str, Any]:
             cwd=app_dir,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=900,
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
-        raise SimpleFinSyncError("SimpleFIN dump timed out after 120 seconds") from exc
+        raise SimpleFinSyncError("SimpleFIN dump timed out after 900 seconds") from exc
     except FileNotFoundError as exc:
         raise SimpleFinSyncError(f"SimpleFIN dump could not start: {exc}") from exc
 
