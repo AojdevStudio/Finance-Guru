@@ -38,7 +38,7 @@ jobs:
       - name: Set up Bun for the hook tests, plugin validation, and onboarding section tests
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: .bun-version
 
       - name: Install Bun dependencies
         run: bun install --frozen-lockfile
