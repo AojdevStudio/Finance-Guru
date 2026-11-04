@@ -35,7 +35,7 @@ jobs:
       - name: Run release-please
         if: steps.token.outputs.available == 'true'
         id: release
-        uses: googleapis/release-please-action@v5
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         with:
           # Use a PAT so release-please can create PRs even when the repository
           # disables PR creation for the default GITHUB_TOKEN.
@@ -56,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Announce the release in the job summary
         run: |

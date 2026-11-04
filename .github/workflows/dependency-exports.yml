@@ -25,14 +25,14 @@ jobs:
       actions: write
     steps:
       - name: Checkout the trusted repair script
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           path: trusted
           persist-credentials: false
 
       - name: Identify the current same-repository Dependabot PR
         id: pr
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
             const { identify } = require(`${process.env.GITHUB_WORKSPACE}/trusted/scripts/qa/dependency_repair.cjs`);
@@ -42,7 +42,7 @@ jobs:
 
       - name: Checkout dependency files at the verified head
         if: steps.pr.outputs.action == 'repair'
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ steps.pr.outputs.sha }}
           fetch-depth: 0
@@ -51,11 +51,11 @@ jobs:
 
       - name: Set up uv
         if: steps.pr.outputs.action == 'repair'
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       - name: Set up an isolated Python interpreter
         if: steps.pr.outputs.action == 'repair'
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
 
@@ -96,7 +96,7 @@ jobs:
 
       - name: Run CI on the repaired head unless it already has a run
         if: steps.push.outputs.sha || steps.pr.outputs.action == 'dispatch'
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           HEAD_BRANCH: ${{ steps.pr.outputs.branch }}
           REPAIR_SHA: ${{ steps.push.outputs.sha || steps.pr.outputs.sha }}
