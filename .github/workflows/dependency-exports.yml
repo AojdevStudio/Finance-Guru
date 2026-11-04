@@ -32,7 +32,7 @@ jobs:
 
       - name: Identify the current same-repository Dependabot PR
         id: pr
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const { identify } = require(`${process.env.GITHUB_WORKSPACE}/trusted/scripts/qa/dependency_repair.cjs`);
@@ -96,7 +96,7 @@ jobs:
 
       - name: Run CI on the repaired head unless it already has a run
         if: steps.push.outputs.sha || steps.pr.outputs.action == 'dispatch'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           HEAD_BRANCH: ${{ steps.pr.outputs.branch }}
           REPAIR_SHA: ${{ steps.push.outputs.sha || steps.pr.outputs.sha }}
