@@ -24,6 +24,7 @@
  *   .claude/settings.json                             the PreToolUse gate hook
  *   .github/workflows/pr-kit.yml                      the PR body check in CI
  *   AGENTS.md (and CLAUDE.md when it does not load AGENTS.md)  the rule block
+ *   only the real one of AGENTS.md and CLAUDE.md when the other is a symlink whose text is exactly its name
  */
 
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
@@ -95,7 +96,12 @@ function inSourceFolder(): boolean {
   return Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], { cwd: dir, stdout: "ignore", stderr: "ignore" }).exitCode === 0;
 }
 
-const { values, positionals } = parseArgs({ allowPositionals: true, options: { "runs-on": { type: "string" }, layout: { type: "string" } } });
+const USAGE = "usage: bun kit.ts install <repo> [--runs-on <label>] [--layout skills|developer] | stamp | check";
+const { values, positionals } = parseArgs({ allowPositionals: true, options: { "runs-on": { type: "string" }, layout: { type: "string" }, help: { type: "boolean", short: "h" } } });
+if (values.help) {
+  console.log(USAGE);
+  process.exit(0);
+}
 const [verb, target] = positionals;
 if (verb === "stamp") {
   if (!inSourceFolder()) throw new Error("stamp runs only in the kit's source folder (<repo>/kits/pr/open-pr). This copy is installed or synced; update it instead.");
@@ -126,7 +132,7 @@ if (verb === "check") {
   process.exit(0);
 }
 if (verb !== "install" || !target) {
-  console.error("usage: bun kit.ts install <repo> [--runs-on <label>] [--layout skills|developer] | stamp | check");
+  console.error(USAGE);
   process.exit(1);
 }
 const repo = resolve(target);
@@ -324,6 +330,21 @@ function assertDestination(path: string, directory = false): void {
   if (path !== repo) assertDestination(join(path, ".."), true);
 }
 
+/**
+ * The repo's only instruction file when one root instruction file is a symlink whose text is
+ * exactly the other's name, the one link the kit accepts. The named file must be a real file.
+ */
+function instructionAlias(): "AGENTS.md" | "CLAUDE.md" | undefined {
+  for (const [link, target] of [["AGENTS.md", "CLAUDE.md"], ["CLAUDE.md", "AGENTS.md"]] as const) {
+    const linkPath = join(repo, link);
+    if (!lstatSync(linkPath, { throwIfNoEntry: false })?.isSymbolicLink() || readlinkSync(linkPath) !== target) continue;
+    const targetPath = join(repo, target);
+    if (!lstatSync(targetPath, { throwIfNoEntry: false })?.isFile()) throw new Error(`${linkPath} links to ${targetPath}, which is not a real file. Point ${link} at a real ${target}, then rerun.`);
+    return target;
+  }
+  return undefined;
+}
+
 function preflightDestinations(): InstructionWrite[] {
   for (const name of SKILLS) {
     const dest = join(repo, layout.directory, name);
@@ -331,14 +352,16 @@ function preflightDestinations(): InstructionWrite[] {
     if (existsSync(dest) && !existsSync(join(dest, MARKER))) throw new Error(`${relative(repo, dest)} exists and is not the PR kit. Move it, then rerun.`);
     for (const file of [...shippedFiles(SOURCE[name]), MARKER]) assertDestination(join(dest, file));
   }
-  for (const file of [".claude/settings.json", ".github/workflows/pr-kit.yml", "AGENTS.md", "CLAUDE.md"]) assertDestination(join(repo, file));
+  const alias = instructionAlias();
+  const instructionFiles = alias ? [alias] : ["AGENTS.md", "CLAUDE.md"];
+  for (const file of [".claude/settings.json", ".github/workflows/pr-kit.yml", ...instructionFiles]) assertDestination(join(repo, file));
   if (layout.name === "skills") assertDestination(join(repo, ".agents", "skills"), true);
-  return ["AGENTS.md", "CLAUDE.md"].flatMap((file) => {
+  return instructionFiles.flatMap((file) => {
     const path = join(repo, file);
     if (file === "CLAUDE.md" && !existsSync(path)) return [];
     const text = existsSync(path) ? readFileSync(path, "utf8") : "";
     const next = replaceRuleBlock(text, path);
-    return file === "CLAUDE.md" && text.includes("AGENTS.md") ? [] : [{ path, text: next }];
+    return file === "CLAUDE.md" && !alias && text.includes("AGENTS.md") ? [] : [{ path, text: next }];
   });
 }
 

@@ -145,14 +145,39 @@ export function titleViolation(title: string): Violation | null {
   return { rule: "title", message: `title ${JSON.stringify(title)} is not conventional-commit shaped, for example "fix(web): threads no longer spike CPU".` };
 }
 
+const PR_LENS_OPEN = "<!-- pr-lens:description -->";
+const PR_LENS_CLOSE = "<!-- /pr-lens:description -->";
+
+/**
+ * Blanks the description block PR Lens appends after the author's body.
+ * Text after the closing marker is the author's, so it stays and is checked.
+ * Markers inside a code block are the author's own text, so they open and close nothing.
+ */
+function stripPrLens(body: string): string {
+  const lines = body.split(/\r?\n/);
+  const mask = fenced(lines);
+  let opening = -1;
+  for (const [i, line] of lines.entries()) {
+    if (mask[i]) continue;
+    const text = line.trim();
+    if (opening < 0 && !text.startsWith(PR_LENS_OPEN)) continue;
+    const close = text.indexOf(PR_LENS_CLOSE, opening < 0 ? PR_LENS_OPEN.length : 0);
+    if (opening < 0) opening = i;
+    if (close < 0) continue;
+    lines.fill("", opening, i);
+    lines[i] = text.slice(close + PR_LENS_CLOSE.length);
+    opening = -1;
+  }
+  return lines.join("\n");
+}
+
 /** Checks one pull request against the contract. Every violation carries the fix in its message. */
 // CodeRabbit appends its release notes inside these markers after the author's body.
 const CODERABBIT_SUMMARY =
   /\n*<!-- This is an auto-generated comment: release notes by coderabbit\.ai -->[\s\S]*?<!-- end of auto-generated comment: release notes by coderabbit\.ai -->\n*/g;
-const PR_LENS_DESCRIPTION = /\n*<!-- pr-lens:description -->[\s\S]*?<!-- \/pr-lens:description -->\n*/g;
 
 export function checkPullRequest(input: PullRequest): Verdict {
-  const pr = { ...input, body: input.body.replace(CODERABBIT_SUMMARY, "\n").replace(PR_LENS_DESCRIPTION, "\n") };
+  const pr = { ...input, body: stripPrLens(input.body.replace(CODERABBIT_SUMMARY, "\n")) };
   const v: Violation[] = [];
   if (pr.draft) v.push({ rule: "draft", message: "drafts get no review-bot coverage. Open the PR ready for review." });
   const title = pr.title === undefined ? null : titleViolation(pr.title);
