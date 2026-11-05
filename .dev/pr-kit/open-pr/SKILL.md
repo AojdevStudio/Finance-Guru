@@ -1,6 +1,6 @@
 ---
 name: open-pr
-description: Open every pull request through this skill. It self-reviews the diff, proves the change, measures the merge danger, and writes the fixed PR body (Problem, Change, Proof, Review, Merge danger) that the PR gate and the pr-kit CI check require. Use before any `gh pr create`, `gh api .../pulls`, or PR body edit.
+description: Open every pull request through this skill. It self-reviews the diff, proves the change, runs the project's verify skills, measures the merge danger, and writes the fixed PR body (Problem, Change, Proof, Review, Merge danger) that the PR gate and the pr-kit CI check require. Use before any `gh pr create`, `gh api .../pulls`, or PR body edit.
 metadata:
   category: git/pr
   lanes: [claude, codex, pi]
@@ -9,6 +9,8 @@ metadata:
 ---
 
 # open-pr
+
+Use Claude Code 2.1.295 or newer. Earlier versions do not enforce `onFailure: "block"`, so a hook crash or timeout can allow a command to run.
 
 The PR body is a briefing for a reviewer who has one minute. A gate checks the body on create, edit, and merge, and the `pr-kit` CI check checks it again. A body that breaks the contract does not open.
 
@@ -29,16 +31,20 @@ The PR body is a briefing for a reviewer who has one minute. A gate checks the b
    - For a performance change, a chart or table of the before and after numbers.
    - The test that fails on the base and passes on the branch. Quote the failure.
    - Command output in a code block.
-4. **Measure the merge danger.**
-   - **Door.** Two-way when a revert undoes it. One-way when it deletes something you didn't make (dead entries that point at nothing stay two-way), deletes data or work that cannot be put back, migrates a schema, publishes, sends, deploys to users, spends money, changes prod user data, or changes a contract that others consume. The door rates the change, not the merge. Merge always waits for the owner's word (see `land-pr`).
-   - **Blast radius.** Find what the change can break outside the diff: callers, consumers, config, jobs, other repos. Prove the one fact that makes it safe by running code, not by reading it. Name the radius in one word: `none`, `low`, `medium`, `high`.
-5. **Write the body** to a file with the template below. Write in ASD-STE100:
+4. **Run the project's verify skills.** Run `bun <this skill's dir>/verify.ts --base origin/<base>` in the repo. It lists the `verify-*` skills this diff needs, in order: the skill of each app the diff touches, then the repo-level skills.
+   - Read each listed `SKILL.md` in full and run it against this branch, in the listed order. The listed paths are relative to the repo root. Its evidence goes in Proof.
+   - When one fails, stop. Do not open the PR. Report the skill, the failing step, and its output. A skill that cannot start counts as a failure, and so does a non-zero exit from `verify.ts`. Never read a `verify.ts` error as nothing to run.
+   - When it prints `verify: none.`, put that line in Proof and go on.
+5. **Measure the merge danger.**
+   - **Door.** Two-way when a revert undoes it. One-way when it deletes something you didn't make (dead entries that point at nothing stay two-way), deletes data or work that cannot be put back, migrates a schema, publishes, sends, deploys to users, spends money, changes prod user data, or changes a contract that others consume. The door rates the change, not the merge.
+   - **Blast radius.** Find what the change can break outside the diff: callers, consumers, config, jobs, other repos. Prove the one fact that makes it safe by running code, not by reading it. Name the radius in one word: `none`, `low`, `medium`, `high`. Rate it honestly, and include the rating in the local review. A radius of `medium` or lower lets the agent merge without asking, and `high` waits for the owner's word and gets an explainer video before he decides (see `land-pr`).
+6. **Write the body** to a file with the template below. Write in ASD-STE100:
    - Start with the problem. No preamble, no "This PR".
    - One topic per sentence, at most 25 words. Active voice, present tense.
    - Periods and commas. No em dashes.
    - Problem uses at most four sentences.
-6. **Check the body.** Run `bun <this skill's dir>/check.ts body.md --title "<title>"`. Fix every violation it names.
-7. **Open the PR ready for review.** Never a draft.
+7. **Check the body.** Run `bun <this skill's dir>/check.ts body.md --title "<title>"`. Fix every violation it names.
+8. **Open the PR ready for review.** Never a draft.
    - `gh pr create --title "<title>" --body-file body.md --base <base>`
    - Run the push in its own call before the create, since the alone rule refuses `git push && gh pr create ...`.
    - To write the body in the same call, put the heredoc first and join it with `&&`: `cat > body.md <<'EOF' && gh pr create --title "<title>" --body-file body.md --base <base>`, with the body lines and `EOF` after it. Under noclobber `cat` fails on an existing file, and only `&&` stops gh from then reading the old file. Use `cat >| body.md` when the file already exists.
@@ -49,7 +55,7 @@ The PR body is a briefing for a reviewer who has one minute. A gate checks the b
    - When `gh` runs through `ssh`, put the remote command in single quotes and pass the body inline with a quoted heredoc. Inside single quotes, quote the delimiter with double quotes: `<<"EOF"`.
    - The gate refuses text a shell changes after the gate reads it. That is an unquoted heredoc with `$` or backquotes, and any `$` or backquote in a double-quoted ssh command. The local shell expands the second kind before ssh runs, even under a quoted heredoc. The gate also refuses remote `--body-file` paths, even when the file exists there. It refuses a `gh pr` or `gh api` PR write whose method, a flag, or a field name comes from the shell, such as `-X "$M"` or `"$DRAFT_FLAG"`, since any request could hide in it. Write those as text. It also refuses an unquoted `$...` anywhere in that command, even after `--jq`, because the shell can split it into more flags. Double-quote it: `--jq "$Q"`.
    - After `--attach`, move any appended image links into Proof and keep `Changes made by ...` last. Check the body again before submitting the edit.
-8. **Read it back.** `gh api repos/{owner}/{repo}/pulls/<n>` and confirm base, body, and draft state. Then hand over to the `land-pr` skill.
+9. **Read it back.** `gh api repos/{owner}/{repo}/pulls/<n>` and confirm base, body, and draft state. Then hand over to the `land-pr` skill.
 
 ## Install the kit
 
@@ -75,13 +81,15 @@ The runner label comes from `--runs-on <label>`, else the label in the installed
 
 For a product that ships `.claude/skills`, install with `--layout developer`. The unchanged skill folders go under `.dev/pr-kit`. The installer creates no Claude or Codex discovery links there. Repository instructions point at each `SKILL.md` explicitly. The repository hook and CI checker use that directory. Run an installed developer copy with `bun .dev/pr-kit/open-pr/kit.ts install <repo>`. A bare rerun keeps the recorded layout. The installer refuses conflicting layouts or an implicit move between them.
 
+The installer writes into real files only and refuses any symlink in its path, with one exception. One root instruction file may be a symlink whose text is exactly the other's name, `AGENTS.md` to `CLAUDE.md` or `CLAUDE.md` to `AGENTS.md`, when the other file is real. The rule block then goes into the real file alone, and the link is left as it is.
+
 Keep product instances separate from repository settings. A developer layout still adds a repository hook to `.claude/settings.json`. Instances need their own product settings and must not inherit that file. Bun is required for every repository Bash tool call because the PR gate runs before it.
 
 Every copy of the kit carries a `VERSION` file, and each installed skill's `.pr-kit` marker records the version it installed. An install refuses before writing anything when it runs from a copy behind `kits/pr` in the kit's source repo: the target repo already has a newer version or the same version with other files, the source repo's main has a different `VERSION`, newer, older, or the same one with other files, or the copy's files do not match its own `VERSION`. There is no override. Update the copy with `sk push` or a pull of the kit's source repo, then rerun. After a kit change, run `bun kit.ts stamp` in `kits/pr/open-pr` and commit `VERSION` with the change. `bun test` fails until you do. `stamp` refuses in any other copy, so an installed or synced copy is updated, never restamped.
 
 Stored SHA-256 fingerprints use `sha256:` followed by all 32 bytes as colon-separated hex. The digest calculation is unchanged. Strict parsing accepts older contiguous hex stamps for updates and compares the complete digest.
 
-The gate hook uses `onFailure: "block"`, so a gate that times out or cannot start refuses the command instead of letting it run.
+On Claude Code 2.1.295 or newer, the gate hook uses `onFailure: "block"`, so a gate that times out or cannot start refuses the command instead of letting it run.
 
 ## Template
 
