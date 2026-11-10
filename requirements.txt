@@ -188,7 +188,7 @@ opentelemetry-api==1.45.2
     #   anthropic
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-sdk==1.45.1
+opentelemetry-sdk==1.45.2
 opentelemetry-semantic-conventions==0.66b2
     # via opentelemetry-sdk
 packageurl-python==0.17.6
@@ -285,7 +285,7 @@ pytest-cov==7.1.0
 pytest-mock==3.17.0
 pytest-rerunfailures==16.7
 pytest-xdist==3.8.0
-python-dateutil==4.0.0
+python-dateutil==2.9.0.post0
     # via
     #   matplotlib
     #   pandas
@@ -403,7 +403,7 @@ urllib3==2.8.0
 uvicorn==0.54.0
     # via streamlit
 vulture==2.16
-watchdog==7.0.0 ; sys_platform != 'darwin'
+watchdog==6.0.0 ; sys_platform != 'darwin'
     # via streamlit
 wcwidth==0.9.4
     # via prompt-toolkit
