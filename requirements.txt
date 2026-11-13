@@ -12,7 +12,7 @@ altair==6.3.0
     # via streamlit
 annotated-types==0.8.0
     # via pydantic
-anthropic==2.4.0
+anthropic==2.7.0
     # via family-office
 anyio==4.16.0
     # via
@@ -49,7 +49,7 @@ charset-normalizer==3.5.2
     # via
     #   reportlab
     #   requests
-click==8.5.0
+click==8.5.1
     # via
     #   deptry
     #   import-linter
@@ -63,7 +63,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   pytest
 contourpy==1.4.0
     # via matplotlib
-coverage==7.17.0
+coverage==7.17.2
     # via pytest-cov
 cryptography==50.0.2
     # via
@@ -84,7 +84,7 @@ et-xmlfile==2.0.0
     # via openpyxl
 execnet==2.1.2
     # via pytest-xdist
-filelock==4.2.7
+filelock==4.2.10
     # via cachecontrol
 fonttools==4.68.0
     # via matplotlib
@@ -94,7 +94,7 @@ frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-grimp==3.18
+grimp==3.19
     # via import-linter
 growthbook==4.0.0
 h11==0.16.0
@@ -113,7 +113,7 @@ idna==3.20
     #   httpx2
     #   requests
     #   yarl
-import-linter==2.15
+import-linter==2.16
 iniconfig==2.3.1
     # via pytest
 itsdangerous==2.2.0
@@ -122,7 +122,7 @@ jinja2==3.1.6
     # via
     #   altair
     #   pydeck
-jiter==0.18.0
+jiter==0.19.0
     # via anthropic
 joblib==1.6.0
     # via scikit-learn
@@ -162,7 +162,7 @@ multidict==7.2.1
 multitasking==0.0.13
     # via yfinance
 mypy==2.4.1
-mypy-extensions==1.1.0
+mypy-extensions==1.2.0
     # via mypy
 narwhals==2.28.0
     # via
@@ -205,7 +205,7 @@ packaging==26.3
     #   pytest-rerunfailures
     #   requirements-parser
     #   streamlit
-pandas==3.1.0
+pandas==3.1.1
     # via
     #   family-office
     #   streamlit
@@ -228,7 +228,7 @@ pip-api==0.0.35
 pip-audit==2.10.1
 pip-requirements-parser==32.0.1
     # via pip-audit
-platformdirs==4.14.3
+platformdirs==4.14.5
     # via
     #   pip-audit
     #   textual
@@ -251,17 +251,17 @@ protobuf==7.36.2
     #   family-office
     #   streamlit
     #   yfinance
-py-serializable==2.1.0
+py-serializable==2.2.0
     # via cyclonedx-python-lib
-pyarrow==26.0.0
+pyarrow==26.0.1
     # via streamlit
 pycparser==3.12 ; implementation_name != 'PyPy'
     # via cffi
-pydantic==2.14.2
+pydantic==2.14.3
     # via
     #   anthropic
     #   family-office
-pydantic-core==2.50.2
+pydantic-core==2.50.4
     # via pydantic
 pydeck==0.9.3
     # via streamlit
@@ -285,7 +285,7 @@ pytest-cov==7.1.0
 pytest-mock==3.17.0
 pytest-rerunfailures==16.7
 pytest-xdist==3.8.0
-python-dateutil==2.9.0.post0
+python-dateutil==4.0.0
     # via
     #   matplotlib
     #   pandas
@@ -325,32 +325,32 @@ rpds-py==2026.9.1
     # via
     #   jsonschema
     #   referencing
-ruff==0.17.3
+ruff==0.17.4
 scikit-learn==1.9.1
     # via family-office
 scipy==1.18.1
     # via
     #   family-office
     #   scikit-learn
-sentry-sdk==2.73.0
+sentry-sdk==2.74.0
 six==1.17.0
     # via python-dateutil
-snaptrade-python-sdk==13.0.52
+snaptrade-python-sdk==13.1.5
     # via family-office
 sniffio==1.3.1
     # via anthropic
 sortedcontainers==2.4.0
     # via cyclonedx-python-lib
-soupsieve==3.0.4
+soupsieve==4.1
     # via beautifulsoup4
 starlette==1.10.0
     # via streamlit
-streamlit==1.66.1
+streamlit==1.67.0
     # via family-office
 structlog==26.1.0
 textual==8.2.8
     # via family-office
-threadpoolctl==3.7.0
+threadpoolctl==3.8.0
     # via scikit-learn
 tomli==2.5.0
     # via
@@ -388,7 +388,7 @@ typing-extensions==4.16.0
     #   streamlit
     #   textual
     #   typing-inspection
-typing-inspection==0.4.4
+typing-inspection==0.4.5
     # via pydantic
 tzdata==2026.6 ; sys_platform == 'emscripten' or sys_platform == 'win32'
     # via pandas
@@ -403,7 +403,7 @@ urllib3==2.8.0
 uvicorn==0.54.0
     # via streamlit
 vulture==2.16
-watchdog==6.0.0 ; sys_platform != 'darwin'
+watchdog==7.1.0 ; sys_platform != 'darwin'
     # via streamlit
 wcwidth==0.9.4
     # via prompt-toolkit
@@ -415,5 +415,5 @@ xlsxwriter==3.3.1
     # via family-office
 yarl==1.25.1
     # via aiohttp
-yfinance==1.7.0
+yfinance==1.8.0
     # via family-office
