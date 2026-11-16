@@ -33,7 +33,7 @@ from src.analysis.hedge_trigger import (
     no_verdict,
     summarize_index,
 )
-from src.analysis.margin_metrics import metrics_from_runtime
+from src.analysis.margin_metrics import _resolve_margin_routing, metrics_from_runtime
 from src.config.instance_paths import InstancePaths, _db_path
 from src.models.hedge_trigger_inputs import (
     HedgeTriggerInputs,
@@ -63,13 +63,14 @@ def _daily_bars(symbol: str, period: str, now: datetime) -> pd.DataFrame:
     return completed_sessions(bars[["High", "Close"]].dropna(), now)
 
 
-def read_position(db: Path, symbol: str) -> HeldHedge | None:
-    """Read the held hedge from the ledger, with its entry date from activity."""
+def read_position(db: Path, account_id: str, symbol: str) -> HeldHedge | None:
+    """Read the hedge held in the margin account, with its entry date from activity."""
     conn = sqlite3.connect(db)
     try:
         rows = conn.execute(
-            "SELECT quantity, avg_cost, price FROM positions WHERE symbol = ? AND quantity > 0",
-            (symbol,),
+            "SELECT quantity, avg_cost, price FROM positions "
+            "WHERE account_id = ? AND symbol = ? AND quantity > 0",
+            (account_id, symbol),
         ).fetchall()
         if not rows:
             return None
@@ -77,19 +78,17 @@ def read_position(db: Path, symbol: str) -> HeldHedge | None:
             msg = f"{symbol} is held in {len(rows)} ledger rows; the check reads one position"
             raise ValueError(msg)
         activity = conn.execute(
-            "SELECT date, quantity FROM transactions WHERE symbol = ? AND quantity IS NOT NULL "
-            "AND quantity != 0 AND date IS NOT NULL ORDER BY date, rowid",
-            (symbol,),
+            "SELECT date, quantity FROM transactions WHERE account_id = ? AND symbol = ? "
+            "AND quantity IS NOT NULL AND quantity != 0 AND date IS NOT NULL "
+            "ORDER BY date, rowid",
+            (account_id, symbol),
         ).fetchall()
     finally:
         conn.close()
     quantity, average_cost, price = rows[0]
     entry = entry_date_from_activity(
-        (date.fromisoformat(day[:10]), qty) for day, qty in activity
+        ((date.fromisoformat(day[:10]), qty) for day, qty in activity), quantity
     )
-    if entry is None:
-        msg = f"{symbol} is held but the ledger activity shows no open position; sync transactions first"
-        raise ValueError(msg)
     return HeldHedge(
         quantity=quantity, average_cost=average_cost, price=price, entry_date=entry
     )
@@ -112,7 +111,9 @@ def evaluate(rules: HedgeTriggerRules, now: datetime) -> HedgeTriggerResult:
     except (ValueError, OSError) as error:
         return no_verdict(today, f"market data: {error}")
     try:
-        position = read_position(_db_path(), rules.hedge_symbol)
+        # The hedge lives in the margin account, the one its sale repays.
+        account_id, _, _ = _resolve_margin_routing()
+        position = read_position(_db_path(), account_id, rules.hedge_symbol)
     except (ValueError, sqlite3.Error) as error:
         return no_verdict(today, f"{rules.hedge_symbol} position: {error}")
     inputs = HedgeTriggerInputs(

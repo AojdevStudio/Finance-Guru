@@ -33,6 +33,12 @@ SESSION_FINAL_AT = time(16, 30)
 # A long weekend leaves the newest close up to four calendar days old.
 MAX_SESSION_AGE = timedelta(days=4)
 WEEKS_52 = timedelta(days=365)
+# History must start within a week of the 52-week window's first day.
+WINDOW_SLACK = timedelta(days=7)
+# Share counts that differ by less than this match.
+SHARE_TOLERANCE = 0.01
+# Rule inputs are compared at six decimals, so an exact 10.0% is 10.0%.
+RULE_DECIMALS = 6
 
 
 def completed_sessions(bars: pd.DataFrame, now: datetime) -> pd.DataFrame:
@@ -73,7 +79,12 @@ def summarize_index(
     session = last_ts.date()
     _require_fresh(session, today, "index")
     volatility_session = volatility_bars.index[-1].date()
-    _require_fresh(volatility_session, today, "volatility")
+    if volatility_session != session:
+        msg = f"index newest close is {session} but volatility newest close is {volatility_session}"
+        raise ValueError(msg)
+    if index_bars.index[0] > last_ts - WEEKS_52 + WINDOW_SLACK:
+        msg = f"index history starts {index_bars.index[0].date()}, short of the 52 weeks before {session}"
+        raise ValueError(msg)
 
     window = index_bars[index_bars.index > last_ts - WEEKS_52]
     average = closes.rolling(moving_average_days).mean()
@@ -95,12 +106,16 @@ def summarize_index(
     )
 
 
-def entry_date_from_activity(activity: Iterable[tuple[date, float]]) -> date | None:
-    """Return the date the current position opened, from signed share changes.
+def entry_date_from_activity(
+    activity: Iterable[tuple[date, float]], held_quantity: float
+) -> date:
+    """Return the date the held position opened, from signed share changes.
 
     ``activity`` is (date, signed quantity) pairs, oldest first: buys and split
     additions are positive, sells and split removals negative. The entry date is
     the first day the running total rose above zero after it was last flat.
+    Activity that does not add up to ``held_quantity`` is stale or incomplete,
+    and its entry date cannot be trusted, so it raises.
     """
     total = 0.0
     entry: date | None = None
@@ -111,6 +126,12 @@ def entry_date_from_activity(activity: Iterable[tuple[date, float]]) -> date | N
             entry = None
         elif was_flat:
             entry = day
+    if entry is None or abs(total - held_quantity) >= SHARE_TOLERANCE:
+        msg = (
+            f"ledger activity adds up to {total:g} shares but {held_quantity:g} are held; "
+            "sync transactions first"
+        )
+        raise ValueError(msg)
     return entry
 
 
@@ -141,7 +162,7 @@ class HedgeTriggerCalculator:
             if inputs.margin_debt > 0
             else None
         )
-        below_high = 1 - index.close / index.high_52_week
+        below_high = round(1 - index.close / index.high_52_week, RULE_DECIMALS)
         position = inputs.position
         gain = position.price / position.average_cost - 1 if position else None
         days_held = (inputs.as_of - position.entry_date).days if position else None

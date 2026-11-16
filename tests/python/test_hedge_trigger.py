@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -14,7 +15,7 @@ from src.analysis.hedge_trigger import (
     entry_date_from_activity,
     summarize_index,
 )
-from src.analysis.hedge_trigger_cli import load_rules
+from src.analysis.hedge_trigger_cli import load_rules, read_position
 from src.models.hedge_trigger_inputs import (
     HedgeTriggerInputs,
     HedgeTriggerRules,
@@ -119,8 +120,27 @@ def test_entry_date_is_the_first_buy_after_the_position_was_last_flat() -> None:
         (date(2026, 11, 5), 10.0),
     ]
 
-    assert entry_date_from_activity(activity) == date(2026, 11, 3)
-    assert entry_date_from_activity(activity[:3]) is None
+    assert entry_date_from_activity(activity, 50.0) == date(2026, 11, 3)
+
+
+def test_activity_that_misses_a_reopened_position_is_refused() -> None:
+    # Transactions not yet synced: the ledger holds 50 shares, activity shows 40.
+    activity = [
+        (date(2025, 11, 6), 900.0),
+        (date(2026, 3, 6), -900.0),
+        (date(2026, 11, 3), 40.0),
+    ]
+
+    with pytest.raises(ValueError, match="sync transactions first"):
+        entry_date_from_activity(activity, 50.0)
+
+
+def test_exactly_ten_percent_below_the_high_starts() -> None:
+    result = HedgeTriggerCalculator(
+        _inputs(_index(90.0, high=100.0, average=95.0)), RULES
+    ).calculate_all()
+
+    assert result.action == "START"
 
 
 def _bars(closes: list[float], end: str, tz: str = "America/New_York") -> pd.DataFrame:
@@ -129,7 +149,7 @@ def _bars(closes: list[float], end: str, tz: str = "America/New_York") -> pd.Dat
 
 
 def test_three_closes_over_a_rising_average_count_as_a_streak() -> None:
-    closes = [100.0] * 50 + [90.0, 110.0, 111.0, 112.0]
+    closes = [100.0] * 260 + [90.0, 110.0, 111.0, 112.0]
 
     snapshot = summarize_index(
         _bars(closes, "2026-11-16"), _bars([20.0], "2026-11-16"), 50, TODAY
@@ -146,6 +166,20 @@ def test_stale_market_data_is_refused() -> None:
         )
 
 
+def test_index_and_volatility_from_different_sessions_are_refused() -> None:
+    with pytest.raises(ValueError, match="volatility newest close"):
+        summarize_index(
+            _bars([100.0] * 270, "2026-11-13"), _bars([20.0], "2026-11-16"), 50, TODAY
+        )
+
+
+def test_history_shorter_than_52_weeks_is_refused() -> None:
+    with pytest.raises(ValueError, match="short of the 52 weeks"):
+        summarize_index(
+            _bars([100.0] * 60, "2026-11-16"), _bars([20.0], "2026-11-16"), 50, TODAY
+        )
+
+
 def test_an_open_session_bar_is_dropped_until_the_close_settles() -> None:
     bars = _bars([100.0, 101.0], "2026-11-16")
 
@@ -159,3 +193,23 @@ def test_a_profile_without_hedge_triggers_fails_closed(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="no hedge_triggers"):
         load_rules(profile)
+
+
+def test_a_hedge_in_another_account_does_not_set_the_entry_date(tmp_path: Path) -> None:
+    db = tmp_path / "ledger.db"
+    conn = sqlite3.connect(db)
+    conn.executescript(
+        "CREATE TABLE positions (account_id, symbol, instrument, quantity, avg_cost, price, synced_at);"
+        "CREATE TABLE transactions (account_id, date, type, symbol, quantity);"
+        "INSERT INTO positions VALUES ('margin', 'SQQQ', 'equity', 10, 50, 52, 'now');"
+        "INSERT INTO positions VALUES ('ira', 'SQQQ', 'equity', 5, 40, 52, 'now');"
+        "INSERT INTO transactions VALUES ('ira', '2026-01-02', 'BUY', 'SQQQ', 5);"
+        "INSERT INTO transactions VALUES ('margin', '2026-11-13', 'BUY', 'SQQQ', 10);"
+    )
+    conn.commit()
+    conn.close()
+
+    held = read_position(db, "margin", "SQQQ")
+
+    assert held is not None
+    assert (held.quantity, held.entry_date) == (10, date(2026, 11, 13))

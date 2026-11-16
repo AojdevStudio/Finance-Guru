@@ -232,7 +232,7 @@ A failed run notifies no one. Check the history, or point a tool you already use
 **The hedge-trigger check.** The `hedge-trigger-check` workflow suggests when to start or exit a triggered inverse-ETF hedge. It suggests only. It never trades or moves money. It runs weekdays at 16:30 in the machine's local time zone, which on a US Central machine is after the US close and after SnapTrade's morning sync.
 
 1. `refresh` runs the same SnapTrade positions sync as the margin-rate check. If the sync fails, the check still runs and reports the stale input.
-2. `check` runs `src.analysis.hedge_trigger_cli --output json`. The engine reads your thresholds from the `hedge_triggers:` section of `user-profile.yaml`, margin numbers from the ledger, your hedge position and its entry date from the ledger, and daily closes from yfinance. It returns one action: `START` with a size, `HOLD`, `EXIT` with the rules that fired, or `NO_VERDICT` naming the input that was stale or missing.
+2. `check` runs `src.analysis.hedge_trigger_cli --output json`. The engine reads your thresholds from the `hedge_triggers:` section of `user-profile.yaml`, margin numbers from the ledger, your hedge position and its entry date from the ledger, and daily closes from [yfinance](https://github.com/ranaroussi/yfinance). It returns one action: `START` with a size, `HOLD`, `EXIT` with the rules that fired, or `NO_VERDICT` naming the input that was stale or missing.
 
 Holdings/debt in these rules is gross holdings (account equity plus margin debt) divided by margin debt. `margin_metrics_cli` reports equity/debt as `portfolio_margin_ratio`, which is a different number.
 
