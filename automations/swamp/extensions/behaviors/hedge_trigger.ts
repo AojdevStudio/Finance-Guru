@@ -11,7 +11,9 @@
  *   run is the alert, the same way a drift fails `margin-rate-check`.
  *
  * - `sync-activity` runs the engine's SnapTrade activities sync, so a held
- *   hedge's entry date comes from current transaction history.
+ *   hedge's entry date comes from current transaction history. `check` passes
+ *   the time of the last successful sync to the engine, which refuses one
+ *   older than the positions snapshot while a hedge is held.
  *
  * A stale or missing input is NO_VERDICT, never a pass. `_lib/engine.ts` finds
  * the instance and the engine and runs engine modules.
@@ -69,7 +71,7 @@ export function shouldAlert(action: Action, previous: Action | null): boolean {
 
 export const behavior = {
   type: "@aojdevstudio/hedge-trigger",
-  version: "2026.11.16.2",
+  version: "2026.11.16.3",
   globalArguments: EngineArgsSchema,
   resources: {
     "suggestion": {
@@ -102,7 +104,10 @@ export const behavior = {
       description: "Run the engine's hedge trigger rules and record one suggested action",
       arguments: z.object({}),
       execute: async (_args: Record<string, never>, context: Ctx) => {
-        const stdout = await runEngine(context, "src.analysis.hedge_trigger_cli", ["--output", "json"]);
+        const activity = ActivitySyncSchema.safeParse(await context.readResource("transactions"));
+        const engineArgs = ["--output", "json"];
+        if (activity.success) engineArgs.push("--activity-synced-at", activity.data.syncedAt);
+        const stdout = await runEngine(context, "src.analysis.hedge_trigger_cli", engineArgs);
         const result = parseResult(stdout);
         const previous = SuggestionSchema.pick({ action: true }).safeParse(await context.readResource("hedge"));
         const previousAction = previous.success ? previous.data.action : null;

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from datetime import date, datetime, time, timedelta
+from itertools import groupby
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -105,32 +106,61 @@ def summarize_index(
 
 
 def entry_date_from_activity(
-    activity: Iterable[tuple[date, float]], held_quantity: float
+    activity: Iterable[tuple[date, str, float]], held_quantity: float
 ) -> date:
     """Return the date the held position opened, from signed share changes.
 
-    ``activity`` is (date, signed quantity) pairs, oldest first: buys and split
-    additions are positive, sells and split removals negative. The entry date is
-    the first day the running total rose above zero after it was last flat.
-    Activity that does not add up to ``held_quantity`` is stale or incomplete,
-    and its entry date cannot be trusted, so it raises.
+    ``activity`` is (date, type, signed quantity) rows, oldest first: buys and
+    split additions are positive, sells and split removals negative. The entry
+    date is the first day the running total rose above zero after it was last
+    flat. It raises when the entry date cannot be trusted:
+
+    - The activity does not add up to ``held_quantity``, so it is stale.
+    - A day in the open position sells down to zero or below and also buys.
+      The ledger does not keep the order within a day, so either day could be
+      the entry. A split day is exempt, because a split never closes a position.
     """
     total = 0.0
     entry: date | None = None
-    for day, quantity in activity:
-        was_flat = total <= 1e-9
-        total += quantity
-        if total <= 1e-9:
-            entry = None
-        elif was_flat:
+    ambiguous: date | None = None
+    for day, rows in groupby(activity, key=lambda row: row[0]):
+        changes = [(kind, quantity) for _, kind, quantity in rows]
+        opening = total
+        total += sum(quantity for _, quantity in changes)
+        sold = sum(quantity for _, quantity in changes if quantity < 0)
+        bought = any(quantity > 0 for _, quantity in changes)
+        is_split = any(kind == "SPLIT" for kind, _ in changes)
+        if total <= SHARE_TOLERANCE:
+            entry, ambiguous = None, None
+        elif opening <= SHARE_TOLERANCE:
             entry = day
+        elif bought and not is_split and opening + sold <= SHARE_TOLERANCE:
+            ambiguous = day
     if entry is None or abs(total - held_quantity) >= SHARE_TOLERANCE:
         msg = (
             f"ledger activity adds up to {total:g} shares but {held_quantity:g} are held; "
             "sync transactions first"
         )
         raise ValueError(msg)
+    if ambiguous is not None:
+        msg = f"activity on {ambiguous} sells the whole position and buys again; the entry date is ambiguous"
+        raise ValueError(msg)
     return entry
+
+
+def require_current_activity(
+    activity_synced_at: datetime | None, ledger_synced_at: datetime | None
+) -> None:
+    """Refuse an activity sync older than the positions snapshot it must explain."""
+    if activity_synced_at is None or ledger_synced_at is None:
+        msg = "no activity sync time was given; run the activity sync and pass --activity-synced-at"
+        raise ValueError(msg)
+    if activity_synced_at < ledger_synced_at:
+        msg = (
+            f"activity was last synced at {activity_synced_at.isoformat()}, before the "
+            f"positions snapshot at {ledger_synced_at.isoformat()}; sync transactions first"
+        )
+        raise ValueError(msg)
 
 
 def no_verdict(as_of: date, failed_input: str) -> HedgeTriggerResult:

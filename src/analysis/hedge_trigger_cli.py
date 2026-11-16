@@ -6,7 +6,9 @@ profile's ``hedge_triggers:`` section, margin numbers from the ledger through
 volatility closes from yfinance. ``hedge_trigger`` does every calculation.
 
 A missing or stale input gives NO_VERDICT with the input named, never a pass.
-A missing or invalid ``hedge_triggers:`` section exits 1.
+A missing or invalid ``hedge_triggers:`` section exits 1. While a hedge is
+held, ``--activity-synced-at`` must name an activity sync at or after the
+positions snapshot, so the entry date is current.
 
     uv run python -m src.analysis.hedge_trigger_cli --output json
 
@@ -31,6 +33,7 @@ from src.analysis.hedge_trigger import (
     completed_sessions,
     entry_date_from_activity,
     no_verdict,
+    require_current_activity,
     summarize_index,
 )
 from src.analysis.margin_metrics import _resolve_margin_routing, metrics_from_runtime
@@ -78,7 +81,7 @@ def read_position(db: Path, account_id: str, symbol: str) -> HeldHedge | None:
             msg = f"{symbol} is held in {len(rows)} ledger rows; the check reads one position"
             raise ValueError(msg)
         activity = conn.execute(
-            "SELECT date, quantity FROM transactions WHERE account_id = ? AND symbol = ? "
+            "SELECT date, type, quantity FROM transactions WHERE account_id = ? AND symbol = ? "
             "AND quantity IS NOT NULL AND quantity != 0 AND date IS NOT NULL "
             "ORDER BY date, rowid",
             (account_id, symbol),
@@ -87,14 +90,17 @@ def read_position(db: Path, account_id: str, symbol: str) -> HeldHedge | None:
         conn.close()
     quantity, average_cost, price = rows[0]
     entry = entry_date_from_activity(
-        ((date.fromisoformat(day[:10]), qty) for day, qty in activity), quantity
+        ((date.fromisoformat(day[:10]), kind, qty) for day, kind, qty in activity),
+        quantity,
     )
     return HeldHedge(
         quantity=quantity, average_cost=average_cost, price=price, entry_date=entry
     )
 
 
-def evaluate(rules: HedgeTriggerRules, now: datetime) -> HedgeTriggerResult:
+def evaluate(
+    rules: HedgeTriggerRules, now: datetime, activity_synced_at: datetime | None
+) -> HedgeTriggerResult:
     """Gather every input. A failed input becomes NO_VERDICT naming it."""
     today = now.astimezone().date()
     try:
@@ -114,6 +120,8 @@ def evaluate(rules: HedgeTriggerRules, now: datetime) -> HedgeTriggerResult:
         # The hedge lives in the margin account, the one its sale repays.
         account_id, _, _ = _resolve_margin_routing()
         position = read_position(_db_path(), account_id, rules.hedge_symbol)
+        if position is not None:
+            require_current_activity(activity_synced_at, metrics.ledger_synced_at)
     except (ValueError, sqlite3.Error) as error:
         return no_verdict(today, f"{rules.hedge_symbol} position: {error}")
     inputs = HedgeTriggerInputs(
@@ -149,6 +157,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Profile YAML with hedge_triggers:; defaults to the instance's",
     )
     parser.add_argument("--output", choices=("text", "json"), default="text")
+    parser.add_argument(
+        "--activity-synced-at",
+        type=datetime.fromisoformat,
+        help="ISO time of the last SnapTrade activities sync; required while a hedge is held",
+    )
     args = parser.parse_args(argv)
 
     profile = args.profile or InstancePaths.resolve().profile
@@ -157,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, ValidationError) as error:
         print(f"Invalid hedge trigger rules in {profile}: {error}", file=sys.stderr)
         return 1
-    result = evaluate(rules, datetime.now(UTC))
+    result = evaluate(rules, datetime.now(UTC), args.activity_synced_at)
     print(
         result.model_dump_json(indent=2)
         if args.output == "json"

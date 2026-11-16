@@ -13,6 +13,7 @@ from src.analysis.hedge_trigger import (
     HedgeTriggerCalculator,
     completed_sessions,
     entry_date_from_activity,
+    require_current_activity,
     summarize_index,
 )
 from src.analysis.hedge_trigger_cli import load_rules, read_position
@@ -112,23 +113,48 @@ def test_thirty_days_held_exits_the_whole_hedge() -> None:
 
 
 def test_entry_date_is_the_first_buy_after_the_position_was_last_flat() -> None:
+    # A reverse split sells 900 and adds 180 on one day without closing.
     activity = [
-        (date(2025, 11, 6), 900.0),
-        (date(2025, 11, 20), -720.0),
-        (date(2026, 3, 6), -180.0),
-        (date(2026, 11, 3), 40.0),
-        (date(2026, 11, 5), 10.0),
+        (date(2025, 11, 6), "BUY", 900.0),
+        (date(2025, 11, 20), "SPLIT", -900.0),
+        (date(2025, 11, 20), "SPLIT", 180.0),
+        (date(2026, 3, 6), "SELL", -180.0),
+        (date(2026, 11, 3), "BUY", 40.0),
+        (date(2026, 11, 5), "BUY", 10.0),
     ]
 
     assert entry_date_from_activity(activity, 50.0) == date(2026, 11, 3)
+    assert entry_date_from_activity(activity[:3], 180.0) == date(2025, 11, 6)
+
+
+def test_selling_out_and_rebuying_on_one_day_is_ambiguous() -> None:
+    # The ledger does not keep the order: the rebuy may predate the sell.
+    activity = [
+        (date(2026, 10, 1), "BUY", 100.0),
+        (date(2026, 11, 13), "BUY", 50.0),
+        (date(2026, 11, 13), "SELL", -100.0),
+    ]
+
+    with pytest.raises(ValueError, match="ambiguous"):
+        entry_date_from_activity(activity, 50.0)
+
+
+def test_activity_synced_before_the_positions_snapshot_is_refused() -> None:
+    snapshot = datetime(2026, 11, 16, 21, tzinfo=UTC)
+
+    with pytest.raises(ValueError, match="before the positions snapshot"):
+        require_current_activity(datetime(2026, 11, 13, 21, tzinfo=UTC), snapshot)
+    with pytest.raises(ValueError, match="no activity sync time"):
+        require_current_activity(None, snapshot)
+    require_current_activity(datetime(2026, 11, 16, 21, 1, tzinfo=UTC), snapshot)
 
 
 def test_activity_that_misses_a_reopened_position_is_refused() -> None:
     # Transactions not yet synced: the ledger holds 50 shares, activity shows 40.
     activity = [
-        (date(2025, 11, 6), 900.0),
-        (date(2026, 3, 6), -900.0),
-        (date(2026, 11, 3), 40.0),
+        (date(2025, 11, 6), "BUY", 900.0),
+        (date(2026, 3, 6), "SELL", -900.0),
+        (date(2026, 11, 3), "BUY", 40.0),
     ]
 
     with pytest.raises(ValueError, match="sync transactions first"):
