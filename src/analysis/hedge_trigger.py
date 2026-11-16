@@ -27,6 +27,7 @@ from pandas.tseries.holiday import (
     USPresidentsDay,
     USThanksgivingDay,
     nearest_workday,
+    sunday_to_monday,
 )
 from pandas.tseries.offsets import CustomBusinessDay
 
@@ -49,7 +50,8 @@ class NyseHolidays(AbstractHolidayCalendar):
     """Full-day NYSE closures. A special closure missing here gives NO_VERDICT."""
 
     rules = [
-        Holiday("New Year's Day", month=1, day=1, observance=nearest_workday),
+        # NYSE moves a Sunday New Year to Monday, but never closes the Friday before.
+        Holiday("New Year's Day", month=1, day=1, observance=sunday_to_monday),
         USMartinLutherKingJr,
         USPresidentsDay,
         GoodFriday,

@@ -51,7 +51,15 @@ PROFILE_SECTION = "hedge_triggers"
 # Cash-only activity types. SnapTrade can fill units on a cash dividend, so these
 # rows never rebuild the share history. Every other row counts, including an
 # untyped or unknown one: a wrong count fails the share check and gives NO_VERDICT.
-CASH_ONLY = ("DIVIDEND", "INTEREST", "FEE", "TAX", "CONTRIBUTION", "WITHDRAWAL")
+CASH_ONLY = (
+    "DIVIDEND",
+    "SUBSTITUTE_DIVIDEND",
+    "INTEREST",
+    "FEE",
+    "TAX",
+    "CONTRIBUTION",
+    "WITHDRAWAL",
+)
 
 
 def load_rules(profile: Path) -> HedgeTriggerRules:

@@ -370,3 +370,23 @@ def test_a_dropped_session_inside_the_average_window_is_refused() -> None:
         summarize_index(
             bars.drop(bars.index[-2]), _bars([20.0], "2026-11-16"), 50, TODAY
         )
+
+
+def test_new_year_on_a_saturday_leaves_the_friday_before_open() -> None:
+    assert latest_completed_session(datetime(2027, 12, 31, 23, tzinfo=UTC)) == date(
+        2027, 12, 31
+    )
+
+
+def test_a_substitute_dividend_with_units_is_cash(tmp_path: Path) -> None:
+    db = _ledger(
+        tmp_path,
+        10,
+        "INSERT INTO transactions VALUES ('margin', '2026-11-13', 'BUY', 'SQQQ', 10);"
+        "INSERT INTO transactions VALUES ('margin', '2026-11-20', 'SUBSTITUTE_DIVIDEND', 'SQQQ', 10);",
+    )
+
+    held = read_position(db, "margin", "SQQQ")
+
+    assert held is not None
+    assert held.entry_date == date(2026, 11, 13)
