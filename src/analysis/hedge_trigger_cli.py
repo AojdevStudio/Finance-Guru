@@ -27,6 +27,7 @@ import pandas as pd
 import yaml
 import yfinance as yf
 from pydantic import ValidationError
+from yfinance.exceptions import YFException
 
 from src.analysis.hedge_trigger import (
     HedgeTriggerCalculator,
@@ -105,7 +106,7 @@ def evaluate(
     today = now.astimezone().date()
     try:
         metrics = metrics_from_runtime(source="db")
-    except (ValueError, OSError) as error:
+    except (ValueError, OSError, sqlite3.Error) as error:
         return no_verdict(today, f"margin metrics: {error}")
     try:
         index = summarize_index(
@@ -114,7 +115,7 @@ def evaluate(
             rules.moving_average_days,
             today,
         )
-    except (ValueError, OSError) as error:
+    except (ValueError, OSError, YFException) as error:
         return no_verdict(today, f"market data: {error}")
     try:
         # The hedge lives in the margin account, the one its sale repays.
@@ -134,6 +135,14 @@ def evaluate(
         position=position,
     )
     return HedgeTriggerCalculator(inputs, rules).calculate_all()
+
+
+def _aware_datetime(text: str) -> datetime:
+    parsed = datetime.fromisoformat(text)
+    if parsed.tzinfo is None:
+        msg = f"{text!r} has no time zone; pass an offset such as +00:00"
+        raise argparse.ArgumentTypeError(msg)
+    return parsed
 
 
 def format_text(result: HedgeTriggerResult) -> str:
@@ -159,7 +168,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", choices=("text", "json"), default="text")
     parser.add_argument(
         "--activity-synced-at",
-        type=datetime.fromisoformat,
+        type=_aware_datetime,
         help="ISO time of the last SnapTrade activities sync; required while a hedge is held",
     )
     args = parser.parse_args(argv)

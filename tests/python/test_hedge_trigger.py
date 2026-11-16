@@ -16,7 +16,7 @@ from src.analysis.hedge_trigger import (
     require_current_activity,
     summarize_index,
 )
-from src.analysis.hedge_trigger_cli import load_rules, read_position
+from src.analysis.hedge_trigger_cli import load_rules, main, read_position
 from src.models.hedge_trigger_inputs import (
     HedgeTriggerInputs,
     HedgeTriggerRules,
@@ -137,6 +137,24 @@ def test_selling_out_and_rebuying_on_one_day_is_ambiguous() -> None:
 
     with pytest.raises(ValueError, match="ambiguous"):
         entry_date_from_activity(activity, 50.0)
+
+
+def test_a_split_day_with_a_sell_out_and_rebuy_is_ambiguous() -> None:
+    activity = [
+        (date(2026, 10, 1), "BUY", 100.0),
+        (date(2026, 11, 13), "SPLIT", -100.0),
+        (date(2026, 11, 13), "SPLIT", 20.0),
+        (date(2026, 11, 13), "SELL", -20.0),
+        (date(2026, 11, 13), "BUY", 20.0),
+    ]
+
+    with pytest.raises(ValueError, match="ambiguous"):
+        entry_date_from_activity(activity, 20.0)
+
+
+def test_a_sync_time_without_a_time_zone_is_rejected() -> None:
+    with pytest.raises(SystemExit):
+        main(["--activity-synced-at", "2026-11-16T22:00:00"])
 
 
 def test_activity_synced_before_the_positions_snapshot_is_refused() -> None:

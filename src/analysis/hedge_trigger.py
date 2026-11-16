@@ -116,9 +116,10 @@ def entry_date_from_activity(
     flat. It raises when the entry date cannot be trusted:
 
     - The activity does not add up to ``held_quantity``, so it is stale.
-    - A day in the open position sells down to zero or below and also buys.
-      The ledger does not keep the order within a day, so either day could be
-      the entry. A split day is exempt, because a split never closes a position.
+    - A day in the open position has a real sell and a real buy, and its
+      negative rows reach zero. The ledger does not keep the order within a
+      day, so either day could be the entry. Split rows alone never make a day
+      ambiguous, because a split never closes a position.
     """
     total = 0.0
     entry: date | None = None
@@ -128,13 +129,14 @@ def entry_date_from_activity(
         opening = total
         total += sum(quantity for _, quantity in changes)
         sold = sum(quantity for _, quantity in changes if quantity < 0)
-        bought = any(quantity > 0 for _, quantity in changes)
-        is_split = any(kind == "SPLIT" for kind, _ in changes)
+        traded_both = any(q > 0 and kind != "SPLIT" for kind, q in changes) and any(
+            q < 0 and kind != "SPLIT" for kind, q in changes
+        )
         if total <= SHARE_TOLERANCE:
             entry, ambiguous = None, None
         elif opening <= SHARE_TOLERANCE:
             entry = day
-        elif bought and not is_split and opening + sold <= SHARE_TOLERANCE:
+        elif traded_both and opening + sold <= SHARE_TOLERANCE:
             ambiguous = day
     if entry is None or abs(total - held_quantity) >= SHARE_TOLERANCE:
         msg = (
