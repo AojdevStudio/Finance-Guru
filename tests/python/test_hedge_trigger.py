@@ -353,3 +353,20 @@ def test_the_latest_completed_session_skips_weekends_holidays_and_open_sessions(
     assert latest_completed_session(datetime(2026, 11, 26, 23, tzinfo=UTC)) == date(
         2026, 11, 25
     )
+
+
+def test_a_missing_close_inside_the_streak_is_refused() -> None:
+    bars = _bars([100.0] * 260 + [110.0, 111.0, 112.0, 113.0], "2026-11-16")
+    bars.loc[bars.index[-2], "Close"] = float("nan")
+
+    with pytest.raises(ValueError, match="missing"):
+        summarize_index(bars, _bars([20.0], "2026-11-16"), 50, TODAY)
+
+
+def test_a_dropped_session_inside_the_average_window_is_refused() -> None:
+    bars = _bars([100.0] * 260 + [110.0, 111.0, 112.0, 113.0], "2026-11-16")
+
+    with pytest.raises(ValueError, match="missing"):
+        summarize_index(
+            bars.drop(bars.index[-2]), _bars([20.0], "2026-11-16"), 50, TODAY
+        )

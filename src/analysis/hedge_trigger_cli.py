@@ -69,7 +69,8 @@ def _daily_bars(symbol: str, period: str, now: datetime) -> pd.DataFrame:
     if bars.empty:
         msg = f"yfinance returned no daily history for {symbol}"
         raise ValueError(msg)
-    return completed_sessions(bars[["High", "Close"]].dropna(), now)
+    # Keep missing values: summarize_index refuses them instead of closing the gap.
+    return completed_sessions(bars[["High", "Close"]], now)
 
 
 def read_position(db: Path, account_id: str, symbol: str) -> HeldHedge | None:

@@ -28,6 +28,7 @@ from pandas.tseries.holiday import (
     USThanksgivingDay,
     nearest_workday,
 )
+from pandas.tseries.offsets import CustomBusinessDay
 
 from src.analysis.margin_metrics import EDUCATIONAL_DISCLAIMER
 from src.models.hedge_trigger_inputs import (
@@ -133,6 +134,23 @@ def summarize_index(
         raise ValueError(msg)
 
     window = index_bars[index_bars.index > last_ts - WEEKS_52]
+    # The average and the above-average streak need every recent session, in order.
+    sessions = pd.date_range(
+        end=pd.Timestamp(expected_session),
+        periods=moving_average_days,
+        freq=CustomBusinessDay(calendar=NyseHolidays()),
+    ).date
+    recent = index_bars.iloc[-moving_average_days:]
+    missing = sorted(set(sessions) - {ts.date() for ts in recent.index})
+    if missing:
+        msg = f"index history is missing sessions {', '.join(map(str, missing))}"
+        raise ValueError(msg)
+    if window[["High", "Close"]].isna().any().any():
+        msg = "index history is missing a high or close inside the 52 weeks"
+        raise ValueError(msg)
+    if pd.isna(volatility_bars["Close"].iloc[-1]):
+        msg = "volatility history is missing its newest close"
+        raise ValueError(msg)
     average = closes.rolling(moving_average_days).mean()
     above = (closes > average).to_list()
     streak = 0
