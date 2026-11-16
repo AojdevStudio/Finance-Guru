@@ -109,6 +109,8 @@ def summarize_index(
     volatility_bars: pd.DataFrame,
     moving_average_days: int,
     expected_session: date,
+    *,
+    streak_days: int,
 ) -> IndexSnapshot:
     """Read the close, 52-week high, moving average, and streak from daily bars.
 
@@ -136,10 +138,11 @@ def summarize_index(
         raise ValueError(msg)
 
     window = index_bars[index_bars.index > last_ts - WEEKS_52]
-    # The streak counts at most ``moving_average_days`` closes, and each one's
-    # average reads that many sessions before it, so this span must be complete.
-    # A special NYSE closure missing from NyseHolidays gives NO_VERDICT here.
-    span = 2 * moving_average_days - 1
+    # The streak counts at most ``streak_days`` closes, enough to decide the exit
+    # rule, and each one's average reads ``moving_average_days`` sessions back,
+    # so this span must be complete. A special NYSE closure missing from
+    # NyseHolidays gives NO_VERDICT here.
+    span = moving_average_days + streak_days - 1
     sessions = pd.date_range(
         end=pd.Timestamp(expected_session),
         periods=span,
@@ -157,7 +160,7 @@ def summarize_index(
         msg = "volatility history is missing its newest close"
         raise ValueError(msg)
     average = closes.rolling(moving_average_days).mean()
-    above = (closes > average).to_list()[-moving_average_days:]
+    above = (closes > average).to_list()[-streak_days:]
     streak = 0
     for is_above in reversed(above):
         if not is_above:

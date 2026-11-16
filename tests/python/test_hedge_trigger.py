@@ -198,7 +198,11 @@ def test_three_closes_over_a_rising_average_count_as_a_streak() -> None:
     closes = [100.0] * 260 + [90.0, 110.0, 111.0, 112.0]
 
     snapshot = summarize_index(
-        _bars(closes, "2026-11-16"), _bars([20.0], "2026-11-16"), 50, TODAY
+        _bars(closes, "2026-11-16"),
+        _bars([20.0], "2026-11-16"),
+        50,
+        TODAY,
+        streak_days=3,
     )
 
     assert snapshot.closes_above_average == 3
@@ -208,14 +212,22 @@ def test_three_closes_over_a_rising_average_count_as_a_streak() -> None:
 def test_stale_market_data_is_refused() -> None:
     with pytest.raises(ValueError, match="newest completed close"):
         summarize_index(
-            _bars([100.0] * 270, "2026-11-06"), _bars([20.0], "2026-11-16"), 50, TODAY
+            _bars([100.0] * 270, "2026-11-06"),
+            _bars([20.0], "2026-11-16"),
+            50,
+            TODAY,
+            streak_days=3,
         )
 
 
 def test_index_and_volatility_from_different_sessions_are_refused() -> None:
     with pytest.raises(ValueError, match="volatility newest close"):
         summarize_index(
-            _bars([100.0] * 270, "2026-11-16"), _bars([20.0], "2026-11-13"), 50, TODAY
+            _bars([100.0] * 270, "2026-11-16"),
+            _bars([20.0], "2026-11-13"),
+            50,
+            TODAY,
+            streak_days=3,
         )
 
 
@@ -225,7 +237,7 @@ def test_history_shorter_than_52_weeks_is_refused() -> None:
     bars = pd.DataFrame({"High": 101.0, "Close": 100.0}, index=days)
 
     with pytest.raises(ValueError, match="short of the 52 weeks"):
-        summarize_index(bars, _bars([20.0], "2026-11-16"), 50, TODAY)
+        summarize_index(bars, _bars([20.0], "2026-11-16"), 50, TODAY, streak_days=3)
 
 
 def test_an_open_session_bar_is_dropped_until_the_close_settles() -> None:
@@ -337,7 +349,11 @@ def test_aligned_feeds_missing_a_weekday_session_are_refused() -> None:
     # Monday Nov 16 after the close, both feeds end Thursday Nov 12: Friday and Monday are missing.
     with pytest.raises(ValueError, match="newest completed close"):
         summarize_index(
-            _bars([100.0] * 270, "2026-11-12"), _bars([20.0], "2026-11-12"), 50, TODAY
+            _bars([100.0] * 270, "2026-11-12"),
+            _bars([20.0], "2026-11-12"),
+            50,
+            TODAY,
+            streak_days=3,
         )
 
 
@@ -360,7 +376,7 @@ def test_a_missing_close_inside_the_streak_is_refused() -> None:
     bars.loc[bars.index[-2], "Close"] = float("nan")
 
     with pytest.raises(ValueError, match="missing"):
-        summarize_index(bars, _bars([20.0], "2026-11-16"), 50, TODAY)
+        summarize_index(bars, _bars([20.0], "2026-11-16"), 50, TODAY, streak_days=3)
 
 
 def test_a_dropped_session_inside_the_average_window_is_refused() -> None:
@@ -368,7 +384,11 @@ def test_a_dropped_session_inside_the_average_window_is_refused() -> None:
 
     with pytest.raises(ValueError, match="missing"):
         summarize_index(
-            bars.drop(bars.index[-2]), _bars([20.0], "2026-11-16"), 50, TODAY
+            bars.drop(bars.index[-2]),
+            _bars([20.0], "2026-11-16"),
+            50,
+            TODAY,
+            streak_days=3,
         )
 
 
@@ -395,7 +415,23 @@ def test_a_substitute_dividend_with_units_is_cash(tmp_path: Path) -> None:
 def test_a_dropped_session_feeding_an_earlier_streak_average_is_refused() -> None:
     bars = _bars([100.0] * 260 + [110.0, 111.0, 112.0, 113.0], "2026-11-16")
     # Older than the newest 50 sessions, but inside the averages behind the streak.
-    gap = bars.index[-55]
+    gap = bars.index[-52]
 
     with pytest.raises(ValueError, match="missing"):
-        summarize_index(bars.drop(gap), _bars([20.0], "2026-11-16"), 50, TODAY)
+        summarize_index(
+            bars.drop(gap), _bars([20.0], "2026-11-16"), 50, TODAY, streak_days=3
+        )
+
+
+def test_a_streak_longer_than_the_average_window_can_still_exit() -> None:
+    closes = [100.0] * 240 + [101.0 + i for i in range(30)]
+
+    snapshot = summarize_index(
+        _bars(closes, "2026-11-16"),
+        _bars([20.0], "2026-11-16"),
+        20,
+        TODAY,
+        streak_days=30,
+    )
+
+    assert snapshot.closes_above_average == 30

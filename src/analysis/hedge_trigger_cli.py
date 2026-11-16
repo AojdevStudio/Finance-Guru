@@ -129,6 +129,7 @@ def evaluate(
             _daily_bars(rules.volatility_symbol, "1mo", now),
             rules.moving_average_days,
             latest_completed_session(now),
+            streak_days=rules.exit_closes_above_average,
         )
     except (ValueError, OSError, YFException) as error:
         return no_verdict(today, f"market data: {error}")
