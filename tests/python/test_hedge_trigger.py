@@ -13,6 +13,7 @@ from src.analysis.hedge_trigger import (
     HedgeTriggerCalculator,
     completed_sessions,
     entry_date_from_activity,
+    no_verdict,
     require_current_activity,
     summarize_index,
 )
@@ -259,3 +260,30 @@ def test_a_hedge_in_another_account_does_not_set_the_entry_date(tmp_path: Path) 
 
     assert held is not None
     assert (held.quantity, held.entry_date) == (10, date(2026, 11, 13))
+
+
+def test_a_dividend_with_units_does_not_change_the_share_count(tmp_path: Path) -> None:
+    db = tmp_path / "ledger.db"
+    conn = sqlite3.connect(db)
+    conn.executescript(
+        "CREATE TABLE positions (account_id, symbol, instrument, quantity, avg_cost, price, synced_at);"
+        "CREATE TABLE transactions (account_id, date, type, symbol, quantity);"
+        "INSERT INTO positions VALUES ('margin', 'SQQQ', 'equity', 10, 50, 52, 'now');"
+        "INSERT INTO transactions VALUES ('margin', '2026-11-13', 'BUY', 'SQQQ', 10);"
+        "INSERT INTO transactions VALUES ('margin', '2026-11-20', 'DIVIDEND', 'SQQQ', 10);"
+    )
+    conn.commit()
+    conn.close()
+
+    held = read_position(db, "margin", "SQQQ")
+
+    assert held is not None
+    assert (held.quantity, held.entry_date) == (10, date(2026, 11, 13))
+
+
+def test_a_no_verdict_result_still_names_its_data_sources() -> None:
+    result = no_verdict(date(2026, 11, 16), "market data: down")
+
+    sources = result.model_dump(mode="json")["data_sources"]
+    assert any("ledger" in source for source in sources)
+    assert any("yfinance" in source for source in sources)

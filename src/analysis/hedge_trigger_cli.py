@@ -47,6 +47,9 @@ from src.models.hedge_trigger_inputs import (
 )
 
 PROFILE_SECTION = "hedge_triggers"
+# Activity types that change a share balance. SnapTrade can fill units on a cash
+# dividend, so only these rows rebuild the position's history.
+POSITION_CHANGES = ("BUY", "SELL", "REI", "SPLIT", "TRANSFER", "JOURNALED")
 
 
 def load_rules(profile: Path) -> HedgeTriggerRules:
@@ -83,9 +86,10 @@ def read_position(db: Path, account_id: str, symbol: str) -> HeldHedge | None:
             raise ValueError(msg)
         activity = conn.execute(
             "SELECT date, type, quantity FROM transactions WHERE account_id = ? AND symbol = ? "
+            f"AND type IN ({', '.join('?' * len(POSITION_CHANGES))}) "
             "AND quantity IS NOT NULL AND quantity != 0 AND date IS NOT NULL "
             "ORDER BY date, rowid",
-            (account_id, symbol),
+            (account_id, symbol, *POSITION_CHANGES),
         ).fetchall()
     finally:
         conn.close()
@@ -151,7 +155,7 @@ def format_text(result: HedgeTriggerResult) -> str:
     lines += [
         f"  [{'x' if r.fired else ' '}] {r.rule}: {r.detail}" for r in result.rules
     ]
-    lines += ["", result.disclaimer]
+    lines += ["", "Sources: " + "; ".join(result.data_sources), result.disclaimer]
     return "\n".join(lines)
 
 

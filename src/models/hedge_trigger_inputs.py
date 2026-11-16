@@ -105,6 +105,12 @@ class HedgeTriggerInputs(BaseModel):
     position: HeldHedge | None
 
 
+DATA_SOURCES = (
+    "Margin, holdings, and hedge position: local SQLite ledger (SnapTrade sync)",
+    "Index and volatility closes: Yahoo Finance via yfinance",
+)
+
+
 class RuleResult(BaseModel):
     """One rule, its measured value, and whether it fired."""
 
@@ -133,4 +139,5 @@ class HedgeTriggerResult(BaseModel):
     rules: list[RuleResult] = Field(default_factory=list)
     inputs: HedgeTriggerInputs | None = None
     rule_config: HedgeTriggerRules | None = None
+    data_sources: tuple[str, ...] = DATA_SOURCES
     disclaimer: str
