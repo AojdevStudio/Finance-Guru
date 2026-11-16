@@ -1,0 +1,161 @@
+"""Tests for the hedge-trigger calculator. Synthetic data, no network."""
+
+from __future__ import annotations
+
+from datetime import UTC, date, datetime
+from pathlib import Path
+
+import pandas as pd
+import pytest
+
+from src.analysis.hedge_trigger import (
+    HedgeTriggerCalculator,
+    completed_sessions,
+    entry_date_from_activity,
+    summarize_index,
+)
+from src.analysis.hedge_trigger_cli import load_rules
+from src.models.hedge_trigger_inputs import (
+    HedgeTriggerInputs,
+    HedgeTriggerRules,
+    HeldHedge,
+    IndexSnapshot,
+)
+
+RULES = HedgeTriggerRules(
+    hedge_symbol="SQQQ",
+    index_symbol="QQQ",
+    volatility_symbol="^VIX",
+    moving_average_days=50,
+    start_ratio_below=3.0,
+    start_drawdown_at_least=0.10,
+    start_volatility_at_least=25,
+    exit_gain_at_least=0.30,
+    exit_within_high=0.05,
+    exit_closes_above_average=3,
+    exit_ratio_above=3.5,
+    exit_after_days=30,
+    max_size_of_holdings=0.06,
+)
+TODAY = date(2026, 11, 16)
+
+
+def _index(
+    close: float, high: float = 762.86, average: float = 716.72, streak: int = 0
+) -> IndexSnapshot:
+    return IndexSnapshot(
+        session_date=TODAY,
+        close=close,
+        high_52_week=high,
+        moving_average=average,
+        closes_above_average=streak,
+        volatility_session_date=TODAY,
+        volatility_close=22.91,
+    )
+
+
+def _inputs(
+    index: IndexSnapshot, position: HeldHedge | None = None, debt: float = 92811.52
+) -> HedgeTriggerInputs:
+    return HedgeTriggerInputs(
+        as_of=TODAY,
+        gross_holdings=286287.35,
+        margin_debt=debt,
+        ledger_synced_at=datetime(2026, 11, 16, 21, tzinfo=UTC),
+        index=index,
+        position=position,
+    )
+
+
+def test_drawdown_below_average_starts_a_hedge_sized_to_six_percent() -> None:
+    result = HedgeTriggerCalculator(_inputs(_index(661.75)), RULES).calculate_all()
+
+    assert result.action == "START"
+    assert result.size_dollars == 17177.24
+    assert [r.rule for r in result.rules if r.fired] == ["start_drawdown"]
+
+
+def test_drawdown_above_its_average_does_not_start() -> None:
+    result = HedgeTriggerCalculator(
+        _inputs(_index(661.75, average=650.0)), RULES
+    ).calculate_all()
+
+    assert result.action == "HOLD"
+    assert result.size_dollars is None
+
+
+def test_a_thirty_percent_gain_alone_exits_half() -> None:
+    position = HeldHedge(
+        quantity=100, average_cost=50, price=66, entry_date=date(2026, 11, 2)
+    )
+
+    result = HedgeTriggerCalculator(
+        _inputs(_index(661.75), position), RULES
+    ).calculate_all()
+
+    assert result.action == "EXIT"
+    assert result.summary.startswith("EXIT half")
+
+
+def test_thirty_days_held_exits_the_whole_hedge() -> None:
+    position = HeldHedge(
+        quantity=100, average_cost=50, price=51, entry_date=date(2026, 10, 17)
+    )
+
+    result = HedgeTriggerCalculator(
+        _inputs(_index(661.75), position), RULES
+    ).calculate_all()
+
+    assert result.action == "EXIT"
+    assert "exit_time" in result.summary
+
+
+def test_entry_date_is_the_first_buy_after_the_position_was_last_flat() -> None:
+    activity = [
+        (date(2025, 11, 6), 900.0),
+        (date(2025, 11, 20), -720.0),
+        (date(2026, 3, 6), -180.0),
+        (date(2026, 11, 3), 40.0),
+        (date(2026, 11, 5), 10.0),
+    ]
+
+    assert entry_date_from_activity(activity) == date(2026, 11, 3)
+    assert entry_date_from_activity(activity[:3]) is None
+
+
+def _bars(closes: list[float], end: str, tz: str = "America/New_York") -> pd.DataFrame:
+    index = pd.bdate_range(end=end, periods=len(closes), tz=tz)
+    return pd.DataFrame({"High": [c + 1 for c in closes], "Close": closes}, index=index)
+
+
+def test_three_closes_over_a_rising_average_count_as_a_streak() -> None:
+    closes = [100.0] * 50 + [90.0, 110.0, 111.0, 112.0]
+
+    snapshot = summarize_index(
+        _bars(closes, "2026-11-16"), _bars([20.0], "2026-11-16"), 50, TODAY
+    )
+
+    assert snapshot.closes_above_average == 3
+    assert snapshot.high_52_week == 113.0
+
+
+def test_stale_market_data_is_refused() -> None:
+    with pytest.raises(ValueError, match="newest completed close"):
+        summarize_index(
+            _bars([100.0] * 60, "2026-11-06"), _bars([20.0], "2026-11-16"), 50, TODAY
+        )
+
+
+def test_an_open_session_bar_is_dropped_until_the_close_settles() -> None:
+    bars = _bars([100.0, 101.0], "2026-11-16")
+
+    assert len(completed_sessions(bars, datetime(2026, 11, 16, 19, tzinfo=UTC))) == 1
+    assert len(completed_sessions(bars, datetime(2026, 11, 16, 22, tzinfo=UTC))) == 2
+
+
+def test_a_profile_without_hedge_triggers_fails_closed(tmp_path: Path) -> None:
+    profile = tmp_path / "user-profile.yaml"
+    profile.write_text("user_profile: {}\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="no hedge_triggers"):
+        load_rules(profile)

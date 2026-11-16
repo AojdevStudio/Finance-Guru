@@ -15,16 +15,12 @@
  * refusal of a stale-equity debt (Finance-Guru#259), so this file repeats none
  * of them. Both methods run the engine with the same instance and env.
  *
- * The instance comes from the `instanceDir` global argument or, when that is
- * unset, `FIN_GURU_DATA_ROOT`. `swamp serve daemon enable` passes neither that
- * variable nor your PATH to the service, so set `instanceDir` and `uvPath`
- * there. The engine is the checkout this swamp repo lives in
- * (`<engine>/automations/swamp`).
+ * `_lib/engine.ts` finds the instance and the engine and runs engine modules.
  *
  * @module
  */
 import { z } from "npm:zod@4.6.5";
-import { resolve } from "jsr:@std/path@1.1.2";
+import { type EngineCtx, EngineArgsSchema, instanceDir, runEngine } from "./_lib/engine.ts";
 
 const RATES_URL = "https://www.fidelity.com/trading/margin-loans/margin-rates";
 // Fidelity's CDN returns Access Denied to clients without browser headers.
@@ -73,20 +69,9 @@ const RefreshSchema = z.object({
   refreshedAt: z.string(),
 });
 
-const GlobalArgsSchema = z.object({
-  instanceDir: z.string().optional().describe(
-    "Finance Guru instance directory. Defaults to FIN_GURU_DATA_ROOT.",
-  ),
-  uvPath: z.string().default("uv").describe(
-    "Path to uv. A service has a minimal PATH, so set the full path there.",
-  ),
-});
-
 type Tier = z.infer<typeof TierSchema>;
 type Metrics = z.infer<typeof MetricsSchema>;
-type Ctx = {
-  repoDir: string;
-  globalArgs: z.infer<typeof GlobalArgsSchema>;
+type Ctx = EngineCtx & {
   writeResource: (spec: string, instance: string, data: unknown) => Promise<{ name: string }>;
   logger: { info: (msg: string, props: Record<string, unknown>) => void };
 };
@@ -129,35 +114,10 @@ export function readMetrics(stdout: string, now: Date, maxAgeHours: number): Met
   return parsed.data;
 }
 
-function instanceDir(ctx: Ctx): string {
-  const dir = ctx.globalArgs.instanceDir ?? Deno.env.get("FIN_GURU_DATA_ROOT");
-  if (!dir) throw new Error("Set the instanceDir global argument or FIN_GURU_DATA_ROOT to your instance directory");
-  return resolve(dir);
-}
-
-/** Run an engine module in the instance, the way an owner runs it from there. */
-async function runEngine(ctx: Ctx, module: string): Promise<string> {
-  const dir = instanceDir(ctx);
-  const args = ["run", "--project", resolve(ctx.repoDir, "../.."), "python", "-m", module];
-  const out = await new Deno.Command(ctx.globalArgs.uvPath, {
-    args,
-    cwd: dir,
-    // The engine prefers FIN_GURU_DATA_ROOT over its working directory, so pin it.
-    env: { FIN_GURU_DATA_ROOT: dir },
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  const text = (b: Uint8Array) => new TextDecoder().decode(b).trim();
-  if (!out.success) {
-    throw new Error(`python -m ${module} failed (exit ${out.code}): ${text(out.stdout)}\n${text(out.stderr)}`);
-  }
-  return text(out.stdout);
-}
-
 export const behavior = {
   type: "@aojdevstudio/fidelity-margin-rate",
   version: "2026.10.22.4",
-  globalArguments: GlobalArgsSchema,
+  globalArguments: EngineArgsSchema,
   resources: {
     "check": {
       description: "Fidelity's tier rate compared with the instance's configured rate",

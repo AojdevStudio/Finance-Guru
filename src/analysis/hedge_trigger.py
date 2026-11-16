@@ -1,0 +1,258 @@
+"""Hedge trigger calculator for Finance Guru.
+
+Layer 2 of the three-layer pattern. It turns ledger and market inputs into one
+suggested action for a triggered inverse-ETF hedge: START, HOLD, EXIT, or
+NO_VERDICT. It suggests only. It never trades.
+
+Holdings/debt here is gross holdings (account equity plus margin debt) divided
+by margin debt. ``margin_metrics_cli`` reports equity/debt as
+``portfolio_margin_ratio``, which is a different number.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterable
+from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
+
+import pandas as pd
+
+from src.analysis.margin_metrics import EDUCATIONAL_DISCLAIMER
+from src.models.hedge_trigger_inputs import (
+    Action,
+    HedgeTriggerInputs,
+    HedgeTriggerResult,
+    HedgeTriggerRules,
+    IndexSnapshot,
+    RuleResult,
+)
+
+MARKET_TZ = ZoneInfo("America/New_York")
+# A bar dated today is final only after the close settles.
+SESSION_FINAL_AT = time(16, 30)
+# A long weekend leaves the newest close up to four calendar days old.
+MAX_SESSION_AGE = timedelta(days=4)
+WEEKS_52 = timedelta(days=365)
+
+
+def completed_sessions(bars: pd.DataFrame, now: datetime) -> pd.DataFrame:
+    """Drop today's bar while that session is still open or settling."""
+    now_market = now.astimezone(MARKET_TZ)
+    if bars.empty or now_market.time() >= SESSION_FINAL_AT:
+        return bars
+    is_closed = [ts.date() < now_market.date() for ts in bars.index]
+    return bars.loc[is_closed]
+
+
+def _require_fresh(session: date, today: date, label: str) -> None:
+    if today - session > MAX_SESSION_AGE:
+        msg = f"{label} newest completed close is {session}, more than {MAX_SESSION_AGE.days} days before {today}"
+        raise ValueError(msg)
+
+
+def summarize_index(
+    index_bars: pd.DataFrame,
+    volatility_bars: pd.DataFrame,
+    moving_average_days: int,
+    today: date,
+) -> IndexSnapshot:
+    """Read the close, 52-week high, moving average, and streak from daily bars.
+
+    Both frames hold completed daily sessions with ``High`` and ``Close``
+    columns, oldest first. The 52-week high is the highest intraday high in
+    the 365 days that end at the newest session.
+    """
+    if len(index_bars) < moving_average_days:
+        msg = f"index history has {len(index_bars)} sessions, fewer than the {moving_average_days}-day average needs"
+        raise ValueError(msg)
+    if volatility_bars.empty:
+        msg = "volatility history is empty"
+        raise ValueError(msg)
+    closes = index_bars["Close"]
+    last_ts = index_bars.index[-1]
+    session = last_ts.date()
+    _require_fresh(session, today, "index")
+    volatility_session = volatility_bars.index[-1].date()
+    _require_fresh(volatility_session, today, "volatility")
+
+    window = index_bars[index_bars.index > last_ts - WEEKS_52]
+    average = closes.rolling(moving_average_days).mean()
+    above = (closes > average).to_list()
+    streak = 0
+    for is_above in reversed(above):
+        if not is_above:
+            break
+        streak += 1
+
+    return IndexSnapshot(
+        session_date=session,
+        close=float(closes.iloc[-1]),
+        high_52_week=float(window["High"].max()),
+        moving_average=float(average.iloc[-1]),
+        closes_above_average=streak,
+        volatility_session_date=volatility_session,
+        volatility_close=float(volatility_bars["Close"].iloc[-1]),
+    )
+
+
+def entry_date_from_activity(activity: Iterable[tuple[date, float]]) -> date | None:
+    """Return the date the current position opened, from signed share changes.
+
+    ``activity`` is (date, signed quantity) pairs, oldest first: buys and split
+    additions are positive, sells and split removals negative. The entry date is
+    the first day the running total rose above zero after it was last flat.
+    """
+    total = 0.0
+    entry: date | None = None
+    for day, quantity in activity:
+        was_flat = total <= 1e-9
+        total += quantity
+        if total <= 1e-9:
+            entry = None
+        elif was_flat:
+            entry = day
+    return entry
+
+
+def no_verdict(as_of: date, failed_input: str) -> HedgeTriggerResult:
+    """The result when an input is missing or stale. Never a pass."""
+    return HedgeTriggerResult(
+        as_of=as_of,
+        action="NO_VERDICT",
+        summary=f"NO VERDICT: {failed_input}",
+        failed_input=failed_input,
+        disclaimer=EDUCATIONAL_DISCLAIMER,
+    )
+
+
+class HedgeTriggerCalculator:
+    """Evaluate the start and exit rules for one day's inputs."""
+
+    def __init__(self, inputs: HedgeTriggerInputs, rules: HedgeTriggerRules):
+        self.inputs = inputs
+        self.rules = rules
+
+    def calculate_all(self) -> HedgeTriggerResult:
+        """Return the suggested action and every rule's result."""
+        inputs, rules = self.inputs, self.rules
+        index = inputs.index
+        ratio = (
+            inputs.gross_holdings / inputs.margin_debt
+            if inputs.margin_debt > 0
+            else None
+        )
+        below_high = 1 - index.close / index.high_52_week
+        position = inputs.position
+        gain = position.price / position.average_cost - 1 if position else None
+        days_held = (inputs.as_of - position.entry_date).days if position else None
+        ratio_text = f"{ratio:.2f}" if ratio is not None else "no margin debt"
+
+        start = [
+            RuleResult(
+                rule="start_ratio",
+                kind="start",
+                fired=ratio is not None and ratio < rules.start_ratio_below,
+                detail=f"holdings/debt {ratio_text}, start below {rules.start_ratio_below}",
+            ),
+            RuleResult(
+                rule="start_drawdown",
+                kind="start",
+                fired=below_high >= rules.start_drawdown_at_least
+                and index.close < index.moving_average,
+                detail=(
+                    f"{rules.index_symbol} {below_high:.2%} below its 52-week high "
+                    f"(start at {rules.start_drawdown_at_least:.0%}), close {index.close:.2f} vs "
+                    f"{rules.moving_average_days}-day average {index.moving_average:.2f}"
+                ),
+            ),
+            RuleResult(
+                rule="start_volatility",
+                kind="start",
+                fired=index.volatility_close >= rules.start_volatility_at_least,
+                detail=(
+                    f"{rules.volatility_symbol} close {index.volatility_close:.2f}, "
+                    f"start at {rules.start_volatility_at_least}"
+                ),
+            ),
+        ]
+        exit_ = [
+            RuleResult(
+                rule="exit_gain",
+                kind="exit",
+                fired=gain is not None and gain >= rules.exit_gain_at_least,
+                detail=(
+                    f"{rules.hedge_symbol} gain {gain:.2%}, exit at {rules.exit_gain_at_least:.0%}"
+                    if gain is not None
+                    else f"no {rules.hedge_symbol} position"
+                ),
+            ),
+            RuleResult(
+                rule="exit_near_high",
+                kind="exit",
+                fired=below_high <= rules.exit_within_high,
+                detail=f"{rules.index_symbol} {below_high:.2%} below its high, exit within {rules.exit_within_high:.0%}",
+            ),
+            RuleResult(
+                rule="exit_above_average",
+                kind="exit",
+                fired=index.closes_above_average >= rules.exit_closes_above_average,
+                detail=(
+                    f"{index.closes_above_average} straight closes above the {rules.moving_average_days}-day "
+                    f"average, exit at {rules.exit_closes_above_average}"
+                ),
+            ),
+            RuleResult(
+                rule="exit_ratio",
+                kind="exit",
+                fired=ratio is None or ratio > rules.exit_ratio_above,
+                detail=f"holdings/debt {ratio_text}, exit above {rules.exit_ratio_above}",
+            ),
+            RuleResult(
+                rule="exit_time",
+                kind="exit",
+                fired=days_held is not None and days_held >= rules.exit_after_days,
+                detail=(
+                    f"held {days_held} days since {position.entry_date}, exit at {rules.exit_after_days}"
+                    if position is not None
+                    else f"no {rules.hedge_symbol} position"
+                ),
+            ),
+        ]
+
+        fired = [r.rule for r in (exit_ if position else start) if r.fired]
+        size: float | None = None
+        action: Action
+        if position is None and fired:
+            action = "START"
+            size = round(inputs.gross_holdings * rules.max_size_of_holdings, 2)
+            summary = (
+                f"START a hedge: buy up to ${size:,.2f} of {rules.hedge_symbol} "
+                f"({rules.max_size_of_holdings:.0%} of gross holdings). Fired: {', '.join(fired)}."
+            )
+        elif position is None:
+            action = "HOLD"
+            summary = f"HOLD: no hedge. No start rule fired. {rules.index_symbol} {below_high:.2%} below its high."
+        elif fired == ["exit_gain"]:
+            action = "EXIT"
+            summary = f"EXIT half: {rules.hedge_symbol} is up {gain:.2%}. Sell half and repay margin."
+        elif fired:
+            action = "EXIT"
+            summary = f"EXIT: sell the {rules.hedge_symbol} hedge and repay margin. Fired: {', '.join(fired)}."
+        else:
+            action = "HOLD"
+            summary = f"HOLD the {rules.hedge_symbol} hedge. No exit rule fired."
+
+        return HedgeTriggerResult(
+            as_of=inputs.as_of,
+            action=action,
+            summary=summary,
+            size_dollars=size,
+            holdings_to_debt=round(ratio, 4) if ratio is not None else None,
+            index_below_high=round(below_high, 4),
+            position_gain=round(gain, 4) if gain is not None else None,
+            days_since_entry=days_held,
+            rules=start + exit_,
+            inputs=inputs,
+            rule_config=rules,
+            disclaimer=EDUCATIONAL_DISCLAIMER,
+        )

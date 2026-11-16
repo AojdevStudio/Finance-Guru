@@ -1,0 +1,39 @@
+id: 8ccd6910-d2f1-467c-b6df-5dbba7334fc0
+name: hedge-trigger-check
+description: Refresh the ledger, then suggest a hedge START, HOLD, or EXIT from the profile's trigger rules. Suggest only, never trades
+tags: {}
+trigger:
+  # Weekdays 16:30 in the machine's local time zone. On a CT machine that is
+  # after the US close and after SnapTrade's daily holdings sync (about 8:45 AM
+  # CT), so the ledger's equity is inside the engine's 12-hour limit.
+  schedule: "30 16 * * 1-5"
+jobs:
+  - name: main
+    description: Refresh the ledger, then record the day's hedge suggestion
+    steps:
+      - name: refresh
+        description: Run the engine's SnapTrade positions sync in the instance
+        task:
+          type: model_method
+          modelIdOrName: fidelity-margin-rate
+          methodName: refresh
+        dependsOn: []
+        weight: 0
+        # A failed sync still lets the check run. The engine then refuses the
+        # stale ledger, and the check records NO_VERDICT naming it.
+        allowFailure: true
+      - name: check
+        description: Run the engine's hedge trigger rules and record one suggestion. Fails the run on START, EXIT, or a change
+        task:
+          type: model_method
+          modelIdOrName: hedge-trigger
+          methodName: check
+        dependsOn:
+          - step: refresh
+            condition:
+              type: completed
+        weight: 0
+        allowFailure: false
+    dependsOn: []
+    weight: 0
+version: 1

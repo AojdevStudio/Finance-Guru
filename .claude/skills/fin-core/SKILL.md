@@ -54,7 +54,7 @@ Every calculator is a Pydantic model, a calculator class, and a CLI. Run each on
 - _Risk and performance:_ `src.analysis.risk_metrics_cli`, `src.analysis.factors_cli`, `src.analysis.total_return_cli`, `src.analysis.rolling_tracker_cli`, `src.analysis.itc_risk_cli`.
 - _Technical analysis:_ `src.utils.momentum_cli`, `src.utils.moving_averages_cli`, `src.utils.volatility_cli`, `src.utils.screener_cli`.
 - _Portfolio construction:_ `src.analysis.correlation_cli`, `src.strategies.optimizer_cli`, `src.strategies.backtester_cli`.
-- _Margin, options, and hedging:_ `src.analysis.margin_metrics_cli`, `src.analysis.options_cli`, `src.analysis.options_chain_cli`, `src.analysis.hedge_sizer_cli`, `src.analysis.hedge_comparison_cli`.
+- _Margin, options, and hedging:_ `src.analysis.margin_metrics_cli`, `src.analysis.options_cli`, `src.analysis.options_chain_cli`, `src.analysis.hedge_sizer_cli`, `src.analysis.hedge_comparison_cli`, `src.analysis.hedge_trigger_cli`.
 - _Data checks:_ `src.utils.data_validator_cli`, `src.utils.input_validation_cli`, `src.utils.yaml_generator_cli`.
 
 ---

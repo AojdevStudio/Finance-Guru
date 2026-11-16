@@ -33,6 +33,7 @@ uv run python -m src.integrations.refresh_all --help
 | `src/analysis/factors_cli.py` | Factor analysis. |
 | `src/analysis/hedge_comparison_cli.py` | Compare hedge approaches. |
 | `src/analysis/hedge_sizer_cli.py` | Calculate hedge sizing. |
+| `src/analysis/hedge_trigger_cli.py` | Suggest a hedge START, HOLD, or EXIT from the profile's `hedge_triggers:` rules. |
 | `src/analysis/itc_risk_cli.py` | Query ITC risk-model data. |
 | `src/analysis/margin_metrics_cli.py` | Calculate margin metrics from configured local data. Prints JSON and has no `--output` flag. `--source snaptrade` adds `equity_synced_at` and raises `StaleAccountEquityError` when the equity sync time is missing, in the future, or older than 12 hours. The default DB source raises `StaleEquitySnapshotError` when the sync stored NULL margin debt, and adds `ledger_synced_at`, the sync time of the balances row it read. `as_of_date` is the run date, not the data date. |
 | `src/analysis/options_chain_cli.py` | Inspect options-chain data. |

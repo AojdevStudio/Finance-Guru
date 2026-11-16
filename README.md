@@ -196,7 +196,7 @@ The last command prints the newest comparison: tier rate, configured rate, margi
 Run the tests with the Deno that ships with swamp (`swamp doctor extensions --json` prints its path as `denoPath`):
 
 ```bash
-~/.swamp/deno/deno test --allow-read extensions/behaviors/fidelity_margin_rate_test.ts
+~/.swamp/deno/deno test --allow-read extensions/behaviors/
 ```
 
 #### Start the service
@@ -210,7 +210,7 @@ swamp serve daemon status
 curl -s http://127.0.0.1:9093/health
 ```
 
-`/health` lists each schedule with its `nextRun` in UTC. Check that the margin-rate check appears there. Stop the service with `swamp serve daemon disable`.
+`/health` lists each schedule with its `nextRun` in UTC. Check that the margin-rate and hedge-trigger checks appear there. Stop the service with `swamp serve daemon disable`.
 
 - The service loads the behavior code once, at start. After you pull changes under `automations/swamp/extensions/`, run the `daemon enable` command again to restart it. Until then, scheduled runs use the old code. Workflow and schedule edits take effect without a restart.
 - swamp installs one serve service per user, so `daemon enable` here replaces a serve service you already run for another repository. The check needs this layout: the workflow, the behavior, and your local definition all in `automations/swamp/` inside a Finance Guru checkout, because the behavior finds the engine two folders up.
@@ -228,6 +228,46 @@ curl -s http://127.0.0.1:9093/health
 A failed run notifies no one. Check the history, or point a tool you already use at it.
 
 **How it relates to the stale-equity guard.** The engine computes margin debt as gross market value minus SnapTrade's account equity, and the equity is only as fresh as SnapTrade's last holdings sync ([#259](https://github.com/AojdevStudio/Finance-Guru/issues/259)). The engine refuses equity over 12 hours old with `StaleAccountEquityError`, and the ledger stores an empty margin debt instead of a wrong one ([#260](https://github.com/AojdevStudio/Finance-Guru/pull/260)). The rate check reads the debt through the engine, so it fails on an empty debt too, and it refuses a ledger synced more than 24 hours ago. It reads that time from `ledger_synced_at` in the engine's output. Stale data never picks a rate tier. The engine guard stops wrong numbers before they exist. The swamp check catches settings that have drifted from the broker.
+
+**The hedge-trigger check.** The `hedge-trigger-check` workflow suggests when to start or exit a triggered inverse-ETF hedge. It suggests only. It never trades or moves money. It runs weekdays at 16:30 in the machine's local time zone, which on a US Central machine is after the US close and after SnapTrade's morning sync.
+
+1. `refresh` runs the same SnapTrade positions sync as the margin-rate check. If the sync fails, the check still runs and reports the stale input.
+2. `check` runs `src.analysis.hedge_trigger_cli --output json`. The engine reads your thresholds from the `hedge_triggers:` section of `user-profile.yaml`, margin numbers from the ledger, your hedge position and its entry date from the ledger, and daily closes from yfinance. It returns one action: `START` with a size, `HOLD`, `EXIT` with the rules that fired, or `NO_VERDICT` naming the input that was stale or missing.
+
+Holdings/debt in these rules is gross holdings (account equity plus margin debt) divided by margin debt. `margin_metrics_cli` reports equity/debt as `portfolio_margin_ratio`, which is a different number.
+
+The check writes every suggestion as a versioned record. It fails the run when the suggestion is `START` or `EXIT`, or differs from the last one, so those days show as red runs, like a margin-rate drift. A missing `hedge_triggers:` section fails the run with no record. Every key is required, and the engine has no defaults for them:
+
+```yaml
+hedge_triggers:
+  hedge_symbol: "SQQQ"
+  index_symbol: "QQQ"
+  volatility_symbol: "^VIX"
+  moving_average_days: 50
+  start_ratio_below: 3.0           # holdings/debt
+  start_drawdown_at_least: 0.10    # below the 52-week high, and below the average
+  start_volatility_at_least: 25
+  exit_gain_at_least: 0.30         # alone, this exits half
+  exit_within_high: 0.05
+  exit_closes_above_average: 3
+  exit_ratio_above: 3.5
+  exit_after_days: 30
+  max_size_of_holdings: 0.06
+```
+
+Create its behavior definition, then run it and read the newest suggestion:
+
+```bash
+cd automations/swamp
+swamp behavior create @aojdevstudio/hedge-trigger hedge-trigger \
+  --global-arg instanceDir=/path/to/your/instance \
+  --global-arg uvPath="$(command -v uv)"
+swamp workflow validate hedge-trigger-check
+swamp workflow run hedge-trigger-check --json
+swamp data query 'behavior("hedge-trigger") && name == "hedge"' --select content --json
+```
+
+The workflow's `refresh` step uses the `fidelity-margin-rate` definition, so create that one too.
 
 ## If you are an agent
 
