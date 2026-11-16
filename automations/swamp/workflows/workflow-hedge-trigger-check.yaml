@@ -22,6 +22,20 @@ jobs:
         # A failed sync still lets the check run. The engine then refuses the
         # stale ledger, and the check records NO_VERDICT naming it.
         allowFailure: true
+      - name: activity
+        description: Run the engine's SnapTrade activities sync, so a held hedge's entry date is current
+        task:
+          type: model_method
+          modelIdOrName: hedge-trigger
+          methodName: sync-activity
+        dependsOn:
+          - step: refresh
+            condition:
+              type: completed
+        weight: 0
+        # As with refresh, the check still runs. Activity that does not add up
+        # to the held shares gives NO_VERDICT.
+        allowFailure: true
       - name: check
         description: Run the engine's hedge trigger rules and record one suggestion. Fails the run on START, EXIT, or a change
         task:
@@ -29,7 +43,7 @@ jobs:
           modelIdOrName: hedge-trigger
           methodName: check
         dependsOn:
-          - step: refresh
+          - step: activity
             condition:
               type: completed
         weight: 0

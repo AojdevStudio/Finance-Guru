@@ -10,6 +10,9 @@
  *   the suggestion is START or EXIT, or differs from the last one. A failed
  *   run is the alert, the same way a drift fails `margin-rate-check`.
  *
+ * - `sync-activity` runs the engine's SnapTrade activities sync, so a held
+ *   hedge's entry date comes from current transaction history.
+ *
  * A stale or missing input is NO_VERDICT, never a pass. `_lib/engine.ts` finds
  * the instance and the engine and runs engine modules.
  *
@@ -29,6 +32,11 @@ const ResultSchema = z.looseObject({
   size_dollars: z.number().nullable(),
   failed_input: z.string().nullable(),
   disclaimer: z.string(),
+});
+
+const ActivitySyncSchema = z.object({
+  output: z.string().describe("sync_transactions_db stdout"),
+  syncedAt: z.string(),
 });
 
 const SuggestionSchema = z.object({
@@ -61,7 +69,7 @@ export function shouldAlert(action: Action, previous: Action | null): boolean {
 
 export const behavior = {
   type: "@aojdevstudio/hedge-trigger",
-  version: "2026.11.16.1",
+  version: "2026.11.16.2",
   globalArguments: EngineArgsSchema,
   resources: {
     "suggestion": {
@@ -70,8 +78,26 @@ export const behavior = {
       lifetime: "infinite",
       garbageCollection: 90,
     },
+    "activity": {
+      description: "Output of the engine's SnapTrade activities sync",
+      schema: ActivitySyncSchema,
+      lifetime: "infinite",
+      garbageCollection: 10,
+    },
   },
   methods: {
+    "sync-activity": {
+      description: "Run the engine's SnapTrade activities sync so the hedge's entry date is current",
+      arguments: z.object({}),
+      execute: async (_args: Record<string, never>, context: Ctx) => {
+        const output = await runEngine(context, "src.integrations.snaptrade.sync_transactions_db");
+        const handle = await context.writeResource("activity", "transactions", {
+          output,
+          syncedAt: new Date().toISOString(),
+        });
+        return { dataHandles: [handle] };
+      },
+    },
     check: {
       description: "Run the engine's hedge trigger rules and record one suggested action",
       arguments: z.object({}),

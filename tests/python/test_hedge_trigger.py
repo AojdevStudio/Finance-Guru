@@ -174,10 +174,12 @@ def test_index_and_volatility_from_different_sessions_are_refused() -> None:
 
 
 def test_history_shorter_than_52_weeks_is_refused() -> None:
+    # Starts five days inside the window, so a high on those days would be missed.
+    days = pd.bdate_range(start="2025-11-21", end="2026-11-16", tz="America/New_York")
+    bars = pd.DataFrame({"High": 101.0, "Close": 100.0}, index=days)
+
     with pytest.raises(ValueError, match="short of the 52 weeks"):
-        summarize_index(
-            _bars([100.0] * 60, "2026-11-16"), _bars([20.0], "2026-11-16"), 50, TODAY
-        )
+        summarize_index(bars, _bars([20.0], "2026-11-16"), 50, TODAY)
 
 
 def test_an_open_session_bar_is_dropped_until_the_close_settles() -> None:

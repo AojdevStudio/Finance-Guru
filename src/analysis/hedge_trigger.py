@@ -33,8 +33,6 @@ SESSION_FINAL_AT = time(16, 30)
 # A long weekend leaves the newest close up to four calendar days old.
 MAX_SESSION_AGE = timedelta(days=4)
 WEEKS_52 = timedelta(days=365)
-# History must start within a week of the 52-week window's first day.
-WINDOW_SLACK = timedelta(days=7)
 # Share counts that differ by less than this match.
 SHARE_TOLERANCE = 0.01
 # Rule inputs are compared at six decimals, so an exact 10.0% is 10.0%.
@@ -82,7 +80,7 @@ def summarize_index(
     if volatility_session != session:
         msg = f"index newest close is {session} but volatility newest close is {volatility_session}"
         raise ValueError(msg)
-    if index_bars.index[0] > last_ts - WEEKS_52 + WINDOW_SLACK:
+    if index_bars.index[0] > last_ts - WEEKS_52:
         msg = f"index history starts {index_bars.index[0].date()}, short of the 52 weeks before {session}"
         raise ValueError(msg)
 
