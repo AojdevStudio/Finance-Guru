@@ -390,3 +390,12 @@ def test_a_substitute_dividend_with_units_is_cash(tmp_path: Path) -> None:
 
     assert held is not None
     assert held.entry_date == date(2026, 11, 13)
+
+
+def test_a_dropped_session_feeding_an_earlier_streak_average_is_refused() -> None:
+    bars = _bars([100.0] * 260 + [110.0, 111.0, 112.0, 113.0], "2026-11-16")
+    # Older than the newest 50 sessions, but inside the averages behind the streak.
+    gap = bars.index[-55]
+
+    with pytest.raises(ValueError, match="missing"):
+        summarize_index(bars.drop(gap), _bars([20.0], "2026-11-16"), 50, TODAY)

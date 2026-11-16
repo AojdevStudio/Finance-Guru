@@ -136,16 +136,19 @@ def summarize_index(
         raise ValueError(msg)
 
     window = index_bars[index_bars.index > last_ts - WEEKS_52]
-    # The average and the above-average streak need every recent session, in order.
+    # The streak counts at most ``moving_average_days`` closes, and each one's
+    # average reads that many sessions before it, so this span must be complete.
+    # A special NYSE closure missing from NyseHolidays gives NO_VERDICT here.
+    span = 2 * moving_average_days - 1
     sessions = pd.date_range(
         end=pd.Timestamp(expected_session),
-        periods=moving_average_days,
+        periods=span,
         freq=CustomBusinessDay(calendar=NyseHolidays()),
     ).date
-    recent = index_bars.iloc[-moving_average_days:]
+    recent = index_bars[[ts.date() >= sessions[0] for ts in index_bars.index]]
     missing = sorted(set(sessions) - {ts.date() for ts in recent.index})
-    if missing:
-        msg = f"index history is missing sessions {', '.join(map(str, missing))}"
+    if missing or recent["Close"].isna().any():
+        msg = f"index history is missing sessions or closes {', '.join(map(str, missing))}"
         raise ValueError(msg)
     if window[["High", "Close"]].isna().any().any():
         msg = "index history is missing a high or close inside the 52 weeks"
@@ -154,7 +157,7 @@ def summarize_index(
         msg = "volatility history is missing its newest close"
         raise ValueError(msg)
     average = closes.rolling(moving_average_days).mean()
-    above = (closes > average).to_list()
+    above = (closes > average).to_list()[-moving_average_days:]
     streak = 0
     for is_above in reversed(above):
         if not is_above:
