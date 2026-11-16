@@ -17,6 +17,17 @@ from itertools import groupby
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+from pandas.tseries.holiday import (
+    AbstractHolidayCalendar,
+    GoodFriday,
+    Holiday,
+    USLaborDay,
+    USMartinLutherKingJr,
+    USMemorialDay,
+    USPresidentsDay,
+    USThanksgivingDay,
+    nearest_workday,
+)
 
 from src.analysis.margin_metrics import EDUCATIONAL_DISCLAIMER
 from src.models.hedge_trigger_inputs import (
@@ -31,8 +42,31 @@ from src.models.hedge_trigger_inputs import (
 MARKET_TZ = ZoneInfo("America/New_York")
 # A bar dated today is final only after the close settles.
 SESSION_FINAL_AT = time(16, 30)
-# A long weekend leaves the newest close up to four calendar days old.
-MAX_SESSION_AGE = timedelta(days=4)
+
+
+class NyseHolidays(AbstractHolidayCalendar):
+    """Full-day NYSE closures. A special closure missing here gives NO_VERDICT."""
+
+    rules = [
+        Holiday("New Year's Day", month=1, day=1, observance=nearest_workday),
+        USMartinLutherKingJr,
+        USPresidentsDay,
+        GoodFriday,
+        USMemorialDay,
+        Holiday(
+            "Juneteenth",
+            month=6,
+            day=19,
+            start_date="2022-01-01",
+            observance=nearest_workday,
+        ),
+        Holiday("Independence Day", month=7, day=4, observance=nearest_workday),
+        USLaborDay,
+        USThanksgivingDay,
+        Holiday("Christmas", month=12, day=25, observance=nearest_workday),
+    ]
+
+
 WEEKS_52 = timedelta(days=365)
 # Share counts that differ by less than this match.
 SHARE_TOLERANCE = 0.01
@@ -49,9 +83,21 @@ def completed_sessions(bars: pd.DataFrame, now: datetime) -> pd.DataFrame:
     return bars.loc[is_closed]
 
 
-def _require_fresh(session: date, today: date, label: str) -> None:
-    if today - session > MAX_SESSION_AGE:
-        msg = f"{label} newest completed close is {session}, more than {MAX_SESSION_AGE.days} days before {today}"
+def latest_completed_session(now: datetime) -> date:
+    """Return the newest NYSE session whose close has settled at ``now``."""
+    now_market = now.astimezone(MARKET_TZ)
+    day = now_market.date()
+    if now_market.time() < SESSION_FINAL_AT:
+        day -= timedelta(days=1)
+    holidays = set(NyseHolidays().holidays(day - timedelta(days=14), day).date)
+    while day.weekday() >= 5 or day in holidays:
+        day -= timedelta(days=1)
+    return day
+
+
+def _require_session(session: date, expected: date, label: str) -> None:
+    if session != expected:
+        msg = f"{label} newest completed close is {session}, but the latest completed session is {expected}"
         raise ValueError(msg)
 
 
@@ -59,13 +105,14 @@ def summarize_index(
     index_bars: pd.DataFrame,
     volatility_bars: pd.DataFrame,
     moving_average_days: int,
-    today: date,
+    expected_session: date,
 ) -> IndexSnapshot:
     """Read the close, 52-week high, moving average, and streak from daily bars.
 
     Both frames hold completed daily sessions with ``High`` and ``Close``
     columns, oldest first. The 52-week high is the highest intraday high in
-    the 365 days that end at the newest session.
+    the 365 days that end at the newest session. The newest bar must be
+    ``expected_session``, so a feed missing a completed session is refused.
     """
     if len(index_bars) < moving_average_days:
         msg = f"index history has {len(index_bars)} sessions, fewer than the {moving_average_days}-day average needs"
@@ -76,7 +123,7 @@ def summarize_index(
     closes = index_bars["Close"]
     last_ts = index_bars.index[-1]
     session = last_ts.date()
-    _require_fresh(session, today, "index")
+    _require_session(session, expected_session, "index")
     volatility_session = volatility_bars.index[-1].date()
     if volatility_session != session:
         msg = f"index newest close is {session} but volatility newest close is {volatility_session}"

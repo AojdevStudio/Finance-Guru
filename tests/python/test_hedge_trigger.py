@@ -13,6 +13,7 @@ from src.analysis.hedge_trigger import (
     HedgeTriggerCalculator,
     completed_sessions,
     entry_date_from_activity,
+    latest_completed_session,
     no_verdict,
     require_current_activity,
     summarize_index,
@@ -207,14 +208,14 @@ def test_three_closes_over_a_rising_average_count_as_a_streak() -> None:
 def test_stale_market_data_is_refused() -> None:
     with pytest.raises(ValueError, match="newest completed close"):
         summarize_index(
-            _bars([100.0] * 60, "2026-11-06"), _bars([20.0], "2026-11-16"), 50, TODAY
+            _bars([100.0] * 270, "2026-11-06"), _bars([20.0], "2026-11-16"), 50, TODAY
         )
 
 
 def test_index_and_volatility_from_different_sessions_are_refused() -> None:
     with pytest.raises(ValueError, match="volatility newest close"):
         summarize_index(
-            _bars([100.0] * 270, "2026-11-13"), _bars([20.0], "2026-11-16"), 50, TODAY
+            _bars([100.0] * 270, "2026-11-16"), _bars([20.0], "2026-11-13"), 50, TODAY
         )
 
 
@@ -330,3 +331,25 @@ def test_a_stock_dividend_adds_shares(tmp_path: Path) -> None:
 
     assert held is not None
     assert (held.quantity, held.entry_date) == (11, date(2026, 11, 13))
+
+
+def test_aligned_feeds_missing_a_weekday_session_are_refused() -> None:
+    # Monday Nov 16 after the close, both feeds end Thursday Nov 12: Friday and Monday are missing.
+    with pytest.raises(ValueError, match="newest completed close"):
+        summarize_index(
+            _bars([100.0] * 270, "2026-11-12"), _bars([20.0], "2026-11-12"), 50, TODAY
+        )
+
+
+def test_the_latest_completed_session_skips_weekends_holidays_and_open_sessions() -> (
+    None
+):
+    # Monday before the close settles: Friday's session is the latest.
+    assert latest_completed_session(datetime(2026, 11, 16, 19, tzinfo=UTC)) == date(
+        2026, 11, 13
+    )
+    assert latest_completed_session(datetime(2026, 11, 16, 22, tzinfo=UTC)) == TODAY
+    # Thanksgiving evening: Wednesday's session is the latest.
+    assert latest_completed_session(datetime(2026, 11, 26, 23, tzinfo=UTC)) == date(
+        2026, 11, 25
+    )

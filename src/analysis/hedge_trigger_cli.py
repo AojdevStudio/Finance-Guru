@@ -33,6 +33,7 @@ from src.analysis.hedge_trigger import (
     HedgeTriggerCalculator,
     completed_sessions,
     entry_date_from_activity,
+    latest_completed_session,
     no_verdict,
     require_current_activity,
     summarize_index,
@@ -118,7 +119,7 @@ def evaluate(
             _daily_bars(rules.index_symbol, "2y", now),
             _daily_bars(rules.volatility_symbol, "1mo", now),
             rules.moving_average_days,
-            today,
+            latest_completed_session(now),
         )
     except (ValueError, OSError, YFException) as error:
         return no_verdict(today, f"market data: {error}")
