@@ -287,3 +287,46 @@ def test_a_no_verdict_result_still_names_its_data_sources() -> None:
     sources = result.model_dump(mode="json")["data_sources"]
     assert any("ledger" in source for source in sources)
     assert any("yfinance" in source for source in sources)
+
+
+def _ledger(tmp_path: Path, held: float, rows: str) -> Path:
+    db = tmp_path / "ledger.db"
+    conn = sqlite3.connect(db)
+    conn.executescript(
+        "CREATE TABLE positions (account_id, symbol, instrument, quantity, avg_cost, price, synced_at);"
+        "CREATE TABLE transactions (account_id, date, type, symbol, quantity);"
+        f"INSERT INTO positions VALUES ('margin', 'SQQQ', 'equity', {held}, 50, 52, 'now');"
+        + rows
+    )
+    conn.commit()
+    conn.close()
+    return db
+
+
+def test_untyped_activity_still_counts_toward_the_entry_date(tmp_path: Path) -> None:
+    db = _ledger(
+        tmp_path,
+        10,
+        "INSERT INTO transactions VALUES ('margin', '2026-10-01', 'BUY', 'SQQQ', 10);"
+        "INSERT INTO transactions VALUES ('margin', '2026-11-12', NULL, 'SQQQ', -10);"
+        "INSERT INTO transactions VALUES ('margin', '2026-11-13', NULL, 'SQQQ', 10);",
+    )
+
+    held = read_position(db, "margin", "SQQQ")
+
+    assert held is not None
+    assert held.entry_date == date(2026, 11, 13)
+
+
+def test_a_stock_dividend_adds_shares(tmp_path: Path) -> None:
+    db = _ledger(
+        tmp_path,
+        11,
+        "INSERT INTO transactions VALUES ('margin', '2026-11-13', 'BUY', 'SQQQ', 10);"
+        "INSERT INTO transactions VALUES ('margin', '2026-11-20', 'STOCK_DIVIDEND', 'SQQQ', 1);",
+    )
+
+    held = read_position(db, "margin", "SQQQ")
+
+    assert held is not None
+    assert (held.quantity, held.entry_date) == (11, date(2026, 11, 13))

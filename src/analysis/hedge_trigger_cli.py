@@ -47,9 +47,10 @@ from src.models.hedge_trigger_inputs import (
 )
 
 PROFILE_SECTION = "hedge_triggers"
-# Activity types that change a share balance. SnapTrade can fill units on a cash
-# dividend, so only these rows rebuild the position's history.
-POSITION_CHANGES = ("BUY", "SELL", "REI", "SPLIT", "TRANSFER", "JOURNALED")
+# Cash-only activity types. SnapTrade can fill units on a cash dividend, so these
+# rows never rebuild the share history. Every other row counts, including an
+# untyped or unknown one: a wrong count fails the share check and gives NO_VERDICT.
+CASH_ONLY = ("DIVIDEND", "INTEREST", "FEE", "TAX", "CONTRIBUTION", "WITHDRAWAL")
 
 
 def load_rules(profile: Path) -> HedgeTriggerRules:
@@ -86,10 +87,10 @@ def read_position(db: Path, account_id: str, symbol: str) -> HeldHedge | None:
             raise ValueError(msg)
         activity = conn.execute(
             "SELECT date, type, quantity FROM transactions WHERE account_id = ? AND symbol = ? "
-            f"AND type IN ({', '.join('?' * len(POSITION_CHANGES))}) "
+            f"AND (type IS NULL OR type NOT IN ({', '.join('?' * len(CASH_ONLY))})) "
             "AND quantity IS NOT NULL AND quantity != 0 AND date IS NOT NULL "
             "ORDER BY date, rowid",
-            (account_id, symbol, *POSITION_CHANGES),
+            (account_id, symbol, *CASH_ONLY),
         ).fetchall()
     finally:
         conn.close()
