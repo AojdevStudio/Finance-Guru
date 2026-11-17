@@ -435,3 +435,16 @@ def test_a_streak_longer_than_the_average_window_can_still_exit() -> None:
     )
 
     assert snapshot.closes_above_average == 30
+
+
+def test_a_dropped_session_inside_the_52_weeks_is_refused() -> None:
+    bars = _bars([100.0] * 270, "2026-11-16")
+    # Older than the streak's averages, but inside the 52-week high window.
+    with pytest.raises(ValueError, match="missing"):
+        summarize_index(
+            bars.drop(bars.index[-200]),
+            _bars([20.0], "2026-11-16"),
+            50,
+            TODAY,
+            streak_days=3,
+        )

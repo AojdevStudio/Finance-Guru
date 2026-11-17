@@ -67,6 +67,7 @@ class NyseHolidays(AbstractHolidayCalendar):
         USLaborDay,
         USThanksgivingDay,
         Holiday("Christmas", month=12, day=25, observance=nearest_workday),
+        Holiday("National Day of Mourning", year=2025, month=1, day=9),
     ]
 
 
@@ -138,15 +139,22 @@ def summarize_index(
         raise ValueError(msg)
 
     window = index_bars[index_bars.index > last_ts - WEEKS_52]
-    # The streak counts at most ``streak_days`` closes, enough to decide the exit
-    # rule, and each one's average reads ``moving_average_days`` sessions back,
-    # so this span must be complete. A special NYSE closure missing from
-    # NyseHolidays gives NO_VERDICT here.
-    span = moving_average_days + streak_days - 1
-    sessions = pd.date_range(
+    # Every session the 52-week high reads must be present. So must every
+    # session behind the streak: it counts at most ``streak_days`` closes, enough
+    # to decide the exit rule, and each one's average reads
+    # ``moving_average_days`` sessions back. A special NYSE closure missing
+    # from NyseHolidays gives NO_VERDICT here, naming the date.
+    trading_day = CustomBusinessDay(calendar=NyseHolidays())
+    streak_start = pd.date_range(
         end=pd.Timestamp(expected_session),
-        periods=span,
-        freq=CustomBusinessDay(calendar=NyseHolidays()),
+        periods=moving_average_days + streak_days - 1,
+        freq=trading_day,
+    )[0]
+    start = min(
+        streak_start, pd.Timestamp(expected_session) - WEEKS_52 + timedelta(days=1)
+    )
+    sessions = pd.date_range(
+        start=start, end=pd.Timestamp(expected_session), freq=trading_day
     ).date
     recent = index_bars[[ts.date() >= sessions[0] for ts in index_bars.index]]
     missing = sorted(set(sessions) - {ts.date() for ts in recent.index})
