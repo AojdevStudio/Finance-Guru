@@ -16,6 +16,7 @@ Available Models:
     - hedging_inputs: Hedging position models (HedgePosition, RollSuggestion, HedgeSizeRequest)
     - total_return_inputs: Total return models (TotalReturnInput, DividendRecord, TickerReturn)
     - hedge_comparison_inputs: Hedge comparison models (ScenarioInput, ComparisonOutput, etc.)
+    - hedge_trigger_inputs: Hedge trigger rules, inputs, and suggested action
 """
 
 from src.models.backtest_inputs import (
@@ -39,6 +40,14 @@ from src.models.hedge_comparison_inputs import (
     PutResult,
     ScenarioInput,
     SQQQResult,
+)
+from src.models.hedge_trigger_inputs import (
+    HedgeTriggerInputs,
+    HedgeTriggerResult,
+    HedgeTriggerRules,
+    HeldHedge,
+    IndexSnapshot,
+    RuleResult,
 )
 from src.models.hedging_inputs import (
     HedgePosition,
@@ -170,4 +179,10 @@ __all__ = [
     "PutResult",
     "ComparisonRow",
     "ComparisonOutput",
+    "HedgeTriggerRules",
+    "HedgeTriggerInputs",
+    "HedgeTriggerResult",
+    "HeldHedge",
+    "IndexSnapshot",
+    "RuleResult",
 ]
